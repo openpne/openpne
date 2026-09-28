@@ -22,6 +22,7 @@ use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventImage;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageImage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicImage;
 use App\Models\HomeIssue;
@@ -37,52 +38,113 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * A month costs what a day of it costs, a count per issue's talk excepted
- * (docs/internals/home-issues.md, "The month page").
+ * A month costs what a day of it costs, but for a read per issue that holds talk and the gate of
+ * each talk picture shown (docs/internals/home-issues.md, "The month page").
  */
 class HomeIssueMonthQueryBudgetTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Measured at 56 for 31 issues: 27 reads and 29 talk counts. The margin stays below the smallest
-     * per-row loop the fixture could hide, a read per issue, which would add 31.
-     */
-    private const CEILING = 60;
+    /** What the file policy reads to answer for one picture: its owner, the owner's room and the two settings its unit hangs on. */
+    private const PER_PICTURE = 4;
 
-    public function test_a_month_costs_the_same_reads_however_many_issues_it_holds(): void
+    /** The files of the pictures asked about, read once for the month. */
+    private const PICTURES = 1;
+
+    protected function setUp(): void
     {
-        Carbon::setTestNow('2026-09-01 06:00:00');
+        parent::setUp();
 
+        // The store a site runs on by default, where a settings read is a query and is counted.
+        config(['cache.default' => 'database']);
+
+        Carbon::setTestNow('2026-09-01 06:00:00');
+    }
+
+    public function test_a_month_costs_the_same_however_many_issues_it_holds(): void
+    {
         $viewer = Member::factory()->create();
 
-        $this->fill(new HomeIssueMonth(2026, 6), 15);
-        $this->fill(new HomeIssueMonth(2026, 7), 31);
+        $this->fill(new HomeIssueMonth(2026, 6), days: 15, talking: 10, pictured: 5);
+        $this->fill(new HomeIssueMonth(2026, 7), days: 31, talking: 10, pictured: 5);
 
-        // Once unmeasured: the first read of a request also loads the site's settings.
-        $this->measure($viewer, new HomeIssueMonth(2026, 6));
+        $this->warm($viewer);
 
         [$half, $halfDays] = $this->measure($viewer, new HomeIssueMonth(2026, 6));
         [$full, $fullDays] = $this->measure($viewer, new HomeIssueMonth(2026, 7));
 
-        // The fixture really did fill the rows — a budget met by rendering nothing is not a budget.
-        $this->assertCount(15, $halfDays);
-        $this->assertCount(31, $fullDays);
-        foreach ($fullDays as $day) {
-            $this->assertNotNull($day['top'], "{$day['date']} drew nothing");
-        }
-        $this->assertSame(
-            ['newGroup', 'newcomer', 'talk', 'story'],
-            array_values(array_unique(array_column(array_column($fullDays, 'top'), 'kind'))),
-        );
+        $this->assertFilled($halfDays, days: 15, talking: 10, pictured: 5);
+        $this->assertFilled($fullDays, days: 31, talking: 10, pictured: 5);
 
-        $this->assertSame($half['other'], $full['other'], 'a read outside talk grew with the month');
-        $this->assertLessThanOrEqual(31, $full['talk']);
-        $this->assertLessThanOrEqual(self::CEILING, $full['talk'] + $full['other'], 'a full month cost '.($full['talk'] + $full['other']).' queries');
+        $this->assertSame($half, $full, 'a read grew with the days of the month');
+    }
+
+    public function test_a_room_costs_one_read_an_issue_and_a_picture_its_gate(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->fill(new HomeIssueMonth(2026, 3), days: 31, talking: 0, pictured: 0);
+        $this->fill(new HomeIssueMonth(2026, 5), days: 31, talking: 1, pictured: 0);
+        $this->fill(new HomeIssueMonth(2026, 7), days: 31, talking: 31, pictured: 0);
+        $this->fill(new HomeIssueMonth(2026, 8), days: 31, talking: 31, pictured: 31, attachments: 3);
+
+        $this->warm($viewer);
+
+        [$silent] = $this->measure($viewer, new HomeIssueMonth(2026, 3));
+        [$one] = $this->measure($viewer, new HomeIssueMonth(2026, 5));
+        [$talking] = $this->measure($viewer, new HomeIssueMonth(2026, 7));
+        [$pictured, $days] = $this->measure($viewer, new HomeIssueMonth(2026, 8));
+
+        $this->assertFilled($days, days: 31, talking: 31, pictured: 31);
+
+        // What the first room brings is read once for the month; every issue after it adds its stretch.
+        $this->assertSame(30, $talking - $one, 'an issue that holds talk cost more than its stretch');
+        $this->assertGreaterThan($silent, $one);
+
+        $this->assertGreaterThan(0, $pictured - $talking);
+        $this->assertLessThanOrEqual(
+            self::PER_PICTURE * 31,
+            $pictured - $talking - self::PICTURES,
+            'a picture cost '.(($pictured - $talking) / 31).' reads',
+        );
     }
 
     /**
-     * @return array{array{talk: int, other: int}, list<array>}
+     * The most a month can ask: no story on any day, so three rooms are drawn on each, every one
+     * ending on a message of three pictures, beside a fourth room that is not drawn.
+     */
+    public function test_a_month_of_rooms_alone_asks_about_one_picture_a_room_drawn(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->fill(new HomeIssueMonth(2026, 7), days: 31, talking: 31, pictured: 0, stories: false, rooms: 4);
+        $this->fill(new HomeIssueMonth(2026, 8), days: 31, talking: 31, pictured: 31, stories: false, rooms: 4, attachments: 3);
+
+        $this->warm($viewer);
+
+        [$bare, $bareDays] = $this->measure($viewer, new HomeIssueMonth(2026, 7));
+        [$pictured, $picturedDays] = $this->measure($viewer, new HomeIssueMonth(2026, 8));
+
+        $this->assertFilled($bareDays, days: 31, talking: 93, pictured: 0, stories: 0);
+        $this->assertFilled($picturedDays, days: 31, talking: 93, pictured: 93, stories: 0);
+        $this->assertSame(array_fill(0, 31, 1), array_column($picturedDays, 'more'));
+
+        $this->assertGreaterThan(0, $pictured - $bare);
+        $this->assertLessThanOrEqual(
+            self::PER_PICTURE * 93,
+            $pictured - $bare - self::PICTURES,
+            'a picture cost '.(($pictured - $bare) / 93).' reads',
+        );
+    }
+
+    /** Once unmeasured: the first read of a process also loads the site's settings. */
+    private function warm(Member $viewer): void
+    {
+        $this->measure($viewer, new HomeIssueMonth(2026, 7));
+    }
+
+    /**
+     * @return array{int, list<array>}
      */
     private function measure(Member $viewer, HomeIssueMonth $month): array
     {
@@ -103,17 +165,48 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $log = DB::getQueryLog();
         DB::disableQueryLog();
 
-        $talk = count(array_filter($log, fn (array $query): bool => str_contains($query['query'], 'group_messages')));
-
-        return [['talk' => $talk, 'other' => count($log) - $talk], $payload['days']];
+        return [count($log), $payload['days']];
     }
 
     /**
-     * The newest three days lead with each fallback in turn; every other day carries every band, with
-     * two pictures on each story.
+     * A budget met by drawing nothing is not a budget.
+     *
+     * @param  list<array>  $shown
      */
-    private function fill(HomeIssueMonth $month, int $days): void
+    private function assertFilled(array $shown, int $days, int $talking, int $pictured, ?int $stories = null): void
     {
+        $this->assertCount($days, $shown);
+
+        $items = array_merge(...array_column($shown, 'items'));
+        $rooms = array_filter($items, fn (array $item): bool => $item['kind'] === 'talk');
+        $told = array_filter($items, fn (array $item): bool => $item['kind'] === 'story');
+
+        $this->assertCount($days * 3, $items);
+        $this->assertCount($talking, $rooms);
+        $this->assertCount($stories ?? $days * 3 - $talking, $told);
+        $this->assertCount($pictured, array_filter($rooms, fn (array $room): bool => $room['image'] !== null));
+        $this->assertSame([], array_filter($told, fn (array $story): bool => $story['image'] === null));
+        $this->assertSame([], array_filter($rooms, fn (array $room): bool => $room['group']['imageUrl'] === null));
+
+        foreach ($shown as $day) {
+            $this->assertCount(3, $day['newcomers']);
+            $this->assertCount(2, $day['newGroups']);
+        }
+    }
+
+    /**
+     * Every day carries every band but the ones switched off here; the first $talking days hold
+     * $rooms rooms, and on the first $pictured of those every room ended on $attachments pictures.
+     */
+    private function fill(
+        HomeIssueMonth $month,
+        int $days,
+        int $talking,
+        int $pictured,
+        bool $stories = true,
+        int $rooms = 2,
+        int $attachments = 1,
+    ): void {
         foreach (range(1, $days) as $number) {
             $day = $month->first()->addDays($number - 1);
             $window = HomeIssueDay::window($day);
@@ -124,20 +217,16 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
                 'published_at' => $window->end,
             ]);
 
-            $fallback = $days - $number;
-
-            if ($fallback > 2) {
+            if ($stories) {
                 $this->stories($issue);
             }
 
-            if ($fallback > 1) {
-                $this->talk($issue, $window->end);
+            if ($number <= $talking) {
+                $this->talk($issue, $window->end, $rooms, $number <= $pictured ? $attachments : 0);
             }
 
-            if ($fallback > 0) {
-                foreach (Member::factory()->count(3)->create() as $rank => $newcomer) {
-                    $this->feature($issue, HomeIssueSection::Newcomers, $newcomer, $rank + 1);
-                }
+            foreach (Member::factory()->count(3)->create() as $rank => $newcomer) {
+                $this->feature($issue, HomeIssueSection::Newcomers, $newcomer, $rank + 1);
             }
 
             foreach ([1, 2] as $rank) {
@@ -184,20 +273,40 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         }
     }
 
-    private function talk(HomeIssue $issue, CarbonImmutable $until): void
+    private function talk(HomeIssue $issue, CarbonImmutable $until, int $rooms, int $attachments): void
     {
-        foreach ([$this->group(), $this->group()] as $rank => $group) {
-            GroupMessage::factory()->count(2)->create([
+        foreach (range(1, $rooms) as $rank) {
+            $group = $this->group();
+            $said = GroupMessage::factory()->count(2)->create([
                 'group_id' => $group->getKey(),
                 'created_at' => $until->subHours(3),
                 'updated_at' => $until->subHours(3),
             ]);
 
-            $this->feature($issue, HomeIssueSection::Talk, $group, $rank + 1, [
+            foreach ($attachments === 0 ? [] : range(1, $attachments) as $number) {
+                $this->attach($said->last(), $number);
+            }
+
+            $this->feature($issue, HomeIssueSection::Talk, $group, $rank, [
                 'since' => $until->subDay()->toIso8601String(),
                 'until' => $until->toIso8601String(),
             ]);
         }
+    }
+
+    private function attach(GroupMessage $message, int $number): void
+    {
+        $file = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'groupMessage',
+            'related_entity_id' => $message->getKey(),
+        ]);
+
+        GroupMessageImage::query()->create([
+            'group_message_id' => $message->getKey(),
+            'file_id' => $file->getKey(),
+            'number' => $number,
+        ]);
     }
 
     private function feature(HomeIssue $issue, HomeIssueSection $section, Model $source, int $rank, array $stats = []): void

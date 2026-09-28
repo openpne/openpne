@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 /** Its subject is the shape: how much survived decides which keys are there. */
@@ -532,7 +533,7 @@ class HomeIssueSerializerTest extends TestCase
 
     // --- a month of issues ---
 
-    public function test_a_day_is_its_date_its_counts_and_its_top(): void
+    public function test_a_day_is_its_date_and_what_it_shows(): void
     {
         $diary = Diary::factory()->create(['title' => 'Morning walk']);
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => File::factory(), 'number' => 1]);
@@ -542,105 +543,161 @@ class HomeIssueSerializerTest extends TestCase
         $day = $this->month()['days'][0];
 
         $this->assertSame(
-            ['date', 'number', 'href', 'days', 'counts', 'level', 'top'],
+            ['date', 'number', 'href', 'days', 'items', 'more', 'newcomers', 'newGroups'],
             array_keys($day),
         );
         $this->assertSame('2026-08-27', $day['date']);
         $this->assertSame('/home/2026/08/27', $day['href']);
         $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $day['days']);
-        $this->assertSame(
-            ['stories' => 1, 'responses' => 2, 'talk' => 0, 'newcomers' => 0, 'newGroups' => 0],
-            $day['counts'],
-        );
-        $this->assertSame(['kind', 'headline', 'image'], array_keys($day['top']));
-        $this->assertSame(1, $day['level']);
-        $this->assertSame('story', $day['top']['kind']);
-        $this->assertSame('Morning walk', $day['top']['headline']);
-        $this->assertNotNull($day['top']['image']);
+        $this->assertSame(0, $day['more']);
+        $this->assertSame([], $day['newcomers']);
+        $this->assertSame([], $day['newGroups']);
+
+        [$item] = $day['items'];
+
+        $this->assertSame(['kind', 'href', 'headline', 'responses', 'image'], array_keys($item));
+        $this->assertSame('story', $item['kind']);
+        $this->assertSame("/diary/{$diary->getKey()}", $item['href']);
+        $this->assertSame('Morning walk', $item['headline']);
+        $this->assertSame(2, $item['responses']);
+        $this->assertSame($this->page()['issue']['stories'][0]['image'], $item['image']);
     }
 
-    public function test_a_post_leads_a_day_with_its_opening_line(): void
+    public function test_each_kind_of_story_is_opened_where_it_is_read(): void
     {
-        $this->feature(HomeIssueSection::Stories, TimelinePost::factory()->create(['body' => "First line\nand the rest"]));
+        $post = TimelinePost::factory()->create(['body' => "First line\nand the rest"]);
+        TimelinePost::factory()->count(2)->replyTo($post)->create();
+        $topic = GroupTopic::factory()->create(['name' => 'What the topic is called']);
+        $event = GroupEvent::factory()->create(['name' => 'The gathering']);
 
-        $this->assertSame('First line', $this->month()['days'][0]['top']['headline']);
+        $this->feature(HomeIssueSection::Stories, $post, rank: 1);
+        $this->feature(HomeIssueSection::Stories, $topic, rank: 2);
+        $this->feature(HomeIssueSection::Stories, $event, rank: 3);
+
+        $items = $this->month()['days'][0]['items'];
+
+        $this->assertSame(
+            ["/timeline/{$post->getKey()}", "/topics/{$topic->getKey()}", "/events/{$event->getKey()}"],
+            array_column($items, 'href'),
+        );
+        $this->assertSame(['First line', 'What the topic is called', 'The gathering'], array_column($items, 'headline'));
+        $this->assertSame([2, 0, 0], array_column($items, 'responses'));
     }
 
-    public function test_a_day_with_no_story_leads_with_its_busiest_room(): void
+    public function test_a_room_is_shown_by_what_was_last_said_in_it(): void
     {
         $group = Group::factory()->create();
-        GroupMessage::factory()->count(3)->create([
+        $speaker = Member::factory()->create();
+        $this->say($group, ['body' => 'said before']);
+        $last = $this->say($group, ['member_id' => $speaker->getKey(), 'body' => "said last\nover two lines"], minutes: 1);
+        $this->talk($group);
+
+        [$item] = $this->month()['days'][0]['items'];
+
+        $this->assertSame(
+            [
+                'kind' => 'talk',
+                'href' => "/groups/{$group->getKey()}/talk?m={$last->getKey()}",
+                'group' => ['id' => $group->getKey(), 'name' => $group->name, 'imageUrl' => null],
+                'speaker' => ['name' => $speaker->name, 'isAi' => false],
+                'line' => 'said last over two lines',
+                'count' => 2,
+                'image' => null,
+            ],
+            $item,
+        );
+    }
+
+    public function test_a_room_that_ended_on_a_picture_shows_the_picture(): void
+    {
+        $group = Group::factory()->create();
+        $file = $this->attach($this->say($group, ['body' => '']));
+        $this->talk($group);
+
+        [$item] = $this->month()['days'][0]['items'];
+
+        $this->assertSame(__('Image'), $item['line']);
+        $this->assertSame($file->url(), $item['image']['url']);
+        $this->assertSame(
+            ['id', 'url', 'thumbnailUrl', 'fitSources', 'cropSources', 'width', 'height', 'animatedSources'],
+            array_keys($item['image']),
+        );
+    }
+
+    /** The row says a picture is there and the gate says the reader may not have it: the gate is heard. */
+    public function test_a_refused_picture_leaves_neither_a_picture_nor_a_word_for_one(): void
+    {
+        $group = Group::factory()->create();
+        $refused = $this->attach($this->say($group, ['body' => '']));
+        $this->talk($group);
+
+        Gate::before(function (?Member $user, string $ability, array $arguments) use ($refused): ?bool {
+            $subject = $arguments[0] ?? null;
+
+            return $ability === 'view' && $subject instanceof File && $subject->is($refused) ? false : null;
+        });
+
+        [$item] = $this->month()['days'][0]['items'];
+
+        $this->assertSame('', $item['line']);
+        $this->assertNull($item['image']);
+        $this->assertSame($group->getKey(), $item['group']['id']);
+        $this->assertSame(1, $item['count']);
+    }
+
+    public function test_a_withdrawn_speaker_is_nobody_and_the_line_is_kept(): void
+    {
+        $group = Group::factory()->create();
+        GroupMessage::factory()->withdrawnAuthor()->create([
             'group_id' => $group->getKey(),
+            'body' => 'left behind',
             'created_at' => $this->now()->subHours(2),
             'updated_at' => $this->now()->subHours(2),
         ]);
-        $this->feature(HomeIssueSection::Talk, $group, stats: [
-            'since' => $this->now()->subDay()->toIso8601String(),
-            'until' => $this->now()->toIso8601String(),
-        ]);
+        $this->talk($group);
+
+        [$item] = $this->month()['days'][0]['items'];
+
+        $this->assertNull($item['speaker']);
+        $this->assertSame('left behind', $item['line']);
+    }
+
+    public function test_a_day_says_how_many_more_it_holds_than_it_shows(): void
+    {
+        foreach (range(1, 4) as $rank) {
+            $this->feature(HomeIssueSection::Stories, Diary::factory()->create(), rank: $rank);
+        }
+
+        $group = Group::factory()->create();
+        $this->say($group);
+        $this->talk($group);
+
+        $day = $this->month()['days'][0];
+
+        $this->assertSame(['story', 'talk', 'story'], array_column($day['items'], 'kind'));
+        $this->assertSame(2, $day['more']);
+    }
+
+    public function test_the_names_of_a_day_are_names_and_where_they_lead(): void
+    {
+        $newcomer = Member::factory()->create();
+        $newGroup = Group::factory()->create();
+        $this->feature(HomeIssueSection::Newcomers, $newcomer);
+        $this->feature(HomeIssueSection::NewGroups, $newGroup);
+
+        $day = $this->month()['days'][0];
 
         $this->assertSame(
-            ['kind' => 'talk', 'group' => ['id' => $group->getKey(), 'name' => $group->name, 'imageUrl' => null]],
-            $this->month()['days'][0]['top'],
+            [['id' => $newcomer->getKey(), 'name' => $newcomer->name, 'isAi' => false, 'href' => "/member/{$newcomer->getKey()}"]],
+            $day['newcomers'],
         );
-        $this->assertSame(3, $this->month()['days'][0]['counts']['talk']);
-    }
-
-    public function test_a_day_of_newcomers_leads_with_the_first_and_counts_the_rest(): void
-    {
-        $first = Member::factory()->create();
-        $this->feature(HomeIssueSection::Newcomers, $first, rank: 1);
-        $this->feature(HomeIssueSection::Newcomers, Member::factory()->create(), rank: 2);
-        $this->feature(HomeIssueSection::Newcomers, Member::factory()->create(), rank: 3);
-
-        $top = $this->month()['days'][0]['top'];
-
-        $this->assertSame('newcomer', $top['kind']);
-        $this->assertSame($first->getKey(), $top['member']['id']);
-        $this->assertSame(2, $top['others']);
-    }
-
-    public function test_a_day_of_new_groups_leads_with_the_first(): void
-    {
-        $first = Group::factory()->create();
-        $this->feature(HomeIssueSection::NewGroups, $first, rank: 1);
-        $this->feature(HomeIssueSection::NewGroups, Group::factory()->create(), rank: 2);
-
         $this->assertSame(
-            ['kind' => 'newGroup', 'group' => ['id' => $first->getKey(), 'name' => $first->name, 'imageUrl' => null]],
-            $this->month()['days'][0]['top'],
+            [['id' => $newGroup->getKey(), 'name' => $newGroup->name, 'href' => "/groups/{$newGroup->getKey()}"]],
+            $day['newGroups'],
         );
-    }
-
-    public function test_a_busier_day_is_drawn_darker_than_a_quieter_one(): void
-    {
-        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
-
-        $busy = HomeIssue::factory()->create([
-            'number' => 6,
-            'issue_date' => $this->now()->subDays(2)->toDateString(),
-            'window_start' => $this->now()->subDays(2),
-            'published_at' => $this->now()->subDay(),
-        ]);
-        $diary = Diary::factory()->create();
-        DiaryComment::factory()->count(3)->create(['diary_id' => $diary->getKey()]);
-        HomeIssueItem::factory()->forSource($diary)->create([
-            'home_issue_id' => $busy->getKey(),
-            'section' => HomeIssueSection::Stories,
-            'rank' => 1,
-        ]);
-
-        $issues = collect([$this->issue->fresh(), $busy]);
-        $days = HomeIssueSerializer::month(
-            new HomeIssueMonth(2026, 8),
-            $issues,
-            app(SummarizeHomeIssues::class)($this->viewer, $issues),
-            null,
-            null,
-            [],
-        )['days'];
-
-        $this->assertSame(['2026-08-27' => 1, '2026-08-26' => 3], array_column($days, 'level', 'date'));
+        // Names are not what a day counts as more.
+        $this->assertSame([], $day['items']);
+        $this->assertSame(0, $day['more']);
     }
 
     public function test_a_day_with_nothing_left_is_its_date_alone(): void
@@ -652,9 +709,10 @@ class HomeIssueSerializerTest extends TestCase
         $day = $this->month()['days'][0];
 
         $this->assertSame('2026-08-27', $day['date']);
-        $this->assertNull($day['top']);
-        $this->assertSame(0, array_sum($day['counts']));
-        $this->assertSame(0, $day['level']);
+        $this->assertSame([], $day['items']);
+        $this->assertSame(0, $day['more']);
+        $this->assertSame([], $day['newcomers']);
+        $this->assertSame([], $day['newGroups']);
     }
 
     // --- the shell's props ---
@@ -693,6 +751,44 @@ class HomeIssueSerializerTest extends TestCase
             'rank' => $rank,
             'stats' => $stats,
         ]);
+    }
+
+    /** @param  array<string, mixed>  $attributes */
+    private function say(Group $group, array $attributes = [], int $minutes = 0): GroupMessage
+    {
+        $at = $this->now()->subHours(2)->addMinutes($minutes);
+
+        return GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'created_at' => $at,
+            'updated_at' => $at,
+            ...$attributes,
+        ]);
+    }
+
+    private function talk(Group $group): HomeIssueItem
+    {
+        return $this->feature(HomeIssueSection::Talk, $group, stats: [
+            'since' => $this->now()->subDay()->toIso8601String(),
+            'until' => $this->now()->toIso8601String(),
+        ]);
+    }
+
+    private function attach(GroupMessage $message): File
+    {
+        $file = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'groupMessage',
+            'related_entity_id' => $message->getKey(),
+        ]);
+
+        GroupMessageImage::query()->create([
+            'group_message_id' => $message->getKey(),
+            'file_id' => $file->getKey(),
+            'number' => 1,
+        ]);
+
+        return $file;
     }
 
     private function page(?HomeIssue $previous = null, ?HomeIssue $next = null): array

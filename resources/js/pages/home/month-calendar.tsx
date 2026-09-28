@@ -1,11 +1,10 @@
 import { Link } from '@inertiajs/react';
-import { BUCKET_FILL } from '@/components/month-grid';
 import { Panel } from '@/components/ui/surface';
 import { monthWeeks } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
-import { breakdown, daysCovered } from './day-card';
+import { daysCovered } from './day-block';
 import type { DaySummary, MonthRef } from './types';
 
 const CELL = 'flex min-h-11 items-center justify-center rounded text-sm';
@@ -13,12 +12,10 @@ const CELL = 'flex min-h-11 items-center justify-center rounded text-sm';
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 /**
- * A day with an issue is a bordered link and a day without one is bare text, so the two are told
- * apart without the fill; the fill is said in words by the day's row below
+ * A day with an issue is a bordered link and a day without one is bare text
  * (docs/internals/home-issues.md, "The month page").
  */
-export function HeatCalendar({ month, days }: { month: MonthRef; days: DaySummary[] }) {
-    const t = useT();
+export function MonthCalendar({ month, days }: { month: MonthRef; days: DaySummary[] }) {
     const date = useDateFormat();
 
     // By `date` alone: an issue stands on the day it is dated, whatever its window reaches back over.
@@ -54,17 +51,6 @@ export function HeatCalendar({ month, days }: { month: MonthRef; days: DaySummar
                     ))}
                 </tbody>
             </table>
-
-            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span>{t('How busy each day was, within this month')}</span>
-                <span className="flex items-center gap-1">
-                    <span>{t('Quieter days')}</span>
-                    {BUCKET_FILL.slice(1).map((fill) => (
-                        <span key={fill} aria-hidden className={cn('size-3 rounded-sm border border-border', fill)} />
-                    ))}
-                    <span>{t('Busier days')}</span>
-                </span>
-            </p>
         </Panel>
     );
 }
@@ -80,8 +66,8 @@ function Day({ number, issue }: { number: number; issue: DaySummary | undefined 
     return (
         <Link
             href={issue.href}
-            aria-label={[daysCovered(t, civilDate, issue), ...breakdown(t, issue.counts)].join(', ')}
-            className={cn(CELL, 'border border-border text-foreground transition-colors hover:bg-selected/60', BUCKET_FILL[issue.level])}
+            aria-label={daysCovered(t, civilDate, issue)}
+            className={cn(CELL, 'border border-border text-foreground transition-colors hover:bg-selected/60')}
         >
             {number}
         </Link>
