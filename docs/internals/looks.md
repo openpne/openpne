@@ -50,7 +50,9 @@ The looks today:
   color line, now the only full-width element the chrome has, over the standard sidebar,
   and on a screen deep enough to be inside somewhere a sticky place bar at the head of the
   content column — the same crumb in the same pill, carrying the place's face — in place of
-  the crumb trail rather than beside it.
+  the crumb trail rather than beside it. The shell publishes the bar's height there as
+  `--modern-place-bar`, which whatever sticks under the bar adds to its own offset
+  (`top-below-place-*`); a look with no place bar leaves the variable unset.
 
 Two decisions inside `tabbed` are deliberate rather than pending:
 
