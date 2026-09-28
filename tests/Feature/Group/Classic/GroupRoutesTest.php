@@ -4,6 +4,7 @@ namespace Tests\Feature\Group\Classic;
 
 use App\Features\Group\Events\GroupJoinRequested;
 use App\Features\Group\GroupRole;
+use App\Features\Group\Queries\ListPendingMembers;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
@@ -509,6 +510,23 @@ class GroupRoutesTest extends TestCase
         $response->assertSee('<td class="photo"><a href="'.route('member.profile.show', $applicant).'">', false);
         // The pager brackets the queue.
         $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+    }
+
+    public function test_the_pending_forms_carry_the_page(): void
+    {
+        $group = Group::factory()->approval()->create();
+        $admin = $this->memberWithRole($group, GroupRole::Admin);
+        foreach (Member::factory()->count(ListPendingMembers::PER_PAGE + 1)->create() as $applicant) {
+            DB::table('group_join_requests')->insert([
+                'group_id' => $group->getKey(),
+                'member_id' => $applicant->getKey(),
+            ]);
+        }
+
+        $response = $this->actingAs($admin)->get(route('group.members.pending', ['group' => $group->getKey(), 'page' => 2]))->assertOk();
+
+        // One applicant on page 2, an approve and a decline form each.
+        $this->assertSame(2, substr_count((string) $response->getContent(), '<input type="hidden" name="page" value="2">'));
     }
 
     public function test_non_admin_cannot_approve_members(): void
