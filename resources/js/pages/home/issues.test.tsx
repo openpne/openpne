@@ -36,6 +36,7 @@ const day = (date: string, top: DayTop | null, counts: Partial<DayCounts> = {}, 
     href: `/home/${date.replaceAll('-', '/')}`,
     days: { from, to: date },
     counts: { ...NOTHING, ...counts },
+    level: top === null ? 0 : 1,
     top,
 });
 
@@ -154,6 +155,9 @@ test('the pager offers only the months there is one to go to', () => {
 test('a month with no day in it says so instead of drawing an empty list', () => {
     arrive({ prev: month(2026, 6), next: month(2026, 9) });
 
+    // The calendar is still drawn: an empty month is a month, with no day to follow.
+    expect(screen.getByRole('table', { name: 'August 2026' })).toBeTruthy();
+    expect(screen.queryAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/home/2026/06', '/home/2026/09']);
     expect(screen.getByText('Nothing happened this month.')).toBeTruthy();
     expect(screen.queryByRole('list')).toBeNull();
 });
@@ -163,4 +167,5 @@ test('a site that has published nothing has no month to show', () => {
 
     expect(screen.getByText('Nothing yet.')).toBeTruthy();
     expect(screen.queryByRole('navigation')).toBeNull();
+    expect(screen.queryByRole('table')).toBeNull();
 });

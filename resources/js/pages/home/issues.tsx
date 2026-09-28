@@ -2,6 +2,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { DayCard } from './day-card';
+import { HeatCalendar } from './heat-calendar';
 import { MonthNav } from './month-nav';
 import type { IssuesPageProps } from './types';
 
@@ -25,6 +26,7 @@ export default function HomeIssues() {
         <>
             <Head title={t('Past happenings')} />
             <MonthNav month={month} prev={prev} next={next} />
+            <HeatCalendar month={month} days={days} />
 
             {days.length === 0 ? (
                 <Panel>

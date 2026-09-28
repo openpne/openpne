@@ -10,6 +10,8 @@ import {
     formatDayLabel,
     formatExact,
     formatListStamp,
+    formatWeekday,
+    monthWeeks,
     msUntilNextSiteDay,
     relativeParts,
     siteCurrentYear,
@@ -155,6 +157,35 @@ test('month labels are civil, so a year-end month keeps its year in any timezone
     assert.equal(formatCivilMonth(2026, 12, newYork), '2026年12月');
     assert.equal(formatCivilMonthShort(7, newYork), '7月');
     assert.equal(formatCivilMonth(2026, 1, { locale: 'en-US', timeZone: 'America/New_York' }), 'January 2026');
+});
+
+test('a month is laid out in Sunday-first weeks, padded where a week reaches outside it', () => {
+    // February 2026 opens on a Sunday and runs four whole weeks.
+    assert.deepEqual(monthWeeks(2026, 2), [
+        [1, 2, 3, 4, 5, 6, 7],
+        [8, 9, 10, 11, 12, 13, 14],
+        [15, 16, 17, 18, 19, 20, 21],
+        [22, 23, 24, 25, 26, 27, 28],
+    ]);
+
+    const september = monthWeeks(2026, 9);
+    assert.deepEqual(september[0], [null, null, 1, 2, 3, 4, 5]);
+    assert.deepEqual(september.at(-1), [27, 28, 29, 30, null, null, null]);
+
+    // August 2026 opens on a Saturday, so its 31 days take six weeks.
+    const august = monthWeeks(2026, 8);
+    assert.equal(august.length, 6);
+    assert.deepEqual(august[0], [null, null, null, null, null, null, 1]);
+    assert.deepEqual(august.at(-1), [30, 31, null, null, null, null, null]);
+
+    assert.deepEqual(monthWeeks(2028, 2).flat().filter((day) => day !== null).at(-1), 29);
+});
+
+test('a weekday is named in the locale, counted from Sunday', () => {
+    assert.equal(formatWeekday(0, tokyo), '日');
+    assert.equal(formatWeekday(6, tokyo), '土');
+    assert.equal(formatWeekday(1, { locale: 'en-US', timeZone: 'Asia/Tokyo' }), 'Mon');
+    assert.equal(formatWeekday(1, { locale: 'en-US', timeZone: 'Asia/Tokyo' }, 'long'), 'Monday');
 });
 
 // The notification feed serializes a null created_at as '', so a formatter that throws on an

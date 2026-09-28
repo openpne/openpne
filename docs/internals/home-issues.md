@@ -294,6 +294,17 @@ date alone.
 Upcoming events are not counted, because the calendar is not news; RSVPs and reactions are not
 counted either.
 
+**How dark a day is drawn compares it with the month's other days.** A day's activity is the sum of
+its five counts, and [`HeatScale`](../../app/Features/Home/HeatScale.php) ranks it among the issues of
+the displayed month that have any: `1 + floor(4 × issues strictly below it / issues ranked)`, which
+runs from 1 to 4, and 0 for a day with nothing left. It is a rank and not a share of the busiest, so
+one very busy day does not flatten the rest, and a tie takes the lower level, so a lone day and a
+month of equal days are drawn at 1. A level says nothing between months.
+
+On the month's calendar a day with an issue is a bordered link and a day without one is bare text, so
+the two are told apart without the fill. The fill itself is never the only way to read a day: its row
+below states the counts the level was ranked by, and the link is named by them.
+
 **The cost does not grow with the month.** The whole month takes one read per source table, one per
 relation the gate asks about, and one count per distinct burst window
 ([`TalkSampleDigest::countsBetween`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)) —

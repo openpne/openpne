@@ -542,7 +542,7 @@ class HomeIssueSerializerTest extends TestCase
         $day = $this->month()['days'][0];
 
         $this->assertSame(
-            ['date', 'number', 'href', 'days', 'counts', 'top'],
+            ['date', 'number', 'href', 'days', 'counts', 'level', 'top'],
             array_keys($day),
         );
         $this->assertSame('2026-08-27', $day['date']);
@@ -553,6 +553,7 @@ class HomeIssueSerializerTest extends TestCase
             $day['counts'],
         );
         $this->assertSame(['kind', 'headline', 'image'], array_keys($day['top']));
+        $this->assertSame(1, $day['level']);
         $this->assertSame('story', $day['top']['kind']);
         $this->assertSame('Morning walk', $day['top']['headline']);
         $this->assertNotNull($day['top']['image']);
@@ -611,6 +612,36 @@ class HomeIssueSerializerTest extends TestCase
         );
     }
 
+    public function test_a_busier_day_is_drawn_darker_than_a_quieter_one(): void
+    {
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
+
+        $busy = HomeIssue::factory()->create([
+            'number' => 6,
+            'issue_date' => $this->now()->subDays(2)->toDateString(),
+            'window_start' => $this->now()->subDays(2),
+            'published_at' => $this->now()->subDay(),
+        ]);
+        $diary = Diary::factory()->create();
+        DiaryComment::factory()->count(3)->create(['diary_id' => $diary->getKey()]);
+        HomeIssueItem::factory()->forSource($diary)->create([
+            'home_issue_id' => $busy->getKey(),
+            'section' => HomeIssueSection::Stories,
+            'rank' => 1,
+        ]);
+
+        $issues = collect([$this->issue->fresh(), $busy]);
+        $days = HomeIssueSerializer::month(
+            new HomeIssueMonth(2026, 8),
+            $issues,
+            app(SummarizeHomeIssues::class)($this->viewer, $issues),
+            null,
+            null,
+        )['days'];
+
+        $this->assertSame(['2026-08-27' => 1, '2026-08-26' => 3], array_column($days, 'level', 'date'));
+    }
+
     public function test_a_day_with_nothing_left_is_its_date_alone(): void
     {
         $diary = Diary::factory()->create();
@@ -622,6 +653,7 @@ class HomeIssueSerializerTest extends TestCase
         $this->assertSame('2026-08-27', $day['date']);
         $this->assertNull($day['top']);
         $this->assertSame(0, array_sum($day['counts']));
+        $this->assertSame(0, $day['level']);
     }
 
     // --- the shell's props ---

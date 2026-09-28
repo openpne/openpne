@@ -9,6 +9,7 @@ import {
     formatDayLabel,
     formatExact,
     formatListStamp,
+    formatWeekday,
     relativeDeadline,
     relativeParts,
     siteCurrentYear,
@@ -36,6 +37,8 @@ export function useDateFormat(): {
     civilDate: (value: string, weekday?: boolean) => string;
     civilMonth: (year: number, month: number) => string;
     civilMonthShort: (month: number) => string;
+    /** `weekday` counts from Sunday, 0 to 6. */
+    weekday: (weekday: number, width?: 'short' | 'long') => string;
     exact: (iso: string) => string;
     currentYear: () => number;
 } {
@@ -61,6 +64,7 @@ export function useDateFormat(): {
         civilDate: (value, weekday) => formatCivilDate(value, context, weekday),
         civilMonth: (year, month) => formatCivilMonth(year, month, context),
         civilMonthShort: (month) => formatCivilMonthShort(month, context),
+        weekday: (weekday, width) => formatWeekday(weekday, context, width),
         exact: (iso) => formatExact(iso, context),
         currentYear: () => siteCurrentYear(context),
     };

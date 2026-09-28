@@ -97,6 +97,28 @@ export function formatCivilMonthShort(month: number, { locale }: DateFormatConte
     return new Intl.DateTimeFormat(locale, { month: 'short', timeZone: UTC }).format(Date.UTC(2000, month - 1, 1));
 }
 
+/** `weekday` counts from Sunday, 0 to 6, as `Date#getUTCDay` does. */
+export function formatWeekday(weekday: number, { locale }: DateFormatContext, width: 'short' | 'long' = 'short'): string {
+    // 2023-01-01 was a Sunday.
+    return new Intl.DateTimeFormat(locale, { weekday: width, timeZone: UTC }).format(Date.UTC(2023, 0, 1 + weekday));
+}
+
+/** A civil month as Sunday-first weeks of day numbers, null where a week reaches outside the month. */
+export function monthWeeks(year: number, month: number): (number | null)[][] {
+    const lead = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+    const length = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const cells: (number | null)[] = [
+        ...Array.from({ length: lead }, () => null),
+        ...Array.from({ length }, (_, index) => index + 1),
+    ];
+
+    while (cells.length % 7 !== 0) {
+        cells.push(null);
+    }
+
+    return Array.from({ length: cells.length / 7 }, (_, week) => cells.slice(week * 7, week * 7 + 7));
+}
+
 /** Longer than any civil day: a fall-back day is 25 hours, and this only has to bracket the boundary. */
 const LONGEST_SITE_DAY_MS = 26 * 3_600_000;
 
