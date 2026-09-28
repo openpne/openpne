@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AiAccount;
 
+use App\Features\AiAccount\SelfIntroductionField;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
+use Database\Seeders\PresetProfileSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +77,16 @@ class AiAccountIdentityTest extends TestCase
         $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}", ['name' => 'Helper', 'self_introduction' => ''])
             ->assertRedirect();
         $this->assertSame(0, MemberProfile::query()->where('member_id', $aiAccount->getKey())->count());
+    }
+
+    public function test_the_field_is_the_one_an_install_is_seeded_with(): void
+    {
+        $this->seed(PresetProfileSeeder::class);
+
+        $field = app(SelfIntroductionField::class)();
+
+        $this->assertNotNull($field);
+        $this->assertSame('op_preset_self_introduction', $field->name);
     }
 
     public function test_an_install_without_the_field_takes_the_submission_without_breaking(): void
