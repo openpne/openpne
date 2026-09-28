@@ -25,7 +25,20 @@ export const BUCKET_FILL = ['', 'bg-selected/10', 'bg-selected/20', 'bg-selected
 const RECENT_YEARS = 2;
 
 /** Hidden entirely when there is no row to draw. */
-export function MonthGrid({ rows, selected, bucket, countPhrase, title, footer }: Props) {
+export function MonthGrid({ title, ...grid }: Props) {
+    if (grid.rows.length === 0) {
+        return null;
+    }
+
+    return (
+        <Panel title={title}>
+            <MonthGridBody {...grid} />
+        </Panel>
+    );
+}
+
+/** The grid with no surface of its own, for a caller that draws it inside one. */
+export function MonthGridBody({ rows, selected, bucket, countPhrase, footer }: Omit<Props, 'title'>) {
     const t = useT();
     const date = useDateFormat();
     const [showEarlier, setShowEarlier] = useState(false);
@@ -41,7 +54,7 @@ export function MonthGrid({ rows, selected, bucket, countPhrase, title, footer }
     const visibleRows = expanded ? rows : rows.slice(0, RECENT_YEARS);
 
     return (
-        <Panel title={title}>
+        <>
             <div className="space-y-4">
                 {visibleRows.map((row) => (
                     <div key={row.year}>
@@ -105,6 +118,6 @@ export function MonthGrid({ rows, selected, bucket, countPhrase, title, footer }
                     {footer}
                 </div>
             )}
-        </Panel>
+        </>
     );
 }

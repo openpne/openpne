@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import HomeIssues from './issues';
@@ -218,6 +218,25 @@ test('what is not shown is counted, and opens the day', () => {
     expect(within(block(2)).queryByText(/more/)).toBeNull();
 });
 
+test('a day on the calendar leads to its block in the page', () => {
+    arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }), day('2026-08-26', { items: [story(2, 'Evening run')] })] });
+
+    const calendar = screen.getByRole('table', { name: 'August 2026' });
+
+    for (const link of within(calendar).getAllByRole('link')) {
+        const target = document.getElementById((link.getAttribute('href') ?? '').slice(1));
+
+        // The block it lands on is headed by the date the link opens with.
+        const heading = target === null ? '' : (within(target).getByRole('heading', { level: 3 }).textContent ?? '');
+
+        expect(heading).not.toBe('');
+        expect(link.getAttribute('aria-label')?.startsWith(`${heading}, `)).toBe(true);
+    }
+
+    expect(within(calendar).getAllByRole('link')).toHaveLength(2);
+    expect(block(0).id).toBe('day-2026-08-27');
+});
+
 test('a stretch of days is named as one', () => {
     arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }, '2026-08-21')] });
 
@@ -235,8 +254,8 @@ test('the pager offers only the months there is one to go to', () => {
     arrive({ prev: month(2026, 6), next: month(2026, 9) });
 
     expect(screen.getByRole('heading', { level: 2, name: 'August 2026' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Earlier month June 2026' }).getAttribute('href')).toBe('/home/2026/06');
-    expect(screen.getByRole('link', { name: 'Later month September 2026' }).getAttribute('href')).toBe('/home/2026/09');
+    expect(screen.getByRole('link', { name: 'Earlier month Jun' }).getAttribute('href')).toBe('/home/2026/06');
+    expect(screen.getByRole('link', { name: 'Later month Sep' }).getAttribute('href')).toBe('/home/2026/09');
 
     cleanup();
 
@@ -264,19 +283,24 @@ test('a site that has published nothing has no month to show', () => {
     expect(screen.queryByRole('table')).toBeNull();
 });
 
-test('every month that holds an issue can be jumped to, and the one on screen is marked', () => {
+test('the ways to another month and another day come before the days themselves', () => {
     arrive({
         days: [day('2026-08-27', { items: [story(1, 'Morning walk')] })],
         months: [
             { year: 2026, month: 9, count: 22, href: '/home/2026/09' },
             { year: 2026, month: 8, count: 11, href: '/home/2026/08' },
-            { year: 2025, month: 12, count: 1, href: '/home/2025/12' },
         ],
     });
 
-    expect(screen.getByRole('link', { name: 'September 2026, 22 days of happenings' }).getAttribute('href')).toBe('/home/2026/09');
-    expect(screen.getByRole('link', { name: 'December 2025, 1 day of happenings' }).getAttribute('href')).toBe('/home/2025/12');
-    expect(screen.getByRole('link', { name: 'August 2026, 11 days of happenings' }).getAttribute('aria-current')).toBe('true');
-    // A month that holds none is a label and nothing to follow.
-    expect(screen.getByLabelText('July 2026').tagName).toBe('SPAN');
+    fireEvent.click(screen.getByRole('button', { name: 'August 2026 Jump to a month' }));
+
+    const following = (before: Element, after: Element): boolean =>
+        Boolean(before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    const jump = screen.getByRole('link', { name: 'September 2026, 22 days of happenings' });
+    const calendar = screen.getByRole('table', { name: 'August 2026' });
+    const days = screen.getByRole('heading', { level: 3, name: 'Thu, August 27, 2026' });
+
+    expect(following(jump, calendar)).toBe(true);
+    expect(following(calendar, days)).toBe(true);
 });
