@@ -16,6 +16,11 @@ const ROW = 'relative -mx-2 flex items-start gap-3 rounded-lg px-2 py-2 transiti
 
 const INLINE_LINK = 'inline-flex min-h-6 items-center hover:underline';
 
+/** Where a day's block stands in the page, which is where the calendar sends its reader. */
+export function dayAnchor(date: string): string {
+    return `day-${date}`;
+}
+
 /** One wording for the block and for the calendar's link, so a stretch of days is heard as one in both. */
 export function daysCovered(t: Translate, civilDate: (value: string, weekday?: boolean) => string, day: DaySummary): string {
     return day.days.from === day.days.to
@@ -24,7 +29,7 @@ export function daysCovered(t: Translate, civilDate: (value: string, weekday?: b
 }
 
 /** A message with nothing the reader may have of it is called by its room. */
-function said(t: Translate, talk: DayTalk): string {
+export function said(t: Translate, talk: DayTalk): string {
     if (talk.line === '') {
         return talk.group.name;
     }
@@ -94,7 +99,7 @@ export function DayBlock({ day }: { day: DaySummary }) {
     const { civilDate } = useDateFormat();
 
     return (
-        <li className="space-y-1 px-4 py-4 sm:px-5">
+        <li id={dayAnchor(day.date)} className="scroll-mt-16 space-y-1 px-4 py-4 sm:px-5">
             <Heading as="h3" variant="minor">
                 <Link href={day.href} className={`${INLINE_LINK} gap-1`}>
                     {daysCovered(t, civilDate, day)}

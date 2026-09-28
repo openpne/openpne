@@ -283,9 +283,13 @@ asks — so a month never shows what the day's own page would drop. Frozen `scor
 not read, a burst's window excepted.
 
 **That an issue exists is not gated.** A day whose rows have all been dropped is still listed, as its
-date alone, and the grid of months under the rows counts issues, not what is left of them
+date alone, and the grid of months counts issues, not what is left of them
 ([`ListHomeIssueMonths`](../../app/Features/Home/Queries/ListHomeIssueMonths.php)). A month that
 holds none is drawn there and is not a link.
+
+**Every way to another day or month is in one panel above the days.** The month's name opens the
+grid of months under it, closed until asked for; the months either side are the nearest that hold an
+issue; the calendar below them is the month's days.
 
 **A day shows three items and says how many more there are.** The lead story, the busiest room, the
 second story; a kind that has run out gives its place to the other, so a day with talk in it always
@@ -305,7 +309,13 @@ show the next. Whether the message has a picture is what that gate answered, nev
 one exists, so a message of pictures only whose first is refused is drawn as the room's name and its
 count and nothing more.
 
-On the month's calendar a day with an issue is a bordered link and a day without one is bare text.
+**The calendar is an index of the page under it.** A day with an issue is a link to its block
+further down, and a day without one is its date alone. A cell prints what the block lists, a line
+each and at most three — a story by its headline, a room by its group's name, then names while
+there is room — with the count of what the block does not list beside the date. A line is cut where
+the cell ends and never wrapped. The link's name holds every word the cell prints and says the rest:
+the date in full, a room's name with what was last said in it, what a name is a name of, and that
+the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
 
 **The cost does not grow with the ledger.** One read per source table, one per relation the gate
 asks about, and the units asked once per gate rather than per row. Two reads do grow, with the
