@@ -25,11 +25,7 @@ export function ChatScrollDay({ at, ref }: { at: string | null; ref: RefObject<H
                 'group/day pointer-events-none sticky z-20 mb-0 flex h-0 items-start justify-center',
                 // `items-start`, or the pill is stretched to the box's own zero height and its words
                 // spill out of a four-pixel line.
-
-                // At lg the place strip pins itself at the same offset and stands 45px tall, and
-                // nothing publishes that height — so it is written here, and moves when the strip's
-                // padding does.
-                'top-offset-2 lg:top-offset-14',
+                'top-below-place-2',
             )}
         >
             {at !== null && (

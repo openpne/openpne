@@ -61,6 +61,8 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         : look.colorLine
           ? 'lg:[--modern-top-offset:4px]'
           : 'lg:[--modern-top-offset:0px]';
+    // The height place-bar.tsx gives a crumb with a face, hairline included, so it moves when that bar's padding does.
+    const placeBarOffset = look.placeBar ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
 
     return (
         <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>
@@ -72,6 +74,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     look.rightRail ? 'max-w-6xl xl:max-w-7xl' : 'max-w-6xl lg:max-w-[58rem]',
                     topOffset,
                     desktopTopOffset,
+                    placeBarOffset,
                     bottomOffset,
                     'lg:[--modern-bottom-offset:0px]',
                 )}

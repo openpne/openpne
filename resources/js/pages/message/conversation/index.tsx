@@ -260,7 +260,7 @@ export default function MessageConversation() {
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot and the boundary this offers is a
                 // page or more above them.
-                <div className="sticky top-offset-2 z-20 flex justify-center">
+                <div className="sticky top-below-place-2 z-20 flex justify-center">
                     <Button size="sm" variant="secondary" elevated onClick={() => jumpToContext(backlog.cursor)}>
                         <ArrowUp className="size-4" aria-hidden />
                         {jumpToUnreadPhrase(t, backlog.count)}
