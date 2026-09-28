@@ -72,9 +72,6 @@ export function BodyField({
     // Resolution runs once (useState initializer) and NEVER writes the preference — a mount is not a
     // member choice; only an explicit pick persists.
     const [mode, setMode] = useState<EditorMode>(() => initialEditorMode(editorPreference, recordFormat));
-    // Bumped whenever the rich editor is (re-)entered, to remount it so it re-parses the latest
-    // textarea text (its initialMarkdown is captured once, at mount).
-    const [switchCount, setSwitchCount] = useState(0);
 
     const errorId = error ? `${id}-error` : undefined;
 
@@ -114,9 +111,6 @@ export function BodyField({
         // conversion is in `format` alone.
         if (applied.format !== format) {
             onFormatChange?.(applied.format);
-        }
-        if (applied.mode === 'rich' && mode !== 'rich') {
-            setSwitchCount((n) => n + 1);
         }
         setMode(applied.mode);
         saveComposeEditor(next);
@@ -158,8 +152,9 @@ export function BodyField({
                         </div>
                     }
                 >
+                    {/* Mounted anew on every entry, the raw field having stood in its place: it reads
+                        its text once, at mount. */}
                     <RichTextEditor
-                        key={switchCount}
                         initialMarkdown={value}
                         onChange={onChange}
                         label={label}
