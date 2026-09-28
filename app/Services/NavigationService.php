@@ -93,7 +93,7 @@ class NavigationService
     /** Drop the cached nav rows. Call after persisting changes from the admin UI. */
     public function clearCache(): void
     {
-        Cache::forget(self::CACHE_KEY);
+        Cache::memo()->forget(self::CACHE_KEY);
     }
 
     /**
@@ -104,7 +104,7 @@ class NavigationService
      */
     private function grouped(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
+        return Cache::memo()->remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
             if (! Schema::hasTable('navigations')) {
                 return [];
             }
