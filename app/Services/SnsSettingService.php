@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Overrides are cached in tiers (the keys below) so the per-request hot path never deserializes the
- * design blobs, the custom CSS body or the login message.
+ * design blobs, the custom CSS body or the login message. Every read and every forget goes through
+ * the memoized store, or a forget would leave this request answering from before it
+ * (docs/internals/runtime.md, "Cache reads").
  */
 class SnsSettingService
 {
@@ -56,7 +58,7 @@ class SnsSettingService
      */
     public function hasCustomCss(): bool
     {
-        return Cache::remember(self::CSS_PRESENT_CACHE_KEY, self::CACHE_TTL, function (): bool {
+        return Cache::memo()->remember(self::CSS_PRESENT_CACHE_KEY, self::CACHE_TTL, function (): bool {
             if (! Schema::hasTable('sns_settings')) {
                 return false;
             }
@@ -71,11 +73,11 @@ class SnsSettingService
     /** Drop every cached tier. Call after persisting changes from an admin page. */
     public function clearCache(): void
     {
-        Cache::forget(self::CORE_CACHE_KEY);
-        Cache::forget(self::DESIGN_CACHE_KEY);
-        Cache::forget(self::CSS_CACHE_KEY);
-        Cache::forget(self::CSS_PRESENT_CACHE_KEY);
-        Cache::forget(self::LOGIN_SCREEN_CACHE_KEY);
+        Cache::memo()->forget(self::CORE_CACHE_KEY);
+        Cache::memo()->forget(self::DESIGN_CACHE_KEY);
+        Cache::memo()->forget(self::CSS_CACHE_KEY);
+        Cache::memo()->forget(self::CSS_PRESENT_CACHE_KEY);
+        Cache::memo()->forget(self::LOGIN_SCREEN_CACHE_KEY);
     }
 
     /**
@@ -86,7 +88,7 @@ class SnsSettingService
      */
     private function coreOverrides(): array
     {
-        return Cache::remember(self::CORE_CACHE_KEY, self::CACHE_TTL, function (): array {
+        return Cache::memo()->remember(self::CORE_CACHE_KEY, self::CACHE_TTL, function (): array {
             if (! Schema::hasTable('sns_settings')) {
                 return [];
             }
@@ -106,7 +108,7 @@ class SnsSettingService
      */
     private function designOverrides(): array
     {
-        return Cache::remember(self::DESIGN_CACHE_KEY, self::CACHE_TTL, function (): array {
+        return Cache::memo()->remember(self::DESIGN_CACHE_KEY, self::CACHE_TTL, function (): array {
             if (! Schema::hasTable('sns_settings')) {
                 return [];
             }
@@ -125,7 +127,7 @@ class SnsSettingService
      */
     private function loginScreenOverrides(): array
     {
-        return Cache::remember(self::LOGIN_SCREEN_CACHE_KEY, self::CACHE_TTL, function (): array {
+        return Cache::memo()->remember(self::LOGIN_SCREEN_CACHE_KEY, self::CACHE_TTL, function (): array {
             if (! Schema::hasTable('sns_settings')) {
                 return [];
             }
@@ -140,7 +142,7 @@ class SnsSettingService
     /** The stored custom CSS body, or '' when unset; read only via get(CustomCss) — the CSS endpoint and admin form. */
     private function customCss(): string
     {
-        return Cache::remember(self::CSS_CACHE_KEY, self::CACHE_TTL, function (): string {
+        return Cache::memo()->remember(self::CSS_CACHE_KEY, self::CACHE_TTL, function (): string {
             if (! Schema::hasTable('sns_settings')) {
                 return '';
             }
