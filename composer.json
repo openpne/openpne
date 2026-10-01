@@ -17,7 +17,7 @@
         "laravel-notification-channels/webpush": "^13.0",
         "laravel/fortify": "^1.37",
         "laravel/framework": "^13.8",
-        "laravel/mcp": "^0.9.3",
+        "laravel/mcp": "^1.0.1",
         "laravel/passkeys": "^0.2.1",
         "laravel/sanctum": "^4.3",
         "league/commonmark": "^2.8",
