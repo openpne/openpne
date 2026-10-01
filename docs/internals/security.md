@@ -42,19 +42,27 @@ the admin-user list shows which administrators have it enabled.
   hijacked session mint fresh recovery codes that bypass the TOTP login
   challenge. A walked-up unlocked session likewise cannot enroll its own
   authenticator — which would also have revoked the admin's other sessions, so a
-  password-free operation must stay side-effect-free. There is no re-auth
+  password-free operation must stay side-effect-free. It can read the new
+  secret, which the wizard shows before the password is checked; that secret is
+  never saved unless the same open wizard is finished with the password, so an
+  administrator cancels a set-up modal they did not open. There is no re-auth
   window: each flow is a single modal, so the password is asked exactly once per
   action. The password field is Filament's own (`current_password:admin`, a
   `Hash::check` that is sound only because of the no-remember-me rule below),
   but its check runs through `App\Auth\AdminMfaPasswordReauth::gate`, installed
-  in the actions' `beforeFormValidated` slot and the set-up step's
-  `beforeValidation` slot in place of Filament's limiter. The gate throttles on
-  a per-admin key (5/min, shared across the three modals, hit only on a wrong
-  password, cleared on success) because the set-up wizard's per-step validation
-  bypasses Filament's action rate limit, and Filament's own limiter counts every
-  attempt — a few mistyped codes would lock a legitimate enrolment. It throws,
-  so a wrong password never consumes a submitted recovery code (the vendor rule
-  that spends the code is never reached). Recovering a lost authenticator for
+  ahead of Filament's own closure in the actions' `beforeFormValidated` slot
+  and in place of it in the set-up step's `beforeValidation` slot. The gate
+  throttles password guesses on a per-admin key (5/min, shared across the three
+  modals, hit only on a wrong password, cleared on success); Filament's limiter
+  then still counts every submit that passed the gate (5/min per action), which
+  is what bounds code guesses by someone who already holds the password. The
+  set-up step keeps only the gate: Filament's step limiter counts every attempt,
+  so a few mistyped codes would lock a legitimate enrolment, and a code guess
+  there is worthless with the secret on screen. The gate exists at all because
+  the wizard's per-step validation bypasses Filament's action rate limit. It
+  throws, so a wrong password never consumes a submitted recovery code (the
+  vendor rule that spends the code is never reached). Recovering a lost
+  authenticator for
   regeneration means disabling with the password and a recovery code, then
   re-enrolling.
 - **No "remember me."** The admin login drops the remember-me option

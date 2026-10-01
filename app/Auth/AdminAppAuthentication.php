@@ -154,8 +154,8 @@ class AdminAppAuthentication extends AppAuthentication
 
     /**
      * Action::$schema has no getter, so the vendor schema is read through a bound closure. A Filament
-     * rename of that property throws here at runtime, which is preferred to the password gate
-     * silently disappearing.
+     * rename of that property throws here at runtime, which is preferred to the regenerate code
+     * requirement and the set-up step override silently disappearing.
      */
     private function requirePassword(Action $action): void
     {
@@ -163,11 +163,19 @@ class AdminAppAuthentication extends AppAuthentication
             return;
         }
 
-        // A single slot: this replaces the vendor closure (its hit-on-every-attempt limiter and its
-        // validateOnly) rather than running ahead of it.
-        $action->beforeFormValidated(
-            fn (HasActions&HasSchemas $livewire) => AdminMfaPasswordReauth::gate(self::mountedPasswordField($livewire)),
-        );
+        $readVendorSubmitHook = Closure::bind(fn (Action $a) => $a->beforeFormValidated, null, Action::class);
+        $vendorSubmitHook = $readVendorSubmitHook($action);
+
+        if (! $vendorSubmitHook instanceof Closure) {
+            throw new LogicException('Expected the vendor MFA action to carry a beforeFormValidated limiter.');
+        }
+
+        // One slot: the gate runs first, then the vendor closure keeps counting every submit that passed
+        // it, which is what bounds code guesses by someone who knows the password.
+        $action->beforeFormValidated(function (HasActions&HasSchemas $livewire) use ($action, $vendorSubmitHook): void {
+            AdminMfaPasswordReauth::gate(self::mountedPasswordField($livewire));
+            $action->evaluate($vendorSubmitHook);
+        });
 
         $readSchema = Closure::bind(fn (Action $a) => $a->schema, null, Action::class);
         $vendorRaw = $readSchema($action);
@@ -184,7 +192,8 @@ class AdminAppAuthentication extends AppAuthentication
     }
 
     /**
-     * The step's own slot holds the vendor limiter and is replaced the same way as beforeFormValidated.
+     * The step slot drops the vendor limiter entirely: it counts every attempt, so a few mistyped codes
+     * would lock a legitimate enrolment, and a code guess here is worthless with the secret on screen.
      *
      * @param  array<Step>  $steps
      * @return array<Step>
