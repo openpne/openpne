@@ -6,27 +6,35 @@ use App\Models\AdminUser;
 use App\Support\SecurityLog;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\OneTimeCodeInput;
-use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
-use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Schemas\Schema;
 use Illuminate\Contracts\Auth\Authenticatable;
 use LogicException;
 use SensitiveParameter;
 
 /**
  * Enabling or disabling MFA revokes the administrator's other sessions, as a password change does;
- * regenerating recovery codes leaves the factor unchanged and revokes nothing. All three management
- * actions also demand the account password inline (AdminMfaPasswordReauth, docs/internals/security.md).
+ * regenerating recovery codes leaves the factor unchanged and revokes nothing. The password on the
+ * three management actions is Filament's own field, gated by OpenPNE's throttle policy in the hook
+ * slots (docs/internals/security.md, "Admin two-factor authentication").
  */
 class AdminAppAuthentication extends AppAuthentication
 {
+    private const MANAGEMENT_ACTIONS = [
+        'setUpAppAuthentication',
+        'disableAppAuthentication',
+        'regenerateAppAuthenticationRecoveryCodes',
+    ];
+
     public function generateQrCodeDataUri(#[SensitiveParameter] string $secret): string
     {
         $user = Filament::auth()->user();
@@ -151,86 +159,96 @@ class AdminAppAuthentication extends AppAuthentication
      */
     private function requirePassword(Action $action): void
     {
+        if (! in_array($action->getName(), self::MANAGEMENT_ACTIONS, true)) {
+            return;
+        }
+
+        // A single slot: this replaces the vendor closure (its hit-on-every-attempt limiter and its
+        // validateOnly) rather than running ahead of it.
+        $action->beforeFormValidated(
+            fn (HasActions&HasSchemas $livewire) => AdminMfaPasswordReauth::gate(self::mountedPasswordField($livewire)),
+        );
+
         $readSchema = Closure::bind(fn (Action $a) => $a->schema, null, Action::class);
         $vendorRaw = $readSchema($action);
 
         match ($action->getName()) {
-            // The vendor steps are never introspected, since an unattached Step throws on child access,
-            // and the captured raw value is re-evaluated inside a fresh closure so nothing accumulates
+            // The captured raw value is re-evaluated inside a fresh closure so nothing accumulates
             // across renders.
-            'setUpAppAuthentication' => $action->steps(fn (Action $action): array => [
-                self::identityStep(),
-                ...$action->evaluate($vendorRaw),
-            ]),
-            // Password field first: validation runs in component order and its fail-fast rule must throw
-            // before the vendor recovery-code rule (which consumes the code) is ever reached.
-            'disableAppAuthentication' => $action->schema(fn (Action $action): array => [
-                self::currentPasswordField(),
-                ...$action->evaluate($vendorRaw),
-            ]),
-            // The captured vendor field instances are mutated in place once per render, so ->rule()
-            // cannot accumulate.
-            'regenerateAppAuthenticationRecoveryCodes' => self::requirePasswordAndCode($vendorRaw),
+            'setUpAppAuthentication' => $action->steps(
+                fn (Action $action): array => self::gateAppStep($action->evaluate($vendorRaw)),
+            ),
+            'regenerateAppAuthenticationRecoveryCodes' => self::requireCode($vendorRaw),
             default => null,
         };
     }
 
-    /** The shared re-auth field. See currentPasswordField()/AdminMfaPasswordReauth for why markAsRequired. */
-    private static function identityStep(): Step
+    /**
+     * The step's own slot holds the vendor limiter and is replaced the same way as beforeFormValidated.
+     *
+     * @param  array<Step>  $steps
+     * @return array<Step>
+     */
+    private static function gateAppStep(array $steps): array
     {
-        return Step::make('identity')->schema([
-            Text::make(__('To continue, first confirm it is you.')),
-            self::currentPasswordField(),
-        ]);
+        foreach ($steps as $step) {
+            if ($step instanceof Step && $step->getLabel() === 'app') {
+                $step->beforeValidation(
+                    fn (Step $step) => AdminMfaPasswordReauth::gate(self::passwordField($step->getChildSchema())),
+                );
+
+                return $steps;
+            }
+        }
+
+        throw new LogicException('Expected the vendor set-up wizard to carry an "app" step.');
     }
 
-    private static function currentPasswordField(): TextInput
+    private static function mountedPasswordField(HasActions&HasSchemas $livewire): Field
     {
-        // markAsRequired, not required(): Laravel stops an attribute's rules once `required` fails, so a
-        // blank password would skip the fail-fast rule and let the recovery-code field consume a code.
-        return TextInput::make('current_password')
-            ->label(__('Current password'))
-            ->password()
-            ->revealable(Filament::arePasswordsRevealable())
-            ->autocomplete('current-password')
-            ->markAsRequired()
-            ->rule(new AdminMfaPasswordReauth)
-            ->dehydrated(false); // keep the password out of getData(), the hooks and the logs
+        $name = $livewire->getMountedActionSchemaName();
+        $schema = $name === null ? null : $livewire->getSchema($name);
+
+        if ($schema === null) {
+            throw new LogicException('Expected a mounted MFA action schema.');
+        }
+
+        return self::passwordField($schema);
+    }
+
+    private static function passwordField(Schema $schema): Field
+    {
+        $field = $schema->getComponent('password');
+
+        if (! $field instanceof Field) {
+            throw new LogicException('Expected the vendor MFA schema to carry a password field.');
+        }
+
+        return $field;
     }
 
     /**
-     * Same loud-break stance as the schema read above: if a Filament upgrade turns this schema
-     * into a closure or renames the fields, throw rather than silently dropping the password gate.
+     * The vendor code field is only requiredWithout('password'), so without this the password alone
+     * would regenerate. Same loud-break stance as the schema read above: a vendor rename throws rather
+     * than silently reopening that path.
      *
      * @param  array<mixed>|Closure|null  $vendorRaw
      */
-    private static function requirePasswordAndCode(array|Closure|null $vendorRaw): void
+    private static function requireCode(array|Closure|null $vendorRaw): void
     {
         if (! is_array($vendorRaw)) {
             throw new LogicException('Expected the vendor regenerate schema to be a component array.');
         }
 
-        $required = [];
-
         foreach ($vendorRaw as $component) {
-            if (! $component instanceof Field) {
-                continue;
+            if ($component instanceof Field && $component->getName() === 'code') {
+                $component->required();
+
+                return;
             }
-
-            match ($component->getName()) {
-                'code' => $required[] = $component->required(),
-                // The vendor label's or-phrasing ("Or, enter your current password") is misleading once
-                // both fields are required.
-                'password' => $required[] = $component->required()
-                    ->label(__('Current password'))
-                    ->rule(new AdminMfaPasswordReauth),
-                default => null,
-            };
         }
 
-        if (count($required) !== 2) {
-            throw new LogicException('Expected the vendor regenerate schema to carry both a code and a password field.');
-        }
+        throw new LogicException('Expected the vendor regenerate schema to carry a code field.');
     }
 
     /**

@@ -34,21 +34,29 @@ the admin-user list shows which administrators have it enabled.
   is unchanged.
 - **Inline re-authentication (sudo mode).** All three management actions also
   require the account password, on top of the code requirements above: set-up
-  keeps the new secret's TOTP proof, disable keeps code-or-recovery, and
-  regenerate — which used to accept a code **or** the password — now needs the
-  password **and** a current code (`App\Auth\AdminMfaPasswordReauth`). Password-
-  only regeneration would let an adversary holding the password and a hijacked
-  session mint fresh recovery codes that bypass the TOTP login challenge. A
-  walked-up unlocked session likewise can no longer enroll its own authenticator
-  — which would also have revoked the admin's other sessions, so a password-free
-  operation must stay side-effect-free. There is no re-auth window: each flow is
-  a single modal, so the password is asked exactly once per action. The check is
-  throttled by a dedicated per-admin limiter (5/min, shared across the three
-  modals) because the set-up wizard's per-step validation bypasses Filament's
-  action rate limit; and a wrong password never consumes a submitted recovery
-  code (it fails fast before the vendor rule spends the code). Recovering a lost
-  authenticator for regeneration means disabling with the password and a
-  recovery code, then re-enrolling.
+  keeps the new secret's TOTP proof (the password sits on the same wizard step
+  as the code), disable keeps code-or-recovery, and regenerate — whose vendor
+  code field is only required *without* a password — needs the password **and**
+  a current code (`App\Auth\AdminAppAuthentication` re-marks the code required).
+  Password-only regeneration would let an adversary holding the password and a
+  hijacked session mint fresh recovery codes that bypass the TOTP login
+  challenge. A walked-up unlocked session likewise cannot enroll its own
+  authenticator — which would also have revoked the admin's other sessions, so a
+  password-free operation must stay side-effect-free. There is no re-auth
+  window: each flow is a single modal, so the password is asked exactly once per
+  action. The password field is Filament's own (`current_password:admin`, a
+  `Hash::check` that is sound only because of the no-remember-me rule below),
+  but its check runs through `App\Auth\AdminMfaPasswordReauth::gate`, installed
+  in the actions' `beforeFormValidated` slot and the set-up step's
+  `beforeValidation` slot in place of Filament's limiter. The gate throttles on
+  a per-admin key (5/min, shared across the three modals, hit only on a wrong
+  password, cleared on success) because the set-up wizard's per-step validation
+  bypasses Filament's action rate limit, and Filament's own limiter counts every
+  attempt — a few mistyped codes would lock a legitimate enrolment. It throws,
+  so a wrong password never consumes a submitted recovery code (the vendor rule
+  that spends the code is never reached). Recovering a lost authenticator for
+  regeneration means disabling with the password and a recovery code, then
+  re-enrolling.
 - **No "remember me."** The admin login drops the remember-me option
   (`App\Filament\Pages\Auth\Login`): a recaller cookie authenticates through the
   guard middleware, which never runs the TOTP challenge, so it would silently
