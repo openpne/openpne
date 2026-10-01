@@ -44,8 +44,9 @@ the admin-user list shows which administrators have it enabled.
   authenticator — which would also have revoked the admin's other sessions, so a
   password-free operation must stay side-effect-free. It can read the new
   secret, which the wizard shows before the password is checked; that secret is
-  never saved unless the same open wizard is finished with the password, so an
-  administrator cancels a set-up modal they did not open. There is no re-auth
+  saved only if the same open wizard is then finished with the password, so the
+  residual risk is an administrator completing a set-up modal someone else
+  opened. There is no re-auth
   window: each flow is a single modal, so the password is asked exactly once per
   action. The password field is Filament's own (`current_password:admin`, a
   `Hash::check` that is sound only because of the no-remember-me rule below),
@@ -62,9 +63,8 @@ the admin-user list shows which administrators have it enabled.
   the wizard's per-step validation bypasses Filament's action rate limit. It
   throws, so a wrong password never consumes a submitted recovery code (the
   vendor rule that spends the code is never reached). Recovering a lost
-  authenticator for
-  regeneration means disabling with the password and a recovery code, then
-  re-enrolling.
+  authenticator for regeneration means disabling with the password and a
+  recovery code, then re-enrolling.
 - **No "remember me."** The admin login drops the remember-me option
   (`App\Filament\Pages\Auth\Login`): a recaller cookie authenticates through the
   guard middleware, which never runs the TOTP challenge, so it would silently
