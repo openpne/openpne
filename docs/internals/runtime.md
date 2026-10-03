@@ -141,17 +141,30 @@ Counters that must be read fresh, the login throttle among them, stay on the pla
 
 ## Scheduled tasks
 
-A deployment must run Laravel's scheduler — `php artisan schedule:run` every
-minute from cron (or a systemd timer) — or scheduled work silently never runs.
-Currently that is the daily prune of expired pending tokens — registration,
-email-change and MFA-reset links — and the weekly prune of unreferenced link
-cards and the image each holds
-([`routes/console.php`](../../routes/console.php)); without the scheduler those
-rows accumulate. The daily 06:00 home issue runs here too, and its absence is
-visible rather than silent: no scheduler means no front page
-([home-issues.md](home-issues.md)). `php artisan schedule:list` shows what is
-registered.
+A deployment should run Laravel's scheduler — `php artisan schedule:run` every
+minute from cron (or a systemd timer). Without it the daily prune of expired
+pending tokens — registration, email-change and MFA-reset links — and the weekly
+prune of unreferenced link cards and the image each holds
+([`routes/console.php`](../../routes/console.php)) never run, and those rows
+accumulate. The daily 06:00 home issue is registered here too but does not depend
+on it: the Modern front page publishes the issue that is due when it is first read
+after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the scheduled
+run only moves publication from that first visit to 06:00 itself. `php artisan
+schedule:list` shows what is registered.
 
 Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
 operator running many sites on one host gets them together and has no lever here
 to stagger them.
+
+## Queue
+
+Notifications, mail and the link-card fetch are queued, on the `database`
+connection by default, which needs a worker (`php artisan queue:work`). A host that
+cannot keep one running sets `QUEUE_CONNECTION=sync`: each job then runs inside the
+request that raised it, so a post costs its notifications' sends and its link-card
+fetch in latency, and a job that fails — a mail transport that is down — fails that
+request instead of landing in `failed_jobs`. A delayed job runs at once: the grace a
+talk message waits before notifying, so that a member reading the room is not
+notified of what they have just read ([group-talk.md](group-talk.md)), is not
+waited. A host with cron but no worker keeps both by running
+`php artisan queue:work --stop-when-empty` from cron instead.
