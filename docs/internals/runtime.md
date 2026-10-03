@@ -147,9 +147,9 @@ pending tokens — registration, email-change and MFA-reset links — and the we
 prune of unreferenced link cards and the image each holds
 ([`routes/console.php`](../../routes/console.php)) never run, and those rows
 accumulate. The daily 06:00 home issue is registered here too but does not depend
-on it: the front page publishes the issue that is due when it is first read after
-06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the scheduled run
-only moves publication from that first visit to 06:00 itself. `php artisan
+on it: the Modern front page publishes the issue that is due when it is first read
+after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the scheduled
+run only moves publication from that first visit to 06:00 itself. `php artisan
 schedule:list` shows what is registered.
 
 Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
@@ -158,8 +158,13 @@ to stagger them.
 
 ## Queue
 
-Notifications and mail are queued, on the `database` connection by default, which
-needs a worker (`php artisan queue:work`). A host that cannot keep one running sets
-`QUEUE_CONNECTION=sync`: each job then runs inside the request that raised it, and
-a post costs the sending of its notifications in latency. The test suite runs under
-`sync`, so that configuration is the exercised one.
+Notifications, mail and the link-card fetch are queued, on the `database`
+connection by default, which needs a worker (`php artisan queue:work`). A host that
+cannot keep one running sets `QUEUE_CONNECTION=sync`: each job then runs inside the
+request that raised it, so a post costs its notifications' sends and its link-card
+fetch in latency, and a job that fails — a mail transport that is down — fails that
+request instead of landing in `failed_jobs`. A delayed job runs at once: the ten
+seconds a talk message waits before notifying, so that a member reading the room is
+not notified of what they have just read ([group-talk.md](group-talk.md)), are not
+waited. A host with cron but no worker keeps both by running
+`php artisan queue:work --stop-when-empty` from cron instead.

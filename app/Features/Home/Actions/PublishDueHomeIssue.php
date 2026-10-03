@@ -17,6 +17,9 @@ use Throwable;
  */
 final class PublishDueHomeIssue
 {
+    /** How long a failed attempt holds the boundary before the next read may try again. */
+    public const RETRY_SECONDS = 600;
+
     public function __construct(
         private readonly LatestHomeIssue $latest,
         private readonly PublishHomeIssue $publish,
@@ -31,9 +34,10 @@ final class PublishDueHomeIssue
             return $latest;
         }
 
-        // Once per boundary, failure included: a blank day leaves no row to find and would be planned
-        // again on every request.
-        if (! Cache::add('home-issue:attempted:'.$boundary->toDateString(), true, 86400)) {
+        // Once per boundary: a blank day leaves no row to find and would be planned again on every
+        // request.
+        $key = 'home-issue:attempted:'.$boundary->toDateString();
+        if (! Cache::add($key, true, 86400)) {
             return $latest;
         }
 
@@ -41,6 +45,7 @@ final class PublishDueHomeIssue
             return ($this->publish)($boundary) ?? $latest;
         } catch (Throwable $e) {
             report($e);
+            Cache::put($key, true, self::RETRY_SECONDS);
 
             return $latest;
         }

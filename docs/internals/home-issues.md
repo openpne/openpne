@@ -1,7 +1,8 @@
 # Home issues
 
 Once a day the site publishes an **issue**: a front page of what has happened since the last one.
-It is built by a scheduled command, stored as a numbered row plus a ledger of what it featured, and
+It is built by the publisher — run by the schedule at 06:00, or by the first read of the front page
+after it ([below](#publish-on-read)) — stored as a numbered row plus a ledger of what it featured, and
 re-resolved from its sources every time it is read.
 
 ## An issue is a ledger, never a copy
@@ -205,10 +206,6 @@ archive whole. The whole rebuild is one transaction, which is what makes `--dry-
 the rebuild, numbers included, and rolls it back. Nothing locks out the schedule, so run it away
 from 06:00.
 
-This is not OpenPNE 3's `daily_news_day`, which was a digest **mailed** to members on administrator-
-chosen weekdays; that is [not ported](../../app/Support/SnsSettingKey.php). An issue is a page on the
-site, published every day there is something to say.
-
 ### Publish on read
 
 The schedule is not what the front page depends on. Before `/` renders,
@@ -224,9 +221,20 @@ The attempt is made **once per boundary**, through `Cache::add` on a key named f
 date, because a blank day leaves no row to find and would otherwise be planned again on every
 request. The scheduled run takes no such key — it has no need to, the row it writes is what stops
 the next visit — and a run by hand after a spent attempt still publishes, as it always did. A
-publication that fails is reported and the page renders the previous issue; the attempt is spent
-with it, so the failure costs that day's issue and nothing else, its stories folding into the next
-window.
+publication that fails is reported and the page renders the previous issue, and the attempt holds the
+boundary for ten minutes rather than the day, so a transient failure costs a late issue and a lasting
+one costs a plan every ten minutes rather than every request. A failure that never reaches the
+handler — the request's time limit, which the CLI does not have — spends the whole day, so a site
+whose publication takes longer than a request may keep the schedule. After a spent attempt every read
+of `/` that day still costs one cache read, until the next boundary moves the key.
+
+Only the Modern front page publishes. The archive and month pages render the issues there are, so a
+reader who opens one of them directly on a host without the schedule sees the day as not yet
+published until someone reads `/`.
+
+This is not OpenPNE 3's `daily_news_day`, which was a digest **mailed** to members on administrator-
+chosen weekdays; that is [not ported](../../app/Support/SnsSettingKey.php). An issue is a page on the
+site, published every day there is something to say.
 
 ## Rendering
 

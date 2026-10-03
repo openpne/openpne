@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Home;
 
+use App\Features\Home\Actions\PublishDueHomeIssue;
 use App\Features\Home\Data\HomeIssueDay;
+use App\Models\GroupEvent;
 use App\Models\HomeIssue;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Testing\TestResponse;
@@ -61,9 +64,10 @@ class PublishOnReadTest extends TestCase
         $this->assertDatabaseCount('home_issue_items', 1);
     }
 
+    /** The 26th's issue is out and the 27th's window is open with a story in it: only the clock holds it. */
     public function test_a_visit_before_the_boundary_publishes_nothing(): void
     {
-        $previous = $this->publishedOn('2026-08-26');
+        $previous = $this->publishedOn('2026-08-25');
         $this->story(CarbonImmutable::parse('2026-08-26 12:00:00'));
         Carbon::setTestNow('2026-08-27 05:59:00');
 
@@ -80,6 +84,8 @@ class PublishOnReadTest extends TestCase
         $this->visit();
 
         $this->assertDatabaseCount('home_issues', 1);
+        // Left alone means no attempt either: the row is what answers, not a spent key.
+        $this->assertFalse(Cache::has('home-issue:attempted:2026-08-27'));
     }
 
     /**
@@ -95,7 +101,8 @@ class PublishOnReadTest extends TestCase
         $this->visit()->assertInertia(fn (AssertableInertia $page) => $page->where('issue', null));
         $this->assertDatabaseCount('home_issues', 0);
 
-        Carbon::setTestNow('2026-08-28 06:30:00');
+        // Inside the first attempt's 24 hours, so only a key named for the new boundary lets this run.
+        Carbon::setTestNow('2026-08-28 06:10:00');
         $this->visit()->assertInertia(fn (AssertableInertia $page) => $page->where('issue.number', 1));
 
         $issue = HomeIssue::sole();
@@ -105,13 +112,26 @@ class PublishOnReadTest extends TestCase
         $this->assertDatabaseCount('home_issue_items', 1);
     }
 
+    /** An event on the boundary day is upcoming in the issue although it is yesterday for a 05:00 reader. */
+    public function test_the_issue_is_published_as_of_the_boundary_not_the_clock(): void
+    {
+        Carbon::setTestNow('2026-08-28 05:00:00');
+        $this->story(CarbonImmutable::parse(self::BOUNDARY)->subHour());
+        GroupEvent::factory()->create(['open_date' => '2026-08-27']);
+
+        $this->visit()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('issue.date', '2026-08-26')
+            ->where('issue.upcomingEvents.0.openDate', '2026-08-27'));
+    }
+
     public function test_a_failed_publication_is_reported_and_the_page_still_renders(): void
     {
         Exceptions::fake();
         $previous = $this->publishedOn('2026-08-25');
         $this->story(CarbonImmutable::parse(self::BOUNDARY)->subHour());
-        DB::beforeExecuting(function (string $query): void {
-            if (str_contains($query, 'insert into') && str_contains($query, 'home_issues')) {
+        $fail = true;
+        DB::beforeExecuting(function (string $query) use (&$fail): void {
+            if ($fail && str_contains($query, 'insert into') && str_contains($query, 'home_issues')) {
                 throw new RuntimeException('the write failed');
             }
         });
@@ -120,6 +140,15 @@ class PublishOnReadTest extends TestCase
 
         Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'the write failed');
         $this->assertDatabaseCount('home_issues', 1);
+
+        // The failure holds the boundary for ten minutes, then the next read tries again.
+        $fail = false;
+        $this->visit()->assertInertia(fn (AssertableInertia $page) => $page->where('issue.number', (int) $previous->number));
+        $this->assertDatabaseCount('home_issues', 1);
+
+        Carbon::setTestNow(CarbonImmutable::parse(self::NOW)->addSeconds(PublishDueHomeIssue::RETRY_SECONDS + 1));
+        $this->visit()->assertInertia(fn (AssertableInertia $page) => $page->where('issue.isCurrent', true));
+        $this->assertDatabaseCount('home_issues', 2);
     }
 
     private function visit(): TestResponse
