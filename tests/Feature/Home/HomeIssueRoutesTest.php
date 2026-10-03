@@ -346,9 +346,14 @@ class HomeIssueRoutesTest extends TestCase
                 ->where('issue.isCurrent', false));
     }
 
+    /** The reader is older than any window here: a newcomer reading `/` would publish the first issue. */
     public function test_a_site_that_has_published_nothing_still_has_a_front_page(): void
     {
-        $this->actingAs(Member::factory()->create())->get('/')
+        Carbon::setTestNow(CarbonImmutable::parse(self::NOW)->subDays(60));
+        $reader = Member::factory()->create();
+        Carbon::setTestNow(self::NOW);
+
+        $this->actingAs($reader)->get('/')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->component('home/issue')->where('issue', null));
     }

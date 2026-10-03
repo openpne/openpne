@@ -8,9 +8,9 @@ use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\DirectMessage\Queries\CountUnreadDirectMessages;
 use App\Features\Group\Queries\PendingJoinRequestCounts;
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
+use App\Features\Home\Actions\PublishDueHomeIssue;
 use App\Features\Home\Queries\AdjacentHomeIssues;
 use App\Features\Home\Queries\JoinedGroupActivity;
-use App\Features\Home\Queries\LatestHomeIssue;
 use App\Features\Home\Queries\ShowHomeIssue;
 use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Features\Home\Serializers\HomeSerializer;
@@ -46,7 +46,7 @@ class HomeController extends Controller
         UnreadCounts $unread,
         CountUnreadDirectMessages $unreadMessages,
         PendingJoinRequestCounts $pendingApprovals,
-        LatestHomeIssue $latest,
+        PublishDueHomeIssue $latest,
         ShowHomeIssue $show,
         AdjacentHomeIssues $adjacent,
     ): View|RedirectResponse|Response {
@@ -57,12 +57,13 @@ class HomeController extends Controller
         }
 
         if (SurfaceResolver::resolve($request, 'home') === SurfaceResolver::MODERN) {
-            $issue = $latest();
+            $now = CarbonImmutable::now();
+            $issue = $latest($now);
 
             // Nothing published yet is not an absence to report: the site has a front page from its
             // first day, and that one simply has nothing on it.
             $page = $issue === null
-                ? HomeIssueSerializer::page(null, null, null, null, CarbonImmutable::now())
+                ? HomeIssueSerializer::page(null, null, null, null, $now)
                 : HomeIssueSerializer::page(
                     $issue,
                     $show($viewer, $issue),
@@ -70,7 +71,7 @@ class HomeController extends Controller
                     // The latest issue is what this page IS, so nothing stands forward of it
                     // however the run happens to be dated.
                     null,
-                    CarbonImmutable::now(),
+                    $now,
                 );
 
             return Inertia::render('home/issue', $page);
