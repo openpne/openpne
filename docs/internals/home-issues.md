@@ -209,6 +209,25 @@ This is not OpenPNE 3's `daily_news_day`, which was a digest **mailed** to membe
 chosen weekdays; that is [not ported](../../app/Support/SnsSettingKey.php). An issue is a page on the
 site, published every day there is something to say.
 
+### Publish on read
+
+The schedule is not what the front page depends on. Before `/` renders,
+[`PublishDueHomeIssue`](../../app/Features/Home/Actions/PublishDueHomeIssue.php) compares the latest
+issue's `published_at` with the last 06:00 boundary, and when that boundary has passed unpublished it
+runs the publisher as of the boundary — the same window, the same date, the same `published_at` the
+06:00 run would have written. A host with no cron therefore has the same front page as one with it;
+a day's issue appears on the first visit after 06:00 rather than at 06:00, and the first reader of
+the day pays the publication, seconds. A reader who arrives before anyone else in a week publishes
+one issue spanning the week, which is the chained window above.
+
+The attempt is made **once per boundary**, through `Cache::add` on a key named for the boundary's
+date, because a blank day leaves no row to find and would otherwise be planned again on every
+request. The scheduled run takes no such key — it has no need to, the row it writes is what stops
+the next visit — and a run by hand after a spent attempt still publishes, as it always did. A
+publication that fails is reported and the page renders the previous issue; the attempt is spent
+with it, so the failure costs that day's issue and nothing else, its stories folding into the next
+window.
+
 ## Rendering
 
 Reading an issue is the ledger asked again. [`ShowHomeIssue`](../../app/Features/Home/Queries/ShowHomeIssue.php)
