@@ -164,7 +164,8 @@ class PublishOnReadTest extends TestCase
                 $failed = true;
                 throw new RuntimeException('the write failed');
             }
-            if ($failed && str_contains($query, 'insert into "cache"')) {
+            // Both engines' quoting: the store's write is the one insert into a table named cache.
+            if ($failed && str_contains($query, 'insert into') && str_contains($query, 'cache')) {
                 throw new RuntimeException('the store failed too');
             }
         });
