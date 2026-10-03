@@ -34,8 +34,8 @@ final class PublishDueHomeIssue
             return $latest;
         }
 
-        // Once per boundary: a blank day leaves no row to find and would be planned again on every
-        // request.
+        // Once per boundary (once per RETRY_SECONDS after a failure): a blank day leaves no row to find
+        // and would be planned again on every request.
         $key = 'home-issue:attempted:'.$boundary->toDateString();
         if (! Cache::add($key, true, 86400)) {
             return $latest;
@@ -45,7 +45,8 @@ final class PublishDueHomeIssue
             return ($this->publish)($boundary) ?? $latest;
         } catch (Throwable $e) {
             report($e);
-            Cache::put($key, true, self::RETRY_SECONDS);
+            // The store may be the connection that just failed; the page renders either way.
+            rescue(fn () => Cache::put($key, true, self::RETRY_SECONDS));
 
             return $latest;
         }

@@ -151,6 +151,29 @@ class PublishOnReadTest extends TestCase
         $this->assertDatabaseCount('home_issues', 2);
     }
 
+    /** The hold is written to the store that may have failed with the publication: the page is still up. */
+    public function test_a_failure_that_also_takes_the_cache_store_still_renders(): void
+    {
+        config(['cache.default' => 'database']);
+        Exceptions::fake();
+        $previous = $this->publishedOn('2026-08-25');
+        $this->story(CarbonImmutable::parse(self::BOUNDARY)->subHour());
+        $failed = false;
+        DB::beforeExecuting(function (string $query) use (&$failed): void {
+            if (str_contains($query, 'insert into') && str_contains($query, 'home_issues')) {
+                $failed = true;
+                throw new RuntimeException('the write failed');
+            }
+            if ($failed && str_contains($query, 'insert into "cache"')) {
+                throw new RuntimeException('the store failed too');
+            }
+        });
+
+        $this->visit()->assertInertia(fn (AssertableInertia $page) => $page->where('issue.number', (int) $previous->number));
+
+        Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'the store failed too');
+    }
+
     private function visit(): TestResponse
     {
         return $this->actingAs($this->viewer)->get('/')->assertOk();

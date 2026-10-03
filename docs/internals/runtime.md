@@ -163,8 +163,8 @@ connection by default, which needs a worker (`php artisan queue:work`). A host t
 cannot keep one running sets `QUEUE_CONNECTION=sync`: each job then runs inside the
 request that raised it, so a post costs its notifications' sends and its link-card
 fetch in latency, and a job that fails — a mail transport that is down — fails that
-request instead of landing in `failed_jobs`. A delayed job runs at once: the ten
-seconds a talk message waits before notifying, so that a member reading the room is
-not notified of what they have just read ([group-talk.md](group-talk.md)), are not
+request instead of landing in `failed_jobs`. A delayed job runs at once: the grace a
+talk message waits before notifying, so that a member reading the room is not
+notified of what they have just read ([group-talk.md](group-talk.md)), is not
 waited. A host with cron but no worker keeps both by running
 `php artisan queue:work --stop-when-empty` from cron instead.

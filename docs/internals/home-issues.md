@@ -222,8 +222,8 @@ date, because a blank day leaves no row to find and would otherwise be planned a
 request. The scheduled run takes no such key — it has no need to, the row it writes is what stops
 the next visit — and a run by hand after a spent attempt still publishes, as it always did. A
 publication that fails is reported and the page renders the previous issue, and the attempt holds the
-boundary for ten minutes rather than the day, so a transient failure costs a late issue and a lasting
-one costs a plan every ten minutes rather than every request. A failure that never reaches the
+boundary for a short while (`PublishDueHomeIssue::RETRY_SECONDS`) rather than the day, so a transient
+failure costs a late issue and a lasting one costs a plan per hold rather than per request. A failure that never reaches the
 handler — the request's time limit, which the CLI does not have — spends the whole day, so a site
 whose publication takes longer than a request may keep the schedule. After a spent attempt every read
 of `/` that day still costs one cache read, until the next boundary moves the key.
