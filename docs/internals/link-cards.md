@@ -554,10 +554,12 @@ bodies as well as open ones — a decision about what this deployment tells the 
 display preference. OpenPNE 3's `enable_cmd` is not an ancestor: that embedded three named services
 in the reader's browser, where this fetches arbitrary hosts from the server.
 
-It is read through `LinkCardSettings` from three places, and all three have to agree or the switch
-does not mean what it says: the read path (do not start work), the fetch job (do not make the
-request, even if it was queued while the setting was on), and the renderer (do not show a card
-fetched earlier). It governs none of the internal path above, which needs no request.
+It is read through `LinkCardSettings` from four places, and all four have to agree or the switch
+does not mean what it says: the read path (refetch no due card), the sync job (queue no fetch for the
+card it attaches), the fetch job (make no request, even if it was queued while the setting was on),
+and the renderer (show no card fetched earlier). Examining a body is none of its business — see "The
+setting does not govern it" — so a site that never turns it on still mints a pending row per distinct
+external URL its bodies lead with, and keeps it for as long as a body points at it.
 
 The admin page states both, because neither follows from a label: the server reaches out to every
 linked page, from bodies only a few people can read as well as open ones, and each destination learns
@@ -619,8 +621,8 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
   pair by pair, and never a second rule. An unread pair costs a query; it never decides anything.
 - A row leaving the fetch lifecycle takes every picture stored for it, found by the relation and
   after the row is converted — never by the id the row held before.
-- Whether a URL of ours has a card does not depend on the link-card setting; whether an external one
-  is examined at all does.
+- A body is examined once in its life whatever the link-card setting says; the setting withholds the
+  fetch alone, so an external first URL waits as a pending card and a URL of ours never waits.
 - One row per normalised URL; a widely-shared link is fetched once.
 - A card renders only when it was fetched successfully **and** has a title. A fetch can succeed
   against a page carrying no metadata at all, so status alone is not the test.

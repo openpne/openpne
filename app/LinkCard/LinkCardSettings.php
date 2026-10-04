@@ -8,10 +8,10 @@ use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 
 /**
- * One question asked from three places, and all three have to agree or the switch does not mean
- * what it says: the read path (start no work), the fetch job (make no request, even if already
- * queued), and the renderer (show no card fetched earlier). Read through one method so a later
- * change cannot reach only two of them.
+ * One question asked from four places, and all four have to agree or the switch does not mean what
+ * it says: the read path (refetch no due card), the sync job (queue no fetch), the fetch job (make no
+ * request, even if already queued), and the renderer (show no card fetched earlier). Read through one
+ * method so a later change cannot reach only some of them.
  */
 final class LinkCardSettings
 {
