@@ -154,8 +154,9 @@ pays for the rows it returns alone. So a list that has to be sorted after the fa
 groups' recent topics and events, read through the membership and ordered across every group's
 rows — names its ids in one query and counts only the page it kept in a second (measured on MySQL
 8.4 at 50k topics across 20 groups: 129 ms → 10 ms). A list that is cut by its axis index keeps the
-count in the one query — the friend diary feed, for one, which MySQL reads backwards along
-`(created_at, id)` and stops at the page.
+count in the one query — the friend diary feed, for one, which MySQL read backwards along
+`(created_at, id)` for a viewer with many friends; with few, the candidates the membership index
+yields are few as well.
 
 ## SQLite foreign-key indexes
 
