@@ -76,8 +76,7 @@ test('a staged reply to a withdrawn author names them with the established label
     expect(screen.getByText('Replying to Withdrawn member')).toBeTruthy();
 });
 
-// Plain shapes rather than DataTransfer instances: the test renderer copies an init's own
-// properties onto a fresh DataTransfer, and a real one keeps its files behind getters.
+// Plain shapes: the test renderer copies an init's own properties onto a fresh DataTransfer, and a real one keeps its files behind getters.
 const picture = (name: string) => new File([new Uint8Array(4)], name, { type: 'image/png' });
 const filesDrag = (files: File[]) => ({ types: ['Files'], files, getData: () => '' });
 
@@ -121,4 +120,17 @@ test('a picture dropped while a send is in flight is ignored, as the attach butt
     finish();
     await waitFor(() => expect(onSend.mock.results).toHaveLength(1));
     expect(screen.queryAllByLabelText(/Remove image/)).toHaveLength(0);
+});
+
+test('at the cap a drop on the bar is swallowed without a note, as the disabled button takes no pick', () => {
+    withObjectUrls();
+    mount();
+    const form = screen.getByLabelText('Message').closest('form') as HTMLFormElement;
+
+    fireEvent.drop(form, { dataTransfer: filesDrag([picture('a.png'), picture('b.png'), picture('c.png')]) });
+    expect(screen.getAllByLabelText(/Remove image/)).toHaveLength(3);
+
+    fireEvent.drop(form, { dataTransfer: filesDrag([picture('d.png')]) });
+    expect(screen.getAllByLabelText(/Remove image/)).toHaveLength(3);
+    expect(screen.queryByText(/You can attach up to/)).toBeNull();
 });

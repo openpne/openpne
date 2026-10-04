@@ -10,10 +10,8 @@ interface DropTargetOptions {
 }
 
 /**
- * Makes the form around `ref` (or the element itself, outside any form) take dropped pictures,
- * and pasted ones where asked. The drag enter/leave pair is counted, since the browser fires them
- * for every child the pointer crosses. The window's own guard leaves a drop alone once a target has
- * claimed it here.
+ * The target is the form around `ref`, or the element itself outside any form. The drag enter/leave
+ * pair is counted, since the browser fires them for every child the pointer crosses.
  */
 export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, enabled = true, paste = false }: DropTargetOptions): boolean {
     const [dragging, setDragging] = useState(false);

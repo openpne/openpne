@@ -7,8 +7,7 @@ afterEach(cleanup);
 
 const picture = () => new File([new Uint8Array(4)], 'a.png', { type: 'image/png' });
 
-// Plain shapes rather than DataTransfer instances: the test renderer copies an init's own
-// properties onto a fresh DataTransfer, and a real one keeps its files behind getters.
+// Plain shapes: the test renderer copies an init's own properties onto a fresh DataTransfer, and a real one keeps its files behind getters.
 const withFiles = (files: File[]) => ({ types: ['Files'], files, getData: () => '' });
 const withText = (text: string, files: File[] = []) => ({ types: ['text/plain'], files, getData: (type: string) => (type === 'text/plain' ? text : '') });
 

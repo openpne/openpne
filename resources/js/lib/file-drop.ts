@@ -3,9 +3,17 @@ export function carriesFiles(transfer: DataTransfer | null): boolean {
     return Array.from(transfer?.types ?? []).includes('Files');
 }
 
-/** The pictures among dropped files; what is not a picture is ignored rather than refused. */
+/**
+ * The pictures among dropped files; what is not a picture is ignored rather than refused. A picture
+ * dragged off a page arrives with its URL (`text/uri-list`) and, in Chromium, a copy of its bytes as
+ * a file: that is a link, not a pick, and is ignored too.
+ */
 export function droppedImages(transfer: DataTransfer | null): File[] {
-    return Array.from(transfer?.files ?? []).filter((file) => file.type.startsWith('image/'));
+    if (transfer === null || Array.from(transfer.types).includes('text/uri-list')) {
+        return [];
+    }
+
+    return Array.from(transfer.files).filter((file) => file.type.startsWith('image/'));
 }
 
 /**

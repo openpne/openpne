@@ -1,11 +1,12 @@
-import { act, cleanup, fireEvent, screen } from '@testing-library/react';
-import type { ReactNode, RefObject } from 'react';
+import { act, cleanup, createEvent, fireEvent, screen } from '@testing-library/react';
+import { type ReactNode, type RefObject, useRef } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { AppShell } from './app-shell';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
 import { type Chrome, resolveChrome } from '@/lib/member-chrome';
+import { useDropTarget } from '@/lib/use-drop-target';
 import type { AuthUser, FeatureKey } from '@/types';
 
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
@@ -239,8 +240,7 @@ test('a conversation under the shipped look holds its chrome still', async () =>
     expect(header()?.className).not.toContain('-translate-y-full');
 });
 
-// Plain shapes rather than DataTransfer instances: the test renderer copies an init's own
-// properties onto a fresh DataTransfer, and a real one keeps its types behind getters.
+// Plain shapes: the test renderer copies an init's own properties onto a fresh DataTransfer, and a real one keeps its types behind getters.
 const filesDrag = { types: ['Files'], files: [new File([new Uint8Array(4)], 'a.png', { type: 'image/png' })] };
 
 test('a picture dropped outside any target is swallowed, so the page and its draft stay', () => {
@@ -258,4 +258,34 @@ test('a picture dropped outside any target is swallowed, so the page and its dra
     // A file input keeps its native drop, and a drag of text is not the guard's business.
     expect(fireEvent.drop(screen.getByLabelText('Picture'), { dataTransfer: filesDrag })).toBe(true);
     expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: { types: ['text/plain'], files: [] } })).toBe(true);
+});
+
+function DropStub() {
+    const field = useRef<HTMLDivElement>(null);
+    useDropTarget(field, { onFiles: () => {} });
+
+    return (
+        <form>
+            <div ref={field}>
+                <textarea aria-label="Body" />
+            </div>
+        </form>
+    );
+}
+
+test('over a target the shell leaves the drag to it: the copy effect the target set survives the guard', () => {
+    const chrome = arrive('dashboard', '/dashboard', {});
+    renderWithProviders(
+        <AppShell chrome={chrome}>
+            <DropStub />
+        </AppShell>,
+    );
+    const body = screen.getByLabelText('Body');
+
+    const over = createEvent.dragOver(body, { dataTransfer: filesDrag });
+    fireEvent(body, over);
+
+    expect(over.defaultPrevented).toBe(true);
+    // The guard would set `none`, and a browser then drops nothing on the target.
+    expect((over as DragEvent).dataTransfer?.dropEffect).toBe('copy');
 });

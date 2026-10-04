@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import { ImagesField, shrink, useShrunkPick } from './images-field';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
@@ -275,4 +276,19 @@ test('a picture dropped on the field\'s form, or pasted into it, is added like a
     await waitFor(() => expect(onChange).toHaveBeenCalledTimes(4));
     fireEvent.dragEnter(form, { dataTransfer: drag });
     expect(container.textContent).toContain('Drop a picture here');
+});
+
+test('at the cap a drop is swallowed without a note, as the disabled input takes no pick', () => {
+    const onChange = vi.fn();
+    const full = [small('image/png', 'a.png'), small('image/png', 'b.png'), small('image/png', 'c.png')];
+    const { container } = renderWithProviders(
+        <form>
+            <ImagesField id="images" label="Images" files={full} onChange={onChange} errors={{}} />
+        </form>,
+    );
+
+    fireEvent.drop(container.querySelector('form')!, { dataTransfer: { types: ['Files'], files: [small('image/png', 'd.png')], getData: () => '' } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(container.textContent).not.toContain('You can attach up to');
 });

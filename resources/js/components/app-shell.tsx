@@ -33,9 +33,8 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     const hidden = useScrollDirection({ enabled: member && chromeRecedes(chrome) }) === 'down';
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
 
-    // A picture dropped outside any target would otherwise open in the tab and take the page, and the
-    // draft on it, with it. A file input is left its native drop, and a target that claimed the drop
-    // has already prevented it.
+    // A picture dropped outside any target would otherwise open in the tab, over the draft; a file
+    // input keeps its native drop, and a target that claimed the drop has already prevented it.
     useEffect(() => {
         const guard = (event: DragEvent) => {
             if (!carriesFiles(event.dataTransfer) || event.defaultPrevented) {
