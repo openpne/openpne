@@ -168,7 +168,9 @@ Notifications, mail and the link-card fetch are queued, on the `database`
 connection by default, which needs a worker (`php artisan queue:work`). A host that
 cannot keep one running sets `QUEUE_CONNECTION=sync`: each job then runs inside the
 request that raised it, so a post costs its notifications' sends and its link-card
-fetch in latency, and a job that fails — a mail transport that is down — fails that
+fetch in latency, the first view of a page costs the examination of each body on it
+that nobody has looked at yet (once in a body's life, migrated history included), and
+a job that fails — a mail transport that is down — fails that
 request instead of landing in `failed_jobs`. A delayed job runs at once: the grace a
 talk message waits before notifying, so that a member reading the room is not
 notified of what they have just read ([group-talk.md](group-talk.md)), is not

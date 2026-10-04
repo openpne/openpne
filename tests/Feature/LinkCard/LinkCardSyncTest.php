@@ -10,6 +10,7 @@ use App\LinkCard\LinkCardSync;
 use App\Models\Diary;
 use App\Models\LinkCard;
 use App\Models\Member;
+use App\Support\LinkCardStatus;
 use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -103,29 +104,33 @@ class LinkCardSyncTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_nothing_is_queued_while_the_setting_is_off(): void
+    public function test_an_unexamined_record_is_queued_while_the_setting_is_off(): void
     {
+        // The job decides what the setting withholds: a body linking one of this site's pages gets
+        // its card whatever the setting says, so the read path cannot stop at the switch.
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
         $diary = $this->diary(['link_card_synced_at' => null]);
 
         $this->sync()->ensure($diary);
 
-        Queue::assertNothingPushed();
+        Queue::assertPushed(SyncLinkCard::class);
     }
 
-    public function test_turning_the_setting_back_on_picks_up_what_was_missed(): void
+    public function test_a_due_card_is_not_fetched_while_the_setting_is_off_and_is_once_it_returns(): void
     {
-        // Records posted while it was off keep a null synced_at, so they are indistinguishable from
-        // any other never-examined record once it returns.
+        // A body examined while the setting was off holds a pending card; the read trigger is what
+        // fetches it later, so nothing posted meanwhile is lost.
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
-        $diary = $this->diary(['link_card_synced_at' => null]);
+        $card = LinkCard::factory()->create(['status' => LinkCardStatus::Pending]);
+        $diary = $this->diary(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()]);
+
         $this->sync()->ensure($diary);
         Queue::assertNothingPushed();
 
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, true);
         $this->sync()->ensure($diary->fresh());
 
-        Queue::assertPushed(SyncLinkCard::class);
+        Queue::assertPushed(FetchLinkCard::class);
     }
 
     public function test_a_page_of_records_is_asked_about_one_by_one(): void
@@ -137,16 +142,13 @@ class LinkCardSyncTest extends TestCase
         Queue::assertPushed(SyncLinkCard::class, 2);
     }
 
-    public function test_a_page_queues_nothing_while_the_setting_is_off(): void
+    public function test_a_page_queues_its_unexamined_rows_while_the_setting_is_off(): void
     {
-        // Answered once for the batch rather than once per record: the setting is read through a
-        // database-backed cache, so a page of a busy room would otherwise pay a query per row to be
-        // told the same thing.
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
 
-        $this->sync()->ensureAll([$this->diary(['link_card_synced_at' => null])]);
+        $this->sync()->ensureAll([$this->diary(['link_card_synced_at' => null]), $this->diary(['link_card_synced_at' => CarbonImmutable::now()])]);
 
-        Queue::assertNothingPushed();
+        Queue::assertPushed(SyncLinkCard::class, 1);
     }
 
     public function test_a_null_record_is_not_an_error(): void

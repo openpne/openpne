@@ -12,8 +12,9 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Starts link-card work from a page view, which is what reaches records written before the feature
  * was on and cards that have since expired. Detail pages only (a list would queue a page's worth of
- * jobs, talk being the one exception, {@see ensureAll()}), nothing runs inline, and it is called
- * from controllers after authorization and never from a serializer.
+ * jobs, talk being the one exception, {@see ensureAll()}), nothing runs inline except what the sync
+ * queue driver makes inline, and it is called from controllers after authorization and never from a
+ * serializer.
  */
 final class LinkCardSync
 {
@@ -30,13 +31,6 @@ final class LinkCardSync
     public function ensureAll(iterable $records): void
     {
         foreach ($records as $record) {
-            // Read on the first row, not on entry: the talk poll usually answers with no rows and the
-            // setting sits behind a database-backed cache, so an empty page asks nothing and a page
-            // with rows asks once (`LinkCardSettings` memoises).
-            if (! $this->settings->enabled()) {
-                return;
-            }
-
             $this->ensure($record);
         }
     }
@@ -49,13 +43,19 @@ final class LinkCardSync
      */
     public function ensure(?Model $record): void
     {
-        if ($record === null || ! $this->settings->enabled()) {
+        if ($record === null) {
             return;
         }
 
+        // Queued whatever the setting says: the job examines a body once in its life either way, and
+        // only a fetch is the setting's to withhold.
         if ($record->getAttribute('link_card_synced_at') === null) {
             SyncLinkCard::dispatch($record::class, (int) $record->getKey());
 
+            return;
+        }
+
+        if (! $this->settings->enabled()) {
             return;
         }
 
