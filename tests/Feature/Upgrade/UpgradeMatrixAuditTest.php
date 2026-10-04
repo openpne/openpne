@@ -102,6 +102,17 @@ class UpgradeMatrixAuditTest extends TestCase
         }
     }
 
+    public function test_every_source_table_is_stepped_or_declared_unstepped(): void
+    {
+        $stepped = array_map(static fn ($step): string => $step->sourceTable(), StepRegistry::all());
+        $declared = array_keys(StepRegistry::unsteppedSourceTables());
+
+        foreach (SourceSchema::default()->tables() as $table) {
+            $this->assertTrue(in_array($table, $stepped, true) || in_array($table, $declared, true),
+                "`{$table}` is neither any step's source table nor declared in unsteppedSourceTables() — its rows would be dropped without a word");
+        }
+    }
+
     public function test_no_stepped_source_table_is_declared_unstepped(): void
     {
         // unsteppedSourceTables() is the ledger of tables no standalone step drives; once a step
