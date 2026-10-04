@@ -238,3 +238,24 @@ test('a conversation under the shipped look holds its chrome still', async () =>
 
     expect(header()?.className).not.toContain('-translate-y-full');
 });
+
+// Plain shapes rather than DataTransfer instances: the test renderer copies an init's own
+// properties onto a fresh DataTransfer, and a real one keeps its types behind getters.
+const filesDrag = { types: ['Files'], files: [new File([new Uint8Array(4)], 'a.png', { type: 'image/png' })] };
+
+test('a picture dropped outside any target is swallowed, so the page and its draft stay', () => {
+    const chrome = arrive('dashboard', '/dashboard', {});
+    renderWithProviders(
+        <AppShell chrome={chrome}>
+            <p>page</p>
+            <input type="file" aria-label="Picture" />
+        </AppShell>,
+    );
+
+    // Prevented at the window: the browser would otherwise open the file in the tab.
+    expect(fireEvent.dragOver(screen.getByText('page'), { dataTransfer: filesDrag })).toBe(false);
+    expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: filesDrag })).toBe(false);
+    // A file input keeps its native drop, and a drag of text is not the guard's business.
+    expect(fireEvent.drop(screen.getByLabelText('Picture'), { dataTransfer: filesDrag })).toBe(true);
+    expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: { types: ['text/plain'], files: [] } })).toBe(true);
+});

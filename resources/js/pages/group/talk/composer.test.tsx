@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TalkComposer } from './composer';
 import { fakeT } from '@/lib/test-i18n';
@@ -74,4 +74,51 @@ test('a staged reply to a withdrawn author names them with the established label
     mount({ replyTo: parent({ author: null }) });
 
     expect(screen.getByText('Replying to Withdrawn member')).toBeTruthy();
+});
+
+// Plain shapes rather than DataTransfer instances: the test renderer copies an init's own
+// properties onto a fresh DataTransfer, and a real one keeps its files behind getters.
+const picture = (name: string) => new File([new Uint8Array(4)], name, { type: 'image/png' });
+const filesDrag = (files: File[]) => ({ types: ['Files'], files, getData: () => '' });
+
+function withObjectUrls() {
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:preview', revokeObjectURL: () => {} }));
+}
+
+test('a picture dropped on the bar or pasted into it is attached like a pick, and text pastes as text', () => {
+    withObjectUrls();
+    mount();
+    const form = screen.getByLabelText('Message').closest('form') as HTMLFormElement;
+
+    fireEvent.drop(form, { dataTransfer: filesDrag([picture('dropped.png')]) });
+    expect(screen.getAllByLabelText(/Remove image/)).toHaveLength(1);
+
+    fireEvent.paste(screen.getByLabelText('Message'), { clipboardData: { files: [picture('shot.png')], getData: () => '' } });
+    expect(screen.getAllByLabelText(/Remove image/)).toHaveLength(2);
+
+    // A copy from a spreadsheet carries a picture and its text: the text is what was meant.
+    const both = fireEvent.paste(screen.getByLabelText('Message'), { clipboardData: { files: [picture('cell.png')], getData: (type: string) => (type === 'text/plain' ? 'A1' : '') } });
+    expect(both).toBe(true);
+    expect(screen.getAllByLabelText(/Remove image/)).toHaveLength(2);
+});
+
+test('a picture dropped while a send is in flight is ignored, as the attach button is', async () => {
+    withObjectUrls();
+    let finish!: () => void;
+    const onSend = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    mount({ onSend });
+    const field = screen.getByLabelText('Message');
+    const form = field.closest('form') as HTMLFormElement;
+
+    fireEvent.change(field, { target: { value: 'on my way' } });
+    fireEvent.submit(form);
+    expect(onSend).toHaveBeenCalledOnce();
+
+    fireEvent.drop(form, { dataTransfer: filesDrag([picture('late.png')]) });
+    fireEvent.paste(field, { clipboardData: { files: [picture('late2.png')], getData: () => '' } });
+    expect(screen.queryAllByLabelText(/Remove image/)).toHaveLength(0);
+
+    finish();
+    await waitFor(() => expect(onSend.mock.results).toHaveLength(1));
+    expect(screen.queryAllByLabelText(/Remove image/)).toHaveLength(0);
 });

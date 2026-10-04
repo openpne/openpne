@@ -240,6 +240,19 @@ upload settings page) ships null instead: every picker then sends the original, 
 the upload rules is refused by them. The switch is for a site whose members want their pixels kept;
 it changes nothing on Classic, whose forms never shrank.
 
+### Dropping and pasting
+
+Every Modern picker takes a picture dropped on its form — the images field of a post, the talk and
+direct-message bars, the avatar, timeline, group and AI account inputs — and the composers with a
+body to write (the post forms, the bars, the timeline) take an image-only paste into it too. What
+lands goes down the picker's own path: the count cap, the chips, the shrink above. A one-picture
+input receives the file in the input itself, the first of several, so its `required` and its label
+see it. A paste that carries plain text pastes the text and no picture, since a copy from a
+spreadsheet or a document carries both. A drop while the picker is disabled (a shrink running, a
+send in flight, the cap reached) is swallowed and nothing lands. The shell prevents the drop that
+would otherwise open the file in the tab anywhere outside a target, except on a file input, which
+keeps its native drop. Only pictures are taken; what is not one is ignored.
+
 ## Processing
 
 Every decode goes through [`ImageProcessor`](../../app/Files/ImageProcessor.php), chosen by

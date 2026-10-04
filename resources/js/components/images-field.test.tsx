@@ -250,3 +250,29 @@ test('the processing hint stays up until the last of two overlapping picks has s
     gates[1]!();
     await waitFor(() => expect(queryByText('Processing')).toBeNull());
 });
+
+test('a picture dropped on the field\'s form, or pasted into it, is added like a pick; neither is while a shrink runs', async () => {
+    decodesEverything();
+    const onChange = vi.fn();
+    const { container } = render(
+        <form>
+            <textarea aria-label="Body" />
+            <ImagesField id="images" label="Images" files={[]} onChange={onChange} errors={{}} />
+        </form>,
+    );
+    const form = container.querySelector('form') as HTMLFormElement;
+    const drag = { types: ['Files'], files: [small('image/png', 'dropped.png')], getData: () => '' };
+
+    fireEvent.drop(form, { dataTransfer: drag });
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ name: 'dropped.png' })]);
+    // Ignored while the drop's shrink is still running, as the disabled input would be; taken once it has settled.
+    expect(fireEvent.paste(container.querySelector('textarea')!, { clipboardData: { files: [small('image/png', 'early.png')], getData: () => '' } })).toBe(false);
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2));
+    expect(onChange.mock.calls.flat(2).map((file) => (file as File).name)).not.toContain('early.png');
+    expect(fireEvent.paste(container.querySelector('textarea')!, { clipboardData: { files: [small('image/png', 'shot.png')], getData: () => '' } })).toBe(false);
+    expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ name: 'shot.png' })]);
+    // The field shows the ring while a picture is over its form, once nothing is running.
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(4));
+    fireEvent.dragEnter(form, { dataTransfer: drag });
+    expect(container.textContent).toContain('Drop a picture here');
+});

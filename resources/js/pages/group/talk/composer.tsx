@@ -10,6 +10,7 @@ import { Tip } from '@/components/ui/tooltip';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
+import { useDropTarget } from '@/lib/use-drop-target';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
 import type { TalkMessage } from './types';
 import { cn } from '@/lib/utils';
@@ -85,10 +86,14 @@ export function TalkComposer({
         form.current?.querySelector('textarea')?.focus();
     }, [replyTo, form]);
 
-    const attach = async (event: ChangeEvent<HTMLInputElement>) => {
+    const attach = (event: ChangeEvent<HTMLInputElement>) => {
         const picked = Array.from(event.target.files ?? []);
         // The strip below is the visible selection; the input itself must never retain one.
         event.target.value = '';
+        void add(picked);
+    };
+
+    const add = async (picked: File[]) => {
         if (picked.length === 0) {
             return;
         }
@@ -117,6 +122,10 @@ export function TalkComposer({
         setCapNote(null);
         select(held.current.filter((_, i) => i !== index));
     };
+
+    // A drop on the bar or an image-only paste into it attaches the way the button does, and is
+    // ignored while the button is: a send in flight would reset what landed during it.
+    const dragging = useDropTarget(form, { onFiles: add, enabled: !sending && images.length < MAX_POST_IMAGES, paste: true });
 
     const nothingToSend = body.trim() === '' && images.length === 0;
 
@@ -171,8 +180,10 @@ export function TalkComposer({
                 // The transition is for the look whose bottom bar leaves when someone writes: the var
                 // jumps, but the length it computes to is what animates.
                 'sticky bottom-0 z-10 border-t border-border bg-background px-3 pt-2 pb-offset-2 transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:px-4',
+                dragging && 'ring-2 ring-ring ring-inset',
             )}
         >
+            {dragging && <p className="pb-2 text-xs text-muted-foreground">{t('Drop a picture here')}</p>}
             {error !== null && (
                 <p role="alert" className="pb-2 text-sm text-destructive">
                     {error}

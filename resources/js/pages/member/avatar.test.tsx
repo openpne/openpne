@@ -106,3 +106,19 @@ test.each([
 
     expect(reset.mock.contexts).toEqual([form]);
 });
+
+test('a picture dropped on the avatar form lands in its input, so the required input submits it', () => {
+    inertia.page = { url: '/member/avatar', props: { ...shared, avatar: null, badgeColor: { value: null, options: [] } } };
+    renderWithProviders(<MemberAvatar />);
+    const field = screen.getByLabelText('Choose Image') as HTMLInputElement;
+    const form = field.closest('form') as HTMLFormElement;
+    const dropped = new File(['x'], 'dropped.png', { type: 'image/png' });
+
+    // Plain shapes rather than a DataTransfer instance: the test renderer copies an init's own
+    // properties onto a fresh DataTransfer, and a real one keeps its files behind getters.
+    fireEvent.drop(form, { dataTransfer: { types: ['Files'], files: [dropped, new File(['y'], 'second.png', { type: 'image/png' })], getData: () => '' } });
+
+    expect(Array.from(field.files ?? []).map((file) => file.name)).toEqual(['dropped.png']);
+    fireEvent.submit(form);
+    expect(inertia.posts.map((post) => post.url)).toEqual(['/member/avatar']);
+});
