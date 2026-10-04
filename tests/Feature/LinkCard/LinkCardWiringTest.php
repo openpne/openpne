@@ -396,7 +396,7 @@ class LinkCardWiringTest extends TestCase
         }
     }
 
-    public function test_nothing_is_queued_while_the_setting_is_off(): void
+    public function test_an_unexamined_body_is_still_queued_while_the_setting_is_off(): void
     {
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
         $diary = Diary::factory()->for($this->member)->create([
@@ -406,7 +406,7 @@ class LinkCardWiringTest extends TestCase
 
         $this->actingAs($this->member)->get(route('diary.show', $diary))->assertOk();
 
-        Queue::assertNothingPushed();
+        Queue::assertPushed(SyncLinkCard::class, 1);
     }
 
     private function createDiary(): Diary

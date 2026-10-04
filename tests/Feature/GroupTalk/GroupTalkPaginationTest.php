@@ -197,13 +197,17 @@ class GroupTalkPaginationTest extends TalkTestCase
         }
     }
 
-    /** Twenty messages, each carrying reactions from two different members. */
+    /**
+     * Twenty messages, each carrying reactions from two different members, already examined for link
+     * cards: the budget is the page read, and a body's first look is the sync job's cost, once in its life.
+     */
     private function reactedConversation(Group $group, Member $viewer): void
     {
         foreach (range(1, 20) as $ignored) {
             $message = GroupMessage::factory()->create([
                 'group_id' => $group->getKey(),
                 'member_id' => $this->memberOf($group)->getKey(),
+                'link_card_synced_at' => Carbon::now(),
             ]);
             $message->reactions()->create(['member_id' => $viewer->getKey(), 'emoji' => "\u{1F44D}"]);
             $message->reactions()->create(['member_id' => $this->memberOf($group)->getKey(), 'emoji' => "\u{1F389}"]);

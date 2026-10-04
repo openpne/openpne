@@ -30,13 +30,6 @@ final class LinkCardSync
     public function ensureAll(iterable $records): void
     {
         foreach ($records as $record) {
-            // Read on the first row, not on entry: the talk poll usually answers with no rows and the
-            // setting sits behind a database-backed cache, so an empty page asks nothing and a page
-            // with rows asks once (`LinkCardSettings` memoises).
-            if (! $this->settings->enabled()) {
-                return;
-            }
-
             $this->ensure($record);
         }
     }
@@ -49,13 +42,19 @@ final class LinkCardSync
      */
     public function ensure(?Model $record): void
     {
-        if ($record === null || ! $this->settings->enabled()) {
+        if ($record === null) {
             return;
         }
 
+        // Queued whatever the setting says: the job examines a body once in its life either way, and
+        // only a fetch is the setting's to withhold.
         if ($record->getAttribute('link_card_synced_at') === null) {
             SyncLinkCard::dispatch($record::class, (int) $record->getKey());
 
+            return;
+        }
+
+        if (! $this->settings->enabled()) {
             return;
         }
 

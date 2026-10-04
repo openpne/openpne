@@ -70,9 +70,9 @@ That split is what makes a link a thousand people posted cost one request.
 
 `link_card_synced_at` distinguishes **"examined, has no link"** from **"never examined"**. Without
 it the read path could not tell whether there is work to do, and a body with no URL would be
-re-parsed on every view forever. It is also why turning the setting off and on again loses nothing:
-records posted while it was off keep a null `link_card_synced_at`, so they are indistinguishable
-from any other never-examined record when it returns.
+re-parsed on every view forever. Turning the setting off and on again loses nothing either way: a
+record examined while it was off holds a pending card, which the read trigger fetches like any other
+due card once the setting returns.
 
 ### The conversation page is talk's detail page
 
@@ -211,12 +211,14 @@ host doing the describing.
 ### The setting does not govern it
 
 `LinkCardEnabled` is about *fetching*, and these cards need no fetch, so they are drawn whatever it
-says. That reaches into `SyncLinkCard`, which would otherwise not run at all while the switch is off:
-a body whose **first** URL is one of ours is resolved and marked examined regardless, because the
-answer does not depend on the setting. A body whose first URL is external is left unexamined, so
-switching the setting on later still picks it up — `link_card_synced_at` is written once in a body's
-life. Nothing looks past the first URL for one of ours; a card is the first URL, and going looking
-would make a body's card depend on when the job happened to run.
+says. That reaches back to the read trigger and into `SyncLinkCard`: a page view queues an
+unexamined record whatever the switch says, and the job examines the body either way — a body whose
+**first** URL is one of ours gets its card, a body with no URL is marked done, and a body whose first
+URL is external is attached to its pending card without a fetch. Only the fetch is the switch's to
+withhold, and the read trigger's own due check fetches that pending card once the switch returns, so
+`link_card_synced_at` stays written once in a body's life and a page view while the switch is off
+costs a room nothing after its first look. Nothing looks past the first URL for one of ours; a card is
+the first URL, and going looking would make a body's card depend on when the job happened to run.
 
 ### Rows written before this existed
 
