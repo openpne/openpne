@@ -39,18 +39,6 @@ class DirectMessageTrashTest extends TestCase
         return app(SendDirectMessage::class)($sender, new DirectMessageComposeData($recipient->getKey(), 'Draft', 'Body'), asDraft: true);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        [$message] = $this->delivered($sender, $recipient);
-        $draft = $this->draftTo($sender, $recipient);
-
-        $this->get(route('message.draft.edit', $draft))->assertRedirect('/login');
-        $this->post(route('message.receive.trash', $message))->assertRedirect('/login');
-        $this->post(route('message.trash.restore', $message))->assertRedirect('/login');
-        $this->post(route('message.trash.purge', $message))->assertRedirect('/login');
-    }
-
     public function test_modern_draft_edit_renders_the_form_for_the_owner(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();

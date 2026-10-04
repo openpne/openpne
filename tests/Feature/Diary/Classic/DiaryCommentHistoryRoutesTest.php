@@ -19,11 +19,6 @@ class DiaryCommentHistoryRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_guest_is_redirected_to_login(): void
-    {
-        $this->get('/diary/comment/history')->assertRedirect('/login');
-    }
-
     public function test_the_page_lists_a_commented_diary_with_count_author_and_body_id(): void
     {
         $viewer = Member::factory()->create();

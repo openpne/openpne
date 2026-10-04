@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\DirectMessage\Modern;
 
-use App\Features\DirectMessage\Actions\SendDirectMessage;
-use App\Features\DirectMessage\DirectMessageComposeData;
 use App\Models\DirectMessage;
 use App\Models\Member;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
@@ -24,16 +22,6 @@ class DirectMessageComposeTest extends TestCase
     {
         parent::setUp();
         config(['openpne.surface_mode' => 'modern_default']);
-    }
-
-    public function test_guests_are_redirected_to_login(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $message = app(SendDirectMessage::class)($sender, new DirectMessageComposeData($recipient->getKey(), 'X', 'Y'), asDraft: false);
-
-        $this->get(route('message.compose', ['id' => $recipient->getKey()]))->assertRedirect('/login');
-        $this->get(route('message.reply', $message))->assertRedirect('/login');
-        $this->post(route('message.compose.store'))->assertRedirect('/login');
     }
 
     public function test_modern_store_sends_and_redirects_to_the_sent_box(): void

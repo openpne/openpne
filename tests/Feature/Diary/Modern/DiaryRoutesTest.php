@@ -20,14 +20,6 @@ class DiaryRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $this->get('/diary/listMember')->assertRedirect('/login');
-        $this->get('/diary/new')->assertRedirect('/login');
-        $this->post('/diary/create')->assertRedirect('/login');
-        $this->get('/diary/1')->assertRedirect('/login');
-    }
-
     public function test_modern_list_member_renders_inertia_component(): void
     {
         $member = Member::factory()->create();

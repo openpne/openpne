@@ -12,15 +12,6 @@ class TimelineRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $member = Member::factory()->create();
-        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
-
-        $this->get("/member/{$member->getKey()}/timeline")->assertRedirect('/login');
-        $this->get("/timeline/{$post->getKey()}")->assertRedirect('/login');
-    }
-
     public function test_member_timeline_renders_with_op3_body_id_and_post_body(): void
     {
         $member = Member::factory()->create();

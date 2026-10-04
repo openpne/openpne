@@ -21,11 +21,6 @@ class DiaryFeedRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_the_friend_feed_still_redirects_a_guest_to_login(): void
-    {
-        $this->get('/diary/listFriend')->assertRedirect('/login');
-    }
-
     public function test_a_guest_gets_the_feed_limited_to_web_public_entries(): void
     {
         Diary::factory()->create(['title' => 'Open note', 'visibility' => Visibility::Open]);

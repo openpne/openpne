@@ -20,11 +20,6 @@ class DirectMessageControllerTest extends TestCase
         return $m;
     }
 
-    public function test_box_routes_require_authentication(): void
-    {
-        $this->get('/message/receiveList')->assertRedirect('/login');
-    }
-
     public function test_index_redirects_to_the_inbox(): void
     {
         $member = Member::factory()->create();

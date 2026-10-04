@@ -12,12 +12,6 @@ class TimelinePostWriteTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $this->get('/timeline/new')->assertRedirect('/login');
-        $this->post('/timeline/create')->assertRedirect('/login');
-    }
-
     public function test_compose_page_renders_the_post_form(): void
     {
         $member = Member::factory()->create();

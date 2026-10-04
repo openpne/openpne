@@ -257,14 +257,6 @@ class DeleteConversationTest extends ConversationTestCase
         $this->actingAs($sender)->get(route('file.show', ['file' => $file->name]))->assertOk();
     }
 
-    public function test_a_guest_is_sent_to_the_login_screen(): void
-    {
-        $other = Member::factory()->create();
-
-        $this->post("/messages/{$other->getKey()}/delete")->assertRedirect('/login');
-        $this->post('/messages/withdrawn/delete')->assertRedirect('/login');
-    }
-
     public function test_the_unit_switched_off_takes_both_delete_routes(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

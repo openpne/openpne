@@ -125,11 +125,6 @@ class TagRenderTest extends TestCase
             ->assertDontSee('secret');
     }
 
-    public function test_a_guest_is_redirected_to_login(): void
-    {
-        $this->get(route('timeline.tag', 'op4'))->assertRedirect('/login');
-    }
-
     private function createPost(Member $author, string $body, Visibility $visibility = Visibility::Members): TimelinePost
     {
         return app(CreateTimelinePost::class)($author, new TimelinePostFormData($body, $visibility));

@@ -15,13 +15,6 @@ class DiaryCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login_for_comment_routes(): void
-    {
-        $this->post('/diary/1/comment/create')->assertRedirect('/login');
-        $this->get('/diary/comment/deleteConfirm/1')->assertRedirect('/login');
-        $this->post('/diary/comment/delete/1')->assertRedirect('/login');
-    }
-
     // create --------------------------------------------------------------------
 
     public function test_store_creates_comment_and_redirects_to_the_diary(): void

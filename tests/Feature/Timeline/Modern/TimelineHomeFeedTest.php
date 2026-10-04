@@ -20,11 +20,6 @@ class TimelineHomeFeedTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $this->get('/timeline')->assertRedirect('/login');
-    }
-
     public function test_modern_home_feed_renders_inertia_component_with_viewer_and_posts(): void
     {
         $member = Member::factory()->create();

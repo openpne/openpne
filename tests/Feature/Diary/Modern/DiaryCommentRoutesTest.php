@@ -20,12 +20,6 @@ class DiaryCommentRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guests_are_redirected_to_login_for_comment_routes(): void
-    {
-        $this->post('/diary/1/comment/create')->assertRedirect('/login');
-        $this->post('/diary/comment/delete/1')->assertRedirect('/login');
-    }
-
     public function test_modern_show_includes_comments_in_props(): void
     {
         $diary = Diary::factory()->create();

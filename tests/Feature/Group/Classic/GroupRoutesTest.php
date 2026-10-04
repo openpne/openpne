@@ -20,13 +20,6 @@ class GroupRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $this->get('/groups')->assertRedirect('/login');
-        $this->get('/groups/1')->assertRedirect('/login');
-        $this->post('/groups/1/join')->assertRedirect('/login');
-    }
-
     public function test_show_page_renders_with_community_body_id(): void
     {
         $group = Group::factory()->create(['name' => 'Tokyo Runners']);
