@@ -1,5 +1,5 @@
 import { type RefObject, useEffect, useRef, useState } from 'react';
-import { carriesFiles, droppedImages, pastedImages } from '@/lib/file-drop';
+import { carriesPick, droppedImages, pastedImages } from '@/lib/file-drop';
 
 interface DropTargetOptions {
     onFiles: (files: File[]) => void;
@@ -10,8 +10,9 @@ interface DropTargetOptions {
 }
 
 /**
- * The target is the form around `ref`, or the element itself outside any form. The drag enter/leave
- * pair is counted, since the browser fires them for every child the pointer crosses.
+ * The target is the form around `ref`, or the element itself outside any form; a drag that is not a
+ * pick (`carriesPick`) is left alone here and to the shell's guard. The drag enter/leave pair is
+ * counted, since the browser fires them for every child the pointer crosses.
  */
 export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, enabled = true, paste = false }: DropTargetOptions): boolean {
     const [dragging, setDragging] = useState(false);
@@ -26,7 +27,7 @@ export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, ena
         }
         let depth = 0;
         const enter = (event: DragEvent) => {
-            if (!carriesFiles(event.dataTransfer)) {
+            if (!carriesPick(event.dataTransfer)) {
                 return;
             }
             event.preventDefault();
@@ -34,7 +35,7 @@ export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, ena
             setDragging(latest.current.enabled);
         };
         const over = (event: DragEvent) => {
-            if (!carriesFiles(event.dataTransfer)) {
+            if (!carriesPick(event.dataTransfer)) {
                 return;
             }
             event.preventDefault();
@@ -43,7 +44,7 @@ export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, ena
             }
         };
         const leave = (event: DragEvent) => {
-            if (!carriesFiles(event.dataTransfer)) {
+            if (!carriesPick(event.dataTransfer)) {
                 return;
             }
             depth = Math.max(0, depth - 1);
@@ -52,7 +53,7 @@ export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, ena
             }
         };
         const drop = (event: DragEvent) => {
-            if (!carriesFiles(event.dataTransfer)) {
+            if (!carriesPick(event.dataTransfer)) {
                 return;
             }
             event.preventDefault();

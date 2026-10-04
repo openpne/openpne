@@ -255,6 +255,8 @@ test('a picture dropped outside any target is swallowed, so the page and its dra
     // Prevented at the window: the browser would otherwise open the file in the tab.
     expect(fireEvent.dragOver(screen.getByText('page'), { dataTransfer: filesDrag })).toBe(false);
     expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: filesDrag })).toBe(false);
+    // A picture dragged off a page carries a file too, and would open over the draft the same way.
+    expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: { ...filesDrag, types: ['text/uri-list', 'text/html', 'Files'] } })).toBe(false);
     // A file input keeps its native drop, and a drag of text is not the guard's business.
     expect(fireEvent.drop(screen.getByLabelText('Picture'), { dataTransfer: filesDrag })).toBe(true);
     expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: { types: ['text/plain'], files: [] } })).toBe(true);

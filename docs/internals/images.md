@@ -254,8 +254,8 @@ while a send is in flight or at the cap; a one-picture input takes a drop as it 
 later one replacing the earlier. The shell
 prevents the drop that would otherwise open the file in the tab anywhere outside a target, except
 on a file input, which keeps its native drop. Only pictures are taken, and only picked ones: what is
-not a picture is ignored, and so is a picture dragged off a web page, which arrives as markup with
-a copy of its bytes rather than as a file the member chose.
+not a picture is ignored, and a picture dragged off a web page — markup with a copy of its bytes,
+not a file the member chose — is offered to no target, the shell alone keeping it from opening.
 
 ## Processing
 

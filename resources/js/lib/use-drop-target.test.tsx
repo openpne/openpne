@@ -91,3 +91,18 @@ test('without paste asked for, a pasted picture is left alone', () => {
     expect(fireEvent.paste(getByTestId('child'), { clipboardData: withFiles([picture()]) })).toBe(true);
     expect(onFiles).not.toHaveBeenCalled();
 });
+
+test('a picture dragged off a page shows no ring and is left to the shell', () => {
+    const onFiles = vi.fn();
+    const { getByTestId } = render(<Target onFiles={onFiles} />);
+    const form = getByTestId('form');
+    const dataTransfer = { types: ['text/uri-list', 'text/html', 'Files'], files: [picture()], getData: () => '' };
+
+    const enter = fireEvent.dragEnter(form, { dataTransfer });
+    expect(form.dataset.dragging).toBe('false');
+    const drop = fireEvent.drop(form, { dataTransfer });
+
+    expect(onFiles).not.toHaveBeenCalled();
+    expect(enter).toBe(true);
+    expect(drop).toBe(true);
+});

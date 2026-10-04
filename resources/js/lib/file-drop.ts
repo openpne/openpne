@@ -4,17 +4,19 @@ export function carriesFiles(transfer: DataTransfer | null): boolean {
 }
 
 /**
- * The pictures among dropped files; what is not a picture is ignored rather than refused. A picture
- * dragged off a web page arrives with its markup (`text/html`) and, in Chromium, a copy of its bytes
- * as a file: that is a link, not a pick, and is ignored too — a file dragged from the desktop
- * carries no markup.
+ * Whether a drag is a pick a target should offer to take: files without markup. A picture dragged
+ * off a web page arrives with its markup (`text/html`) and, in Chromium, a copy of its bytes as a
+ * file — a link, not a pick — where a file dragged from the desktop carries no markup.
  */
-export function droppedImages(transfer: DataTransfer | null): File[] {
-    if (transfer === null || Array.from(transfer.types).includes('text/html')) {
-        return [];
-    }
+export function carriesPick(transfer: DataTransfer | null): boolean {
+    const types = Array.from(transfer?.types ?? []);
 
-    return Array.from(transfer.files).filter((file) => file.type.startsWith('image/'));
+    return types.includes('Files') && !types.includes('text/html');
+}
+
+/** The pictures among dropped files; what is not a picture is ignored rather than refused. */
+export function droppedImages(transfer: DataTransfer | null): File[] {
+    return Array.from(transfer?.files ?? []).filter((file) => file.type.startsWith('image/'));
 }
 
 /**

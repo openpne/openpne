@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { assignToInput, carriesFiles, droppedImages, pastedImages } from './file-drop';
+import { assignToInput, carriesFiles, carriesPick, droppedImages, pastedImages } from './file-drop';
 
 const picture = (name: string) => new File([new Uint8Array(4)], name, { type: 'image/png' });
 
@@ -23,15 +23,19 @@ test('a drag carries files only when the browser says so', () => {
     expect(carriesFiles(null)).toBe(false);
 });
 
-test('only the pictures among dropped files are handed on, and none from a picture dragged off a page', () => {
+test('only the pictures among dropped files are handed on', () => {
     const files = droppedImages(transfer([picture('a.png'), new File(['x'], 'notes.txt', { type: 'text/plain' })]));
-    expect(files.map((file) => file.name)).toEqual(['a.png']);
 
-    const offAPage = { types: ['text/uri-list', 'text/html', 'Files'], files: [picture('hero.png')] } as unknown as DataTransfer;
-    expect(droppedImages(offAPage)).toEqual([]);
+    expect(files.map((file) => file.name)).toEqual(['a.png']);
+});
+
+test('a pick is files without markup: a picture dragged off a page is none, a desktop file with its URI is one', () => {
+    expect(carriesPick({ types: ['text/uri-list', 'text/html', 'Files'] } as unknown as DataTransfer)).toBe(false);
     // A desktop file drag may carry its file:// URI on some platforms, and is a pick all the same.
-    const fromDesktop = { types: ['text/uri-list', 'Files'], files: [picture('IMG_1.png')] } as unknown as DataTransfer;
-    expect(droppedImages(fromDesktop).map((file) => file.name)).toEqual(['IMG_1.png']);
+    expect(carriesPick({ types: ['text/uri-list', 'Files'] } as unknown as DataTransfer)).toBe(true);
+    expect(carriesPick({ types: ['Files'] } as unknown as DataTransfer)).toBe(true);
+    expect(carriesPick({ types: ['text/plain'] } as unknown as DataTransfer)).toBe(false);
+    expect(carriesPick(null)).toBe(false);
 });
 
 test('a paste that carries plain text pastes the text and no picture', () => {
