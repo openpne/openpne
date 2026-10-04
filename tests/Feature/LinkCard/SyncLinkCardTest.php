@@ -120,8 +120,8 @@ class SyncLinkCardTest extends TestCase
 
     public function test_it_attaches_the_pending_card_but_fetches_nothing_while_the_setting_is_off(): void
     {
-        // Checked here as well as where the job was queued: the setting can be turned off after a
-        // job is already waiting. The pending card is what the read trigger fetches once it returns.
+        // The read trigger queues this job without asking the setting, so the fetch gate here and in
+        // FetchLinkCard is the one that holds; the pending card is what the read trigger fetches later.
         Queue::fake();
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
         $diary = $this->diary('https://example.com/x');

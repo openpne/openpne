@@ -12,8 +12,9 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Starts link-card work from a page view, which is what reaches records written before the feature
  * was on and cards that have since expired. Detail pages only (a list would queue a page's worth of
- * jobs, talk being the one exception, {@see ensureAll()}), nothing runs inline, and it is called
- * from controllers after authorization and never from a serializer.
+ * jobs, talk being the one exception, {@see ensureAll()}), nothing runs inline except what the sync
+ * queue driver makes inline, and it is called from controllers after authorization and never from a
+ * serializer.
  */
 final class LinkCardSync
 {
