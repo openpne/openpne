@@ -24,6 +24,7 @@ class RejectFriendRequestTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $alice->getKey(),
             'target_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         app(RejectFriendRequest::class)($bob, $alice);

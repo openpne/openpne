@@ -60,8 +60,8 @@ class MemberDiaryMonthlyCountsTest extends TestCase
     {
         [$owner, $friend] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey()],
+            ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey(), 'created_at' => now()],
         ]);
         $this->diaryOn($owner, '2026-03-05 09:00:00', Visibility::Friends);
         $this->diaryOn($owner, '2026-03-20 09:00:00', Visibility::Private);
@@ -91,6 +91,7 @@ class MemberDiaryMonthlyCountsTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertSame([], (new MemberDiaryMonthlyCounts)($viewer, $owner));

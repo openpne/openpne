@@ -33,6 +33,7 @@ class GroupModelTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         // An applicant is reachable as a pending applicant, never as a confirmed member.

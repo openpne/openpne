@@ -73,8 +73,8 @@ class InternalLinkCardQueryCostTest extends TestCase
         $this->friend = Member::factory()->create();
         $this->blocker = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $this->author->id, 'friend_id' => $this->friend->id],
-            ['member_id' => $this->friend->id, 'friend_id' => $this->author->id],
+            ['member_id' => $this->author->id, 'friend_id' => $this->friend->id, 'created_at' => now()],
+            ['member_id' => $this->friend->id, 'friend_id' => $this->author->id, 'created_at' => now()],
         ]);
         DB::table('member_blocks')->insert([
             'blocker_id' => $this->blocker->id, 'blocked_id' => $this->author->id, 'created_at' => now(),

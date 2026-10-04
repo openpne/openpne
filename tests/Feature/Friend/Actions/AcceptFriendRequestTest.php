@@ -25,6 +25,7 @@ class AcceptFriendRequestTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $alice->getKey(),
             'target_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         app(AcceptFriendRequest::class)($bob, $alice);
@@ -75,11 +76,13 @@ class AcceptFriendRequestTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $alice->getKey(),
             'target_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
         // Pre-existing partial-mirror row makes the bulk insert fail mid-way.
         DB::table('friendships')->insert([
             'member_id' => $alice->getKey(),
             'friend_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->expectException(QueryException::class);
@@ -103,10 +106,12 @@ class AcceptFriendRequestTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $alice->getKey(),
             'target_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
         DB::table('member_blocks')->insert([
             'blocker_id' => $bob->getKey(),
             'blocked_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         try {

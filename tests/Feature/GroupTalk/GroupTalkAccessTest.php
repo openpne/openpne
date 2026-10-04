@@ -97,7 +97,7 @@ class GroupTalkAccessTest extends TalkTestCase
         $group = $this->group();
         $viewer = $this->memberOf($group);
         $blocked = $this->memberOf($group);
-        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
         GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $blocked->getKey()]);
 
         $this->actingAs($viewer)

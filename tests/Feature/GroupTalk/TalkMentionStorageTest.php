@@ -136,9 +136,9 @@ class TalkMentionStorageTest extends TalkTestCase
     public function test_a_block_in_either_direction_drops_the_row(bool $authorBlocks): void
     {
         [$group, $author, $target] = $this->conversation();
-        DB::table('member_blocks')->insert($authorBlocks
+        DB::table('member_blocks')->insert(($authorBlocks
             ? ['blocker_id' => $author->getKey(), 'blocked_id' => $target->getKey()]
-            : ['blocker_id' => $target->getKey(), 'blocked_id' => $author->getKey()]);
+            : ['blocker_id' => $target->getKey(), 'blocked_id' => $author->getKey()]) + ['created_at' => now()]);
 
         $this->say($author, $group, 'hi @Bob welcome', [
             ['member_id' => $target->getKey(), 'offset' => 3, 'length' => 4],

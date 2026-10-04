@@ -60,6 +60,7 @@ class MemberDiaryDaysTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertSame([], (new MemberDiaryDays)($viewer, $owner, 2026, 3));

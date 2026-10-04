@@ -286,7 +286,7 @@ class MemberSearchTest extends TestCase
         $viewer = Member::factory()->create();
         $profile = Profile::factory()->create(['form_type' => 'input']);
         $owner = $this->memberWithValue($profile, 'blocked-value');
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->assertNotContains($owner->getKey(), $this->ids($this->search($viewer, profile: [$profile->getKey() => 'blocked'])));
     }
@@ -348,7 +348,7 @@ class MemberSearchTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $owner = $this->memberWithIntro($this->selfIntroProfile(), 'Blocked', Visibility::Members);
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->assertSame([], $this->visibleIntros($viewer, $owner));
     }
@@ -476,8 +476,8 @@ class MemberSearchTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 
@@ -574,7 +574,7 @@ class MemberSearchTest extends TestCase
         $viewer = Member::factory()->create();
         $birthday = $this->birthdayProfile();
         $owner = $this->memberAged30($birthday, Visibility::Members);
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->assertNotContains($owner->getKey(), $this->ids($this->search($viewer, age: ['min' => '25', 'max' => '35'])));
     }

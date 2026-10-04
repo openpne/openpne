@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('group_join_requests', function (Blueprint $table) {
             $table->foreignId('group_id')->constrained('groups')->cascadeOnDelete();
             $table->foreignId('member_id')->constrained('members')->cascadeOnDelete();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at');
 
             $table->primary(['group_id', 'member_id']);
             $table->index('member_id');

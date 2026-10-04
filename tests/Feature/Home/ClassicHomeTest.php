@@ -141,7 +141,7 @@ class ClassicHomeTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $sender = Member::factory()->create();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 
@@ -162,12 +162,12 @@ class ClassicHomeTest extends TestCase
         $group = Group::factory()->create(['name' => 'Runners Club']);
         GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
         $group->forceFill(['pending_admin_member_id' => $viewer->getKey()])->save();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
         $administered = Group::factory()->approval()->create(['name' => 'Chess Club']);
         GroupMember::factory()->admin()->create(['group_id' => $administered->getKey(), 'member_id' => $viewer->getKey()]);
-        DB::table('group_join_requests')->insert(['group_id' => $administered->getKey(), 'member_id' => $sender->getKey()]);
+        DB::table('group_join_requests')->insert(['group_id' => $administered->getKey(), 'member_id' => $sender->getKey(), 'created_at' => now()]);
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
@@ -201,7 +201,7 @@ class ClassicHomeTest extends TestCase
         $viewer = Member::factory()->create();
         $senders = Member::factory()->count(3)->create();
         foreach ($senders as $sender) {
-            DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+            DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         }
         foreach ($senders->take(2) as $sender) {
             $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
@@ -225,7 +225,7 @@ class ClassicHomeTest extends TestCase
             GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         }
         foreach (Member::factory()->count(2)->create() as $applicant) {
-            DB::table('group_join_requests')->insert(['group_id' => $busy->getKey(), 'member_id' => $applicant->getKey()]);
+            DB::table('group_join_requests')->insert(['group_id' => $busy->getKey(), 'member_id' => $applicant->getKey(), 'created_at' => now()]);
         }
 
         $content = (string) $this->actingAs($admin)->get('/')->assertOk()->getContent();
@@ -245,7 +245,7 @@ class ClassicHomeTest extends TestCase
         $group = Group::factory()->approval()->create(['name' => 'Busy Club']);
         $subAdmin = Member::factory()->create();
         GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $subAdmin->getKey(), 'role' => GroupRole::SubAdmin]);
-        DB::table('group_join_requests')->insert(['group_id' => $group->getKey(), 'member_id' => Member::factory()->create()->getKey()]);
+        DB::table('group_join_requests')->insert(['group_id' => $group->getKey(), 'member_id' => Member::factory()->create()->getKey(), 'created_at' => now()]);
 
         // The approval page is Admin-only, so a sub-administrator gets no line pointing at a 403.
         $this->actingAs($subAdmin)->get('/')

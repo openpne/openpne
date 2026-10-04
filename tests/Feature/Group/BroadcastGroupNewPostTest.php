@@ -67,7 +67,7 @@ class BroadcastGroupNewPostTest extends TestCase
         $banned = $this->member($group);
         $banned->forceFill(['is_login_rejected' => true])->save();
         $blocked = $this->member($group);
-        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->broadcastTopic($topic);

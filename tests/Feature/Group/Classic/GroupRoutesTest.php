@@ -62,6 +62,7 @@ class GroupRoutesTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($applicant)->get(route('group.show', $group));
@@ -464,6 +465,7 @@ class GroupRoutesTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         // A non-admin cannot see the queue.
@@ -493,6 +495,7 @@ class GroupRoutesTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($admin)->get(route('group.members.pending', ['group' => $group->getKey()]))->assertOk();
@@ -513,6 +516,7 @@ class GroupRoutesTest extends TestCase
             DB::table('group_join_requests')->insert([
                 'group_id' => $group->getKey(),
                 'member_id' => $applicant->getKey(),
+                'created_at' => now(),
             ]);
         }
 
@@ -530,6 +534,7 @@ class GroupRoutesTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($stranger)->post('/groups/'.$group->getKey().'/members/approve', [

@@ -83,8 +83,8 @@ class DiaryFeedRoutesTest extends TestCase
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         Diary::factory()->create([
             'member_id' => $friend->getKey(),
@@ -135,6 +135,7 @@ class DiaryFeedRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $blocker->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($viewer)->get('/diary/list')

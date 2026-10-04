@@ -17,6 +17,7 @@ class CountReceivedFriendRequestsTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $requester->getKey(),
             'target_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
     }
 

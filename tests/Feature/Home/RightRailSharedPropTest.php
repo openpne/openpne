@@ -19,8 +19,8 @@ class RightRailSharedPropTest extends TestCase
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
 
         $this->actingAs($viewer)
@@ -51,8 +51,8 @@ class RightRailSharedPropTest extends TestCase
         $friend = Member::factory()->create();
         MemberImage::factory()->create(['member_id' => $friend->getKey()]);
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
 
         // The rail's tiles paint at ~90px, well above every other surface's avatar, so the grid asks

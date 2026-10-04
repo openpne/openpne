@@ -40,8 +40,8 @@ class ShowTimelinePostTest extends TestCase
     {
         [$owner, $friend] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey()],
+            ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey(), 'created_at' => now()],
         ]);
         $post = TimelinePost::factory()->friends()->create(['member_id' => $owner->getKey()]);
 
@@ -55,6 +55,7 @@ class ShowTimelinePostTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertNull((new ShowTimelinePost)($viewer, $post->getKey()));

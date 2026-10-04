@@ -46,7 +46,7 @@ class UnreadCountsEndpointTest extends TestCase
     public function test_a_switched_off_unit_reports_zero(): void
     {
         [$viewer, $sender] = Member::factory()->count(2)->create()->all();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
 

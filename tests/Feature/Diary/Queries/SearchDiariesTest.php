@@ -87,6 +87,7 @@ class SearchDiariesTest extends TestCase
         ]);
         DB::table('member_blocks')->insert([
             'blocker_id' => $blocker->getKey(), 'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertSame(0, (new SearchDiaries)($viewer, 'laravel')->total());

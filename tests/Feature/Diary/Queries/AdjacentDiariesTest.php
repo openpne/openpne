@@ -110,6 +110,7 @@ class AdjacentDiariesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $result = (new AdjacentDiaries)($viewer, $current);

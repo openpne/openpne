@@ -31,6 +31,7 @@ class TimelineRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}/timeline")->assertNotFound();

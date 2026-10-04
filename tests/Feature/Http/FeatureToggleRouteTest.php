@@ -128,8 +128,8 @@ class FeatureToggleRouteTest extends TestCase
     {
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $this->member->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $this->member->getKey()],
+            ['member_id' => $this->member->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $this->member->getKey(), 'created_at' => now()],
         ]);
         Diary::factory()->friends()->create(['member_id' => $friend->getKey()]);
 
@@ -177,7 +177,7 @@ class FeatureToggleRouteTest extends TestCase
 
     private function seedFriendRequest(Member $target, Member $requester): string
     {
-        DB::table('friend_requests')->insertOrIgnore(['requester_id' => $requester->getKey(), 'target_id' => $target->getKey()]);
+        DB::table('friend_requests')->insertOrIgnore(['requester_id' => $requester->getKey(), 'target_id' => $target->getKey(), 'created_at' => now()]);
 
         $id = (string) Str::uuid();
         $target->notifications()->create([

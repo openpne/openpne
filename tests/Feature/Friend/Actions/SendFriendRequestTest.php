@@ -40,6 +40,7 @@ class SendFriendRequestTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $bob->getKey(),
             'target_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         (new SendFriendRequest)($alice, $bob);
@@ -72,8 +73,8 @@ class SendFriendRequestTest extends TestCase
         Event::fake([FriendRequested::class, FriendRequestAccepted::class]);
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $alice->getKey(), 'friend_id' => $bob->getKey()],
-            ['member_id' => $bob->getKey(), 'friend_id' => $alice->getKey()],
+            ['member_id' => $alice->getKey(), 'friend_id' => $bob->getKey(), 'created_at' => now()],
+            ['member_id' => $bob->getKey(), 'friend_id' => $alice->getKey(), 'created_at' => now()],
         ]);
 
         try {
@@ -94,6 +95,7 @@ class SendFriendRequestTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $alice->getKey(),
             'blocked_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         try {
@@ -114,6 +116,7 @@ class SendFriendRequestTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $bob->getKey(),
             'blocked_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         try {
@@ -134,6 +137,7 @@ class SendFriendRequestTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $alice->getKey(),
             'target_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         try {

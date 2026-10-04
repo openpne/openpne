@@ -19,8 +19,8 @@ class ListBlocksTest extends TestCase
         $blockedA = Member::factory()->create();
         $blockedB = Member::factory()->create();
         DB::table('member_blocks')->insert([
-            ['blocker_id' => $blocker->getKey(), 'blocked_id' => $blockedA->getKey()],
-            ['blocker_id' => $blocker->getKey(), 'blocked_id' => $blockedB->getKey()],
+            ['blocker_id' => $blocker->getKey(), 'blocked_id' => $blockedA->getKey(), 'created_at' => now()],
+            ['blocker_id' => $blocker->getKey(), 'blocked_id' => $blockedB->getKey(), 'created_at' => now()],
         ]);
 
         $result = (new ListBlocks)($blocker);
@@ -52,6 +52,7 @@ class ListBlocksTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $other->getKey(),
             'blocked_id' => $blocked->getKey(),
+            'created_at' => now(),
         ]);
 
         $result = (new ListBlocks)($blocker);

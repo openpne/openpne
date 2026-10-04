@@ -86,7 +86,7 @@ class NotifyTopicCommentPostedTest extends TestCase
         Notification::fake();
         $group = Group::factory()->create();
         [$author, $commenter] = $this->members($group, 2);
-        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $commenter->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $commenter->getKey(), 'created_at' => now()]);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $comment = $this->comment($topic, $commenter);
 

@@ -73,6 +73,7 @@ class ShowDiaryTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertNull((new ShowDiary)($viewer, $diary->getKey()));
@@ -99,6 +100,7 @@ class ShowDiaryTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertNull((new ShowDiary)($viewer, $diary->getKey()));
@@ -107,8 +109,8 @@ class ShowDiaryTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 }

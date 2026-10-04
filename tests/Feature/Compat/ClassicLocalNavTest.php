@@ -65,8 +65,8 @@ class ClassicLocalNavTest extends TestCase
         $stranger = Member::factory()->create(); // not yet a friend → link page
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
 
         $this->actingAs($viewer)->get("/friend/link?id={$stranger->getKey()}")

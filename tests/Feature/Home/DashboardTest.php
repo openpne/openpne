@@ -259,7 +259,7 @@ class DashboardTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $requester = Member::factory()->create();
-        DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $message = DirectMessage::factory()->create(['sender_id' => $requester->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);

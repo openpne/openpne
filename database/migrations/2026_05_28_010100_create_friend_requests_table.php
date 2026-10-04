@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('friend_requests', function (Blueprint $table) {
             $table->foreignId('requester_id')->constrained('members')->cascadeOnDelete();
             $table->foreignId('target_id')->constrained('members')->cascadeOnDelete();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at');
 
             $table->primary(['requester_id', 'target_id']);
             $table->index('target_id');

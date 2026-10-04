@@ -59,6 +59,7 @@ class GroupMembershipTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertTrue(GroupMembership::isPending($group, $applicant));

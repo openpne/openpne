@@ -84,8 +84,8 @@ class ClassicPhotoTableRowCostTest extends TestCase
         $member = Member::factory()->create();
         foreach (Member::factory()->count($count)->create() as $friend) {
             DB::table('friendships')->insert([
-                ['member_id' => $member->getKey(), 'friend_id' => $friend->getKey()],
-                ['member_id' => $friend->getKey(), 'friend_id' => $member->getKey()],
+                ['member_id' => $member->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+                ['member_id' => $friend->getKey(), 'friend_id' => $member->getKey(), 'created_at' => now()],
             ]);
         }
 

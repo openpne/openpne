@@ -48,13 +48,19 @@ the first write and treat a later change as a data migration.
 
 Key invariants:
 
-1. **The application stamps its own timestamps.** Four tables default
-   `created_at` to the database clock (`useCurrent()`): `friend_requests`,
-   `friendships`, `member_blocks`, `group_join_requests`. No connection
-   timezone is configured, so that clock is UTC on SQLite and the server's zone on
-   MySQL — a row the app did not stamp puts a second clock in one column. Every
-   write path passes `now()` explicitly; the default remains only for raw SQL and
-   the upgrade importer.
+1. **The application stamps its own timestamps.** No connection timezone is
+   configured, so the database clock is UTC on SQLite and the server's zone on
+   MySQL — a row the app did not stamp would put a second clock in one column.
+   Every write path passes `now()` explicitly, and no `created_at` column carries
+   a database default: `friend_requests`, `friendships`, `member_blocks` and
+   `group_join_requests` refuse an unstamped row rather than stamping it
+   themselves (the upgrade importer maps each source timestamp explicitly). On
+   MySQL that refusal rests on strict mode, which the connection config sets, and
+   on `explicit_defaults_for_timestamp`, which MySQL 8 turns on; without the
+   former an unstamped row stores a zero date, without the latter the column
+   regains a database default. The one column still defaulting to the database
+   clock is the talk read cursor `group_members.talk_read_at`, a backstop
+   described in [group-talk.md](group-talk.md), "Unread".
 2. **The client formats in the site's zone, not the browser's.** Instants are
    serialized as offset-bearing ISO and the zone travels with them as the
    `timezone` shared prop, so Modern places them on the same clock Classic renders

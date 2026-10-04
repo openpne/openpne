@@ -147,7 +147,7 @@ class SourcePreflightTest extends TestCase
         // Existing target rows and a checkpoint that --force-restart would normally clear; target rows
         // only, since the run aborts on the preflight before any step reads a source member.
         [$a, $b] = Member::factory()->count(2)->create()->all();
-        DB::table('friendships')->insert(['member_id' => $a->id, 'friend_id' => $b->id]);
+        DB::table('friendships')->insert(['member_id' => $a->id, 'friend_id' => $b->id, 'created_at' => now()]);
         UpgradeState::create(['step_key' => 'FriendshipUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
 
         $this->createSource('member_relationship');

@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('member_blocks', function (Blueprint $table) {
             $table->foreignId('blocker_id')->constrained('members')->cascadeOnDelete();
             $table->foreignId('blocked_id')->constrained('members')->cascadeOnDelete();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at');
 
             $table->primary(['blocker_id', 'blocked_id']);
             $table->index('blocked_id');

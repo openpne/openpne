@@ -151,7 +151,7 @@ class NotificationTargetReadTest extends TestCase
         [$accepted, $waiting] = Member::factory()->count(2)->create()->all();
 
         foreach ([$accepted, $waiting] as $requester) {
-            DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
+            DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         }
 
         $rows = collect([$accepted, $waiting])->map(fn (Member $requester): DatabaseNotification => $this->seedRow(

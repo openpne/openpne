@@ -111,7 +111,7 @@ class BroadcastGroupCommentTest extends TestCase
         $author = $this->member($group);
         $commenter = $this->member($group);
         $blocked = $this->member($group);
-        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $commenter->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $commenter->getKey(), 'created_at' => now()]);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $comment = $this->comment($topic, $commenter);
 

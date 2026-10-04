@@ -106,7 +106,7 @@ class ConversationVisibilityTest extends ConversationTestCase
         [$viewer, $other] = Member::factory()->count(2)->create();
         $this->deliver($viewer, $other, ['body' => 'mine']);
         $this->deliver($other, $viewer, ['body' => 'theirs']);
-        DB::table('member_blocks')->insert(['blocker_id' => $other->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $other->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->actingAs($viewer)
             ->get("/messages/{$other->getKey()}")

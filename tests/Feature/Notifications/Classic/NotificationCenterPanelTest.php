@@ -223,7 +223,7 @@ class NotificationCenterPanelTest extends TestCase
 
     private function seedFriendRequest(Member $viewer, Member $requester): string
     {
-        DB::table('friend_requests')->insertOrIgnore(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insertOrIgnore(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
 
         return $this->seedRow($viewer, FriendRequestedNotification::class, [
             'kind' => 'friend_requested',

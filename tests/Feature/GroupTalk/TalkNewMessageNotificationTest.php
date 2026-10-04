@@ -218,7 +218,7 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         $banned = $this->joined($group);
         $blocked = $this->joined($group, 'Carol');
         $banned->forceFill(['is_login_rejected' => true])->save();
-        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $author->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $author->getKey(), 'created_at' => now()]);
 
         $this->broadcast($this->message($group, $author));
 

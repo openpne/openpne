@@ -58,8 +58,8 @@ class ClassicNoImageFallbackTest extends TestCase
         app(SetAvatar::class)($withAvatar, UploadedFile::fake()->image('me.png', 100, 100));
         foreach ([$withAvatar, $withoutAvatar] as $friend) {
             DB::table('friendships')->insert([
-                ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey()],
-                ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey()],
+                ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+                ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey(), 'created_at' => now()],
             ]);
         }
 

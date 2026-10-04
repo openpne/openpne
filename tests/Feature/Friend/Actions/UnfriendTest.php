@@ -18,8 +18,8 @@ class UnfriendTest extends TestCase
     {
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $alice->getKey(), 'friend_id' => $bob->getKey()],
-            ['member_id' => $bob->getKey(), 'friend_id' => $alice->getKey()],
+            ['member_id' => $alice->getKey(), 'friend_id' => $bob->getKey(), 'created_at' => now()],
+            ['member_id' => $bob->getKey(), 'friend_id' => $alice->getKey(), 'created_at' => now()],
         ]);
 
         (new Unfriend)($alice, $bob);
@@ -31,8 +31,8 @@ class UnfriendTest extends TestCase
     {
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $alice->getKey(), 'friend_id' => $bob->getKey()],
-            ['member_id' => $bob->getKey(), 'friend_id' => $alice->getKey()],
+            ['member_id' => $alice->getKey(), 'friend_id' => $bob->getKey(), 'created_at' => now()],
+            ['member_id' => $bob->getKey(), 'friend_id' => $alice->getKey(), 'created_at' => now()],
         ]);
 
         (new Unfriend)($bob, $alice);

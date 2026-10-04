@@ -60,6 +60,7 @@ class GroupQueriesTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $appliedTo->getKey(),
             'member_id' => $member->getKey(),
+            'created_at' => now(),
         ]);
 
         $result = (new ListMemberGroups)($member);
@@ -88,6 +89,7 @@ class GroupQueriesTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         $pending = (new ListPendingMembers)($group);

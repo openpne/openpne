@@ -75,7 +75,7 @@ class NotifyGroupJoinedTest extends TestCase
     {
         Notification::fake();
         [$admin, $joiner] = Member::factory()->count(2)->create()->all();
-        DB::table('member_blocks')->insert(['blocker_id' => $admin->getKey(), 'blocked_id' => $joiner->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $admin->getKey(), 'blocked_id' => $joiner->getKey(), 'created_at' => now()]);
         $group = Group::factory()->create();
         $this->addMember($group, $admin, GroupRole::Admin);
 

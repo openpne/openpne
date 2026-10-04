@@ -18,8 +18,8 @@ class ListPendingRequestsTest extends TestCase
     {
         [$alice, $bob, $carol] = Member::factory()->count(3)->create()->all();
         DB::table('friend_requests')->insert([
-            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey()],
-            ['requester_id' => $carol->getKey(), 'target_id' => $alice->getKey()],
+            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey(), 'created_at' => now()],
+            ['requester_id' => $carol->getKey(), 'target_id' => $alice->getKey(), 'created_at' => now()],
         ]);
 
         $page = (new ListPendingRequests)($alice, PendingRequestDirection::Received);
@@ -33,8 +33,8 @@ class ListPendingRequestsTest extends TestCase
     {
         [$alice, $bob, $carol] = Member::factory()->count(3)->create()->all();
         DB::table('friend_requests')->insert([
-            ['requester_id' => $alice->getKey(), 'target_id' => $bob->getKey()],
-            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
+            ['requester_id' => $alice->getKey(), 'target_id' => $bob->getKey(), 'created_at' => now()],
+            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey(), 'created_at' => now()],
         ]);
 
         $page = (new ListPendingRequests)($alice, PendingRequestDirection::Sent);
@@ -74,6 +74,7 @@ class ListPendingRequestsTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $bob->getKey(),
             'target_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         $page = (new ListPendingRequests)(
@@ -89,7 +90,7 @@ class ListPendingRequestsTest extends TestCase
     {
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
         DB::table('friend_requests')->insert([
-            ['requester_id' => $alice->getKey(), 'target_id' => $bob->getKey()],
+            ['requester_id' => $alice->getKey(), 'target_id' => $bob->getKey(), 'created_at' => now()],
         ]);
 
         $this->assertSame(1, (new ListPendingRequests)($alice, PendingRequestDirection::Sent)->total());

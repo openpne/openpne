@@ -75,8 +75,8 @@ class ClassicHomeGadgetTest extends TestCase
         $member = Member::factory()->create();
         $friend = Member::factory()->create(['name' => 'AlphaFriend']);
         DB::table('friendships')->insert([
-            ['member_id' => $member->id, 'friend_id' => $friend->id],
-            ['member_id' => $friend->id, 'friend_id' => $member->id],
+            ['member_id' => $member->id, 'friend_id' => $friend->id, 'created_at' => now()],
+            ['member_id' => $friend->id, 'friend_id' => $member->id, 'created_at' => now()],
         ]);
         $group = Group::factory()->create(['name' => 'BetaGroup']);
         GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $member->id]);
@@ -121,8 +121,8 @@ class ClassicHomeGadgetTest extends TestCase
         $member = Member::factory()->create();
         $friend = Member::factory()->create(['name' => 'PageOneFriend']);
         DB::table('friendships')->insert([
-            ['member_id' => $member->id, 'friend_id' => $friend->id],
-            ['member_id' => $friend->id, 'friend_id' => $member->id],
+            ['member_id' => $member->id, 'friend_id' => $friend->id, 'created_at' => now()],
+            ['member_id' => $friend->id, 'friend_id' => $member->id, 'created_at' => now()],
         ]);
         $this->makeGadget('home', 'sideMenu', 'friendListBox');
 

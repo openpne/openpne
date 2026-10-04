@@ -38,8 +38,8 @@ class DiaryImagesTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 
@@ -76,7 +76,7 @@ class DiaryImagesTest extends TestCase
         $this->actingAs(Member::factory()->create())->get($file->url())->assertOk();
 
         $blocked = Member::factory()->create();
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
         $this->actingAs($blocked)->get($file->url())->assertNotFound();
     }
 

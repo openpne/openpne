@@ -146,7 +146,7 @@ class TimelineLoadMoreTest extends TestCase
         $this->actingAs($author)->withHeaders(self::FETCH)->get('/member/999999/timeline/rows')->assertNotFound();
         // A member the owner blocks gets the same 404 as the screen: the rows are no oracle.
         $blocked = Member::factory()->create();
-        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
         $this->actingAs($blocked)->withHeaders(self::FETCH)->get("/member/{$author->getKey()}/timeline")->assertNotFound();
         $this->actingAs($blocked)->withHeaders(self::FETCH)->get("/member/{$author->getKey()}/timeline/rows")->assertNotFound();
         $this->actingAs($author)->withHeaders(self::FETCH)->get("/member/{$author->getKey()}/timeline/rows")->assertOk()
@@ -216,7 +216,7 @@ class TimelineLoadMoreTest extends TestCase
 
         // A blocked viewer sees the uniform 404 before the redirect could confirm the member exists.
         $blocked = Member::factory()->create();
-        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
         $this->actingAs($blocked)->get("/member/{$author->getKey()}/timeline?page=3")->assertNotFound();
         $this->actingAs($blocked)->getJson("/member/{$author->getKey()}/timeline/rows?page=2")->assertNotFound();
         $this->actingAs($blocked)->getJson("/member/{$author->getKey()}/timeline/rows?per_page=999")->assertNotFound();

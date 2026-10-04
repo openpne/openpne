@@ -216,8 +216,8 @@ class ProfileFriendOffAudienceTest extends TestCase
         // Read as the forced Friends policy: an existing friend sees it, a stranger does not.
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey()],
+            ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey(), 'created_at' => now()],
         ]);
         $stranger = Member::factory()->create();
 

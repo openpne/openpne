@@ -44,8 +44,8 @@ class ModernFeatureSuppressionTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 
@@ -149,7 +149,7 @@ class ModernFeatureSuppressionTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $other = Member::factory()->create();
-        DB::table('friend_requests')->insert(['requester_id' => $other->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $other->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         $message = DirectMessage::factory()->create(['sender_id' => $other->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 
