@@ -395,7 +395,7 @@ class UnifiedMemberTest extends TestCase
             DB::getQueryLog(),
             fn (array $q): bool => str_contains($q['query'], 'friendships')
                 && ! str_contains($q['query'], 'select exists(')
-                && preg_match('/^select ["`]friend_id["`] from/', $q['query']) !== 1,
+                && preg_match('/^select (["`])friend_id\1 from \1friendships\1 where \1member_id\1 = \? and \1friend_id\1 in \(/', $q['query']) !== 1,
         );
         DB::disableQueryLog();
 
