@@ -7,7 +7,7 @@ import { Field } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
 import { headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
-import { useImageAccept } from '@/components/images-field';
+import { useShrunkPick } from '@/components/images-field';
 import { useT } from '@/lib/i18n';
 import { pickReadableTextColor } from '@/lib/identity-mark';
 import { cn } from '@/lib/utils';
@@ -33,10 +33,10 @@ type AvatarProps = PageProps & {
 
 export default function MemberAvatar() {
     const t = useT();
-    const accept = useImageAccept();
     const { avatar, auth, badgeColor } = usePage<AvatarProps>().props;
 
     const upload = useForm<{ image: File | null }>({ image: null });
+    const image = useShrunkPick(upload.data.image, (file) => upload.setData('image', file));
     const remove = useForm({});
     // Picking a swatch only updates the previews; the choice persists on the explicit save below.
     const color = useForm<{ avatar_color: string | null }>({ avatar_color: badgeColor.value });
@@ -84,11 +84,12 @@ export default function MemberAvatar() {
                             id="avatar_image"
                             type="file"
                             name="image"
-                            accept={accept}
-                            onChange={(e) => upload.setData('image', e.target.files?.[0] ?? null)}
+                            accept={image.accept}
+                            onChange={image.pick}
                             required
                             className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
                         />
+                        {image.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
                     </Field>
                     <Button type="submit" loading={upload.processing}>
                         {t('Upload')}

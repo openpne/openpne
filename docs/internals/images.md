@@ -217,6 +217,25 @@ base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it i
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.
 
+### Shrinking in the browser
+
+The Modern pickers re-encode a picture on the member's device before it is sent, through a canvas:
+over `openpne.images.browser_shrink.max_edge` (2048) on a side it is scaled down, and over
+`passthrough_kb` (2048, never above the upload cap) it is re-encoded even at its size, as JPEG at
+`jpeg_quality` (82) or as PNG when it was one. What survives that is pixels alone: the EXIF block,
+GPS included, does not, and a wide-gamut profile lands on sRGB. A picture under both thresholds, a
+GIF, a WebP whose header says it animates, an APNG, and a PNG the canvas would not downscale (its
+re-encode gains nothing, up to the upload cap) are sent as picked, with whatever metadata they
+carry — the canonical strips it on the way out ([security](security.md), "Inline delivery is
+re-encoded"), the stored bytes keep it. A file the browser cannot decode is sent as picked too, and
+the server's rules answer it.
+
+[`ImageUploadPolicy`](../../app/Files/ImageUploadPolicy.php) ships the thresholds with the accept
+list as the `imageUpload` shared prop, and `SnsSettingKey::ImageUploadBrowserShrink` (the image
+upload settings page) ships null instead: every picker then sends the original, and anything over
+the upload cap is refused by the rules above. The switch is for a site whose members want their
+pixels kept; it changes nothing on Classic, whose forms never shrank.
+
 ## Processing
 
 Every decode goes through [`ImageProcessor`](../../app/Files/ImageProcessor.php), chosen by

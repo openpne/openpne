@@ -10,7 +10,10 @@ use App\Files\ImageProcessor;
 use App\Files\ImageSpec;
 use App\Files\ProcessedImage;
 use App\Models\Member;
+use App\Services\SnsSettingService;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
 use Tests\TestCase;
@@ -35,6 +38,26 @@ class ImageUploadAcceptPropTest extends TestCase
         $this->assertStringContainsString('.avif', image_upload_accept());
         $this->actingAs($member)->get('/dashboard')
             ->assertInertia(fn ($page) => $page->where('imageUpload.accept', ImageIntake::imgproxy()->accept()));
+    }
+
+    public function test_the_shared_prop_carries_the_shrink_thresholds_until_the_site_switches_them_off(): void
+    {
+        $member = Member::factory()->create();
+        config(['openpne.images.browser_shrink' => ['max_edge' => 1600, 'passthrough_kb' => 1024, 'jpeg_quality' => 75]]);
+
+        $this->actingAs($member)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 1048576, 'maxBytes' => 5242880, 'quality' => 0.75]));
+
+        // A pass-through size above the upload cap would send a picture the cap then refuses.
+        config(['openpne.images.max_upload_kilobytes' => 512]);
+        $this->actingAs($member)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 524288, 'maxBytes' => 524288, 'quality' => 0.75]));
+
+        DB::table('sns_settings')->updateOrInsert(['key' => SnsSettingKey::ImageUploadBrowserShrink->value], ['value' => '0']);
+        app(SnsSettingService::class)->clearCache();
+
+        $this->actingAs($member)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', null));
     }
 
     public function test_a_classic_form_renders_the_same_list(): void
