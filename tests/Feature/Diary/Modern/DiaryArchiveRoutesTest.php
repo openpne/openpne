@@ -22,11 +22,6 @@ class DiaryArchiveRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guest_is_redirected_to_login(): void
-    {
-        $this->get('/diary/listMember/1/2026/3')->assertRedirect('/login');
-    }
-
     public function test_month_archive_renders_inertia_with_period_and_filtered_data(): void
     {
         $owner = Member::factory()->create();

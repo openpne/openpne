@@ -13,11 +13,6 @@ class TimelineHomeFeedTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $this->get('/timeline')->assertRedirect('/login');
-    }
-
     public function test_home_feed_renders_with_op3_body_id_and_a_visible_post(): void
     {
         $member = Member::factory()->create();

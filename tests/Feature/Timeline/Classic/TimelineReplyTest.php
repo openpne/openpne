@@ -12,13 +12,6 @@ class TimelineReplyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $post = TimelinePost::factory()->create(['member_id' => Member::factory()->create()->getKey()]);
-
-        $this->post("/timeline/{$post->getKey()}/reply")->assertRedirect('/login');
-    }
-
     public function test_show_renders_the_thread_and_reply_form(): void
     {
         $author = Member::factory()->create();

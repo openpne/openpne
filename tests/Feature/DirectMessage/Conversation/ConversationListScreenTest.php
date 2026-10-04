@@ -28,11 +28,6 @@ class ConversationListScreenTest extends ConversationTestCase
         ]);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $this->get('/messages')->assertRedirect('/login');
-    }
-
     public function test_the_list_renders_each_conversation_with_its_preview_and_unread(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

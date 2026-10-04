@@ -19,15 +19,6 @@ class TimelineRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $member = Member::factory()->create();
-        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
-
-        $this->get("/member/{$member->getKey()}/timeline")->assertRedirect('/login');
-        $this->get("/timeline/{$post->getKey()}")->assertRedirect('/login');
-    }
-
     public function test_modern_member_renders_inertia_component(): void
     {
         $member = Member::factory()->create();

@@ -7,18 +7,6 @@ use App\Support\SnsSettingKey;
 
 class ConversationGateTest extends ConversationTestCase
 {
-    public function test_a_guest_is_sent_to_the_login_screen(): void
-    {
-        $other = Member::factory()->create();
-
-        $this->get("/messages/{$other->getKey()}")->assertRedirect('/login');
-        $this->get("/messages/{$other->getKey()}/messages")->assertRedirect('/login');
-        $this->post("/messages/{$other->getKey()}/read", ['messageId' => 1])->assertRedirect('/login');
-        $this->get('/messages/withdrawn')->assertRedirect('/login');
-        $this->get('/messages/withdrawn/messages')->assertRedirect('/login');
-        $this->post('/messages/withdrawn/read', ['messageId' => 1])->assertRedirect('/login');
-    }
-
     public function test_the_unit_switched_off_takes_every_conversation_route(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();

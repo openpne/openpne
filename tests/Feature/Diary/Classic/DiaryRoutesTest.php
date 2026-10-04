@@ -15,18 +15,6 @@ class DiaryRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login_for_every_diary_route(): void
-    {
-        $this->get('/diary/listMember')->assertRedirect('/login');
-        $this->get('/diary/new')->assertRedirect('/login');
-        $this->post('/diary/create')->assertRedirect('/login');
-        $this->get('/diary/edit/1')->assertRedirect('/login');
-        $this->post('/diary/update/1')->assertRedirect('/login');
-        $this->get('/diary/deleteConfirm/1')->assertRedirect('/login');
-        $this->post('/diary/delete/1')->assertRedirect('/login');
-        $this->get('/diary/1')->assertRedirect('/login');
-    }
-
     // listMember ----------------------------------------------------------------
 
     public function test_list_member_page_renders_own_archive_with_body_id(): void

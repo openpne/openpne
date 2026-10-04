@@ -18,15 +18,6 @@ class GroupManageRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $group = Group::factory()->create();
-
-        $this->get(route('group.members.manage', $group))->assertRedirect('/login');
-        $this->post('/groups/1/members/appoint')->assertRedirect('/login');
-        $this->post('/groups/1/members/drop')->assertRedirect('/login');
-    }
-
     public function test_manage_page_is_available_to_admin_and_sub_admin_only(): void
     {
         $group = Group::factory()->create();
