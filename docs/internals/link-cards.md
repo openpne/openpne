@@ -258,7 +258,8 @@ what am I to this group — which is a single-row question asked once per card. 
 records are read, the relations those rules are about to ask for are read for exactly that set, one
 query each, into a memo of **pairs** ([`ViewerRelations`](../../app/Support/ViewerRelations.php)).
 Nothing is loaded on the strength of who is reading, so what it holds is bounded by the page rather
-than by the size of a reader's social graph.
+than by the size of a reader's social graph. A page about one group — a topic, an event — warms the
+viewer's role in it the same way before its first gate, since every comment's delete gate asks it.
 
 Every rule keeps **one** path — the memo if the pair is in it, its own query if not — so a page that
 read nothing behaves and costs exactly as it did before, and a pair the page never named is asked

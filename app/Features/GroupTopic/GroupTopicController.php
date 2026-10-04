@@ -28,6 +28,7 @@ use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use App\Support\Stream\StreamProps;
 use App\Support\SurfaceResolver;
+use App\Support\ViewerRelations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -73,6 +74,7 @@ class GroupTopicController extends Controller
         $found = $query($topic);
         abort_if($found === null, 404);
         $viewer = $this->viewer();
+        app(ViewerRelations::class)->warmRoles($viewer, [$found->group_id]);
         abort_unless(GroupTopicAccess::canViewTopic($found, $viewer), 404);
         // After the authorization decision, and only on the detail page: a board index renders many
         // topics, and asking on each would queue a page's worth of jobs for someone scrolling past.

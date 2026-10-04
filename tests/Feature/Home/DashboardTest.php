@@ -234,9 +234,9 @@ class DashboardTest extends TestCase
         $queries = $this->countApplicationQueries(fn () => $this->actingAs($viewer)->get('/dashboard')->assertOk());
 
         // Bounded by the feeds and their eager loads, never by the row count, and kept tight (steady
-        // state 36 with this fixture's single look: the shell's preference read and the timeline
-        // digest's one grouped reaction read included).
-        $this->assertLessThan(37, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
+        // state 38 with this fixture's single look: the shell's preference read, the timeline
+        // digest's one grouped reaction read and the joined boards' two id reads ahead of their counts included).
+        $this->assertLessThan(39, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void
