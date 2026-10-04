@@ -174,6 +174,7 @@ class PruneLinkCardsCommandTest extends TestCase
             'related_entity_id' => $card->id,
         ]);
         $other = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => $card->id + 1]);
+        $sameIdElsewhere = File::factory()->create(['related_entity_type' => 'member', 'related_entity_id' => $card->id]);
         DB::table('link_cards')->where('id', $card->id)->update(['image_file_id' => $pictures[1]->id]); // the query builder leaves updated_at, so the card stays aged
 
         $this->artisan('openpne:prune-link-cards')->assertSuccessful();
@@ -182,6 +183,7 @@ class PruneLinkCardsCommandTest extends TestCase
         $this->assertDatabaseMissing('files', ['id' => $pictures[0]->id]);
         $this->assertDatabaseMissing('files', ['id' => $pictures[1]->id]);
         $this->assertDatabaseHas('files', ['id' => $other->id]);
+        $this->assertDatabaseHas('files', ['id' => $sameIdElsewhere->id]);
     }
 
     public function test_it_says_so_when_there_is_nothing_to_do(): void
