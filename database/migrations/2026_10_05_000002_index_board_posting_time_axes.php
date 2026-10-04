@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * The site-wide posting-time axis of the boards and the calendar axis of the events
+ * The posting-time axes of the boards, site-wide and per group, and the calendar axis of the events
  * (docs/internals/ordering.md, "One index per axis").
  */
 return new class extends Migration
@@ -15,6 +15,7 @@ return new class extends Migration
         foreach (['group_topics', 'group_events'] as $table) {
             Schema::table($table, function (Blueprint $t) {
                 $t->index(['created_at', 'id']);
+                $t->index(['group_id', 'created_at', 'id']);
             });
         }
         Schema::table('group_events', function (Blueprint $t) {
@@ -29,6 +30,7 @@ return new class extends Migration
         });
         foreach (['group_topics', 'group_events'] as $table) {
             Schema::table($table, function (Blueprint $t) {
+                $t->dropIndex(['group_id', 'created_at', 'id']);
                 $t->dropIndex(['created_at', 'id']);
             });
         }

@@ -22,6 +22,7 @@ class TimeAxisIndexesTest extends TestCase
     {
         foreach (['group_topics', 'group_events'] as $table) {
             $this->assertContains(['created_at', 'id'], $this->indexColumns($table), $table);
+            $this->assertContains(['group_id', 'created_at', 'id'], $this->indexColumns($table), $table);
         }
         $this->assertContains(['open_date', 'id'], $this->indexColumns('group_events'));
     }
