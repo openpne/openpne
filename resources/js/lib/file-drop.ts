@@ -56,7 +56,7 @@ export function takesText(element: Element | null): boolean {
         return !element.readOnly && !element.disabled;
     }
     if (element instanceof HTMLInputElement) {
-        return ['text', 'search', 'url', 'email', 'tel', 'password', 'number'].includes(element.type) && !element.readOnly && !element.disabled;
+        return ['text', 'search', 'url', 'email', 'tel', 'password'].includes(element.type) && !element.readOnly && !element.disabled;
     }
 
     return false;
