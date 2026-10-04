@@ -106,8 +106,10 @@ class UpgradeMatrixAuditTest extends TestCase
     {
         $stepped = array_map(static fn ($step): string => $step->sourceTable(), StepRegistry::all());
         $declared = array_keys(StepRegistry::unsteppedSourceTables());
+        $tables = SourceSchema::default()->tables();
+        $this->assertNotEmpty($tables, 'the source schema fixture yielded no tables');
 
-        foreach (SourceSchema::default()->tables() as $table) {
+        foreach ($tables as $table) {
             $this->assertTrue(in_array($table, $stepped, true) || in_array($table, $declared, true),
                 "`{$table}` is neither any step's source table nor declared in unsteppedSourceTables() — its rows would be dropped without a word");
         }

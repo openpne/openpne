@@ -184,7 +184,7 @@ final class StepRegistry
 
     /**
      * Every OpenPNE 3 source table no standalone step drives, each with its disposition; together with
-     * the steps' FROM tables this covers the whole fixture (UpgradeMatrixAuditTest).
+     * the steps' FROM tables this covers the whole source DDL.
      *
      * @return array<string, string> source table => reason
      */
@@ -201,15 +201,13 @@ final class StepRegistry
             'community_config' => 'OpenPNE 3 community KV settings. Read by GroupUpgrade\'s correlated subqueries one name at a time; communityConfigDispositions() is the per-name coverage.',
             // File-owning tables whose rows are not migrated; their binaries still migrate with a null owner.
             'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
-            // Dropped with the feature-phone, OAuth and OpenID surfaces, and the session store.
             'blacklist' => 'OpenPNE 3 feature-phone UID blacklist. Not migrated: the mobile frontend is out of scope, so no UID exists to block.',
             'o_auth_admin_token' => 'OpenPNE 3 OAuth 1.0 admin access tokens. Not migrated: OpenPNE 4 has no OAuth provider (see oauth_consumer).',
             'o_auth_member_token' => 'OpenPNE 3 OAuth 1.0 member access tokens. Not migrated: OpenPNE 4 has no OAuth provider (see oauth_consumer).',
             'openid_trust_log' => 'OpenPNE 3 OpenID relying-party trust log. Not migrated: OpenID sign-in is out of scope.',
             'session' => 'OpenPNE 3 PHP session store. Not migrated: a session cannot carry across the cutover, so members sign in again.',
-            // Tables OpenPNE 4 derives or does without.
-            'diary_comment_update' => 'OpenPNE 3 per-diary last-comment marker. Not migrated: OpenPNE 4 derives the comment history from diary_comments (DiaryCommentHistory).',
-            'diary_comment_unread' => 'OpenPNE 3 per-member unread diary-comment flags. Not migrated: OpenPNE 4 keeps no diary-comment unread state; the diary_commented notification stands in.',
+            'diary_comment_update' => 'OpenPNE 3 marker of each diary a member commented on and when. Not migrated: OpenPNE 4 derives the comment history from diary_comments (DiaryCommentHistory).',
+            'diary_comment_unread' => 'OpenPNE 3 per-diary unread-comment flag for the diary\'s owner. Not migrated: OpenPNE 4 keeps no diary-comment unread state; the diary_commented notification stands in.',
             'skin_config' => 'OpenPNE 3 skin settings. Not migrated: no OpenPNE 3 application code read the table, and OpenPNE 4 looks are configured in the admin panel.',
         ];
     }
