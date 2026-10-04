@@ -66,9 +66,11 @@ written in first, each carrying what it leads with and the viewer's unread.
 [`ConversationList`](../../app/Features/DirectMessage/Queries/ConversationList.php) follows the rule
 [group-talk.md](group-talk.md#the-joined-group-list-is-a-room-list) sets out — **the order is decided
 in SQL, before the page is cut** — by a different means: every message the viewer can see is laid
-out once per counterpart, the sent arm by its receipt and the received arm by its sender, in a
-`UNION ALL`; a window over each counterpart's rows numbers them newest-first by `(created_at, id)`
-and totals the unread receipts, and the rows numbered first are the heads the page is cut from. Then
+out against each counterpart it passed between, the sent arm by its receipts and the received arm by
+its sender, in a `UNION ALL`; a window over each counterpart's rows numbers them newest-first by
+`(created_at, id)` and counts the unread messages (a message with two receipts naming the viewer is
+one row of the received arm, so it is one unread, as opening the conversation counts it), and the
+rows numbered first are the heads the page is cut from. Then
 one lookup by key for the bodies the ordering has already named. Nothing runs per conversation, so
 a mailbox of thousands of messages lists in one pass over the viewer's own rows.
 
