@@ -27,6 +27,7 @@ use App\Support\GuestLoginRedirect;
 use App\Support\LookResolver;
 use App\Support\PreferenceKey;
 use App\Support\SurfaceResolver;
+use App\Support\ViewerRelations;
 use App\Support\Visibility;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,6 +48,11 @@ class ProfileController extends Controller
             return GuestLoginRedirect::response();
         }
 
+        if ($viewer !== null && ! $viewer->is($member)) {
+            $relations = app(ViewerRelations::class);
+            $relations->warmBlocks($viewer, [$member->getKey()]);
+            $relations->warmFriends($viewer, [$member->getKey()]);
+        }
         $this->memberSubject($member); // 404 when the owner has blocked the viewer
 
         $lang = $this->translationLang();

@@ -389,10 +389,13 @@ class UnifiedMemberTest extends TestCase
                 ->where('profile.friendStatus', null)
                 ->where('enabledFeatures.friend', false)
             );
-        // The `exists` probes stay: a friends-only diary is friends-only whatever the section is doing.
+        // The pair probes stay (the page's one warm and the `exists` fallbacks): a friends-only diary
+        // is friends-only whatever the section is doing.
         $friendQueries = array_filter(
             DB::getQueryLog(),
-            fn (array $q): bool => str_contains($q['query'], 'friendships') && ! str_contains($q['query'], 'select exists('),
+            fn (array $q): bool => str_contains($q['query'], 'friendships')
+                && ! str_contains($q['query'], 'select exists(')
+                && preg_match('/^select (["`])friend_id\1 from \1friendships\1 where \1member_id\1 = \? and \1friend_id\1 in \(/', $q['query']) !== 1,
         );
         DB::disableQueryLog();
 
