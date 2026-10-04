@@ -34,6 +34,46 @@ abstract class TestCase extends BaseTestCase
         }
     }
 
+    /**
+     * A request starts and ends with an empty memoized cache, as in production where the memo lives
+     * for one request; the test container outlives the request, so the scope is closed here by hand.
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        $this->forgetMemoizedCaches();
+
+        try {
+            return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+        } finally {
+            $this->forgetMemoizedCaches();
+        }
+    }
+
+    /** The queries a callback runs, leaving out the cache store's own reads and writes. */
+    protected function countApplicationQueries(callable $run): int
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            $run();
+
+            return count(array_filter(
+                DB::getQueryLog(),
+                fn (array $query): bool => preg_match('/["`]cache(_locks)?["`]/', $query['query']) !== 1,
+            ));
+        } finally {
+            DB::disableQueryLog();
+        }
+    }
+
+    private function forgetMemoizedCaches(): void
+    {
+        foreach (array_keys((array) config('cache.stores')) as $store) {
+            $this->app->forgetInstance("cache.__memoized:{$store}");
+        }
+    }
+
     /** Whether this test isolates the database per process (and so may safely seed it). */
     private function usesRefreshDatabase(): bool
     {

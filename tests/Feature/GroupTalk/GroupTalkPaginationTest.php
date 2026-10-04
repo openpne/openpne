@@ -159,12 +159,7 @@ class GroupTalkPaginationTest extends TalkTestCase
         $this->reactedConversation($group, $viewer);
 
         $this->actingAs($viewer);
-        $queries = 0;
-        DB::listen(function () use (&$queries) {
-            $queries++;
-        });
-
-        $this->getJson("/groups/{$group->getKey()}/talk/messages")->assertOk();
+        $queries = $this->countApplicationQueries(fn () => $this->getJson("/groups/{$group->getKey()}/talk/messages")->assertOk());
 
         // Session, access gate, permissions, the page read, its eager loads and the one grouped
         // count behind the chips — a constant, and far below the 20 rows it just serialized.

@@ -7,6 +7,14 @@ use Tests\TestCase;
 
 class CountryListServiceTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // No database here, so the store that reads from one cannot be the default.
+        config(['cache.default' => 'array']);
+    }
+
     public function test_options_are_keyed_by_iso_code(): void
     {
         $options = (new CountryListService)->getOptions('en');
