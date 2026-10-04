@@ -13,35 +13,25 @@ use App\Upgrade\Runner\EmojiMap;
 use App\Upgrade\Runner\EmojiTransform;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** The post-walk template pass over both landing tables; MySQL only (the source DDL). */
-class ActivityTemplateTransformTest extends TestCase
+/** The post-walk template pass over both landing tables. */
+class ActivityTemplateTransformTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities;
+    use SeedsSourceActivities;
+
+    protected function sourceTables(): array
+    {
+        return self::ACTIVITY_SOURCE_TABLES;
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The pass reads the OpenPNE 3 source DDL on MySQL.');
-        }
-
-        $this->createSourceActivityTables();
         config(['openpne.site_locale' => 'en']);
         URL::forceRootUrl('http://sns.example');
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceActivityTables();
-        }
-
-        parent::tearDown();
     }
 
     public function test_renders_the_template_rows_in_both_tables_and_keeps_the_rest_with_a_count(): void

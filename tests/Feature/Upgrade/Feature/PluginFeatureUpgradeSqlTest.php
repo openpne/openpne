@@ -5,42 +5,20 @@ namespace Tests\Feature\Upgrade\Feature;
 use App\Services\SnsSettingService;
 use App\Support\Feature;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled `plugin` → `sns_settings` copy against the real OpenPNE 3 `plugin` DDL: a row is
- * written only for a plugin OpenPNE 3 had switched off, so absent / enabled both stay absent here too.
- *
- * MySQL only, like the other upgrade SQL tests.
+ * The `plugin` → `sns_settings` copy: a row is written only for a plugin OpenPNE 3 had switched
+ * off, so absent / enabled both stay absent here too.
  */
-class PluginFeatureUpgradeSqlTest extends TestCase
+class PluginFeatureUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        DB::statement('DROP TABLE IF EXISTS `plugin`');
-        DB::statement(SourceSchema::default()->createStatement('plugin', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `plugin`');
-        }
-
-        parent::tearDown();
+        return ['plugin'];
     }
 
     public function test_an_absent_plugin_row_writes_nothing(): void

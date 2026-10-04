@@ -4,43 +4,21 @@ namespace Tests\Feature\Upgrade\Relation;
 
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Runs the compiled member_relationship steps against the real OpenPNE 3 DDL; MySQL only. */
-class RelationGraphUpgradeSqlTest extends TestCase
+class RelationGraphUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceMemberTable();
-
-        DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceMemberTable();
-            DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        }
-
-        parent::tearDown();
+        return ['member', 'member_relationship'];
     }
 
     public function test_decomposes_member_relationship_into_three_tables_by_flag(): void

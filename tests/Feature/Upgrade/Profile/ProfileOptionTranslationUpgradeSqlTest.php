@@ -3,43 +3,17 @@
 namespace Tests\Feature\Upgrade\Profile;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\ProfileOptionTranslationUpgrade;
 use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-class ProfileOptionTranslationUpgradeSqlTest extends TestCase
+class ProfileOptionTranslationUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL.');
-        }
-
-        foreach (['profile_option_translation', 'profile_option', 'profile'] as $t) {
-            DB::statement("DROP TABLE IF EXISTS `{$t}`");
-        }
-        DB::statement(SourceSchema::default()->createStatement('profile', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('profile_option', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('profile_option_translation', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (['profile_option_translation', 'profile_option', 'profile'] as $t) {
-                DB::statement("DROP TABLE IF EXISTS `{$t}`");
-            }
-        }
-
-        parent::tearDown();
+        return ['profile', 'profile_option', 'profile_option_translation'];
     }
 
     public function test_every_language_row_is_copied_verbatim_under_its_option(): void

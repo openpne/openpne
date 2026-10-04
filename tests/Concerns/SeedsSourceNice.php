@@ -5,15 +5,9 @@ namespace Tests\Concerns;
 use App\Upgrade\SourceSchema;
 use Illuminate\Support\Facades\DB;
 
-/** The OpenPNE 3 opLikePlugin `nice` table from the real DDL, plus a row seeder. */
+/** Row seeder for the OpenPNE 3 opLikePlugin `nice` table, plus its case-folding variant of the DDL. */
 trait SeedsSourceNice
 {
-    protected function createSourceNiceTable(): void
-    {
-        DB::statement('DROP TABLE IF EXISTS `nice`');
-        DB::statement(SourceSchema::default()->createStatement('nice', withoutForeignKeys: true));
-    }
-
     /** The same table with the letter column folding case, as a source outside the stock DDL may. */
     protected function createCaseInsensitiveSourceNiceTable(): void
     {
@@ -28,11 +22,6 @@ trait SeedsSourceNice
         if (! str_ends_with((string) $collation, '_ci')) {
             throw new \RuntimeException("the folding fixture's letter column came out {$collation}");
         }
-    }
-
-    protected function dropSourceNiceTable(): void
-    {
-        DB::statement('DROP TABLE IF EXISTS `nice`');
     }
 
     /** @param  'A'|'D'|'d'|'t'|'e'  $table  the opLikePlugin one-letter target: activity / diary / diary comment / topic comment / event comment */

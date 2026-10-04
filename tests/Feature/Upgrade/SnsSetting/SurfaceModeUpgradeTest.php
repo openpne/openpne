@@ -5,14 +5,12 @@ namespace Tests\Feature\Upgrade\SnsSetting;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * The Classic-default surface stamp is a runner write (not the command's), so a direct
@@ -20,32 +18,13 @@ use Tests\TestCase;
  * never on a dry run. The relation source and steps are the smallest walk that reaches the end,
  * since the stamp fires on any full success.
  */
-class SurfaceModeUpgradeTest extends TestCase
+class SurfaceModeUpgradeTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The runner executes INSERT...SELECT on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-
-        DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceMemberTable();
-            DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        }
-
-        parent::tearDown();
+        return ['member', 'member_relationship'];
     }
 
     public function test_a_full_run_stamps_classic_default(): void

@@ -4,43 +4,16 @@ namespace Tests\Feature\Upgrade\Term;
 
 use App\Services\TermService;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\TermOverrideUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled sns_term → term_overrides copy against the real OpenPNE 3 DDL. MySQL only, like
- * the other upgrade SQL tests.
- */
-class TermOverrideUpgradeSqlTest extends TestCase
+/** Runs the compiled sns_term → term_overrides copy. */
+class TermOverrideUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    private const SOURCE_TABLES = ['sns_term_translation', 'sns_term'];
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->dropSourceTables();
-        foreach (array_reverse(self::SOURCE_TABLES) as $table) {
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceTables();
-        }
-
-        parent::tearDown();
+        return ['sns_term', 'sns_term_translation'];
     }
 
     /** The stock OpenPNE 3 seed: `community` differs from the OpenPNE 4 default, `friend` matches it. */
@@ -124,13 +97,6 @@ class TermOverrideUpgradeSqlTest extends TestCase
         $id = (int) DB::table('sns_term')->insertGetId(['name' => $name, 'application' => $application]);
         foreach ($values as $lang => $value) {
             DB::table('sns_term_translation')->insert(['id' => $id, 'lang' => $lang, 'value' => $value]);
-        }
-    }
-
-    private function dropSourceTables(): void
-    {
-        foreach (self::SOURCE_TABLES as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
         }
     }
 }

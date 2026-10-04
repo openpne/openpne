@@ -6,7 +6,6 @@ use App\Auth\PasswordScheme;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\AdminUserUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
@@ -14,43 +13,29 @@ use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * End-to-end over the real runner: the walk lands the OpenPNE 3 MD5 verbatim, the
  * post-walk wrap pass converts it, and verify-upgrade's Check C holds the cutover to
  * zero bare-MD5 rows / no malformed or unknown schemes.
  */
-class VerifyPasswordsSqlTest extends TestCase
+class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    protected function sourceTables(): array
+    {
+        return ['member', 'member_config', 'sns_config', 'admin_user'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The upgrade runner and Check C run on MySQL.');
-        }
-
-        $this->createSourceTables();
         $this->seedSources();
 
         $ok = (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade, new AdminUserUpgrade, new SnsSettingUpgrade]))
             ->run(new RunOptions);
         $this->assertTrue($ok, 'the upgrade run (walk + wrap) should succeed');
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (['sns_config', 'member_config', 'member', 'admin_user'] as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-        }
-
-        parent::tearDown();
     }
 
     public function test_the_run_wraps_passwords_and_a_clean_result_passes_check_c(): void
@@ -126,16 +111,6 @@ class VerifyPasswordsSqlTest extends TestCase
             });
 
         return [$report, implode("\n", $lines)];
-    }
-
-    private function createSourceTables(): void
-    {
-        foreach (['sns_config', 'member_config', 'member', 'admin_user'] as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-        }
-        foreach (['member', 'member_config', 'sns_config', 'admin_user'] as $table) {
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
     }
 
     private function seedSources(): void

@@ -3,40 +3,16 @@
 namespace Tests\Feature\Upgrade\Navigation;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\NavigationTranslationUpgrade;
 use App\Upgrade\Steps\NavigationUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled navigation (+ translation) copy against the real OpenPNE 3 DDL; MySQL only,
- * MigratesUpgradeTargetsOnce because creating the source tables is DDL.
- */
-class NavigationUpgradeSqlTest extends TestCase
+class NavigationUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceTables();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `navigation_translation`');
-            DB::statement('DROP TABLE IF EXISTS `navigation`');
-        }
-
-        parent::tearDown();
+        return ['navigation', 'navigation_translation'];
     }
 
     public function test_keeps_an_already_formed_url(): void
@@ -138,14 +114,6 @@ class NavigationUpgradeSqlTest extends TestCase
         $this->assertDatabaseMissing('navigations', ['id' => 2]);
         $this->assertDatabaseHas('navigation_translations', ['id' => 1, 'lang' => 'en', 'caption' => 'My Home']);
         $this->assertDatabaseMissing('navigation_translations', ['id' => 2]);
-    }
-
-    private function createSourceTables(): void
-    {
-        DB::statement('DROP TABLE IF EXISTS `navigation_translation`');
-        DB::statement('DROP TABLE IF EXISTS `navigation`');
-        DB::statement(SourceSchema::default()->createStatement('navigation', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('navigation_translation', withoutForeignKeys: true));
     }
 
     public function test_resolves_the_policy_tokens_to_their_canonical_pages(): void

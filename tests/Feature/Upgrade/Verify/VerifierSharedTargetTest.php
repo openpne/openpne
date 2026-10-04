@@ -5,7 +5,6 @@ namespace Tests\Feature\Upgrade\Verify;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendFeatureUpgrade;
 use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
@@ -14,8 +13,7 @@ use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * Check A over `sns_settings`, the one target several steps write: each step's count must see only
@@ -23,35 +21,19 @@ use Tests\TestCase;
  * runner's post-walk surface_mode stamp, and the enabled-by-default rows the admin Features page
  * materializes on its first save — and none of them may read as target drift.
  */
-class VerifierSharedTargetTest extends TestCase
+class VerifierSharedTargetTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    protected function sourceTables(): array
+    {
+        return ['plugin', 'sns_config'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('verify re-counts the OpenPNE 3 source DDL on MySQL.');
-        }
-
-        foreach (['plugin', 'sns_config'] as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-
         $this->seedSource();
         (new UpgradeRunner(new InsertSelectCompiler, $this->settingSteps()))->run(new RunOptions);
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `plugin`');
-            DB::statement('DROP TABLE IF EXISTS `sns_config`');
-        }
-
-        parent::tearDown();
     }
 
     public function test_a_clean_migration_passes_on_a_mixed_settings_table(): void

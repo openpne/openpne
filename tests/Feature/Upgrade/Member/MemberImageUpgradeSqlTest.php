@@ -4,46 +4,23 @@ namespace Tests\Feature\Upgrade\Member;
 
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberImageUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled `member_image` → `member_images` INSERT...SELECT against the real OpenPNE 3 DDL,
- * checking the single-avatar collapse: one row per member (member_images.member_id is unique), the
- * row OpenPNE 3's getImage() would show (is_primary DESC, then id), the rest dropped.
- *
- * MySQL only: the set-based copy, the source DDL and the correlated filter are MySQL features.
+ * The `member_image` → `member_images` single-avatar collapse: one row per member
+ * (member_images.member_id is unique), the row OpenPNE 3's getImage() would show (is_primary DESC,
+ * then id), the rest dropped.
  */
-class MemberImageUpgradeSqlTest extends TestCase
+class MemberImageUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceMemberTable();
-
-        DB::statement('DROP TABLE IF EXISTS `member_image`');
-        DB::statement(SourceSchema::default()->createStatement('member_image', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceMemberTable();
-            DB::statement('DROP TABLE IF EXISTS `member_image`');
-        }
-
-        parent::tearDown();
+        return ['member', 'member_image'];
     }
 
     public function test_keeps_the_primary_image_and_drops_the_others(): void

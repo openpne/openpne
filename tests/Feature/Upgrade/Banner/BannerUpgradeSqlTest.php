@@ -3,51 +3,22 @@
 namespace Tests\Feature\Upgrade\Banner;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
 use App\Upgrade\Steps\BannerUseImageUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled banner steps against the real OpenPNE 3 DDL: banner / banner_image / banner_use_image
- * copy verbatim, the banner's missing timestamps fall to their nullable default, and the placement pivot
- * resolves both foreign keys.
- *
- * MySQL only: the set-based copy and the source DDL are MySQL features.
+ * banner / banner_image / banner_use_image copy verbatim, the banner's missing timestamps fall to
+ * their nullable default, and the placement pivot resolves both foreign keys.
  */
-class BannerUpgradeSqlTest extends TestCase
+class BannerUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    private array $sourceTables = ['banner', 'banner_image', 'banner_use_image'];
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach ($this->sourceTables as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse($this->sourceTables) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-        }
-
-        parent::tearDown();
+        return ['banner', 'banner_image', 'banner_use_image'];
     }
 
     public function test_copies_banners_images_and_placement_links(): void

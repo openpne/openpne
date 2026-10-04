@@ -2,28 +2,12 @@
 
 namespace Tests\Concerns;
 
-use App\Upgrade\SourceSchema;
 use Illuminate\Support\Facades\DB;
 
-/** The OpenPNE 3 activity tables (and `community`, which the routing reads) from the real DDL, plus row seeders. */
+/** The OpenPNE 3 activity table names (and `community`, which the routing reads), plus row seeders. */
 trait SeedsSourceActivities
 {
-    private const ACTIVITY_SOURCE_TABLES = ['activity_data', 'activity_image', 'community'];
-
-    protected function createSourceActivityTables(): void
-    {
-        foreach (self::ACTIVITY_SOURCE_TABLES as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-    }
-
-    protected function dropSourceActivityTables(): void
-    {
-        foreach (array_reverse(self::ACTIVITY_SOURCE_TABLES) as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-        }
-    }
+    protected const ACTIVITY_SOURCE_TABLES = ['activity_data', 'activity_image', 'community'];
 
     /** @param  array<string, mixed>  $overrides */
     protected function seedActivity(int $id, int $memberId, array $overrides = []): void

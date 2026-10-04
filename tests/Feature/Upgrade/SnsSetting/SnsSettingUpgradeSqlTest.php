@@ -4,42 +4,20 @@ namespace Tests\Feature\Upgrade\SnsSetting;
 
 use App\Support\SnsSettingKey;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled sns_config → sns_settings copy against the real OpenPNE 3 `sns_config` DDL:
- * display settings carry over, gadget layout keys are renamed, and the security/unknown keys are not
- * migrated (a security key's OpenPNE 3 value must not silently override its fail-closed default).
- *
- * MySQL only, like the other upgrade SQL tests.
+ * The sns_config → sns_settings copy: display settings carry over, gadget layout keys are renamed,
+ * and the security/unknown keys are not migrated (a security key's OpenPNE 3 value must not
+ * silently override its fail-closed default).
  */
-class SnsSettingUpgradeSqlTest extends TestCase
+class SnsSettingUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        DB::statement('DROP TABLE IF EXISTS `sns_config`');
-        DB::statement(SourceSchema::default()->createStatement('sns_config', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `sns_config`');
-        }
-
-        parent::tearDown();
+        return ['sns_config'];
     }
 
     public function test_migrates_display_settings_verbatim(): void

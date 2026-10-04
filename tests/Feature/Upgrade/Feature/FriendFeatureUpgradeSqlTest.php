@@ -3,36 +3,15 @@
 namespace Tests\Feature\Upgrade\Feature;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendFeatureUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Runs the compiled `sns_config.enable_friend_link` copy against the real OpenPNE 3 DDL; MySQL only. */
-class FriendFeatureUpgradeSqlTest extends TestCase
+class FriendFeatureUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        DB::statement('DROP TABLE IF EXISTS `sns_config`');
-        DB::statement(SourceSchema::default()->createStatement('sns_config', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `sns_config`');
-        }
-
-        parent::tearDown();
+        return ['sns_config'];
     }
 
     public function test_a_disabled_friend_link_writes_a_zero_row(): void

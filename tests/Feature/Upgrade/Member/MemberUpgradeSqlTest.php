@@ -4,41 +4,16 @@ namespace Tests\Feature\Upgrade\Member;
 
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberUpgrade;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled member step against the real OpenPNE 3 `member` + `member_config` + `sns_config`
- * DDL; MySQL only, MigratesUpgradeTargetsOnce because creating the source tables is DDL.
- */
-class MemberUpgradeSqlTest extends TestCase
+class MemberUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceTables();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `sns_config`');
-            DB::statement('DROP TABLE IF EXISTS `member_config`');
-            DB::statement('DROP TABLE IF EXISTS `member`');
-        }
-
-        parent::tearDown();
+        return ['member', 'member_config', 'sns_config'];
     }
 
     public function test_maps_pc_address_to_email_and_carries_the_md5_password_verbatim(): void
@@ -240,17 +215,6 @@ class MemberUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertDatabaseHas('members', ['id' => 53, 'name' => 'LegacySchema']);
-    }
-
-    private function createSourceTables(): void
-    {
-        // The real OpenPNE 3 DDL, minus FKs so the two tables stand alone in this test.
-        DB::statement('DROP TABLE IF EXISTS `sns_config`');
-        DB::statement('DROP TABLE IF EXISTS `member_config`');
-        DB::statement('DROP TABLE IF EXISTS `member`');
-        DB::statement(SourceSchema::default()->createStatement('member', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('member_config', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('sns_config', withoutForeignKeys: true));
     }
 
     private function seedSnsConfig(string $name, string $value): void

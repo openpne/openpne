@@ -5,50 +5,21 @@ namespace Tests\Feature\Upgrade\GroupTopic;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\GroupTopicCommentImageUpgrade;
 use App\Upgrade\Steps\GroupTopicImageUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled group-topic image steps against the real OpenPNE 3 DDL: the join rows copy
- * verbatim (post_id / file_id / number) and a placeholder row with a null file_id is dropped (OpenPNE
- * 4 requires the file).
- *
- * MySQL only: the set-based copy and the source DDL are MySQL features.
+ * The group-topic image steps: the join rows copy verbatim (post_id / file_id / number) and a
+ * placeholder row with a null file_id is dropped (OpenPNE 4 requires the file).
  */
-class GroupTopicImageUpgradeSqlTest extends TestCase
+class GroupTopicImageUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    private array $sourceTables = ['community_topic_image', 'community_topic_comment_image'];
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach ($this->sourceTables as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse($this->sourceTables) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-        }
-
-        parent::tearDown();
+        return ['community_topic_image', 'community_topic_comment_image'];
     }
 
     public function test_copies_topic_images_and_drops_null_file_rows(): void

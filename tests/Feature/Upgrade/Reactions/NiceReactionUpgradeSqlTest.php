@@ -8,7 +8,6 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\NicePreflight;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryCommentReactionUpgrade;
 use App\Upgrade\Steps\DiaryReactionUpgrade;
 use App\Upgrade\Steps\GroupEventCommentReactionUpgrade;
@@ -22,47 +21,27 @@ use App\Upgrade\Steps\TimelineReplyUpgrade;
 use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
 use Tests\Concerns\SeedsSourceNice;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** The opLikePlugin like, following its activity's landing or its record's existence; MySQL only. */
-class NiceReactionUpgradeSqlTest extends TestCase
+/** The opLikePlugin like, following its activity's landing or its record's existence. */
+class NiceReactionUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers, SeedsSourceNice;
+    use SeedsSourceActivities, SeedsSourceMembers, SeedsSourceNice;
+
+    protected function sourceTables(): array
+    {
+        return ['member', ...self::ACTIVITY_SOURCE_TABLES, 'nice', ...array_values(NiceReactionUpgrade::RECORD_TABLES)];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
-        $this->createSourceNiceTable();
-        foreach (NiceReactionUpgrade::RECORD_TABLES as $table) {
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
         Group::factory()->create(['id' => 5]);
         $this->seedSourceCommunity(5);
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (NiceReactionUpgrade::RECORD_TABLES as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-            $this->dropSourceNiceTable();
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
     }
 
     public function test_a_like_lands_where_its_activity_did(): void

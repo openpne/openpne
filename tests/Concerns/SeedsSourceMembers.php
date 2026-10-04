@@ -3,7 +3,6 @@
 namespace Tests\Concerns;
 
 use App\Models\Member;
-use App\Upgrade\SourceSchema;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,17 +13,6 @@ use Illuminate\Support\Facades\DB;
  */
 trait SeedsSourceMembers
 {
-    protected function createSourceMemberTable(): void
-    {
-        DB::statement('DROP TABLE IF EXISTS `member`');
-        DB::statement(SourceSchema::default()->createStatement('member', withoutForeignKeys: true));
-    }
-
-    protected function dropSourceMemberTable(): void
-    {
-        DB::statement('DROP TABLE IF EXISTS `member`');
-    }
-
     /** @param  array<string, mixed>  $attributes */
     protected function activeMember(array $attributes = []): Member
     {

@@ -3,50 +3,35 @@
 namespace Tests\Feature\Upgrade\Runner;
 
 use App\Upgrade\Runner\FileOwnerPreflight;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FileUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** One owner per file, counted across every owning table FileUpgrade knows; MySQL only. */
-class FileOwnerPreflightTest extends TestCase
+/** One owner per file, counted across every owning table FileUpgrade knows. */
+class FileOwnerPreflightTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers;
+    use SeedsSourceActivities, SeedsSourceMembers;
 
-    private const OWNER_TABLES = ['file', 'member_image', 'diary_image', 'diary_comment_image', 'community_topic_image',
-        'community_topic_comment_image', 'community_event_image', 'community_event_comment_image', 'message_file',
-        'message', 'message_type', 'banner_image'];
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The preflight counts over the OpenPNE 3 source DDL on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
-        foreach (self::OWNER_TABLES as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse(self::OWNER_TABLES) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
+        return [
+            'member',
+            ...self::ACTIVITY_SOURCE_TABLES,
+            'file',
+            'member_image',
+            'diary_image',
+            'diary_comment_image',
+            'community_topic_image',
+            'community_topic_comment_image',
+            'community_event_image',
+            'community_event_comment_image',
+            'message_file',
+            'message',
+            'message_type',
+            'banner_image',
+        ];
     }
 
     public function test_a_file_referenced_from_two_places_is_an_error_and_single_references_are_not(): void

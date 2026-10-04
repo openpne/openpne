@@ -5,47 +5,24 @@ namespace Tests\Feature\Upgrade\DirectMessage;
 use App\Models\DirectMessage;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DirectMessageUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Runs the compiled `message` step against the real OpenPNE 3 DDL; MySQL only. */
-class DirectMessageUpgradeSqlTest extends TestCase
+class DirectMessageUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    /** Source tables DirectMessageUpgrade reads (its FROM table plus the subquery tables), FKs stripped. */
-    private array $sourceTables = ['message', 'message_send_list', 'deleted_message', 'message_type'];
+    protected function sourceTables(): array
+    {
+        return ['message', 'message_send_list', 'deleted_message', 'message_type'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach ($this->sourceTables as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-
         // Personal-message type (migrated) and a notification type (skipped by the filter).
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse($this->sourceTables) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-        }
-
-        parent::tearDown();
     }
 
     public function test_migrates_a_sent_personal_message_preserving_id_and_timestamps(): void

@@ -6,43 +6,15 @@ use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\GroupTopicCommentUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled INSERT...SELECT against the real OpenPNE 3 `community_topic_comment` DDL, MySQL
- * only. MigratesUpgradeTargetsOnce rather than RefreshDatabase, because creating the source table is
- * DDL and implicitly commits.
- */
-class GroupTopicCommentUpgradeSqlTest extends TestCase
+class GroupTopicCommentUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        // The real OpenPNE 3 `community_topic_comment` DDL, minus its FKs to `community_topic`/
-        // `member` so the source table stands alone; the migrated `group_topics`/`members` rows
-        // satisfy the target-side FKs instead.
-        DB::statement('DROP TABLE IF EXISTS `community_topic_comment`');
-        DB::statement(SourceSchema::default()->createStatement('community_topic_comment', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `community_topic_comment`');
-        }
-
-        parent::tearDown();
+        return ['community_topic_comment'];
     }
 
     public function test_preserves_id_topic_author_number_and_timestamps(): void

@@ -5,40 +5,16 @@ namespace Tests\Feature\Upgrade\Mail;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MailTemplateTranslationUpgrade;
 use App\Upgrade\Steps\MailTemplateUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Runs the compiled notification_mail (+ translation) copy against the real OpenPNE 3 DDL; MySQL only. */
-class MailTemplateUpgradeSqlTest extends TestCase
+class MailTemplateUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach (['notification_mail_translation', 'notification_mail'] as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `notification_mail_translation`');
-            DB::statement('DROP TABLE IF EXISTS `notification_mail`');
-        }
-
-        parent::tearDown();
+        return ['notification_mail_translation', 'notification_mail'];
     }
 
     public function test_migrates_in_scope_templates_with_the_key_remap(): void

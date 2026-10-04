@@ -9,41 +9,26 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * Proves --source-prefix reaches a step's correlated subqueries, not just the FROM table: a prefixed
  * `op_member_config` and `op_member` sit beside the unprefixed target, and MemberPreferenceUpgrade
  * must read the prefix in its FROM, its MAX() subquery and its active-member guard.
- * MigratesUpgradeTargetsOnce, not RefreshDatabase: creating the source table is DDL and auto-commits.
  */
-class PrefixedSourceUpgradeSqlTest extends TestCase
+class PrefixedSourceUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
+        return ['op_member', 'op_member_config'];
+    }
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach (['member_config', 'member'] as $table) {
+    protected function createSourceTables(): void
+    {
+        foreach (['member', 'member_config'] as $table) {
             $ddl = SourceSchema::default()->createStatement($table, withoutForeignKeys: true);
             DB::statement(str_replace("`{$table}`", "`op_{$table}`", $ddl));
         }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `op_member_config`');
-            DB::statement('DROP TABLE IF EXISTS `op_member`');
-        }
-
-        parent::tearDown();
     }
 
     public function test_a_prefixed_source_table_and_its_subquery_are_read(): void

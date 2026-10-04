@@ -10,36 +10,18 @@ use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Every activity disposition the routing applies is counted here first; MySQL only. */
-class ActivityPreflightTest extends TestCase
+/** Every activity disposition the routing applies is counted here first. */
+class ActivityPreflightTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers;
+    use SeedsSourceActivities, SeedsSourceMembers;
 
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The preflight counts over the OpenPNE 3 source DDL on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
+        return ['member', ...self::ACTIVITY_SOURCE_TABLES];
     }
 
     public function test_a_clean_source_reports_nothing(): void

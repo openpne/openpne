@@ -4,56 +4,33 @@ namespace Tests\Feature\Upgrade\Profile;
 
 use App\Models\MemberProfile;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled profile steps against the real OpenPNE 3 DDL, profiles and options first so the
- * member_profiles FKs resolve; MySQL only. Source rows carry OpenPNE 3's public_flag and the target
- * stores Visibility values.
+ * The profile steps, profiles and options first so the member_profiles FKs resolve. Source rows
+ * carry OpenPNE 3's public_flag and the target stores Visibility values.
  */
-class MemberProfileUpgradeSqlTest extends TestCase
+class MemberProfileUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
     private int $memberId;
+
+    protected function sourceTables(): array
+    {
+        return ['member', 'profile', 'profile_option', 'member_profile'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-
-        foreach (['member_profile', 'profile_option', 'profile'] as $t) {
-            DB::statement("DROP TABLE IF EXISTS `{$t}`");
-        }
-        DB::statement(SourceSchema::default()->createStatement('profile', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('profile_option', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('member_profile', withoutForeignKeys: true));
-
         $this->memberId = $this->activeMember()->getKey();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceMemberTable();
-            foreach (['member_profile', 'profile_option', 'profile'] as $t) {
-                DB::statement("DROP TABLE IF EXISTS `{$t}`");
-            }
-        }
-
-        parent::tearDown();
     }
 
     public function test_single_value_text_is_copied_with_its_flag(): void

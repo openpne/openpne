@@ -4,41 +4,16 @@ namespace Tests\Feature\Upgrade\Diary;
 
 use App\Models\Diary;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled diary-image step against the real OpenPNE 3 DDL: the join rows copy verbatim
- * (diary_id / file_id / number, FileUpgrade preserves file.id).
- *
- * MySQL only: the set-based copy and the source DDL are MySQL features.
- */
-class DiaryImageUpgradeSqlTest extends TestCase
+/** The join rows copy verbatim (diary_id / file_id / number, FileUpgrade preserves file.id). */
+class DiaryImageUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        DB::statement('DROP TABLE IF EXISTS `diary_image`');
-        DB::statement(SourceSchema::default()->createStatement('diary_image', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `diary_image`');
-        }
-
-        parent::tearDown();
+        return ['diary_image'];
     }
 
     public function test_copies_diary_images_verbatim(): void

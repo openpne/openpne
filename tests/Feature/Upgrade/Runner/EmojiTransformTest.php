@@ -12,27 +12,14 @@ use App\Models\TimelinePost;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\EmojiMap;
 use App\Upgrade\Runner\EmojiTransform;
-use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * The post-walk emoji pass; MySQL only (REGEXP and the utf8mb4 preflight). The resume tests pin that
  * a persisted cursor and a restart from 0 both converge without double-converting.
  */
-class EmojiTransformTest extends TestCase
+class EmojiTransformTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The emoji pass narrows rows with a MySQL REGEXP and preflights utf8mb4.');
-        }
-    }
-
     /** @return list<string> */
     private function runTransform(array $tables): array
     {

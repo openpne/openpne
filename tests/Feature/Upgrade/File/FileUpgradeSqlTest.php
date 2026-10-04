@@ -3,68 +3,45 @@
 namespace Tests\Feature\Upgrade\File;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FileUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled `file` step against the real OpenPNE 3 DDL, with every owning table the owner CASE
- * reads created from the dump; MySQL only.
- */
-class FileUpgradeSqlTest extends TestCase
+/** The `file` step, with every owning table its owner CASE reads present as a source table. */
+class FileUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
-    /** FileUpgrade's FROM table plus every table its owner CASE reads, created from the real dump. */
-    private array $sourceTables = [
-        'member',
-        'file',
-        'member_image',
-        'community',
-        'diary_image',
-        'diary_comment_image',
-        'community_topic_image',
-        'community_topic_comment_image',
-        'community_event_image',
-        'community_event_comment_image',
-        'message_file',
-        'message',
-        'message_type',
-        'banner_image',
-        'activity_image',
-        'activity_data',
-    ];
+    protected function sourceTables(): array
+    {
+        return [
+            'member',
+            'file',
+            'member_image',
+            'community',
+            'diary_image',
+            'diary_comment_image',
+            'community_topic_image',
+            'community_topic_comment_image',
+            'community_event_image',
+            'community_event_comment_image',
+            'message_file',
+            'message',
+            'message_type',
+            'banner_image',
+            'activity_image',
+            'activity_data',
+        ];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach ($this->sourceTables as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-
         // Personal-message type (owns its attachment) and a notification type (does not).
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse($this->sourceTables) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-        }
-
-        parent::tearDown();
     }
 
     public function test_copies_metadata_with_id_and_name_verbatim(): void
