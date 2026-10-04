@@ -30,7 +30,7 @@ class RelationTableInvariantsTest extends TestCase
 
         $this->expectException(QueryException::class);
 
-        DB::table($table)->insert([$a => $m->getKey(), $b => $m->getKey()]);
+        DB::table($table)->insert([$a => $m->getKey(), $b => $m->getKey(), 'created_at' => now()]);
     }
 
     #[DataProvider('relationTables')]
@@ -38,18 +38,18 @@ class RelationTableInvariantsTest extends TestCase
     {
         [$x, $y] = Member::factory()->count(2)->create()->all();
 
-        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey()]);
+        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey(), 'created_at' => now()]);
 
         $this->expectException(QueryException::class);
 
-        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey()]);
+        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey(), 'created_at' => now()]);
     }
 
     #[DataProvider('relationTables')]
     public function test_cascade_delete_when_primary_fk_member_is_removed(string $table, string $a, string $b): void
     {
         [$x, $y] = Member::factory()->count(2)->create()->all();
-        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey()]);
+        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey(), 'created_at' => now()]);
 
         $this->assertDatabaseCount($table, 1);
 
@@ -62,7 +62,7 @@ class RelationTableInvariantsTest extends TestCase
     public function test_cascade_delete_when_secondary_fk_member_is_removed(string $table, string $a, string $b): void
     {
         [$x, $y] = Member::factory()->count(2)->create()->all();
-        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey()]);
+        DB::table($table)->insert([$a => $x->getKey(), $b => $y->getKey(), 'created_at' => now()]);
 
         $this->assertDatabaseCount($table, 1);
 
@@ -96,12 +96,13 @@ class RelationTableInvariantsTest extends TestCase
         [$a, $b] = Member::factory()->count(2)->create()->all();
 
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
         DB::table('friend_requests')->insert([
             'requester_id' => $a->getKey(),
             'target_id' => $b->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertDatabaseCount('friendships', 2);

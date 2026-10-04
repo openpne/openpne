@@ -125,7 +125,7 @@ class NotifyTimelineReplyPostedTest extends TestCase
     {
         Notification::fake();
         [$owner, $replier] = Member::factory()->count(2)->create()->all();
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $replier->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $replier->getKey(), 'created_at' => now()]);
         $root = $this->root($owner);
         $reply = $this->seedReply($root, $replier);
 
@@ -285,7 +285,7 @@ class NotifyTimelineReplyPostedTest extends TestCase
 
         $this->assertTrue($notification->shouldSend($owner->fresh(), 'mail'));
 
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $replier->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $replier->getKey(), 'created_at' => now()]);
 
         $this->assertFalse($notification->shouldSend($owner->fresh(), 'mail'));
     }
@@ -339,8 +339,8 @@ class NotifyTimelineReplyPostedTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 }

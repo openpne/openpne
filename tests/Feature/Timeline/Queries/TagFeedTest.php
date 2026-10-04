@@ -60,8 +60,8 @@ class TagFeedTest extends TestCase
     {
         [$viewer, $friend, $stranger] = Member::factory()->count(3)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         $friends = $this->createPost($friend, 'ours #tag', Visibility::Friends);
         $strangers = $this->createPost($stranger, 'theirs #tag', Visibility::Friends);
@@ -86,7 +86,7 @@ class TagFeedTest extends TestCase
     {
         [$viewer, $blocker] = Member::factory()->count(2)->create()->all();
         $post = $this->createPost($blocker, 'hello #tag');
-        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->assertNotContains($post->getKey(), $this->feedIds($viewer, 'tag'));
     }

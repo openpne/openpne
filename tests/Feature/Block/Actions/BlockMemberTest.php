@@ -46,6 +46,7 @@ class BlockMemberTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $blocker->getKey(),
             'blocked_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
 
         try {
@@ -61,8 +62,8 @@ class BlockMemberTest extends TestCase
         $blocker = Member::factory()->create();
         $target = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $blocker->getKey(), 'friend_id' => $target->getKey()],
-            ['member_id' => $target->getKey(), 'friend_id' => $blocker->getKey()],
+            ['member_id' => $blocker->getKey(), 'friend_id' => $target->getKey(), 'created_at' => now()],
+            ['member_id' => $target->getKey(), 'friend_id' => $blocker->getKey(), 'created_at' => now()],
         ]);
 
         (new BlockMember)($blocker, $target);
@@ -82,8 +83,8 @@ class BlockMemberTest extends TestCase
         $blocker = Member::factory()->create();
         $target = Member::factory()->create();
         DB::table('friend_requests')->insert([
-            ['requester_id' => $blocker->getKey(), 'target_id' => $target->getKey()],
-            ['requester_id' => $target->getKey(), 'target_id' => $blocker->getKey()],
+            ['requester_id' => $blocker->getKey(), 'target_id' => $target->getKey(), 'created_at' => now()],
+            ['requester_id' => $target->getKey(), 'target_id' => $blocker->getKey(), 'created_at' => now()],
         ]);
 
         (new BlockMember)($blocker, $target);

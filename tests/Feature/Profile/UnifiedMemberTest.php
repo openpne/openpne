@@ -40,10 +40,10 @@ class UnifiedMemberTest extends TestCase
         $this->freshRequestState();
     }
 
-    /** The bidirectional mirror `friendships` is read through, both rows. `$at` defaults to useCurrent. */
+    /** The bidirectional mirror `friendships` is read through, both rows. */
     private function makeFriends(Member $a, Member $b, ?string $at = null): void
     {
-        $when = $at === null ? [] : ['created_at' => $at];
+        $when = ['created_at' => $at ?? now()];
 
         DB::table('friendships')->insert([
             ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), ...$when],
@@ -53,7 +53,7 @@ class UnifiedMemberTest extends TestCase
 
     private function block(Member $blocker, Member $blocked): void
     {
-        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
     }
 
     private function diary(Member $owner, string $at, int $images = 0, Visibility $visibility = Visibility::Members, string $title = 'a-title'): Diary

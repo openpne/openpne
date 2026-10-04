@@ -221,7 +221,7 @@ class ShowHomeIssueTest extends TestCase
         $this->assertSame([$this->ref($diary), $this->ref($post)], $this->refs(HomeIssueSection::Stories));
         $this->assertSame([$this->ref($owner)], $this->refs(HomeIssueSection::Newcomers));
 
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $this->viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $this->viewer->getKey(), 'created_at' => now()]);
 
         $this->assertSame([], $this->refs(HomeIssueSection::Stories));
         $this->assertSame([], $this->refs(HomeIssueSection::Newcomers));
@@ -235,7 +235,7 @@ class ShowHomeIssueTest extends TestCase
         $this->feature(HomeIssueSection::Stories, $diary);
         $this->feature(HomeIssueSection::Newcomers, $owner);
 
-        DB::table('member_blocks')->insert(['blocker_id' => $this->viewer->getKey(), 'blocked_id' => $owner->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $this->viewer->getKey(), 'blocked_id' => $owner->getKey(), 'created_at' => now()]);
 
         $this->assertSame([$this->ref($diary)], $this->refs(HomeIssueSection::Stories));
         $this->assertSame([$this->ref($owner)], $this->refs(HomeIssueSection::Newcomers));

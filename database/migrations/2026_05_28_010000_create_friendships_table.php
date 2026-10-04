@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('friendships', function (Blueprint $table) {
             $table->foreignId('member_id')->constrained('members')->cascadeOnDelete();
             $table->foreignId('friend_id')->constrained('members')->cascadeOnDelete();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at');
 
             $table->primary(['member_id', 'friend_id']);
             // SQLite does not auto-index FK columns; MySQL/InnoDB does.

@@ -96,8 +96,8 @@ class TalkMentionNotificationTest extends TalkTestCase
 
         match ($situation) {
             'ban' => $target->forceFill(['is_login_rejected' => true])->save(),
-            'blockAuthor' => DB::table('member_blocks')->insert(['blocker_id' => $target->getKey(), 'blocked_id' => $author->getKey()]),
-            'blockedByAuthor' => DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $target->getKey()]),
+            'blockAuthor' => DB::table('member_blocks')->insert(['blocker_id' => $target->getKey(), 'blocked_id' => $author->getKey(), 'created_at' => now()]),
+            'blockedByAuthor' => DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $target->getKey(), 'created_at' => now()]),
             'leave' => DB::table('group_members')->where('member_id', $target->getKey())->delete(),
             'membersOnlyAndLeave' => (function () use ($group, $target) {
                 $group->forceFill(['topic_read_access' => TopicReadAccess::MembersOnly])->save();

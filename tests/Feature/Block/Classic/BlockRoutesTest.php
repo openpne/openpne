@@ -24,6 +24,7 @@ class BlockRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $member->getKey(),
             'blocked_id' => $blocked->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($member)->get('/block/list');
@@ -71,6 +72,7 @@ class BlockRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $member->getKey(),
             'blocked_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($member)->get('/block/add?id='.$target->getKey())->assertNotFound();
@@ -112,6 +114,7 @@ class BlockRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $member->getKey(),
             'blocked_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($member)->post('/block/add', [
@@ -129,6 +132,7 @@ class BlockRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $member->getKey(),
             'blocked_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($member)->get('/block/remove/'.$target->getKey());
@@ -152,6 +156,7 @@ class BlockRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $member->getKey(),
             'blocked_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($member)->post('/block/remove/'.$target->getKey());

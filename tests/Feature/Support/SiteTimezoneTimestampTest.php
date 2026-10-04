@@ -18,10 +18,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * These four tables default created_at to the database's clock (`useCurrent()`), and no connection
- * timezone is configured — SQLite's CURRENT_TIMESTAMP is UTC while MySQL's follows the server, so a
- * row the app did not stamp means one column holding instants from two different clocks. Freezing
- * time well in the past makes any database-generated value obvious: it would land at the real now.
+ * No connection timezone is configured, so a value the database generated (CURRENT_TIMESTAMP, a raw
+ * now) would sit on a different clock from the application's; freezing time well in the past makes
+ * such a value obvious, since it would land at the real now.
  */
 class SiteTimezoneTimestampTest extends TestCase
 {
@@ -102,7 +101,7 @@ class SiteTimezoneTimestampTest extends TestCase
         $this->assertStampedByApp('friendships', 2);
     }
 
-    /** Every row's created_at is the frozen application clock, so none came from the database default. */
+    /** Every row's created_at is the frozen application clock, so none came from the database. */
     private function assertStampedByApp(string $table, int $expectedRows = 1): void
     {
         $stamps = DB::table($table)->pluck('created_at');

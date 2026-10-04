@@ -109,7 +109,7 @@ class VisibleAgeTest extends TestCase
         $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Members); // otherwise visible
         $viewer = Member::factory()->create();
         $this->giveBirthday($owner, '1990-06-23');
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->assertNull($this->age($viewer, $owner));
     }
@@ -146,8 +146,8 @@ class VisibleAgeTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 }

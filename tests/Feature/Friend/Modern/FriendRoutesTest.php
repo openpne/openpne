@@ -92,8 +92,8 @@ class FriendRoutesTest extends TestCase
         MemberImage::factory()->create(['member_id' => $bob->getKey()]);
         MemberImage::factory()->create(['member_id' => $carol->getKey()]);
         DB::table('friend_requests')->insert([
-            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey()],
-            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
+            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey(), 'created_at' => now()],
+            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey(), 'created_at' => now()],
         ]);
 
         $this->actingAs($alice)->get('/friend/requests')
@@ -116,8 +116,8 @@ class FriendRoutesTest extends TestCase
         $bob = Member::factory()->create(['name' => 'Bob']);
         $carol = Member::factory()->create(['name' => 'Carol']);
         DB::table('friend_requests')->insert([
-            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey()],
-            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
+            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey(), 'created_at' => now()],
+            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey(), 'created_at' => now()],
         ]);
 
         $response = $this->actingAs($alice)->get('/friend/requests');
@@ -154,6 +154,7 @@ class FriendRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $bob->getKey(),
             'blocked_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($alice)->get("/friend/link?id={$bob->getKey()}")->assertNotFound();
@@ -202,6 +203,7 @@ class FriendRoutesTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $bob->getKey(),
             'target_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($alice)
@@ -230,6 +232,7 @@ class FriendRoutesTest extends TestCase
         DB::table('friend_requests')->insert([
             'requester_id' => $bob->getKey(),
             'target_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($alice)
@@ -291,6 +294,7 @@ class FriendRoutesTest extends TestCase
             DB::table('friend_requests')->insert([
                 'requester_id' => $requester->getKey(),
                 'target_id' => $alice->getKey(),
+                'created_at' => now(),
             ]);
         }
 
@@ -407,8 +411,8 @@ class FriendRoutesTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 }

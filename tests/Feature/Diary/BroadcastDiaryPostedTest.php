@@ -29,8 +29,8 @@ class BroadcastDiaryPostedTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 
@@ -83,7 +83,7 @@ class BroadcastDiaryPostedTest extends TestCase
         Notification::fake();
         [$author, $banned, $blocked] = Member::factory()->count(3)->create()->all();
         $banned->forceFill(['is_login_rejected' => true])->save();
-        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $author->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $author->getKey(), 'created_at' => now()]);
         $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
 
         $this->broadcast($diary);
@@ -166,7 +166,7 @@ class BroadcastDiaryPostedTest extends TestCase
 
         $this->assertTrue($notification->shouldSend($reader->fresh(), 'mail'));
 
-        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $reader->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $reader->getKey(), 'created_at' => now()]);
 
         $this->assertFalse($notification->shouldSend($reader->fresh(), 'mail'));
     }
@@ -179,7 +179,7 @@ class BroadcastDiaryPostedTest extends TestCase
 
         $this->assertTrue($notification->shouldSend($reader->fresh(), 'mail'));
 
-        DB::table('member_blocks')->insert(['blocker_id' => $reader->getKey(), 'blocked_id' => $author->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $reader->getKey(), 'blocked_id' => $author->getKey(), 'created_at' => now()]);
 
         $this->assertFalse($notification->shouldSend($reader->fresh(), 'mail'));
     }

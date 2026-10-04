@@ -119,7 +119,7 @@ class MemberProfileRoutesTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $this->fieldFor($owner, Visibility::Members, 'v');
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")->assertNotFound();
     }
@@ -166,8 +166,8 @@ class MemberProfileRoutesTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $owner->getKey(), 'friend_id' => $viewer->getKey()],
-            ['member_id' => $viewer->getKey(), 'friend_id' => $owner->getKey()],
+            ['member_id' => $owner->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $owner->getKey(), 'created_at' => now()],
         ]);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -181,7 +181,7 @@ class MemberProfileRoutesTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('friend_requests')->insert([
-            ['requester_id' => $viewer->getKey(), 'target_id' => $owner->getKey()],
+            ['requester_id' => $viewer->getKey(), 'target_id' => $owner->getKey(), 'created_at' => now()],
         ]);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -195,7 +195,7 @@ class MemberProfileRoutesTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('friend_requests')->insert([
-            ['requester_id' => $owner->getKey(), 'target_id' => $viewer->getKey()],
+            ['requester_id' => $owner->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -217,7 +217,7 @@ class MemberProfileRoutesTest extends TestCase
     {
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
-        DB::table('member_blocks')->insert(['blocker_id' => $viewer->getKey(), 'blocked_id' => $owner->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $viewer->getKey(), 'blocked_id' => $owner->getKey(), 'created_at' => now()]);
 
         config(['openpne.surface_mode' => 'modern_default']);
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -261,8 +261,8 @@ class MemberProfileRoutesTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $owner->getKey(), 'friend_id' => $viewer->getKey()],
-            ['member_id' => $viewer->getKey(), 'friend_id' => $owner->getKey()],
+            ['member_id' => $owner->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $owner->getKey(), 'created_at' => now()],
         ]);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -592,8 +592,8 @@ class MemberProfileRoutesTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 }

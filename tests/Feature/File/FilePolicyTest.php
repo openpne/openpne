@@ -125,7 +125,7 @@ class FilePolicyTest extends TestCase
     {
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
         $post = TimelinePost::factory()->create(['member_id' => $owner->getKey()]);
 
         $this->assertFalse(Gate::forUser($viewer)->allows('view', $this->postImage($post)));

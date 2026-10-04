@@ -183,7 +183,7 @@ class InternalLinkCardRenderingTest extends TestCase
     {
         $subject = Member::factory()->create(['profile_visibility' => Visibility::Open]);
         $blocked = Member::factory()->create();
-        DB::table('member_blocks')->insert(['blocker_id' => $subject->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $subject->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
 
         $this->assertNull($this->draw($subject, $blocked));
         $this->assertNotNull($this->draw($subject, Member::factory()->create()));
@@ -516,8 +516,8 @@ class InternalLinkCardRenderingTest extends TestCase
     private function befriend(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 }

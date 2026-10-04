@@ -120,8 +120,8 @@ class TalkAnswerToolTest extends TalkToolsTestCase
         match ($situation) {
             'left' => DB::table('group_members')
                 ->where('group_id', $group->getKey())->where('member_id', $asker->getKey())->delete(),
-            'blocked' => DB::table('member_blocks')->insert(['blocker_id' => $bot->getKey(), 'blocked_id' => $asker->getKey()]),
-            'blocker' => DB::table('member_blocks')->insert(['blocker_id' => $asker->getKey(), 'blocked_id' => $bot->getKey()]),
+            'blocked' => DB::table('member_blocks')->insert(['blocker_id' => $bot->getKey(), 'blocked_id' => $asker->getKey(), 'created_at' => now()]),
+            'blocker' => DB::table('member_blocks')->insert(['blocker_id' => $asker->getKey(), 'blocked_id' => $bot->getKey(), 'created_at' => now()]),
             'frozen' => $asker->forceFill(['is_login_rejected' => true])->save(),
             default => null,
         };
@@ -209,6 +209,7 @@ class TalkAnswerToolTest extends TalkToolsTestCase
         $this->raceBeforeTheWrite(fn () => DB::table('member_blocks')->insert([
             'blocker_id' => $asker->getKey(),
             'blocked_id' => $bot->getKey(),
+            'created_at' => now(),
         ]));
 
         $this->acting($bot);

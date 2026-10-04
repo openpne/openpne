@@ -50,6 +50,7 @@ class ListRecentDiariesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertSame(0, (new ListRecentDiaries)($viewer)->rows->count());
