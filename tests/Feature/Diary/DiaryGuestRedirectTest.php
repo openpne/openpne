@@ -7,10 +7,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * The bounce is the `auth` middleware, which runs before the surface is chosen and before
- * route-model binding, so one surface and unbacked ids stand for every arm. The entry and the
- * month archive are guest-reachable and bounce from the controller instead: a missing id gets
- * the same answer as an author who publishes nothing web-public, so there is no existence oracle.
+ * The member-only rows bounce from the `auth` middleware, which runs before the surface is chosen and
+ * before route-model binding, so one surface and unbacked ids stand for every arm. The archive and
+ * entry rows are guest-reachable and bounce from the controller or the route's `missing()` closure
+ * instead, which send a guest with an unbacked id to the login screen rather than a 404.
  */
 class DiaryGuestRedirectTest extends TestCase
 {
@@ -20,8 +20,6 @@ class DiaryGuestRedirectTest extends TestCase
     public static function memberOnlyRoutes(): array
     {
         return [
-            'own archive' => ['get', '/diary/listMember'],
-            'month archive' => ['get', '/diary/listMember/1/2026/3'],
             'friend feed' => ['get', '/diary/listFriend'],
             'new' => ['get', '/diary/new'],
             'create' => ['post', '/diary/create'],
@@ -29,7 +27,6 @@ class DiaryGuestRedirectTest extends TestCase
             'update' => ['post', '/diary/update/1'],
             'delete confirm' => ['get', '/diary/deleteConfirm/1'],
             'delete' => ['post', '/diary/delete/1'],
-            'entry' => ['get', '/diary/1'],
             'comment create' => ['post', '/diary/1/comment/create'],
             'comment delete confirm' => ['get', '/diary/comment/deleteConfirm/1'],
             'comment delete' => ['post', '/diary/comment/delete/1'],
@@ -41,5 +38,21 @@ class DiaryGuestRedirectTest extends TestCase
     public function test_a_guest_is_sent_to_login(string $method, string $url): void
     {
         $this->{$method}($url)->assertRedirect('/login');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function guestReachableRoutes(): array
+    {
+        return [
+            'own archive' => ['/diary/listMember'],
+            'month archive' => ['/diary/listMember/1/2026/3'],
+            'entry' => ['/diary/1'],
+        ];
+    }
+
+    #[DataProvider('guestReachableRoutes')]
+    public function test_a_guest_reachable_page_sends_a_guest_with_an_unbacked_id_to_login(string $url): void
+    {
+        $this->get($url)->assertRedirect('/login');
     }
 }
