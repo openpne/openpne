@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\LinkCard\CardContext;
+use App\LinkCard\LinkCardImage;
 use App\Models\LinkCard;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -63,8 +64,6 @@ class PruneLinkCardsCommand extends Command
      */
     private function deleteIfStillUnreferenced(LinkCard $card, CarbonImmutable $cutoff): bool
     {
-        $image = $card->image;
-
         $deleted = LinkCard::query()
             ->whereKey($card->getKey())
             ->where('updated_at', '<=', $cutoff)
@@ -77,7 +76,7 @@ class PruneLinkCardsCommand extends Command
 
         // Deleted explicitly rather than by cascade: the foreign key runs from the card to the File, so
         // the database would null the reference instead of removing the row.
-        $image?->delete();
+        LinkCardImage::deleteAllFor((int) $card->getKey());
 
         return true;
     }
