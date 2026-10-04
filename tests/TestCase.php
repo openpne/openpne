@@ -35,8 +35,9 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * A request starts and ends with an empty memoized cache, as in production where the memo lives
-     * for one request; the test container outlives the request, so the scope is closed here by hand.
+     * A request sent through here starts and ends with an empty memoized cache, as in production where
+     * the memo lives for one request; the test container outlives the request, so the scope is closed
+     * by hand (Livewire's test requests go through its own broker and keep theirs).
      */
     public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
     {
