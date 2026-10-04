@@ -2,8 +2,13 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
+use App\Mail\Template\MailTemplateService;
 use App\Models\Member;
 use App\Models\UpgradeState;
+use App\Services\GadgetService;
+use App\Services\NavigationService;
+use App\Services\SnsSettingService;
+use App\Services\TermService;
 use App\Upgrade\Column;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
@@ -155,6 +160,41 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
 
         $this->assertDatabaseCount('friendships', 2);
         $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => 'FriendshipUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
+    }
+
+    public function test_a_run_forgets_every_cached_map_the_steps_wrote(): void
+    {
+        $this->seedGraph();
+        $this->expectCachesForgotten();
+
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions));
+    }
+
+    public function test_a_failed_run_forgets_the_cached_maps_too(): void
+    {
+        // The second step writes to a table that does not exist, so the walk stops after the first
+        // committed its rows, which a cache warmed before the cutover would otherwise keep hiding.
+        $this->seedGraph();
+        $broken = new class extends MemberBlockUpgrade
+        {
+            public function targetTable(): string
+            {
+                return 'no_such_table';
+            }
+        };
+        $this->expectCachesForgotten();
+
+        $this->assertFalse($this->runner([new FriendshipUpgrade, $broken])->run(new RunOptions));
+        $this->assertDatabaseCount('friendships', 2);
+    }
+
+    private function expectCachesForgotten(): void
+    {
+        foreach ([TermService::class, SnsSettingService::class, NavigationService::class, GadgetService::class, MailTemplateService::class] as $service) {
+            $this->partialMock($service, function ($mock): void {
+                $mock->shouldReceive('clearCache')->atLeast()->once();
+            });
+        }
     }
 
     /** @param list<UpgradeStep> $steps */
