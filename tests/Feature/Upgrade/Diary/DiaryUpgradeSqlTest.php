@@ -7,40 +7,16 @@ use App\Models\Member;
 use App\Support\BodyFormat;
 use App\Support\Visibility;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryUpgrade;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled INSERT...SELECT against the real OpenPNE 3 `diary` DDL, MySQL only.
- * MigratesUpgradeTargetsOnce rather than RefreshDatabase, because creating the source table is DDL
- * and implicitly commits.
- */
-class DiaryUpgradeSqlTest extends TestCase
+class DiaryUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceDiaryTable();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `diary`');
-        }
-
-        parent::tearDown();
+        return ['diary'];
     }
 
     public function test_preserves_id_owner_and_timestamps(): void
@@ -115,14 +91,6 @@ class DiaryUpgradeSqlTest extends TestCase
 
         $this->expectException(QueryException::class);
         $this->runUpgrade();
-    }
-
-    private function createSourceDiaryTable(): void
-    {
-        // The real OpenPNE 3 `diary` DDL (TEXT, tinyint, DATETIME), minus its FK to
-        // `member` so the source table stands alone in this diary-only test.
-        DB::statement('DROP TABLE IF EXISTS `diary`');
-        DB::statement(SourceSchema::default()->createStatement('diary', withoutForeignKeys: true));
     }
 
     private function runUpgrade(): void

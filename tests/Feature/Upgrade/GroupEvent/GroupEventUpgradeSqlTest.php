@@ -6,43 +6,15 @@ use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\GroupEventUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled INSERT...SELECT against the real OpenPNE 3 `community_event` DDL, MySQL only.
- * MigratesUpgradeTargetsOnce rather than RefreshDatabase, because creating the source table is DDL
- * and implicitly commits.
- */
-class GroupEventUpgradeSqlTest extends TestCase
+class GroupEventUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        // The real OpenPNE 3 `community_event` DDL, minus its FKs to `community`/`member` so the
-        // source table stands alone; the migrated `groups`/`members` rows satisfy the
-        // target-side FKs instead.
-        DB::statement('DROP TABLE IF EXISTS `community_event`');
-        DB::statement(SourceSchema::default()->createStatement('community_event', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `community_event`');
-        }
-
-        parent::tearDown();
+        return ['community_event'];
     }
 
     public function test_preserves_id_community_author_scheduling_and_timestamps(): void

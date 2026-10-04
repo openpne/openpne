@@ -9,7 +9,6 @@ use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\GroupMemberUpgrade;
 use App\Upgrade\Steps\GroupMessageUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
@@ -18,50 +17,29 @@ use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * The activity steps and the post-walk passes through the runner; MySQL only. A source row dated
- * after the run is what separates the cursor backfill from the schema default it replaces.
+ * The activity steps and the post-walk passes through the runner. A source row dated after the run
+ * is what separates the cursor backfill from the schema default it replaces.
  */
-class ActivityUpgradeRunnerSqlTest extends TestCase
+class ActivityUpgradeRunnerSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers;
+    use SeedsSourceActivities, SeedsSourceMembers;
 
-    private const MEMBERSHIP_TABLES = ['community_member', 'community_member_position'];
+    protected function sourceTables(): array
+    {
+        return ['member', ...self::ACTIVITY_SOURCE_TABLES, 'community_member', 'community_member_position'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The runner reads the OpenPNE 3 source DDL on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
-        foreach (self::MEMBERSHIP_TABLES as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
         config(['openpne.site_locale' => 'en']);
         URL::forceRootUrl('http://sns.example');
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse(self::MEMBERSHIP_TABLES) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
     }
 
     public function test_the_walk_renders_then_converts_emoji_then_points_the_cursors_at_the_history(): void

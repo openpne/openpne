@@ -8,48 +8,26 @@ use App\Upgrade\Column;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * One member_relationship fixture decomposing into the three relation steps, so run order,
  * checkpointing, resume, dry run, force-restart and the not-runnable skip share it; members come
- * from the factory, so the only source table is member_relationship. MigratesUpgradeTargetsOnce, not
- * RefreshDatabase: creating the source table is DDL and auto-commits.
+ * from the factory, so the only source table is member_relationship.
  */
-class UpgradeRunnerSqlTest extends TestCase
+class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The runner executes INSERT...SELECT on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-
-        DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceMemberTable();
-            DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        }
-
-        parent::tearDown();
+        return ['member', 'member_relationship'];
     }
 
     public function test_runs_steps_in_order_and_checkpoints_each(): void

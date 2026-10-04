@@ -6,43 +6,15 @@ use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled INSERT...SELECT against the real OpenPNE 3 `diary_comment` DDL, MySQL only.
- * MigratesUpgradeTargetsOnce rather than RefreshDatabase, because creating the source table is DDL
- * and implicitly commits.
- */
-class DiaryCommentUpgradeSqlTest extends TestCase
+class DiaryCommentUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        // The real OpenPNE 3 `diary_comment` DDL, minus its FKs to `diary`/`member` so the
-        // source table stands alone; the migrated `diaries`/`members` rows satisfy the
-        // target-side FKs instead.
-        DB::statement('DROP TABLE IF EXISTS `diary_comment`');
-        DB::statement(SourceSchema::default()->createStatement('diary_comment', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `diary_comment`');
-        }
-
-        parent::tearDown();
+        return ['diary_comment'];
     }
 
     public function test_preserves_id_diary_author_number_and_timestamps(): void

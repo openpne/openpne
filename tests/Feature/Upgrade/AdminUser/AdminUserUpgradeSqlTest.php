@@ -3,37 +3,15 @@
 namespace Tests\Feature\Upgrade\AdminUser;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\AdminUserUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Runs the compiled admin_user copy against the real OpenPNE 3 DDL; MySQL only. */
-class AdminUserUpgradeSqlTest extends TestCase
+class AdminUserUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        // Source `admin_user` and target `admin_users` are distinct tables (the rename), so both coexist.
-        DB::statement('DROP TABLE IF EXISTS `admin_user`');
-        DB::statement(SourceSchema::default()->createStatement('admin_user', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `admin_user`');
-        }
-
-        parent::tearDown();
+        return ['admin_user'];
     }
 
     public function test_migrates_admin_with_the_legacy_md5_password_verbatim(): void

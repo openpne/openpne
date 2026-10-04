@@ -7,36 +7,18 @@ use App\Models\GroupMessage;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Steps\GroupMessageImageUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** The activity-image join step for talk-landing activities; MySQL only. */
-class GroupMessageImageUpgradeSqlTest extends TestCase
+/** The activity-image join step for talk-landing activities. */
+class GroupMessageImageUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers;
+    use SeedsSourceActivities, SeedsSourceMembers;
 
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
+        return ['member', ...self::ACTIVITY_SOURCE_TABLES];
     }
 
     public function test_numbers_the_file_backed_images_and_skips_the_url_only_and_the_other_landing(): void

@@ -17,37 +17,22 @@ use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * verify handles the runner's source-preflight semantics: an uninstalled optional plugin (its source
  * table absent by design) is a clean 0==0==0, and a partial / missing-required source is a reported
  * failure — never a SQL exception on the missing table.
  */
-class VerifierAbsentOptionalTest extends TestCase
+class VerifierAbsentOptionalTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('verify introspects the source on MySQL.');
-        }
-
-        $this->dropSources();
+        return ['member', 'community', 'activity_data', 'activity_image', 'nice', 'diary', 'diary_image'];
     }
 
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSources();
-        }
-
-        parent::tearDown();
-    }
+    /** Each test creates the subset that models its install; the base drops whatever is left. */
+    protected function createSourceTables(): void {}
 
     public function test_an_uninstalled_optional_plugin_passes(): void
     {
@@ -132,12 +117,5 @@ class VerifierAbsentOptionalTest extends TestCase
             });
 
         return [$report, implode("\n", $lines)];
-    }
-
-    private function dropSources(): void
-    {
-        foreach (['diary', 'diary_image', 'nice', 'activity_data', 'activity_image', 'community', 'member'] as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-        }
     }
 }

@@ -13,30 +13,27 @@ use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * Check A over `timeline_posts`, which two steps share, plus the template check: a run through the
  * runner (steps, then the template pass) verifies clean, and each way the target can drift fails.
- * MySQL only.
  */
-class ActivityUpgradeVerifyTest extends TestCase
+class ActivityUpgradeVerifyTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers;
+    use SeedsSourceActivities, SeedsSourceMembers;
+
+    protected function sourceTables(): array
+    {
+        return ['member', ...self::ACTIVITY_SOURCE_TABLES];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('verify re-counts the OpenPNE 3 source DDL on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
         config(['openpne.site_locale' => 'en']);
         URL::forceRootUrl('http://sns.example');
 
@@ -50,16 +47,6 @@ class ActivityUpgradeVerifyTest extends TestCase
         $this->seedActivity(3, $member->id, ['body' => '[Diary] a'] + $this->templateRow('diary', ['%1%' => 'a'], '@diary_show?id=1'));
         $this->seedActivity(4, $member->id, ['body' => 'kept [i:1]'] + $this->templateRow('friend_link', ['%1%' => 'a'], '@diary_show?id=1'));
         $this->assertTrue($this->runner()->run(new RunOptions));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
     }
 
     public function test_a_clean_run_passes_both_steps_and_the_template_check(): void

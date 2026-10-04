@@ -7,40 +7,22 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * The reply step after the starter step, against the real OpenPNE 3 DDL; MySQL only. Fixtures reach
- * past the fleet's shape on purpose: nested replies, a scoped reply under an unscoped root and the
- * reverse, a reply under a parent the source lost.
+ * The reply step after the starter step. Fixtures reach past the fleet's shape on purpose: nested
+ * replies, a scoped reply under an unscoped root and the reverse, a reply under a parent the source
+ * lost.
  */
-class TimelineReplyUpgradeSqlTest extends TestCase
+class TimelineReplyUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers;
+    use SeedsSourceActivities, SeedsSourceMembers;
 
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
+        return ['member', ...self::ACTIVITY_SOURCE_TABLES];
     }
 
     public function test_a_reply_attaches_to_its_root_with_the_roots_audience(): void

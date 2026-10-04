@@ -4,47 +4,28 @@ namespace Tests\Feature\Upgrade\Member;
 
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/**
- * Runs the compiled member_config → member_preferences step against the real OpenPNE 3 DDL; MySQL
- * only, with a target member created first so the member_id FK resolves.
- */
-class MemberPreferenceUpgradeSqlTest extends TestCase
+/** The member_config → member_preferences step, with a target member created first so the member_id FK resolves. */
+class MemberPreferenceUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
     private int $memberId;
+
+    protected function sourceTables(): array
+    {
+        return ['member', 'member_config'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-
-        DB::statement('DROP TABLE IF EXISTS `member_config`');
-        DB::statement(SourceSchema::default()->createStatement('member_config', withoutForeignKeys: true));
-
         $this->memberId = $this->activeMember()->getKey();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceMemberTable();
-            DB::statement('DROP TABLE IF EXISTS `member_config`');
-        }
-
-        parent::tearDown();
     }
 
     public function test_maps_diary_public_flag_to_the_diary_default_visibility_key(): void

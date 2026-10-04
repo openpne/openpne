@@ -7,7 +7,6 @@ use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
@@ -15,43 +14,29 @@ use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
  * Check A (per-step row-count parity) over the three relation steps sharing one member_relationship
  * source. setUp runs the real runner so the target + upgrade-state are populated as production would;
  * each test then either verifies the clean result or corrupts one side.
  */
-class UpgradeVerifierSqlTest extends TestCase
+class UpgradeVerifierSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
+
+    protected function sourceTables(): array
+    {
+        return ['member', 'member_relationship'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('verify re-counts the OpenPNE 3 source DDL on MySQL.');
-        }
-
-        $this->createSourceMemberTable();
-
-        DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
         $this->seedGraph();
         (new UpgradeRunner(new InsertSelectCompiler, $this->relationSteps()))->run(new RunOptions);
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceMemberTable();
-            DB::statement('DROP TABLE IF EXISTS `member_relationship`');
-        }
-
-        parent::tearDown();
     }
 
     public function test_a_clean_migration_passes(): void
