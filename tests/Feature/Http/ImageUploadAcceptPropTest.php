@@ -45,13 +45,15 @@ class ImageUploadAcceptPropTest extends TestCase
         $member = Member::factory()->create();
         config(['openpne.images.browser_shrink' => ['max_edge' => 1600, 'passthrough_kb' => 1024, 'jpeg_quality' => 75]]);
 
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
         $this->actingAs($member)->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 1048576, 'maxBytes' => 5242880, 'quality' => 0.75]));
+            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 1048576, 'maxBytes' => 5242880, 'quality' => 0.75, 'keepsFrames' => false]));
 
-        // A pass-through size above the upload cap would send a picture the cap then refuses.
-        config(['openpne.images.max_upload_kilobytes' => 512]);
+        // A threshold above the upload rules' own would send a picture those rules then refuse.
+        config(['openpne.images.max_upload_kilobytes' => 512, 'openpne.images.max_upload_dimension' => 1200]);
+        $this->app->instance(ImageProcessor::class, $this->sidecarLike());
         $this->actingAs($member)->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 524288, 'maxBytes' => 524288, 'quality' => 0.75]));
+            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1200, 'passthroughBytes' => 524288, 'maxBytes' => 524288, 'quality' => 0.75, 'keepsFrames' => true]));
 
         DB::table('sns_settings')->updateOrInsert(['key' => SnsSettingKey::ImageUploadBrowserShrink->value], ['value' => '0']);
         app(SnsSettingService::class)->clearCache();

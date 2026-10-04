@@ -24,39 +24,14 @@ function acceptedTypes(accept: string): Set<string> {
     );
 }
 
-function fourcc(view: DataView, at: number): string {
-    return String.fromCharCode(view.getUint8(at), view.getUint8(at + 1), view.getUint8(at + 2), view.getUint8(at + 3));
-}
-
-/** A WebP whose VP8X header sets the animation bit, or a PNG with an acTL chunk before its first IDAT. */
-async function keepsFrames(file: File): Promise<boolean> {
-    if (file.type === 'image/webp') {
-        const head = new DataView(await file.slice(0, 21).arrayBuffer());
-        return head.byteLength === 21 && fourcc(head, 12) === 'VP8X' && (head.getUint8(20) & 0x02) !== 0;
-    }
-    if (file.type !== 'image/png' && file.type !== 'image/apng') {
+/** A WebP whose VP8X header sets the animation bit. */
+async function animatedWebp(file: File): Promise<boolean> {
+    if (file.type !== 'image/webp') {
         return false;
     }
-    // Chunk headers only, each read where the previous length points: acTL must precede the first
-    // IDAT, but a colour profile or text chunk of any size may precede acTL.
-    let offset = 8;
-    while (offset + 8 <= file.size) {
-        const header = new DataView(await file.slice(offset, offset + 8).arrayBuffer());
-        if (header.byteLength < 8) {
-            return false;
-        }
-        const length = header.getUint32(0);
-        const type = fourcc(header, 4);
-        if (type === 'acTL') {
-            return true;
-        }
-        if (type === 'IDAT' || type === 'IEND') {
-            return false;
-        }
-        offset += 12 + length;
-    }
+    const head = new DataView(await file.slice(0, 21).arrayBuffer());
 
-    return false;
+    return head.byteLength === 21 && String.fromCharCode(head.getUint8(12), head.getUint8(13), head.getUint8(14), head.getUint8(15)) === 'VP8X' && (head.getUint8(20) & 0x02) !== 0;
 }
 
 /**
@@ -68,12 +43,16 @@ export async function shrink(file: File, upload: ImageUploadPolicy): Promise<Fil
     if (policy === null) {
         return file;
     }
-    // A GIF stays as picked, and so does a WebP or PNG that keeps frames: the canvas would flatten
-    // the animation, so an oversized one fails visibly instead.
-    if (file.type === 'image/gif' || (await keepsFrames(file))) {
+    // A GIF stays as picked: the canvas would flatten its animation, so an oversized one fails visibly.
+    if (file.type === 'image/gif') {
         return file;
     }
     try {
+        // An animated WebP stays as picked too, but only where the server keeps its frames; elsewhere
+        // the canvas's still is the still the server would have made.
+        if (policy.keepsFrames && (await animatedWebp(file))) {
+            return file;
+        }
         const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
         try {
             const scale = Math.min(1, policy.maxEdge / Math.max(bitmap.width, bitmap.height));
@@ -117,6 +96,8 @@ export async function shrink(file: File, upload: ImageUploadPolicy): Promise<Fil
 export function useShrunkPick(value: File | null, setFile: (file: File | null) => void): { pick: (e: ChangeEvent<HTMLInputElement>) => void; busy: boolean; accept: string } {
     const upload = useImageUpload();
     const [busy, setBusy] = useState(false);
+    // Counted, not flagged: a second pick before the first shrink ends must not clear the hint early.
+    const pending = useRef(0);
     // The form's own value as of the last render, so a shrink that outlives a reset or a re-pick
     // finds its file gone and leaves the form alone.
     const latest = useRef(value);
@@ -128,6 +109,7 @@ export function useShrunkPick(value: File | null, setFile: (file: File | null) =
         if (raw === null) {
             return;
         }
+        pending.current += 1;
         setBusy(true);
         try {
             const shrunk = await shrink(raw, upload);
@@ -135,7 +117,10 @@ export function useShrunkPick(value: File | null, setFile: (file: File | null) =
                 setFile(shrunk);
             }
         } finally {
-            setBusy(false);
+            pending.current -= 1;
+            if (pending.current === 0) {
+                setBusy(false);
+            }
         }
     }
 

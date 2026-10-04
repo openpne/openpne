@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Files\ImageUploadPolicy;
+use App\Files\UploadLimit;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -124,15 +126,13 @@ class ImageSettings extends Page
 
     private function buildSection(): Section
     {
-        $shrink = (array) config('openpne.images.browser_shrink');
-
         return Section::make()
             ->schema([
                 Toggle::make(SnsSettingKey::ImageUploadBrowserShrink->value)
                     ->label(SnsSettingKey::ImageUploadBrowserShrink->label())
-                    ->helperText(__('Pictures over :kb KB or longer than :px px on a side are resized and re-encoded on the member\'s device before they are sent, and their location data does not survive that. Off, the original file is sent and anything over the upload limit is refused.', [
-                        'kb' => number_format((int) $shrink['passthrough_kb']),
-                        'px' => number_format((int) $shrink['max_edge']),
+                    ->helperText(__('A large picture (over :px px on a side, or over :kb KB) is shrunk on the member\'s device before it is sent, and its location data does not survive that. Off, the original file is sent and anything over the upload limit is refused.', [
+                        'px' => number_format(min((int) config('openpne.images.browser_shrink.max_edge'), UploadLimit::dimension())),
+                        'kb' => number_format(intdiv(ImageUploadPolicy::passthroughBytes(), 1024)),
                     ])),
             ]);
     }

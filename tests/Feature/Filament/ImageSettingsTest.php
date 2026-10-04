@@ -66,6 +66,16 @@ class ImageSettingsTest extends TestCase
         $this->assertTrue((bool) app(SnsSettingService::class)->get(SnsSettingKey::ImageUploadBrowserShrink));
     }
 
+    public function test_the_copy_names_the_thresholds_as_clamped(): void
+    {
+        config(['openpne.images.max_upload_kilobytes' => 1024, 'openpne.images.max_upload_dimension' => 1600]);
+        app()->setLocale('en');
+
+        $rendered = Livewire::test(ImageSettings::class)->html();
+
+        $this->assertStringContainsString('over 1,600 px on a side, or over 1,024 KB', $rendered);
+    }
+
     public function test_the_page_says_what_turning_it_off_does(): void
     {
         // Asserted through __() under an explicit locale: the panel renders in the site language, so
@@ -75,7 +85,7 @@ class ImageSettingsTest extends TestCase
             $rendered = Livewire::test(ImageSettings::class)->html();
             $this->assertStringContainsString(SnsSettingKey::ImageUploadBrowserShrink->label(), $rendered);
             $this->assertStringContainsString(
-                e(__('Pictures over :kb KB or longer than :px px on a side are resized and re-encoded on the member\'s device before they are sent, and their location data does not survive that. Off, the original file is sent and anything over the upload limit is refused.', ['kb' => '2,048', 'px' => '2,048'])),
+                e(__('A large picture (over :px px on a side, or over :kb KB) is shrunk on the member\'s device before it is sent, and its location data does not survive that. Off, the original file is sent and anything over the upload limit is refused.', ['px' => '2,048', 'kb' => '2,048'])),
                 $rendered,
             );
         }

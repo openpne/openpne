@@ -65,7 +65,7 @@ export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'gro
 /** The server's upload contract for the Modern pickers; `shrink` is null while the site has switched the browser-side shrink off. */
 export interface ImageUploadPolicy {
     accept: string;
-    shrink: { maxEdge: number; passthroughBytes: number; maxBytes: number; quality: number } | null;
+    shrink: { maxEdge: number; passthroughBytes: number; maxBytes: number; quality: number; keepsFrames: boolean } | null;
 }
 
 export interface PageProps {
@@ -83,7 +83,6 @@ export interface PageProps {
     autoplayAnimations: boolean;
     /** Whether the member is still to be told how a row's actions are reached; null for a guest. */
     rowActionsHint: 'shown' | 'dismissed' | null;
-    /** The `<input accept>` list for a picture upload: what the server's image processor reads. */
     imageUpload: ImageUploadPolicy;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
