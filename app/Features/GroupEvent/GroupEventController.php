@@ -29,6 +29,7 @@ use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use App\Support\Stream\StreamProps;
 use App\Support\SurfaceResolver;
+use App\Support\ViewerRelations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -74,6 +75,7 @@ class GroupEventController extends Controller
         $found = $query($event);
         abort_if($found === null, 404);
         $viewer = $this->viewer();
+        app(ViewerRelations::class)->warmRoles($viewer, [$found->group_id]);
         abort_unless(GroupEventAccess::canViewEvent($found, $viewer), 404);
         $linkCards->ensure($found);
         $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::event((int) $found->getKey()));

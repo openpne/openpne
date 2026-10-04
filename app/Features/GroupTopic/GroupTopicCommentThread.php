@@ -38,6 +38,7 @@ final class GroupTopicCommentThread
         if (! $ascending) {
             $comments = $comments->reverse()->values();
         }
+        $comments->each->setRelation('topic', $topic);
 
         return new self($topic, $comments, $total, $ascending, $page, $lastPage);
     }

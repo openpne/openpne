@@ -38,6 +38,7 @@ final class GroupEventCommentThread
         if (! $ascending) {
             $comments = $comments->reverse()->values();
         }
+        $comments->each->setRelation('event', $event);
 
         return new self($event, $comments, $total, $ascending, $page, $lastPage);
     }

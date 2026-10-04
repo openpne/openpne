@@ -146,6 +146,16 @@ index. The talk room list sorts on a correlated latest-message subquery that rea
 `group_messages` index above; the conversation list's subquery reads the mailbox rows; in both the
 outer sort over the computed column is the engine's.
 
+## Counts after the cut
+
+A count that rides in the projection (`withCount`, `withExists`) is evaluated for every candidate
+row before a filesort cuts to the LIMIT, where a read in axis-index order stops at the LIMIT and
+pays for the rows it returns alone. So a list that has to be sorted after the fact — the joined
+groups' recent topics and events, read through the membership and ordered across every group's
+rows — names its ids in one query and counts only the page it kept in a second (measured on MySQL
+8.4 at 50k topics across 20 groups: 129 ms → 10 ms). A list that is cut by its axis index keeps the
+count in the one query.
+
 ## SQLite foreign-key indexes
 
 Laravel's `constrained()` creates an index on MySQL, where InnoDB requires one for the constraint,
