@@ -29,6 +29,9 @@ test('only the pictures among dropped files are handed on, and none from a pictu
 
     const offAPage = { types: ['text/uri-list', 'text/html', 'Files'], files: [picture('hero.png')] } as unknown as DataTransfer;
     expect(droppedImages(offAPage)).toEqual([]);
+    // A desktop file drag may carry its file:// URI on some platforms, and is a pick all the same.
+    const fromDesktop = { types: ['text/uri-list', 'Files'], files: [picture('IMG_1.png')] } as unknown as DataTransfer;
+    expect(droppedImages(fromDesktop).map((file) => file.name)).toEqual(['IMG_1.png']);
 });
 
 test('a paste that carries plain text pastes the text and no picture', () => {

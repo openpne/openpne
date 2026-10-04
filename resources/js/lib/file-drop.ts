@@ -5,11 +5,12 @@ export function carriesFiles(transfer: DataTransfer | null): boolean {
 
 /**
  * The pictures among dropped files; what is not a picture is ignored rather than refused. A picture
- * dragged off a page arrives with its URL (`text/uri-list`) and, in Chromium, a copy of its bytes as
- * a file: that is a link, not a pick, and is ignored too.
+ * dragged off a web page arrives with its markup (`text/html`) and, in Chromium, a copy of its bytes
+ * as a file: that is a link, not a pick, and is ignored too — a file dragged from the desktop
+ * carries no markup.
  */
 export function droppedImages(transfer: DataTransfer | null): File[] {
-    if (transfer === null || Array.from(transfer.types).includes('text/uri-list')) {
+    if (transfer === null || Array.from(transfer.types).includes('text/html')) {
         return [];
     }
 

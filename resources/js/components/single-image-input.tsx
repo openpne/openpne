@@ -45,9 +45,8 @@ export function SingleImageInput({
                 accept={picked.accept}
                 onChange={picked.pick}
                 required={required}
-                disabled={picked.busy}
                 className={cn(
-                    'block w-full rounded-md text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80 disabled:opacity-50',
+                    'block w-full rounded-md text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80',
                     dragging && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
                 )}
             />
