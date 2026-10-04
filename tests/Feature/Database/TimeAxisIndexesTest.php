@@ -18,6 +18,15 @@ class TimeAxisIndexesTest extends TestCase
         }
     }
 
+    public function test_the_boards_carry_a_posting_time_axis_and_the_events_a_date_axis(): void
+    {
+        foreach (['group_topics', 'group_events'] as $table) {
+            $this->assertContains(['created_at', 'id'], $this->indexColumns($table), $table);
+            $this->assertContains(['group_id', 'created_at', 'id'], $this->indexColumns($table), $table);
+        }
+        $this->assertContains(['open_date', 'id'], $this->indexColumns('group_events'));
+    }
+
     public function test_the_timeline_axes_carry_the_reply_flag_and_nothing_else_leads_with_it(): void
     {
         $columns = $this->indexColumns('timeline_posts');
