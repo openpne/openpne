@@ -563,8 +563,10 @@ the link was shared here — while a link to one of this site's own pages is pre
 
 ## Cleaning up
 
-`openpne:prune-link-cards` deletes cards no body points at, and takes their images with them — while
-a card exists its image is referenced, so this is the only thing that makes those bytes collectable.
+`openpne:prune-link-cards` deletes cards no body points at, and takes every picture stored for them —
+the current one and the generations a refetch replaced, which nothing points at any more — because
+while a card exists its pictures are referenced only through it, so this is the only thing that makes
+those bytes collectable.
 
 It is a sweep rather than something the posting path does inline, because cards are shared by URL: no
 single record stopping its reference proves the card is unused without checking every other record.

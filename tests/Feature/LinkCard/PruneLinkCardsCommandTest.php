@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\LinkCard\CardContext;
+use App\LinkCard\LinkCardImage;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\File;
@@ -20,6 +21,7 @@ use App\Support\LinkCardStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class PruneLinkCardsCommandTest extends TestCase
@@ -161,17 +163,25 @@ class PruneLinkCardsCommandTest extends TestCase
         $this->assertDatabaseHas('link_cards', ['id' => $orphan->id]);
     }
 
-    public function test_pruning_a_card_takes_its_image_with_it(): void
+    public function test_pruning_a_card_takes_every_generation_of_its_image_with_it(): void
     {
-        // While a card exists its image is referenced, so this sweep is the only thing that makes
-        // those bytes collectable at all.
-        $file = File::factory()->create();
-        $card = $this->agedCard(['image_file_id' => $file->id]);
+        // While a card exists its pictures are referenced only through it, so this sweep is the only
+        // thing that makes those bytes collectable; a refetch leaves the generation it replaced behind
+        // with no pointer at all.
+        $card = $this->agedCard();
+        $pictures = File::factory()->count(2)->create([
+            'related_entity_type' => LinkCardImage::RELATED_TYPE,
+            'related_entity_id' => $card->id,
+        ]);
+        $other = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => $card->id + 1]);
+        DB::table('link_cards')->where('id', $card->id)->update(['image_file_id' => $pictures[1]->id]); // the query builder leaves updated_at, so the card stays aged
 
         $this->artisan('openpne:prune-link-cards')->assertSuccessful();
 
         $this->assertDatabaseMissing('link_cards', ['id' => $card->id]);
-        $this->assertDatabaseMissing('files', ['id' => $file->id]);
+        $this->assertDatabaseMissing('files', ['id' => $pictures[0]->id]);
+        $this->assertDatabaseMissing('files', ['id' => $pictures[1]->id]);
+        $this->assertDatabaseHas('files', ['id' => $other->id]);
     }
 
     public function test_it_says_so_when_there_is_nothing_to_do(): void

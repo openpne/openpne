@@ -24,9 +24,26 @@ final class LinkCardImage
     /**
      * Not a morph alias, deliberately: `link_card` resolves to no model, and `FilePolicy` denies a
      * related entity it cannot resolve, so the generic file route refuses these bytes whatever else
-     * changes. Written down once because {@see InternalCardRow} deletes by it.
+     * changes.
      */
     public const RELATED_TYPE = 'link_card';
+
+    /**
+     * Every picture ever stored for the card, not the one `image_file_id` points at: a refetch stores
+     * a new File and only re-points the card, and a fetch in flight can store one more before its
+     * fence fails. One at a time, so FileObserver takes the bytes and the cached thumbnails too.
+     */
+    public static function deleteAllFor(int $linkCardId): void
+    {
+        $pictures = File::query()
+            ->where('related_entity_type', self::RELATED_TYPE)
+            ->where('related_entity_id', $linkCardId)
+            ->get();
+
+        foreach ($pictures as $picture) {
+            $picture->delete();
+        }
+    }
 
     /** Formats the card renders. SVG is absent deliberately: it is a document, not a picture. */
     private const ACCEPTED = [
