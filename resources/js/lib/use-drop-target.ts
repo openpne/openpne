@@ -10,9 +10,9 @@ interface DropTargetOptions {
 }
 
 /**
- * The target is the form around `ref`, or the element itself outside any form; a drag that is not a
- * pick (`carriesPick`) is left alone here and to the shell's guard. The drag enter/leave pair is
- * counted, since the browser fires them for every child the pointer crosses.
+ * The target is the form around `ref`, or the element itself outside any form, and it takes a drag
+ * only when it is a pick (`carriesPick`). The drag enter/leave pair is counted, since the browser
+ * fires them for every child the pointer crosses.
  */
 export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, enabled = true, paste = false }: DropTargetOptions): boolean {
     const [dragging, setDragging] = useState(false);

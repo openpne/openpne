@@ -8,7 +8,7 @@ import { LeftNav } from '@/components/left-nav';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
-import { carriesFiles } from '@/lib/file-drop';
+import { carriesFiles, carriesPick } from '@/lib/file-drop';
 import { type Chrome, chromeRecedes, hasBottomNav, lookSpec } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
@@ -34,13 +34,18 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
 
     // A picture dropped outside any target would otherwise open in the tab, over the draft; a file
-    // input keeps its native drop, and a target that claimed the drop has already prevented it.
+    // input keeps its native drop, a field keeps a page link's text, and a target that claimed the
+    // drop has already prevented it.
     useEffect(() => {
         const guard = (event: DragEvent) => {
             if (!carriesFiles(event.dataTransfer) || event.defaultPrevented) {
                 return;
             }
-            if (event.target instanceof Element && event.target.closest('input[type="file"]')) {
+            const target = event.target instanceof Element ? event.target : null;
+            if (target?.closest('input[type="file"]')) {
+                return;
+            }
+            if (!carriesPick(event.dataTransfer) && target?.closest('textarea, input, [contenteditable="true"]')) {
                 return;
             }
             event.preventDefault();

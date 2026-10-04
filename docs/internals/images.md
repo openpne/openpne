@@ -255,7 +255,8 @@ later one replacing the earlier. The shell
 prevents the drop that would otherwise open the file in the tab anywhere outside a target, except
 on a file input, which keeps its native drop. Only pictures are taken, and only picked ones: what is
 not a picture is ignored, and a picture dragged off a web page — markup with a copy of its bytes,
-not a file the member chose — is offered to no target, the shell alone keeping it from opening.
+not a file the member chose — is offered to no target; the shell keeps it from opening, except over
+a field, where the browser's own insert of the link's text stands.
 
 ## Processing
 
