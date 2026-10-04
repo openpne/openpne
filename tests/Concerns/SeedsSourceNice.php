@@ -5,7 +5,7 @@ namespace Tests\Concerns;
 use App\Upgrade\SourceSchema;
 use Illuminate\Support\Facades\DB;
 
-/** The OpenPNE 3 opLikePlugin `nice` table from the real DDL, plus a row seeder. */
+/** Row seeder for the OpenPNE 3 opLikePlugin `nice` table, plus its case-folding variant of the DDL. */
 trait SeedsSourceNice
 {
     /** The same table with the letter column folding case, as a source outside the stock DDL may. */

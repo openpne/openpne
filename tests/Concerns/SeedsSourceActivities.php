@@ -4,7 +4,7 @@ namespace Tests\Concerns;
 
 use Illuminate\Support\Facades\DB;
 
-/** The OpenPNE 3 activity tables (and `community`, which the routing reads) from the real DDL, plus row seeders. */
+/** The OpenPNE 3 activity table names (and `community`, which the routing reads), plus row seeders. */
 trait SeedsSourceActivities
 {
     protected const ACTIVITY_SOURCE_TABLES = ['activity_data', 'activity_image', 'community'];

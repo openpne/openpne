@@ -16,7 +16,10 @@ abstract class UpgradeSqlTestCase extends TestCase
 {
     use MigratesUpgradeTargetsOnce;
 
-    /** @return list<string> OpenPNE 3 tables in creation order, each created without its foreign keys. */
+    /**
+     * @return list<string> the tables setUp and tearDown drop, in creation order; createSourceTables()
+     *                      builds each from the OpenPNE 3 DDL without its foreign keys unless overridden
+     */
     protected function sourceTables(): array
     {
         return [];
@@ -27,7 +30,7 @@ abstract class UpgradeSqlTestCase extends TestCase
         parent::setUp();
 
         if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The OpenPNE 3 source DDL and the upgrade SQL run on MySQL.');
+            $this->markTestSkipped('Upgrade SQL tests run on MySQL.');
         }
 
         $this->dropSourceTables();
