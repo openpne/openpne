@@ -392,10 +392,7 @@ class MemberSearchTest extends TestCase
             $this->memberWithIntro($profile, "Intro {$i}", Visibility::Members);
         }
 
-        DB::enableQueryLog();
-        $this->actingAs($viewer)->get('/member/search')->assertOk();
-        $queries = count(DB::getQueryLog());
-        DB::disableQueryLog();
+        $queries = $this->countApplicationQueries(fn () => $this->actingAs($viewer)->get('/member/search')->assertOk());
 
         // Bounded just above the steady state, so a per-row read (which would reach 25) trips this
         // instead of hiding.

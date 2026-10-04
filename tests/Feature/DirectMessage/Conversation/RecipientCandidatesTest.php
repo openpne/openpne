@@ -206,10 +206,7 @@ class RecipientCandidatesTest extends ConversationTestCase
             MemberImage::factory()->create(['member_id' => Member::factory()->create(['name' => "Match Anon {$i}"])->getKey()]);
         }
 
-        DB::enableQueryLog();
-        $this->actingAs($viewer)->getJson(self::URI.'?q=Match')->assertOk();
-        $queries = count(DB::getQueryLog());
-        DB::disableQueryLog();
+        $queries = $this->countApplicationQueries(fn () => $this->actingAs($viewer)->getJson(self::URI.'?q=Match')->assertOk());
 
         // Each tier resolves its avatars (and their files) in one query, so eight candidates cost
         // what one does.
