@@ -84,8 +84,8 @@ class ListFriendsTest extends TestCase
     }
 
     /**
-     * Friendships made in the same request share a timestamp (`created_at` defaults to useCurrent), so
-     * the tie-break is what the decorative row's "same set on every visit" actually rests on.
+     * Every friendship here carries the same second, so the tie-break is what the decorative row's
+     * "same set on every visit" actually rests on.
      */
     public function test_two_pages_of_one_second_split_at_the_friend_id_with_no_row_repeated_or_lost(): void
     {
