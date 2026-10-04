@@ -100,9 +100,12 @@ test('a picture dragged off a page shows no ring and is left to the shell', () =
 
     const enter = fireEvent.dragEnter(form, { dataTransfer });
     expect(form.dataset.dragging).toBe('false');
+    // Not prevented either, or the browser would show a copy cursor over a target that takes nothing.
+    const over = fireEvent.dragOver(form, { dataTransfer });
     const drop = fireEvent.drop(form, { dataTransfer });
 
     expect(onFiles).not.toHaveBeenCalled();
     expect(enter).toBe(true);
+    expect(over).toBe(true);
     expect(drop).toBe(true);
 });
