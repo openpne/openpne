@@ -226,10 +226,7 @@ class MentionCandidatesTest extends TestCase
             MemberImage::factory()->create(['member_id' => Member::factory()->create(['name' => "Match Anon {$i}"])->getKey()]);
         }
 
-        DB::enableQueryLog();
-        $this->actingAs($viewer)->getJson(self::URI.'?q=Match')->assertOk();
-        $queries = count(DB::getQueryLog());
-        DB::disableQueryLog();
+        $queries = $this->countApplicationQueries(fn () => $this->actingAs($viewer)->getJson(self::URI.'?q=Match')->assertOk());
 
         // Each tier resolves its avatars in one query, so the bound sits well under the
         // eight-candidate steady state plus a per-row read.

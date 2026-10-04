@@ -5,7 +5,6 @@ namespace Tests\Feature\DirectMessage\Conversation;
 use App\Features\DirectMessage\Queries\ConversationMessages;
 use App\Models\Member;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class ConversationPaginationTest extends ConversationTestCase
 {
@@ -228,12 +227,7 @@ class ConversationPaginationTest extends ConversationTestCase
         $this->conversation($viewer, $other, 20);
 
         $this->actingAs($viewer);
-        $queries = 0;
-        DB::listen(function () use (&$queries) {
-            $queries++;
-        });
-
-        $this->getJson("/messages/{$other->getKey()}/messages")->assertOk();
+        $queries = $this->countApplicationQueries(fn () => $this->getJson("/messages/{$other->getKey()}/messages")->assertOk());
 
         // Session, the feature gate, the page read and its eager loads — a constant, and far below
         // the 20 rows it just serialized.

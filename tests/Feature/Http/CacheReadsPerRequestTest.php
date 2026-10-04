@@ -46,7 +46,6 @@ class CacheReadsPerRequestTest extends TestCase
 
         // Once unmeasured, so every key is warm: a cold key is fetched twice by design.
         $this->get($uri)->assertOk();
-        $this->endOfRequest();
 
         $fetched = $this->fetchesDuring(fn () => $this->get($uri)->assertOk());
 
@@ -130,7 +129,7 @@ class CacheReadsPerRequestTest extends TestCase
         $this->assertSame('My Group', app(SnsSettingService::class)->get(SnsSettingKey::SnsName));
     }
 
-    /** The memoized store is scoped, and the test container ends no scope on its own. */
+    /** The memoized store is scoped; a request ends its scope through TestCase::call(), a direct service read here does not. */
     private function endOfRequest(): void
     {
         $this->app->forgetScopedInstances();

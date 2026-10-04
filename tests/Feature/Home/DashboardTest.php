@@ -231,10 +231,7 @@ class DashboardTest extends TestCase
             ]);
         }
 
-        DB::enableQueryLog();
-        $this->actingAs($viewer)->get('/dashboard')->assertOk();
-        $queries = count(DB::getQueryLog());
-        DB::disableQueryLog();
+        $queries = $this->countApplicationQueries(fn () => $this->actingAs($viewer)->get('/dashboard')->assertOk());
 
         // Bounded by the feeds and their eager loads, never by the row count, and kept tight (steady
         // state 36 with this fixture's single look: the shell's preference read and the timeline

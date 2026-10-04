@@ -7,6 +7,14 @@ use Tests\TestCase;
 
 class RegionListServiceTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // No database here, so the store that reads from one cannot be the default.
+        config(['cache.default' => 'array']);
+    }
+
     public function test_flatten_options_lists_a_country_regions(): void
     {
         $regions = (new RegionListService)->flattenOptions('JP');
