@@ -1,13 +1,18 @@
-# Static analysis of the TypeScript and JavaScript under resources/js; CodeQL has no PHP analyzer, so
-# the PHP side keeps its own test and lint gates. Deliberately NOT a required check, so a plain paths
-# filter is safe (see the required-checks note in ci.yml); the weekly run keeps the main branch's
-# analysis current for pull requests to compare against.
+# Deliberately NOT a required check, so a plain paths filter is safe (see the required-checks note in
+# ci.yml); the filter names every place the checkout keeps JavaScript or TypeScript, since the
+# analysis reads them all, and the weekly run keeps the main branch's analysis current for pull
+# requests to compare against. CodeQL has no PHP analyzer.
 name: CodeQL
 
 on:
   pull_request:
     paths:
       - 'resources/js/**'
+      - 'public/js/**'
+      - public/sw.js
+      - 'tests/js/**'
+      - '*.config.js'
+      - '*.config.ts'
       - package.json
       - package-lock.json
       - tsconfig.json
@@ -16,6 +21,11 @@ on:
     branches: [main]
     paths:
       - 'resources/js/**'
+      - 'public/js/**'
+      - public/sw.js
+      - 'tests/js/**'
+      - '*.config.js'
+      - '*.config.ts'
       - package.json
       - package-lock.json
       - tsconfig.json
@@ -26,6 +36,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   analyze:
