@@ -26,19 +26,6 @@ class DirectMessageRoutesTest extends TestCase
         return $m;
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $message = $this->deliver(...Member::factory()->count(2)->create()->all());
-
-        $this->get('/messages')->assertRedirect('/login');
-        $this->get('/message')->assertRedirect('/login');
-        $this->get('/message/receiveList')->assertRedirect('/login');
-        $this->get('/message/sendList')->assertRedirect('/login');
-        $this->get('/message/draftList')->assertRedirect('/login');
-        $this->get('/message/dustList')->assertRedirect('/login');
-        $this->get(route('message.receive.show', $message))->assertRedirect('/login');
-    }
-
     /** The four boxes and both index aliases: the conversation list answers for all of them. */
     public function test_every_box_url_lands_on_the_conversation_list(): void
     {

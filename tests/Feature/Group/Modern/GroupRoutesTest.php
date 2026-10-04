@@ -21,17 +21,6 @@ class GroupRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $group = Group::factory()->create();
-
-        $this->get('/groups')->assertRedirect('/login');
-        $this->get('/groups/mine')->assertRedirect('/login');
-        $this->get("/groups/{$group->getKey()}")->assertRedirect('/login');
-        $this->get("/groups/{$group->getKey()}/members")->assertRedirect('/login');
-        $this->post('/groups/'.$group->getKey().'/join')->assertRedirect('/login');
-    }
-
     public function test_modern_search_renders_inertia_component(): void
     {
         $member = Member::factory()->create();

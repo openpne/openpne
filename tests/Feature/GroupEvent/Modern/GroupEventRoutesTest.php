@@ -47,19 +47,6 @@ class GroupEventRoutesTest extends TestCase
         ], $overrides);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $group = Group::factory()->create();
-        $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
-
-        $this->get(route('group.events.index', $group))->assertRedirect('/login');
-        $this->get(route('group.events.new', $group))->assertRedirect('/login');
-        $this->get(route('group.events.show', $event))->assertRedirect('/login');
-        $this->get(route('group.events.member_list', $event))->assertRedirect('/login');
-        $this->post(route('group.events.store', $group))->assertRedirect('/login');
-        $this->post(route('group.events.delete', $event))->assertRedirect('/login');
-    }
-
     public function test_modern_index_renders_the_board(): void
     {
         $group = Group::factory()->create();

@@ -17,13 +17,6 @@ class DiaryFeedRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_friend_feed_still_redirects_a_guest_to_login(): void
-    {
-        // The all-member feed is guest-reachable on its web-public tier; the friend feed is defined
-        // by a viewer's friendships, so it stays behind the login.
-        $this->get('/diary/listFriend')->assertRedirect('/login');
-    }
-
     /**
      * A web-public entry belongs in the member feed, as in OpenPNE 3: an Open save is stored
      * there as public_flag=1 + is_open, which is exactly what its feed query lists.

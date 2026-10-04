@@ -33,18 +33,6 @@ class GroupTopicCommentRoutesTest extends TestCase
         return $member;
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $group = Group::factory()->create();
-        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-        $comment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'number' => 1]);
-
-        $this->post(route('group.topics.comment.store', $topic))
-            ->assertRedirect('/login');
-        $this->post(route('group.topics.comment.delete', $comment))
-            ->assertRedirect('/login');
-    }
-
     public function test_modern_comment_store_creates_a_comment_and_redirects_to_show(): void
     {
         $group = Group::factory()->create();

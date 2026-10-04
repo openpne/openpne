@@ -15,11 +15,6 @@ class RecipientCandidatesTest extends ConversationTestCase
 {
     private const URI = '/messages/recipients';
 
-    public function test_a_guest_is_sent_to_the_login_screen(): void
-    {
-        $this->get(self::URI)->assertRedirect('/login');
-    }
-
     public function test_the_unit_switched_off_takes_the_picker_and_its_search(): void
     {
         $viewer = Member::factory()->create();

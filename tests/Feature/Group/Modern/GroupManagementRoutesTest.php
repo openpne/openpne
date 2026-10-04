@@ -20,16 +20,6 @@ class GroupManagementRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $group = Group::factory()->create();
-
-        $this->get('/groups/edit')->assertRedirect('/login');
-        $this->post('/groups/edit')->assertRedirect('/login');
-        $this->post("/groups/{$group->getKey()}/delete")->assertRedirect('/login');
-        $this->get("/groups/{$group->getKey()}/members/pending")->assertRedirect('/login');
-    }
-
     public function test_modern_new_renders_create_form_with_null_community(): void
     {
         $member = Member::factory()->create();

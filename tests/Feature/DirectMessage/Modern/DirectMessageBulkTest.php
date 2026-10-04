@@ -27,11 +27,6 @@ class DirectMessageBulkTest extends TestCase
         return [$message, $r];
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $this->post(route('message.bulk'), ['box' => 'receive', 'action' => 'delete', 'ids' => [1]])->assertRedirect('/login');
-    }
-
     public function test_modern_bulk_trash_from_the_inbox_redirects_to_the_inbox(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();

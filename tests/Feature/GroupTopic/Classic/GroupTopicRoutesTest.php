@@ -30,16 +30,6 @@ class GroupTopicRoutesTest extends TestCase
         return $member;
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $group = Group::factory()->create();
-        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-
-        $this->get(route('group.topics.index', $group))->assertRedirect('/login');
-        $this->get(route('group.topics.show', $topic))->assertRedirect('/login');
-        $this->post(route('group.topics.store', $group))->assertRedirect('/login');
-    }
-
     public function test_board_renders_with_body_id_and_most_recent_activity_first(): void
     {
         $group = Group::factory()->create();

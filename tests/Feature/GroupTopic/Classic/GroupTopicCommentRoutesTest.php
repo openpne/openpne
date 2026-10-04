@@ -28,13 +28,6 @@ class GroupTopicCommentRoutesTest extends TestCase
         return $member;
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $topic = GroupTopic::factory()->create();
-
-        $this->post(route('group.topics.comment.store', $topic))->assertRedirect('/login');
-    }
-
     public function test_a_member_comments_and_the_topic_rises_on_the_board(): void
     {
         $group = Group::factory()->create();

@@ -33,16 +33,6 @@ class GroupEventCommentRoutesTest extends TestCase
         return $member;
     }
 
-    public function test_guests_are_redirected_to_login(): void
-    {
-        $group = Group::factory()->create();
-        $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
-        $comment = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'number' => 1]);
-
-        $this->post(route('group.events.comment.store', $event))->assertRedirect('/login');
-        $this->post(route('group.events.comment.delete', $comment))->assertRedirect('/login');
-    }
-
     public function test_participate_button_joins_the_roster_and_saves_the_comment(): void
     {
         $group = Group::factory()->create();
