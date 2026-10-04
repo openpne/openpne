@@ -49,12 +49,9 @@ class ProfileController extends Controller
         }
 
         if ($viewer !== null && ! $viewer->is($member)) {
-            // The page asks about this one pair from its gate to its last serializer.
             $relations = app(ViewerRelations::class);
             $relations->warmBlocks($viewer, [$member->getKey()]);
-            if (Feature::Friend->enabled()) {
-                $relations->warmFriends($viewer, [$member->getKey()]);
-            }
+            $relations->warmFriends($viewer, [$member->getKey()]);
         }
         $this->memberSubject($member); // 404 when the owner has blocked the viewer
 
