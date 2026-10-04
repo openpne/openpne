@@ -384,7 +384,9 @@ the groups first and then looking up their newest messages sorts the page rather
 membership, and a group talked in an hour ago belongs at the top whether or not it falls in the
 first twenty by id. So the newest `(created_at, id)` rides along as two correlated subselects, one
 per column — the tuple cannot be read in one statement without a row constructor or a lateral join,
-and SQLite has neither. Each is a single seek on `(group_id, created_at, id)`. Whether a room has
+and SQLite has neither. (The conversation list reads its tuple with a window function instead, over
+the viewer's own mailbox rows; a room list has no such bound, and a window there would rank every
+message of every joined room.) Each is a single seek on `(group_id, created_at, id)`. Whether a room has
 anything at all is spelled as a `CASE` rather than left to where the engine collates NULL in a
 descending sort, which is not a portable answer.
 
