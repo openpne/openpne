@@ -122,11 +122,10 @@ class InternalLinkCardTest extends TestCase
         $this->assertNotNull($fresh->link_card_synced_at, 'Whether this URL has a card does not depend on the setting.');
     }
 
-    public function test_a_body_whose_first_link_is_external_is_left_unexamined_while_the_setting_is_off(): void
+    public function test_a_body_whose_first_link_is_external_holds_a_pending_card_while_the_setting_is_off(): void
     {
-        // The second URL is deliberately one of ours: a card is the first URL, and marking here would
-        // cost the body its card forever, since the marker is written once and nothing revisits it
-        // when the setting returns.
+        // The second URL is deliberately one of ours: a card is the first URL, so the external one is
+        // what waits for the setting, as a pending card the read trigger fetches once it returns.
         Queue::fake();
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
         $diary = $this->bodyLinking('https://example.com/article', $this->selfUrl());
@@ -134,20 +133,37 @@ class InternalLinkCardTest extends TestCase
         $this->sync($diary);
 
         $fresh = $diary->fresh();
-        $this->assertNull($fresh->link_card_id);
-        $this->assertNull($fresh->link_card_synced_at);
-        $this->assertSame(0, LinkCard::count());
+        $this->assertSame(LinkCardStatus::Pending, $fresh->linkCard?->status);
+        $this->assertNotNull($fresh->link_card_synced_at);
+        $this->assertSame(1, LinkCard::count());
+        Queue::assertNothingPushed();
     }
 
-    public function test_a_body_with_no_url_is_left_unexamined_while_the_setting_is_off(): void
+    public function test_a_body_with_no_url_is_examined_while_the_setting_is_off(): void
     {
+        // Whether this body has a card does not depend on the setting, and the read path re-queues an
+        // unexamined body on every view.
         Queue::fake();
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
         $diary = $this->bodyLinking();
 
         $this->sync($diary);
 
-        $this->assertNull($diary->fresh()->link_card_synced_at);
+        $fresh = $diary->fresh();
+        $this->assertNull($fresh->link_card_id);
+        $this->assertNotNull($fresh->link_card_synced_at);
+    }
+
+    public function test_reading_a_body_written_before_internal_cards_gives_it_its_card_while_the_setting_is_off(): void
+    {
+        // Not Queue::fake(): the suite's sync queue runs the job inside the page view.
+        $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
+        $diary = $this->bodyLinking($this->selfUrl());
+        $this->assertNull($diary->link_card_synced_at);
+
+        $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk();
+
+        $this->assertSame(LinkCardStatus::Internal, $diary->fresh()->linkCard?->status);
     }
 
     public function test_an_external_link_still_takes_the_fetch_path(): void

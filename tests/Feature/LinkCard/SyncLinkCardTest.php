@@ -12,6 +12,7 @@ use App\Models\Diary;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Support\BodyFormat;
+use App\Support\LinkCardStatus;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -117,10 +118,10 @@ class SyncLinkCardTest extends TestCase
         Queue::assertPushed(FetchLinkCard::class);
     }
 
-    public function test_it_does_nothing_while_the_setting_is_off(): void
+    public function test_it_attaches_the_pending_card_but_fetches_nothing_while_the_setting_is_off(): void
     {
-        // Checked here as well as where the job was queued: the setting can be turned off after a
-        // job is already waiting.
+        // The read trigger queues this job without asking the setting, so the fetch gate here and in
+        // FetchLinkCard is the one that holds; the pending card is what the read trigger fetches later.
         Queue::fake();
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
         $diary = $this->diary('https://example.com/x');
@@ -128,8 +129,8 @@ class SyncLinkCardTest extends TestCase
         (new SyncLinkCard(Diary::class, $diary->id))->handle($this->settings());
 
         $diary->refresh();
-        $this->assertNull($diary->link_card_id);
-        $this->assertNull($diary->link_card_synced_at, 'Leaving it unsynced is what lets it be picked up when the setting returns.');
+        $this->assertSame(LinkCardStatus::Pending, $diary->linkCard?->status);
+        $this->assertNotNull($diary->link_card_synced_at);
         Queue::assertNothingPushed();
     }
 

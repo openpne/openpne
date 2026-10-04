@@ -74,12 +74,6 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Read after the body, not on entry: the switch governs fetching, and a card of one of this
-        // site's own pages needs none, so it is decided above whatever the switch says.
-        if (! $settings->enabled()) {
-            return;
-        }
-
         if ($url === null) {
             // Marked as looked at, so the read path stops asking about a body that has no card.
             $this->attach($record, $body, $format, null);
@@ -94,7 +88,9 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        if ($card->isDueForFetch()) {
+        // Read last: the switch governs fetching alone, so the body is examined and holds its pending
+        // card either way, and the read trigger fetches it once the switch returns.
+        if ($card->isDueForFetch() && $settings->enabled()) {
             FetchLinkCard::dispatch($card->id);
         }
     }
