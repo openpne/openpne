@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\LinkCard;
 
-use App\Models\File;
 use App\Models\LinkCard;
 use App\Support\LinkCardStatus;
 use Carbon\CarbonImmutable;
@@ -57,7 +56,7 @@ final class InternalCardRow
             ->whereKey($card->getKey())
             ->update($attributes + ['updated_at' => CarbonImmutable::now()]);
 
-        self::deleteStoredPictures($card);
+        LinkCardImage::deleteAllFor((int) $card->getKey());
 
         $card->forceFill($attributes)->syncOriginal();
     }
@@ -80,26 +79,5 @@ final class InternalCardRow
         }
 
         return true;
-    }
-
-    /**
-     * After the update, and by relation rather than by the id the row held: a fetch in flight can
-     * write `image_file_id` in the window before the update, and a file whose card row still exists
-     * is collected by no sweep. A write landing after the update fails its fence, and that worker
-     * deletes its own image.
-     */
-    private static function deleteStoredPictures(LinkCard $card): void
-    {
-        $pictures = File::query()
-            // Both halves, always: this deletes bytes, and a filter that named only the card would
-            // take another card's pictures with it.
-            ->where('related_entity_type', LinkCardImage::RELATED_TYPE)
-            ->where('related_entity_id', $card->getKey())
-            ->get();
-
-        // One at a time, so FileObserver runs for each: the bytes and the cached thumbnails go too.
-        foreach ($pictures as $picture) {
-            $picture->delete();
-        }
     }
 }
