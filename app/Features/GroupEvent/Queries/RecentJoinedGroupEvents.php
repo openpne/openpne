@@ -25,7 +25,7 @@ class RecentJoinedGroupEvents
             ->limit($limit)
             ->pluck('id');
         if ($ids->isEmpty()) {
-            return $ids;
+            return collect();
         }
 
         return GroupEvent::query()

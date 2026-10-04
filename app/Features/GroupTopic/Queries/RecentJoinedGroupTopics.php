@@ -29,7 +29,7 @@ class RecentJoinedGroupTopics
             ->limit($limit)
             ->pluck('id');
         if ($ids->isEmpty()) {
-            return $ids;
+            return collect();
         }
 
         return GroupTopic::query()

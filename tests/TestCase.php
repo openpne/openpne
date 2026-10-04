@@ -50,7 +50,6 @@ abstract class TestCase extends BaseTestCase
         }
     }
 
-    /** The queries a callback runs, leaving out the cache store's own reads and writes. */
     /**
      * Each statement's run count under $run, cache reads aside; eager loads inline their key lists,
      * so those are folded before statements are compared.
@@ -79,6 +78,7 @@ abstract class TestCase extends BaseTestCase
         }
     }
 
+    /** The queries a callback runs, leaving out the cache store's own reads and writes. */
     protected function countApplicationQueries(callable $run): int
     {
         DB::flushQueryLog();

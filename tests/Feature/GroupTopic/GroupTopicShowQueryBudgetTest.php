@@ -45,28 +45,6 @@ class GroupTopicShowQueryBudgetTest extends TestCase
         $this->assertSame([], $grew, 'queries that ran more often for 20 comments than for 2');
     }
 
-    private function queryCounts(callable $run): array
-    {
-        DB::flushQueryLog();
-        DB::enableQueryLog();
-
-        try {
-            $run();
-            $counts = [];
-            foreach (DB::getQueryLog() as $query) {
-                if (preg_match('/["`]cache(_locks)?["`]/', $query['query']) !== 1) {
-                    // Eager loads inline their key lists, so the list is folded before statements are compared.
-                    $sql = preg_replace('/ in \([^)]*\)/', ' in (...)', $query['query']);
-                    $counts[$sql] = ($counts[$sql] ?? 0) + 1;
-                }
-            }
-
-            return $counts;
-        } finally {
-            DB::disableQueryLog();
-        }
-    }
-
     private function topicWithComments(Group $group, int $count): GroupTopic
     {
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
