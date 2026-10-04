@@ -21,6 +21,7 @@ class UnblockMemberTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $blocker->getKey(),
             'blocked_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
 
         (new UnblockMember)($blocker, $target);
@@ -59,6 +60,7 @@ class UnblockMemberTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $blocker->getKey(),
             'blocked_id' => $target->getKey(),
+            'created_at' => now(),
         ]);
 
         (new UnblockMember)($blocker, $target);

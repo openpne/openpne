@@ -38,8 +38,8 @@ class TimelineHomeFeedTest extends TestCase
     {
         [$viewer, $friend, $stranger] = Member::factory()->count(3)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         TimelinePost::factory()->friends()->create(['member_id' => $friend->getKey(), 'body' => 'Friend only post']);
         TimelinePost::factory()->create(['member_id' => $stranger->getKey(), 'visibility' => Visibility::Members, 'body' => 'Stranger members post']);

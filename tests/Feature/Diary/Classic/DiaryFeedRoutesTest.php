@@ -67,8 +67,8 @@ class DiaryFeedRoutesTest extends TestCase
         $friend = Member::factory()->create();
         $stranger = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         foreach ([
             ['Friend open note', Visibility::Open],
@@ -120,6 +120,7 @@ class DiaryFeedRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $blocker->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($viewer)->get('/diary/list')
@@ -132,8 +133,8 @@ class DiaryFeedRoutesTest extends TestCase
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         Diary::factory()->create([
             'member_id' => $friend->getKey(),
@@ -213,8 +214,8 @@ class DiaryFeedRoutesTest extends TestCase
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create(['name' => 'Fran']);
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         $diary = Diary::factory()->create([
             'member_id' => $friend->getKey(),
@@ -237,8 +238,8 @@ class DiaryFeedRoutesTest extends TestCase
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         for ($i = 1; $i <= 21; $i++) {
             Diary::factory()->create(['member_id' => $friend->getKey(), 'title' => sprintf('Entry %02d', $i), 'visibility' => Visibility::Members, 'created_at' => now()->subMinutes(21 - $i)]);
@@ -280,8 +281,8 @@ class DiaryFeedRoutesTest extends TestCase
         $friend = Member::factory()->create();
         app(SetAvatar::class)($friend, UploadedFile::fake()->image('f.png', 100, 100));
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         Diary::factory()->create([
             'member_id' => $friend->getKey(),

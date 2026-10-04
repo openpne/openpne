@@ -76,9 +76,9 @@ class TalkMentionCandidatesTest extends TalkTestCase
         $group = $this->group();
         $viewer = $this->memberOf($group);
         $other = $this->joined($group, 'Blocked');
-        DB::table('member_blocks')->insert($viewerBlocks
+        DB::table('member_blocks')->insert(($viewerBlocks
             ? ['blocker_id' => $viewer->getKey(), 'blocked_id' => $other->getKey()]
-            : ['blocker_id' => $other->getKey(), 'blocked_id' => $viewer->getKey()]);
+            : ['blocker_id' => $other->getKey(), 'blocked_id' => $viewer->getKey()]) + ['created_at' => now()]);
 
         $this->actingAs($viewer)->getJson($this->url($group))->assertJsonCount(0, 'candidates');
     }
@@ -142,7 +142,7 @@ class TalkMentionCandidatesTest extends TalkTestCase
         // Names the picker must not offer, each for a different reason.
         $this->joined($group, 'Banned')->forceFill(['is_login_rejected' => true])->save();
         $blocked = $this->joined($group, 'Blocked');
-        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
         Member::factory()->create(['name' => 'Outsider']);
 
         $candidates = $this->actingAs($viewer)->getJson($this->url($group))->json('candidates');

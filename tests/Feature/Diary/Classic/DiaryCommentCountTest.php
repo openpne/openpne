@@ -29,8 +29,8 @@ class DiaryCommentCountTest extends TestCase
     {
         [$viewer, $friend] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         $this->countedDiary($friend, 'Friend Entry', Visibility::Friends, 1);
 

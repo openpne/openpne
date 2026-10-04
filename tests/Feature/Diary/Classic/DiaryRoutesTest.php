@@ -130,6 +130,7 @@ class DiaryRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $bob->getKey(),
             'blocked_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         // The whole page is denied (MemberPolicy::access), not rendered empty.
@@ -142,6 +143,7 @@ class DiaryRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $bob->getKey(),
             'blocked_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($alice)->get("/diary/listMember/{$bob->getKey()}/2026/6")->assertNotFound();
@@ -183,6 +185,7 @@ class DiaryRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $bob->getKey(),
             'blocked_id' => $alice->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->actingAs($alice)->get("/diary/{$diary->getKey()}")->assertNotFound();

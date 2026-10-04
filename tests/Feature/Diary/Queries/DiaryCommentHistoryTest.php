@@ -18,8 +18,8 @@ class DiaryCommentHistoryTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 
@@ -123,7 +123,7 @@ class DiaryCommentHistoryTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
         $this->comment($diary, $viewer, '2026-01-01 00:00:00');
 
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->assertTrue((new DiaryCommentHistory)($viewer)->isEmpty());
     }

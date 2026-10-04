@@ -123,7 +123,7 @@ class SummarizeHomeIssuesTest extends TestCase
             $this->feature(HomeIssueSection::Newcomers, $member, rank: $rank + 1);
         }
 
-        DB::table('member_blocks')->insert(['blocker_id' => $members[1]->getKey(), 'blocked_id' => $this->viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $members[1]->getKey(), 'blocked_id' => $this->viewer->getKey(), 'created_at' => now()]);
 
         $this->assertSame(
             [$this->ref($members[0]), $this->ref($members[2])],
@@ -503,7 +503,7 @@ class SummarizeHomeIssuesTest extends TestCase
         $gone->delete();
         $last->delete();
         $closed->delete();
-        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $this->viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $this->viewer->getKey(), 'created_at' => now()]);
 
         return [
             'stories' => [$this->ref($diary), $this->ref($post), $this->ref($topic), $this->ref($event)],

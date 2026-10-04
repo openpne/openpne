@@ -69,7 +69,7 @@ class DiaryCommentImagesTest extends TestCase
         $this->actingAs(Member::factory()->create())->get($file->url())->assertOk();
 
         $blocked = Member::factory()->create();
-        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
         $this->actingAs($blocked)->get($file->url())->assertNotFound();
     }
 

@@ -60,6 +60,7 @@ class ListFriendsTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $alice->getKey(),
             'blocked_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         $page = (new ListFriends)($bob, $alice);
@@ -74,6 +75,7 @@ class ListFriendsTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $alice->getKey(),
             'blocked_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         $page = (new ListFriends)($alice, $alice);
@@ -118,15 +120,15 @@ class ListFriendsTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $alice->getKey(),
             'blocked_id' => $bob->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertSame([], (new ListFriends)->take($bob, $alice, 9)->modelKeys());
     }
 
-    /** `$at` defaults to useCurrent, which is what production writes. */
     private function makeFriends(Member $a, Member $b, ?string $at = null): void
     {
-        $when = $at === null ? [] : ['created_at' => $at];
+        $when = ['created_at' => $at ?? now()];
 
         DB::table('friendships')->insert([
             ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), ...$when],

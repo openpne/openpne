@@ -19,7 +19,7 @@ class UnreadCountsTest extends TestCase
     public function test_aggregates_friend_requests_unread_messages_and_notifications(): void
     {
         [$viewer, $sender] = Member::factory()->count(2)->create()->all();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
         $viewer->notifications()->create([
@@ -37,7 +37,7 @@ class UnreadCountsTest extends TestCase
     {
         // Rows that would count, so the zero proves the skip rather than an empty database.
         [$viewer, $sender] = Member::factory()->count(2)->create()->all();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 

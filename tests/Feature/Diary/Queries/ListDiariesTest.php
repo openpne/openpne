@@ -61,6 +61,7 @@ class ListDiariesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $result = (new ListDiaries)($viewer, $owner);
@@ -75,6 +76,7 @@ class ListDiariesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $other->getKey(),
             'blocked_id' => $owner->getKey(),
+            'created_at' => now(),
         ]);
 
         $result = (new ListDiaries)($owner, $owner);
@@ -103,6 +105,7 @@ class ListDiariesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $owner->getKey(),
             'blocked_id' => $viewer->getKey(),
+            'created_at' => now(),
         ]);
 
         $this->assertSame(0, (new ListDiaries)($viewer, $owner)->total());
@@ -247,8 +250,8 @@ class ListDiariesTest extends TestCase
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([
-            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
-            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
         ]);
     }
 }

@@ -64,6 +64,7 @@ class GroupOperationsParityTest extends TestCase
         DB::table('group_join_requests')->insert([
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
+            'created_at' => now(),
         ]);
 
         $response = $this->actingAs($applicant)->get(route('group.show', $group))->assertOk();

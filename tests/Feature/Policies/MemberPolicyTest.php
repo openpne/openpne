@@ -35,7 +35,7 @@ class MemberPolicyTest extends TestCase
     public function test_blocked_viewer_is_denied_with_404(): void
     {
         [$viewer, $subject] = Member::factory()->count(2)->create()->all();
-        DB::table('member_blocks')->insert(['blocker_id' => $subject->getKey(), 'blocked_id' => $viewer->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $subject->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $response = Gate::forUser($viewer)->inspect('access', $subject);
 
@@ -47,7 +47,7 @@ class MemberPolicyTest extends TestCase
     {
         // The gate hides the SUBJECT's pages from someone the SUBJECT blocked, not the reverse.
         [$viewer, $subject] = Member::factory()->count(2)->create()->all();
-        DB::table('member_blocks')->insert(['blocker_id' => $viewer->getKey(), 'blocked_id' => $subject->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $viewer->getKey(), 'blocked_id' => $subject->getKey(), 'created_at' => now()]);
 
         $this->assertTrue(Gate::forUser($viewer)->allows('access', $subject));
     }

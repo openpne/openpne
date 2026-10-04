@@ -241,6 +241,7 @@ class BlockRoutesTest extends TestCase
         DB::table('member_blocks')->insert([
             'blocker_id' => $blocker->getKey(),
             'blocked_id' => $blocked->getKey(),
+            'created_at' => now(),
         ]);
     }
 }

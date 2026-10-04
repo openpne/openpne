@@ -77,7 +77,7 @@ class NotifyTimelinePostedTest extends TestCase
 
         $this->assertTrue($notification->shouldSend($reader->fresh(), 'mail'));
 
-        DB::table('member_blocks')->insert(['blocker_id' => $reader->getKey(), 'blocked_id' => $author->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $reader->getKey(), 'blocked_id' => $author->getKey(), 'created_at' => now()]);
 
         $this->assertFalse($notification->shouldSend($reader->fresh(), 'mail'));
     }
@@ -99,8 +99,8 @@ class NotifyTimelinePostedTest extends TestCase
     {
         [$author, $friend] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert([
-            ['member_id' => $author->getKey(), 'friend_id' => $friend->getKey()],
-            ['member_id' => $friend->getKey(), 'friend_id' => $author->getKey()],
+            ['member_id' => $author->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $author->getKey(), 'created_at' => now()],
         ]);
         $post = TimelinePost::factory()->friends()->create(['member_id' => $author->getKey()]);
         $notification = new TimelinePostedNotification($post, $author, ['mail']);
@@ -140,7 +140,7 @@ class NotifyTimelinePostedTest extends TestCase
         $this->fanOut($post);
         $this->assertGreaterThan(0, $this->queuedNotificationJobs());
 
-        DB::table('member_blocks')->insert(['blocker_id' => $reader->getKey(), 'blocked_id' => $author->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $reader->getKey(), 'blocked_id' => $author->getKey(), 'created_at' => now()]);
         $this->artisan('queue:work', ['--stop-when-empty' => true, '--sleep' => 0, '--memory' => 1024]);
 
         $this->assertDatabaseMissing('notifications', ['notifiable_id' => $reader->getKey()]);

@@ -398,7 +398,7 @@ class NotificationFeedTest extends TestCase
     public function test_marking_feed_read_does_not_consume_the_layer1_friend_request_badge(): void
     {
         [$viewer, $requester] = Member::factory()->count(2)->create()->all();
-        DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
+        DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey(), 'created_at' => now()]);
         $this->seedRow($viewer, 'friend_requested', ['requester_id' => $requester->getKey()]);
 
         $this->actingAs($viewer)->post('/notifications/read-all');

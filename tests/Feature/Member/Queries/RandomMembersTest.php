@@ -14,7 +14,7 @@ class RandomMembersTest extends TestCase
 
     private function block(Member $blocker, Member $blocked): void
     {
-        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $blocked->getKey()]);
+        DB::table('member_blocks')->insert(['blocker_id' => $blocker->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
     }
 
     public function test_returns_other_members_and_never_the_viewer(): void
