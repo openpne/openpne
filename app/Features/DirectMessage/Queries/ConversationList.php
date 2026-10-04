@@ -11,8 +11,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The order is decided in SQL, before the page is cut, and each row's lead message restates
- * `ConversationScope`'s two arms as a correlated subquery the scope's builder cannot be reused in
+ * The order is decided in SQL, before the page is cut, and `ConversationScope`'s two arms are
+ * restated here as the two halves of a union the scope's builder cannot be reused in
  * (`docs/internals/direct-messages.md`, "The conversation list").
  */
 class ConversationList
@@ -23,14 +23,10 @@ class ConversationList
     /** @return LengthAwarePaginator<int, ConversationSummary> */
     public function __invoke(Member $viewer, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        $viewerId = (int) $viewer->getKey();
-
         $page = DB::query()
-            ->fromSub($this->counterparts($viewerId), 'heads')
-            ->select('heads.counterpart_id')
-            ->selectSub($this->newest($viewerId, 'created_at'), 'latest_at')
-            ->selectSub($this->newest($viewerId, 'id'), 'latest_id')
-            ->selectSub($this->unread($viewerId), 'unread_count')
+            ->fromSub($this->heads((int) $viewer->getKey()), 'heads')
+            ->select(['heads.counterpart_id', 'heads.latest_at', 'heads.latest_id', 'heads.unread_count'])
+            ->where('heads.recency_rank', 1)
             // An upgraded multi-recipient send is the shared latest of every conversation it landed
             // in, so the counterpart is the final tie-break an offset page needs to not duplicate or
             // drop a row.
@@ -45,10 +41,24 @@ class ConversationList
     }
 
     /**
+     * Every visible message against each counterpart it passed between, ranked newest-first within
+     * the counterpart and carrying the counterpart's unread total; NULL partitions with NULL, which
+     * is what collapses the withdrawn bucket into one row.
+     */
+    private function heads(int $viewerId): Builder
+    {
+        return DB::query()
+            ->fromSub($this->visible($viewerId), 'visible')
+            ->select(['visible.counterpart_id', 'visible.created_at as latest_at', 'visible.id as latest_id'])
+            ->selectRaw('row_number() over (partition by visible.counterpart_id order by visible.created_at desc, visible.id desc) as recency_rank')
+            ->selectRaw('sum(visible.unread) over (partition by visible.counterpart_id) as unread_count');
+    }
+
+    /**
      * Per-side visibility and nothing else, so a conversation the viewer has emptied from their side
      * leaves the list while staying whole in the other's.
      */
-    private function counterparts(int $viewerId): Builder
+    private function visible(int $viewerId): Builder
     {
         $sent = DB::table('direct_message_recipients as delivery')
             ->join('direct_messages as message', 'message.id', '=', 'delivery.direct_message_id')
@@ -56,7 +66,8 @@ class ConversationList
             ->where('message.is_draft', false)
             ->whereNull('message.sender_deleted_at')
             ->whereNull('message.sender_purged_at')
-            ->select('delivery.recipient_id as counterpart_id');
+            ->select(['delivery.recipient_id as counterpart_id', 'message.created_at', 'message.id'])
+            ->selectRaw('0 as unread');
 
         $received = DB::table('direct_message_recipients as delivery')
             ->join('direct_messages as message', 'message.id', '=', 'delivery.direct_message_id')
@@ -64,73 +75,13 @@ class ConversationList
             ->whereNull('delivery.recipient_deleted_at')
             ->whereNull('delivery.recipient_purged_at')
             ->where('message.is_draft', false)
-            ->select('message.sender_id as counterpart_id');
+            ->select(['message.sender_id as counterpart_id', 'message.created_at', 'message.id'])
+            // Grouped so that a message with two receipts naming the viewer is one unread, as opening
+            // the conversation counts it.
+            ->selectRaw('max(case when delivery.read_at is null then 1 else 0 end) as unread')
+            ->groupBy('message.id', 'message.sender_id', 'message.created_at');
 
-        return $sent->union($received);
-    }
-
-    private function newest(int $viewerId, string $column): Builder
-    {
-        return $this->conversation($viewerId)
-            ->select("conversation.{$column}")
-            ->orderByDesc('conversation.created_at')
-            ->orderByDesc('conversation.id')
-            ->limit(1);
-    }
-
-    private function unread(int $viewerId): Builder
-    {
-        $query = DB::table('direct_messages as conversation')
-            ->selectRaw('count(*)')
-            ->where('conversation.is_draft', false)
-            ->whereExists(fn (Builder $receipt) => $this->viewerReceipt($receipt, $viewerId)->whereNull('delivery.read_at'));
-
-        return $this->isCounterpart($query, 'conversation.sender_id');
-    }
-
-    private function conversation(int $viewerId): Builder
-    {
-        return DB::table('direct_messages as conversation')
-            ->where('conversation.is_draft', false)
-            ->where(fn (Builder $arms) => $arms
-                ->where(fn (Builder $sent) => $sent
-                    ->where('conversation.sender_id', $viewerId)
-                    ->whereNull('conversation.sender_deleted_at')
-                    ->whereNull('conversation.sender_purged_at')
-                    // The counterpart is named on the receipt here, so the comparison goes inside
-                    // the EXISTS: `delivery` does not exist in the arm's own scope.
-                    ->whereExists(fn (Builder $receipt) => $this->isCounterpart(
-                        $receipt
-                            ->select(DB::raw('1'))
-                            ->from('direct_message_recipients as delivery')
-                            ->whereColumn('delivery.direct_message_id', 'conversation.id'),
-                        'delivery.recipient_id',
-                    )))
-                ->orWhere(fn (Builder $received) => $this->isCounterpart($received, 'conversation.sender_id')
-                    ->whereExists(fn (Builder $receipt) => $this->viewerReceipt($receipt, $viewerId))));
-    }
-
-    private function viewerReceipt(Builder $query, int $viewerId): Builder
-    {
-        return $query
-            ->select(DB::raw('1'))
-            ->from('direct_message_recipients as delivery')
-            ->whereColumn('delivery.direct_message_id', 'conversation.id')
-            ->where('delivery.recipient_id', $viewerId)
-            ->whereNull('delivery.recipient_deleted_at')
-            ->whereNull('delivery.recipient_purged_at');
-    }
-
-    /**
-     * `$column` names the row's counterpart, written out as `= it OR (both IS NULL)`: binding a null
-     * would make every comparison UNKNOWN and lose the withdrawn bucket, and MySQL's null-safe `<=>`
-     * is not SQL SQLite speaks.
-     */
-    private function isCounterpart(Builder $query, string $column): Builder
-    {
-        return $query->where(fn (Builder $match) => $match
-            ->whereColumn($column, 'heads.counterpart_id')
-            ->orWhere(fn (Builder $withdrawn) => $withdrawn->whereNull($column)->whereNull('heads.counterpart_id')));
+        return $sent->unionAll($received);
     }
 
     /**

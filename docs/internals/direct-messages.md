@@ -65,22 +65,21 @@ can see, and any other id opens the newest page with no anchor.
 written in first, each carrying what it leads with and the viewer's unread.
 [`ConversationList`](../../app/Features/DirectMessage/Queries/ConversationList.php) follows the rule
 [group-talk.md](group-talk.md#the-joined-group-list-is-a-room-list) sets out — **the order is decided
-in SQL, before the page is cut** — for the same reason and by the same means: two correlated
-subselects for the newest `(created_at, id)`, since the tuple cannot be read in one statement without
-a row constructor or a lateral join, then one lookup by key for the bodies the ordering has already
-named.
+in SQL, before the page is cut** — by a different means: every message the viewer can see is laid
+out against each counterpart it passed between, the sent arm by its receipts and the received arm by
+its sender, in a `UNION ALL`; a window over each counterpart's rows numbers them newest-first by
+`(created_at, id)` and counts the unread messages (a message with two receipts naming the viewer is
+one row of the received arm, so it is one unread, as opening the conversation counts it), and the
+rows numbered first are the heads the page is cut from. Then
+one lookup by key for the bodies the ordering has already named. Nothing runs per conversation, so
+a mailbox of thousands of messages lists in one pass over the viewer's own rows.
 
-The counterparts themselves are a `UNION` of the two arms in the `FROM` clause. That is what
-`ConversationScope` refuses for *reading* a conversation, and it is right here because this set is
-never ordered or sliced — it is deduplicated and nothing else. Deduplication is also what collapses
-the withdrawn bucket: `UNION` treats NULL as equal to NULL, so every departed member arrives as the
-single row they are read as.
+The withdrawn bucket is collapsed by the partitioning: a window `PARTITION BY` treats NULL as equal
+to NULL, so every departed member arrives as the single row they are read as.
 
-What each row leads with is `ConversationScope`'s own two arms, correlated to the row's counterpart
-instead of a bound member — a shape the scope's Eloquent builder cannot be reused in, and where the
-counterpart comparison has to be written out as `= it OR (both IS NULL)` (MySQL's `<=>` is not SQL
-SQLite speaks). So the two readings are held together by test rather than by shared code:
-`ConversationListBeltTest` seeds one matrix and asserts that every row says what opening that
+The two halves of the union are `ConversationScope`'s own two arms, a shape the scope's Eloquent
+builder cannot be reused in. So the two readings are held together by test rather than by shared
+code: `ConversationListBeltTest` seeds one matrix and asserts that every row says what opening that
 conversation says, and that the rows are exactly the conversations with anything in them.
 
 **Drafts ride under the list.** A draft has no receipt, so it is in neither arm of any conversation

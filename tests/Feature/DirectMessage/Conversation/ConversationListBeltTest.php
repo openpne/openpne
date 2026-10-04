@@ -7,6 +7,7 @@ use App\Features\DirectMessage\Queries\ConversationList;
 use App\Features\DirectMessage\Queries\ConversationMessages;
 use App\Features\DirectMessage\Queries\ConversationUnreadSnapshot;
 use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\Member;
 use Illuminate\Support\Carbon;
 
@@ -18,7 +19,8 @@ class ConversationListBeltTest extends ConversationTestCase
 {
     /**
      * A matrix with something of every kind in it: both arms, both sides' trash, read and unread
-     * receipts, a drafted message, a conversation the viewer has emptied, and a withdrawn sender.
+     * receipts, a drafted message, a conversation the viewer has emptied, a withdrawn sender and
+     * recipient, a same-second pair, a doubled receipt and a two-recipient send.
      *
      * @return array{Member, list<Member>}
      */
@@ -62,6 +64,19 @@ class ConversationListBeltTest extends ConversationTestCase
         $departed = Member::factory()->create();
         $this->deliver($departed, $viewer, ['body' => 'w1', 'created_at' => $at(16), 'updated_at' => $at(16)]);
         $departed->delete();
+        // A same-second pair, one each way: the newer is the higher id.
+        $this->deliver($busy, $viewer, ['body' => 'b6', 'created_at' => $at(17), 'updated_at' => $at(17)]);
+        $this->deliver($viewer, $busy, ['body' => 'b7', 'created_at' => $at(17), 'updated_at' => $at(17)]);
+        // Two receipts naming the viewer for one message (upgraded data carries them): one unread.
+        $doubled = $this->deliver($quiet, $viewer, ['body' => 'q2', 'created_at' => $at(18), 'updated_at' => $at(18)]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $doubled->getKey(), 'recipient_id' => $viewer->getKey()]);
+        // One send to two recipients: the shared latest of both conversations.
+        $shared = $this->deliver($viewer, $quiet, ['body' => 's2', 'created_at' => $at(19), 'updated_at' => $at(19)]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $shared->getKey(), 'recipient_id' => $onlySent->getKey()]);
+        // A recipient who has since left: the withdrawn bucket, from the sent arm.
+        $left = Member::factory()->create();
+        $this->deliver($viewer, $left, ['body' => 'w2', 'created_at' => $at(20), 'updated_at' => $at(20)]);
+        $left->delete();
 
         return [$viewer, $others];
     }

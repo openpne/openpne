@@ -8,7 +8,7 @@ rule; the feature documents record how each list applies it.
 | Axis | Meaning | Columns | Lists |
 |---|---|---|---|
 | Posting time | when the row was written | `(created_at, id)` | diary lists, timeline feeds, group talk, direct-message conversations, notifications, new members, group search and a member's groups |
-| Last activity | when the thread last moved | a dedicated activity column plus `id`, or a correlated `(latest_at, latest_id)` | group boards, the talk room list, the conversation list, the diary comment-history box |
+| Last activity | when the thread last moved | a dedicated activity column plus `id`, or the newest `(latest_at, latest_id)` of the thread's rows | group boards, the talk room list, the conversation list, the diary comment-history box |
 | Structural | the row's place inside its parent | `(parent, number)`, `id`, `sort_order`, `role` | comment threads, images, participants, settings tables, the admin tables' key sort |
 | Event date | when the event takes place | `(open_date, id)` | the home issue's upcoming events |
 | Other | relevance or an aggregate | the score, then `id` | home-issue candidates, groups by member count |
@@ -143,8 +143,8 @@ flag, a foreign-key column, and is treated as adopted.
 Lists bounded to one viewer's or one group's rows are left to the engine's sort: the mailbox boxes,
 and the friend, block, friend-request and group-applicant pages, whose pivots carry no time-axis
 index. The talk room list sorts on a correlated latest-message subquery that reads the
-`group_messages` index above; the conversation list's subquery reads the mailbox rows; in both the
-outer sort over the computed column is the engine's.
+`group_messages` index above; the conversation list ranks the viewer's mailbox rows with a window
+function; in both the outer sort over the computed column is the engine's.
 
 ## SQLite foreign-key indexes
 
