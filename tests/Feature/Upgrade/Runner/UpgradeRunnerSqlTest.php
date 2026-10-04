@@ -188,11 +188,14 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseCount('friendships', 2);
     }
 
+    /** After the walk, not before it: the clear is checked against the rows the first step lands. */
     private function expectCachesForgotten(): void
     {
         foreach ([TermService::class, SnsSettingService::class, NavigationService::class, GadgetService::class, MailTemplateService::class] as $service) {
             $this->partialMock($service, function ($mock): void {
-                $mock->shouldReceive('clearCache')->atLeast()->once();
+                $mock->shouldReceive('clearCache')->atLeast()->once()->andReturnUsing(function (): void {
+                    $this->assertSame(2, DB::table('friendships')->count(), 'a cache was cleared before the walk landed its rows');
+                });
             });
         }
     }

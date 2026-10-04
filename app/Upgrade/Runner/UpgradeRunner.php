@@ -2,8 +2,8 @@
 
 namespace App\Upgrade\Runner;
 
-use App\Models\UpgradeState;
 use App\Mail\Template\MailTemplateService;
+use App\Models\UpgradeState;
 use App\Services\GadgetService;
 use App\Services\NavigationService;
 use App\Services\SnsSettingService;
@@ -164,8 +164,6 @@ final class UpgradeRunner
 
             $walked = $this->walk($options, $out);
 
-            $this->forgetCachedMaps();
-
             // Wrap after the walk: the steps land the OpenPNE 3 MD5 verbatim (bcrypt is not
             // expressible in an INSERT...SELECT), and this pass converts it before the run can
             // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
@@ -221,13 +219,14 @@ final class UpgradeRunner
 
             return $walked;
         } finally {
+            $this->forgetCachedMaps();
             $preflight->drop($created, $options->sourcePrefix, $options->sourceDatabase);
         }
     }
 
     /**
-     * Each step commits its own rows, so every map a step wrote and the app caches for an hour is stale
-     * from here, whether or not a later pass fails; an app warmed before the cutover would otherwise
+     * Every step and every pass commits its own rows, so each map they wrote and the app caches for an
+     * hour is stale when the run ends, however it ends; an app warmed before the cutover would otherwise
      * serve the stock rows until the TTL.
      */
     private function forgetCachedMaps(): void
