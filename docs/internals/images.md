@@ -248,8 +248,10 @@ body to write (the post forms, the bars, the timeline) take an image-only paste 
 lands goes down the picker's own path: the count cap, the chips, the shrink above. A one-picture
 input receives the file in the input itself, the first of several, so its `required` and its label
 see it. A paste that carries plain text pastes the text and no picture, since a copy from a
-spreadsheet or a document carries both. A drop while a shrink runs, a send is in flight or the cap
-is reached is swallowed and nothing lands, as the attach button takes no pick then. The shell
+spreadsheet or a document carries both. A drop is swallowed, nothing landing, exactly when the
+picker's own control takes no pick: the images field while a shrink runs or at the cap, the bars
+while a send is in flight or at the cap; a one-picture input takes a drop as it takes a pick, a
+later one replacing the earlier. The shell
 prevents the drop that would otherwise open the file in the tab anywhere outside a target, except
 on a file input, which keeps its native drop. Only pictures are taken, and only picked ones: what is
 not a picture is ignored, and so is a picture dragged off a web page, which arrives as markup with

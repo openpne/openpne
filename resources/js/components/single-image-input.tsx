@@ -31,7 +31,6 @@ export function SingleImageInput({
                 assignToInput(input.current, files);
             }
         },
-        enabled: !picked.busy,
         paste,
     });
 
