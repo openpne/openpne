@@ -219,8 +219,9 @@ final class UpgradeRunner
 
             return $walked;
         } finally {
-            $this->forgetCachedMaps();
             $preflight->drop($created, $options->sourcePrefix, $options->sourceDatabase);
+            // Reported, not thrown: a cache store that is down must not replace the run's own outcome.
+            rescue(fn () => $this->forgetCachedMaps());
         }
     }
 
