@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { assignToInput, carriesFiles, carriesPick, droppedImages, pastedImages } from './file-drop';
+import { assignToInput, carriesFiles, carriesPick, droppedImages, pastedImages, takesText } from './file-drop';
 
 const picture = (name: string) => new File([new Uint8Array(4)], name, { type: 'image/png' });
 
@@ -57,4 +57,25 @@ test('a drop lands in the input as a pick, the first file alone for a single-fil
     input.multiple = true;
     assignToInput(input, [picture('a.png'), picture('b.png')]);
     expect(changes).toEqual([1, 2]);
+});
+
+test('a field takes text when it is editable text, not a control or a frozen field', () => {
+    const textarea = document.createElement('textarea');
+    const text = document.createElement('input');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    const frozen = document.createElement('input');
+    frozen.readOnly = true;
+    const editor = document.createElement('div');
+    editor.contentEditable = 'true';
+    document.body.append(editor);
+
+    expect(takesText(textarea)).toBe(true);
+    expect(takesText(text)).toBe(true);
+    expect(takesText(checkbox)).toBe(false);
+    expect(takesText(frozen)).toBe(false);
+    expect(takesText(editor)).toBe(true);
+    expect(takesText(document.createElement('p'))).toBe(false);
+    expect(takesText(null)).toBe(false);
+    editor.remove();
 });

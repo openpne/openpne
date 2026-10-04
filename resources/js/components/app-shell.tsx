@@ -8,7 +8,7 @@ import { LeftNav } from '@/components/left-nav';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
-import { carriesFiles, carriesPick } from '@/lib/file-drop';
+import { carriesFiles, carriesPick, takesText } from '@/lib/file-drop';
 import { type Chrome, chromeRecedes, hasBottomNav, lookSpec } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
             if (target?.closest('input[type="file"]')) {
                 return;
             }
-            if (!carriesPick(event.dataTransfer) && target?.closest('textarea, input, [contenteditable="true"]')) {
+            if (!carriesPick(event.dataTransfer) && takesText(target)) {
                 return;
             }
             event.preventDefault();

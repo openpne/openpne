@@ -43,3 +43,21 @@ export function assignToInput(input: HTMLInputElement, files: File[]): void {
     input.files = transfer.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
 }
+
+/** Whether `element` takes typed text, so a dropped link's text has somewhere to land. */
+export function takesText(element: Element | null): boolean {
+    if (element === null) {
+        return false;
+    }
+    if (element instanceof HTMLElement && element.isContentEditable) {
+        return true;
+    }
+    if (element instanceof HTMLTextAreaElement) {
+        return !element.readOnly && !element.disabled;
+    }
+    if (element instanceof HTMLInputElement) {
+        return ['text', 'search', 'url', 'email', 'tel', 'password', 'number'].includes(element.type) && !element.readOnly && !element.disabled;
+    }
+
+    return false;
+}

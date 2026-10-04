@@ -250,6 +250,8 @@ test('a picture dropped outside any target is swallowed, so the page and its dra
             <p>page</p>
             <input type="file" aria-label="Picture" />
             <textarea aria-label="Title" />
+            <input type="checkbox" aria-label="Remove" />
+            <textarea aria-label="Frozen" readOnly />
         </AppShell>,
     );
     const offAPage = { ...filesDrag, types: ['text/uri-list', 'text/html', 'Files'] };
@@ -262,6 +264,9 @@ test('a picture dropped outside any target is swallowed, so the page and its dra
     expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: offAPage })).toBe(false);
     expect(fireEvent.drop(screen.getByLabelText('Title'), { dataTransfer: offAPage })).toBe(true);
     expect(fireEvent.drop(screen.getByLabelText('Title'), { dataTransfer: filesDrag })).toBe(false);
+    // A control that takes no text would navigate to the link instead.
+    expect(fireEvent.drop(screen.getByLabelText('Remove'), { dataTransfer: offAPage })).toBe(false);
+    expect(fireEvent.drop(screen.getByLabelText('Frozen'), { dataTransfer: offAPage })).toBe(false);
     // A file input keeps its native drop, and a drag of text is not the guard's business.
     expect(fireEvent.drop(screen.getByLabelText('Picture'), { dataTransfer: filesDrag })).toBe(true);
     expect(fireEvent.drop(screen.getByText('page'), { dataTransfer: { types: ['text/plain'], files: [] } })).toBe(true);
