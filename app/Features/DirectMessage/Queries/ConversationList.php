@@ -41,9 +41,9 @@ class ConversationList
     }
 
     /**
-     * Every visible message once per counterpart, ranked newest-first within the counterpart and
-     * carrying the counterpart's unread total; NULL partitions with NULL, which is what collapses
-     * the withdrawn bucket into one row.
+     * Every visible message against each counterpart it passed between, ranked newest-first within
+     * the counterpart and carrying the counterpart's unread total; NULL partitions with NULL, which
+     * is what collapses the withdrawn bucket into one row.
      */
     private function heads(int $viewerId): Builder
     {
@@ -76,7 +76,10 @@ class ConversationList
             ->whereNull('delivery.recipient_purged_at')
             ->where('message.is_draft', false)
             ->select(['message.sender_id as counterpart_id', 'message.created_at', 'message.id'])
-            ->selectRaw('case when delivery.read_at is null then 1 else 0 end as unread');
+            // Grouped so that a message with two receipts naming the viewer is one unread, as opening
+            // the conversation counts it.
+            ->selectRaw('max(case when delivery.read_at is null then 1 else 0 end) as unread')
+            ->groupBy('message.id', 'message.sender_id', 'message.created_at');
 
         return $sent->unionAll($received);
     }
@@ -91,6 +94,7 @@ class ConversationList
         $members = $memberIds === []
             ? new Collection
             : Member::query()->whereIn('id', $memberIds)->with('avatar.file')->get()->keyBy('id');
+
         // Whether there are pictures, not how many: the preview's stand-in never counts them.
         $messageIds = $rows->pluck('latest_id')->map(static fn ($id): int => (int) $id)->all();
         $messages = $messageIds === []
