@@ -49,11 +49,14 @@ class ImageUploadAcceptPropTest extends TestCase
         $this->actingAs($member)->get('/dashboard')
             ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 1048576, 'maxBytes' => 5242880, 'quality' => 0.75, 'keepsFrames' => false]));
 
-        // A threshold above the upload rules' own would send a picture those rules then refuse.
+        // A threshold above the upload rules' own would send a picture those rules then refuse; the
+        // per-side rule is the in-process processor's alone.
         config(['openpne.images.max_upload_kilobytes' => 512, 'openpne.images.max_upload_dimension' => 1200]);
+        $this->actingAs($member)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1200, 'passthroughBytes' => 524288, 'maxBytes' => 524288, 'quality' => 0.75, 'keepsFrames' => false]));
         $this->app->instance(ImageProcessor::class, $this->sidecarLike());
         $this->actingAs($member)->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1200, 'passthroughBytes' => 524288, 'maxBytes' => 524288, 'quality' => 0.75, 'keepsFrames' => true]));
+            ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 524288, 'maxBytes' => 524288, 'quality' => 0.75, 'keepsFrames' => true]));
 
         DB::table('sns_settings')->updateOrInsert(['key' => SnsSettingKey::ImageUploadBrowserShrink->value], ['value' => '0']);
         app(SnsSettingService::class)->clearCache();

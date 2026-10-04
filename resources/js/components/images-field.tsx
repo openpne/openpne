@@ -48,9 +48,10 @@ export async function shrink(file: File, upload: ImageUploadPolicy): Promise<Fil
         return file;
     }
     try {
-        // An animated WebP stays as picked too, but only where the server keeps its frames; elsewhere
-        // the canvas's still is the still the server would have made.
-        if (policy.keepsFrames && (await animatedWebp(file))) {
+        // An animated WebP stays as picked only where the server keeps its frames; elsewhere the
+        // server refuses the file whole, whatever its size, so it always takes the canvas.
+        const animated = await animatedWebp(file);
+        if (policy.keepsFrames && animated) {
             return file;
         }
         const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
@@ -59,7 +60,7 @@ export async function shrink(file: File, upload: ImageUploadPolicy): Promise<Fil
             // A PNG the canvas would not downscale gains nothing from the trip: the canvas writes an
             // unoptimised PNG, often a larger one, so up to the upload cap it goes as picked.
             const unchanged = file.size <= (file.type === 'image/png' ? policy.maxBytes : policy.passthroughBytes);
-            if (scale === 1 && unchanged && acceptedTypes(upload.accept).has(file.type)) {
+            if (scale === 1 && unchanged && !animated && acceptedTypes(upload.accept).has(file.type)) {
                 return file;
             }
             const canvas = document.createElement('canvas');

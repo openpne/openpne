@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Files\ImageUploadPolicy;
-use App\Files\UploadLimit;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -131,7 +130,7 @@ class ImageSettings extends Page
                 Toggle::make(SnsSettingKey::ImageUploadBrowserShrink->value)
                     ->label(SnsSettingKey::ImageUploadBrowserShrink->label())
                     ->helperText(__('A large picture (over :px px on a side, or over :kb KB) is shrunk on the member\'s device before it is sent, and its location data does not survive that. Off, the original file is sent and anything over the upload limit is refused.', [
-                        'px' => number_format(min((int) config('openpne.images.browser_shrink.max_edge'), UploadLimit::dimension())),
+                        'px' => number_format(ImageUploadPolicy::maxEdge()),
                         'kb' => number_format(intdiv(ImageUploadPolicy::passthroughBytes(), 1024)),
                     ])),
             ]);

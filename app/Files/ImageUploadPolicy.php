@@ -30,16 +30,25 @@ final class ImageUploadPolicy
         if (! (bool) app(SnsSettingService::class)->get(SnsSettingKey::ImageUploadBrowserShrink)) {
             return null;
         }
-        $config = (array) config('openpne.images.browser_shrink');
+        $processor = app(ImageProcessor::class);
 
         return [
-            'maxEdge' => min((int) $config['max_edge'], UploadLimit::dimension()),
+            'maxEdge' => self::maxEdge(),
             'passthroughBytes' => self::passthroughBytes(),
             'maxBytes' => UploadLimit::bytes(),
-            'quality' => (float) ((int) $config['jpeg_quality'] / 100),
+            'quality' => (float) ((int) config('openpne.images.browser_shrink.jpeg_quality') / 100),
             // An animated WebP is worth sending whole only where the processor keeps its frames.
-            'keepsFrames' => app(ImageProcessor::class)->preservesAnimation(),
+            'keepsFrames' => $processor->preservesAnimation(),
         ];
+    }
+
+    /** The per-side limit is the in-process processor's; the sidecar has none to clamp to. */
+    public static function maxEdge(): int
+    {
+        $edge = (int) config('openpne.images.browser_shrink.max_edge');
+        $side = app(ImageProcessor::class)->intake()->sideLimit();
+
+        return $side === null ? $edge : min($edge, $side);
     }
 
     public static function passthroughBytes(): int

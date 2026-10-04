@@ -146,8 +146,9 @@ test('where the server keeps frames, an animated WebP is submitted as picked wit
     expect(await shrink(still, page.imageUpload)).toBe(still);
 });
 
-test('where the server would flatten it anyway, an animated WebP is decoded and shrunk like a still', async () => {
-    vi.stubGlobal('createImageBitmap', async () => ({ width: 4000, height: 4000, close: () => {} }));
+test('where the server would refuse it whole, an animated WebP takes the canvas whatever its size', async () => {
+    // Small enough to pass through as a still: the frames are what the server cannot read.
+    vi.stubGlobal('createImageBitmap', async () => ({ width: 400, height: 300, close: () => {} }));
     const { toBlob } = canvasAnswering();
     const upload = { ...page.imageUpload, shrink: { ...shipped().shrink, keepsFrames: false } };
 
@@ -164,14 +165,9 @@ test('the picker offers what the page was shipped', () => {
     expect(container.querySelector('input[type="file"]')?.getAttribute('accept')).toBe('image/jpeg,image/png');
 });
 
-function SinglePicker({ slow }: { slow: Promise<void> }) {
+function SinglePicker() {
     const [file, setFile] = useState<File | null>(null);
     const picked = useShrunkPick(file, setFile);
-    vi.stubGlobal('createImageBitmap', async () => {
-        await slow;
-
-        return { width: 4000, height: 4000, close: () => {} };
-    });
 
     return (
         <form onReset={() => setFile(null)}>
@@ -188,7 +184,12 @@ test('a single-file pick is replaced by its shrunk file, unless the form was res
     const slow = new Promise<void>((resolve) => {
         finish = resolve;
     });
-    const { getByLabelText, getByTestId, queryByText } = render(<SinglePicker slow={slow} />);
+    vi.stubGlobal('createImageBitmap', async () => {
+        await slow;
+
+        return { width: 4000, height: 4000, close: () => {} };
+    });
+    const { getByLabelText, getByTestId, queryByText } = render(<SinglePicker />);
     const raw = new File([new Uint8Array(3 * 1024 * 1024)], 'IMG_7.heic', { type: 'image/heic' });
 
     fireEvent.change(getByLabelText('Picture'), { target: { files: [raw] } });
@@ -206,7 +207,12 @@ test('a shrink that outlives a reset leaves the emptied form alone', async () =>
     const slow = new Promise<void>((resolve) => {
         finish = resolve;
     });
-    const { getByLabelText, getByTestId, container } = render(<SinglePicker slow={slow} />);
+    vi.stubGlobal('createImageBitmap', async () => {
+        await slow;
+
+        return { width: 4000, height: 4000, close: () => {} };
+    });
+    const { getByLabelText, getByTestId, container } = render(<SinglePicker />);
     const raw = new File([new Uint8Array(3 * 1024 * 1024)], 'IMG_7.heic', { type: 'image/heic' });
 
     fireEvent.change(getByLabelText('Picture'), { target: { files: [raw] } });
@@ -217,4 +223,30 @@ test('a shrink that outlives a reset leaves the emptied form alone', async () =>
     await slow;
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(getByTestId('value').textContent).toBe('none');
+});
+
+test('the processing hint stays up until the last of two overlapping picks has settled', async () => {
+    canvasAnswering();
+    const gates: Array<() => void> = [];
+    const slow = () => new Promise<void>((resolve) => gates.push(resolve));
+    let calls = 0;
+    vi.stubGlobal('createImageBitmap', async () => {
+        calls += 1;
+        await slow();
+
+        return { width: 4000, height: 4000, close: () => {} };
+    });
+    const { getByLabelText, queryByText } = render(<SinglePicker />);
+    const big = (name: string) => new File([new Uint8Array(3 * 1024 * 1024)], name, { type: 'image/jpeg' });
+
+    fireEvent.change(getByLabelText('Picture'), { target: { files: [big('a.jpg')] } });
+    fireEvent.change(getByLabelText('Picture'), { target: { files: [big('b.jpg')] } });
+    await waitFor(() => expect(calls).toBe(2));
+
+    gates[0]!();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(queryByText('Processing')).not.toBeNull();
+
+    gates[1]!();
+    await waitFor(() => expect(queryByText('Processing')).toBeNull());
 });

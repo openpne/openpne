@@ -220,17 +220,18 @@ set, or says the OpenPNE 3 value could not be read as a size.
 ### Shrinking in the browser
 
 The Modern pickers re-encode a picture on the member's device before it is sent, through a canvas,
-when it is over `openpne.images.browser_shrink.max_edge` (2048, never above the per-side limit) on a
-side or over `passthrough_kb` (2048, never above the upload cap) — as JPEG at `jpeg_quality` (82),
-or as PNG when it was one. What survives that is pixels alone: the EXIF block, GPS included, does
-not, and a wide-gamut profile lands on sRGB. Sent as picked, with whatever metadata they carry, are
-a picture of an accepted type under both thresholds, a GIF, an animated WebP where the processor
-keeps frames (elsewhere the canvas's still is the still the server would make, so it is shrunk like
-any other), and a PNG the canvas would not downscale, up to the upload cap — its re-encode gains
-nothing, since a canvas writes an unoptimised PNG — so the proxy and PHP limits above have to hold
-the cap for such a PNG as for any other upload. An APNG is shrunk like a PNG: no processor keeps its
-frames. A file the browser cannot decode is sent as picked too, and the server's rules answer it. The canonical strips metadata on the way out ([security](security.md), "Inline delivery is
-re-encoded"); the stored bytes keep it.
+when it is over `openpne.images.browser_shrink.max_edge` (2048, never above the in-process
+processor's per-side limit) on a side or over `passthrough_kb` (2048, never above the upload cap) —
+as JPEG at `jpeg_quality` (82), or as PNG when it was one. What survives that is pixels alone: the
+EXIF block, GPS included, does not, a wide-gamut profile lands on sRGB, and a WebP's alpha goes with
+the JPEG. Sent as picked, with whatever metadata they carry, are a picture of an accepted type under
+both thresholds, a GIF, an animated WebP where the processor keeps frames (elsewhere it is shrunk
+like a still, since the server would store a still of it anyway), and a PNG the canvas would not
+downscale, up to the upload cap: its re-encode gains nothing, a canvas writing an unoptimised PNG.
+Such a PNG reaches the proxy and PHP at its own size, so their limits ("Upload size" above) must
+admit the cap. An APNG is shrunk like a PNG, no processor keeping its frames. A file the browser
+cannot decode is sent as picked too, and the server's rules answer it. The canonical strips metadata
+on the way out ([security](security.md), "Inline delivery is re-encoded"); the stored bytes keep it.
 
 [`ImageUploadPolicy`](../../app/Files/ImageUploadPolicy.php) ships the thresholds with the accept
 list as the `imageUpload` shared prop, and `SnsSettingKey::ImageUploadBrowserShrink` (the image
