@@ -6,38 +6,25 @@ use App\Models\Group;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Steps\GroupMessageUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceActivities;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** The community-thread step against the real OpenPNE 3 DDL; MySQL only. */
-class GroupMessageUpgradeSqlTest extends TestCase
+class GroupMessageUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceActivities, SeedsSourceMembers;
+    use SeedsSourceActivities, SeedsSourceMembers;
+
+    protected function sourceTables(): array
+    {
+        return ['member', ...self::ACTIVITY_SOURCE_TABLES];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceMemberTable();
-        $this->createSourceActivityTables();
         Group::factory()->create(['id' => 5]);
         $this->seedSourceCommunity(5);
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            $this->dropSourceActivityTables();
-            $this->dropSourceMemberTable();
-        }
-
-        parent::tearDown();
     }
 
     public function test_a_community_thread_lands_with_every_reply_attached_to_the_root(): void

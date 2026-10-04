@@ -4,36 +4,15 @@ namespace Tests\Feature\Upgrade\Diary;
 
 use App\Models\DiaryComment;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryCommentImageUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Runs the compiled step against the real OpenPNE 3 `diary_comment_image` DDL; MySQL only. */
-class DiaryCommentImageUpgradeSqlTest extends TestCase
+class DiaryCommentImageUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        DB::statement('DROP TABLE IF EXISTS `diary_comment_image`');
-        DB::statement(SourceSchema::default()->createStatement('diary_comment_image', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `diary_comment_image`');
-        }
-
-        parent::tearDown();
+        return ['diary_comment_image'];
     }
 
     public function test_copies_diary_comment_images_verbatim(): void

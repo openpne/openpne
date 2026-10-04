@@ -9,28 +9,15 @@ use App\Models\UpgradeState;
 use App\Upgrade\Runner\PasswordWrap;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * The post-walk wrap pass: every bare-MD5 password becomes bcrypt(md5hex) +
- * password_scheme, everything else is left alone, and the bare-MD5 predicate makes
- * re-runs and resumes no-ops over already-wrapped rows. MySQL only (REGEXP predicate),
- * like the rest of the upgrade suite.
+ * The post-walk wrap pass: every bare-MD5 password becomes bcrypt(md5hex) + password_scheme,
+ * everything else is left alone, and the bare-MD5 predicate makes re-runs and resumes no-ops over
+ * already-wrapped rows. MySQL only (REGEXP predicate).
  */
-class PasswordWrapTest extends TestCase
+class PasswordWrapTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('The wrap pass selects rows with a MySQL REGEXP.');
-        }
-    }
-
     /** @return list<string> */
     private function runWrap(array $tables = ['members', 'admin_users']): array
     {

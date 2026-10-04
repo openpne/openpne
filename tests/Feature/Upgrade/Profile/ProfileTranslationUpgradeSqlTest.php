@@ -3,41 +3,16 @@
 namespace Tests\Feature\Upgrade\Profile;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\ProfileTranslationUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-class ProfileTranslationUpgradeSqlTest extends TestCase
+class ProfileTranslationUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL.');
-        }
-
-        foreach (['profile_translation', 'profile'] as $t) {
-            DB::statement("DROP TABLE IF EXISTS `{$t}`");
-        }
-        DB::statement(SourceSchema::default()->createStatement('profile', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('profile_translation', withoutForeignKeys: true));
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (['profile_translation', 'profile'] as $t) {
-                DB::statement("DROP TABLE IF EXISTS `{$t}`");
-            }
-        }
-
-        parent::tearDown();
+        return ['profile', 'profile_translation'];
     }
 
     public function test_every_language_row_is_copied_verbatim_under_its_profile(): void

@@ -3,42 +3,20 @@
 namespace Tests\Feature\Upgrade\Gadget;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled gadget INSERT...SELECT against the real OpenPNE 3 `gadget` + `gadget_config` DDL,
- * exercising the type→(context, zone) split, the PC-context keep filter, and the config-row scoping.
- *
- * MySQL only, like the other upgrade SQL tests (source DDL + set-based copy are MySQL features).
+ * The gadget INSERT...SELECT, exercising the type→(context, zone) split, the PC-context keep
+ * filter, and the config-row scoping.
  */
-class GadgetUpgradeSqlTest extends TestCase
+class GadgetUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        $this->createSourceTables();
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('DROP TABLE IF EXISTS `gadget_config`');
-            DB::statement('DROP TABLE IF EXISTS `gadget`');
-        }
-
-        parent::tearDown();
+        return ['gadget', 'gadget_config'];
     }
 
     public function test_splits_the_type_into_context_and_zone_keeping_the_original(): void
@@ -91,14 +69,6 @@ class GadgetUpgradeSqlTest extends TestCase
 
         $this->assertDatabaseHas('gadget_configs', ['gadget_id' => 1, 'name' => 'title', 'value' => 'Hello']);
         $this->assertDatabaseMissing('gadget_configs', ['gadget_id' => 2]);
-    }
-
-    private function createSourceTables(): void
-    {
-        DB::statement('DROP TABLE IF EXISTS `gadget_config`');
-        DB::statement('DROP TABLE IF EXISTS `gadget`');
-        DB::statement(SourceSchema::default()->createStatement('gadget', withoutForeignKeys: true));
-        DB::statement(SourceSchema::default()->createStatement('gadget_config', withoutForeignKeys: true));
     }
 
     public function test_renames_builtin_names_by_exact_match_only(): void

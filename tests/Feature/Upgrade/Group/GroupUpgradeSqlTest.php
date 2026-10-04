@@ -8,55 +8,29 @@ use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\GroupCategoryUpgrade;
 use App\Upgrade\Steps\GroupJoinRequestUpgrade;
 use App\Upgrade\Steps\GroupMemberUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\SeedsSourceMembers;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-/** Runs the compiled community steps against the real OpenPNE 3 DDL; MySQL only. */
-class GroupUpgradeSqlTest extends TestCase
+class GroupUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
+    use SeedsSourceMembers;
 
-    /** Source tables this step set reads, created from the real dump (FKs stripped to stand alone). */
-    private array $sourceTables = [
-        'member',
-        'community_category',
-        'community',
-        'community_config',
-        'community_member',
-        'community_member_position',
-    ];
-
-    protected function setUp(): void
+    protected function sourceTables(): array
     {
-        parent::setUp();
-
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach ($this->sourceTables as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse($this->sourceTables) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-        }
-
-        parent::tearDown();
+        return [
+            'member',
+            'community_category',
+            'community',
+            'community_config',
+            'community_member',
+            'community_member_position',
+        ];
     }
 
     public function test_migrates_communities_categories_members_and_requests(): void

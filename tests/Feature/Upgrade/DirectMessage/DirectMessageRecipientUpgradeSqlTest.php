@@ -5,50 +5,29 @@ namespace Tests\Feature\Upgrade\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DirectMessageRecipientUpgrade;
 use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
-use Tests\Concerns\MigratesUpgradeTargetsOnce;
-use Tests\TestCase;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
- * Runs the compiled `message_send_list` step against the real OpenPNE 3 DDL, after DirectMessageUpgrade
- * has populated the parents and folded the draft recipients away; MySQL only.
+ * The `message_send_list` step, run after DirectMessageUpgrade has populated the parents and folded
+ * the draft recipients away.
  */
-class DirectMessageRecipientUpgradeSqlTest extends TestCase
+class DirectMessageRecipientUpgradeSqlTest extends UpgradeSqlTestCase
 {
-    use MigratesUpgradeTargetsOnce;
-
-    private array $sourceTables = ['message', 'message_send_list', 'deleted_message', 'message_type'];
+    protected function sourceTables(): array
+    {
+        return ['message', 'message_send_list', 'deleted_message', 'message_type'];
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
-        }
-
-        foreach ($this->sourceTables as $table) {
-            DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            DB::statement(SourceSchema::default()->createStatement($table, withoutForeignKeys: true));
-        }
-
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            foreach (array_reverse($this->sourceTables) as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table}`");
-            }
-        }
-
-        parent::tearDown();
     }
 
     public function test_migrates_a_delivered_receipt_preserving_id_and_timestamps(): void
