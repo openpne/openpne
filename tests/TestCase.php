@@ -51,6 +51,34 @@ abstract class TestCase extends BaseTestCase
     }
 
     /** The queries a callback runs, leaving out the cache store's own reads and writes. */
+    /**
+     * Each statement's run count under $run, cache reads aside; eager loads inline their key lists,
+     * so those are folded before statements are compared.
+     *
+     * @return array<string, int>
+     */
+    protected function applicationQueryCounts(callable $run): array
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            $run();
+            $counts = [];
+            foreach (DB::getQueryLog() as $query) {
+                if (preg_match('/["`]cache(_locks)?["`]/', $query['query']) === 1) {
+                    continue;
+                }
+                $sql = preg_replace('/ in \([^)]*\)/', ' in (...)', $query['query']);
+                $counts[$sql] = ($counts[$sql] ?? 0) + 1;
+            }
+
+            return $counts;
+        } finally {
+            DB::disableQueryLog();
+        }
+    }
+
     protected function countApplicationQueries(callable $run): int
     {
         DB::flushQueryLog();

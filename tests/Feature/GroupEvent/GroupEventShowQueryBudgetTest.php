@@ -8,7 +8,6 @@ use App\Models\GroupEventComment;
 use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -39,14 +38,13 @@ class GroupEventShowQueryBudgetTest extends TestCase
         $long = $this->eventWithComments($group, 20);
 
         $this->actingAs($viewer);
-        $forTwo = $this->queryCounts(fn () => $this->get(route('group.events.show', $short))->assertOk());
-        $forTwenty = $this->queryCounts(fn () => $this->get(route('group.events.show', $long))->assertOk());
+        $forTwo = $this->applicationQueryCounts(fn () => $this->get(route('group.events.show', $short))->assertOk());
+        $forTwenty = $this->applicationQueryCounts(fn () => $this->get(route('group.events.show', $long))->assertOk());
 
         $grew = array_filter($forTwenty, fn (int $count, string $sql): bool => $count > ($forTwo[$sql] ?? 0), ARRAY_FILTER_USE_BOTH);
         $this->assertSame([], $grew, 'queries that ran more often for 20 comments than for 2');
     }
 
-    /** @return array<string, int> each statement's run count, cache reads aside */
     private function queryCounts(callable $run): array
     {
         DB::flushQueryLog();

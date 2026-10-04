@@ -24,6 +24,9 @@ class RecentJoinedGroupEvents
             ->orderByDesc('id')
             ->limit($limit)
             ->pluck('id');
+        if ($ids->isEmpty()) {
+            return $ids;
+        }
 
         return GroupEvent::query()
             ->whereIn('id', $ids)

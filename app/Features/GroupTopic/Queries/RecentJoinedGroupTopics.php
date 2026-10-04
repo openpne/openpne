@@ -28,6 +28,9 @@ class RecentJoinedGroupTopics
             ->orderByDesc('id')
             ->limit($limit)
             ->pluck('id');
+        if ($ids->isEmpty()) {
+            return $ids;
+        }
 
         return GroupTopic::query()
             ->whereIn('id', $ids)
