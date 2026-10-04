@@ -135,7 +135,8 @@ reads the answer's container; a walk it cannot finish is null, never a guess, an
 times its bytes in memory, so such a GIF stays unknown however often `warm` runs and never has an `_a`;
 the bound is on bytes, so the same animation can be recorded from its WebP, whose flag sits in the
 header, and not from its GIF). Only a canonical is probed; a variant's frames are nobody's fact. GD
-keeps one frame of anything, so it cannot tell whether a GIF or WebP animates and records null for one
+keeps one frame of anything it reads (an animated WebP it does not read at all; the browser-side
+shrink hands it a still), so it cannot tell whether a GIF or WebP animates and records null for one
 (a JPEG or PNG is false under either processor). A fact the sidecar recorded therefore stands under GD,
 which offers no `_a` URL for it; one a page already holds is answered with a still under GD's own key,
 which a browser that fetched it keeps for up to a day after a switch back, or with a 404 where it asks
@@ -226,7 +227,7 @@ as JPEG at `jpeg_quality` (82), or as PNG when it was one. What survives that is
 EXIF block, GPS included, does not, a wide-gamut profile lands on sRGB, and a WebP's alpha goes with
 the JPEG. Sent as picked, with whatever metadata they carry, are a picture of an accepted type under
 both thresholds, a GIF, an animated WebP where the processor keeps frames (elsewhere it is shrunk
-like a still, since the server would store a still of it anyway), and a PNG the canvas would not
+to a still whatever its size, the only form of it the server reads), and a PNG the canvas would not
 downscale, up to the upload cap: its re-encode gains nothing, a canvas writing an unoptimised PNG.
 Such a PNG reaches the proxy and PHP at its own size, so their limits ("Upload size" above) must
 admit the cap. An APNG is shrunk like a PNG, no processor keeping its frames. A file the browser
@@ -254,7 +255,7 @@ is a still unless its URL asks for the frames with `_a`, and a header over the p
 | Formats read | JPEG, PNG, GIF, WebP | those, and HEIC / HEIF (answered as JPEG) and AVIF (answered as WebP, the format a browser and the MCP tools can take everywhere); an upload of either is refused under `gd` |
 | Source limits | a header over `max_upload_dimension` a side or `max_source_pixels` (25 MP unconfigured) is refused before the decode, and so is a header PHP cannot read | no per-side limit; the pixel limit is the sidecar's 50 MP budget unless `max_source_pixels` is set; a header PHP cannot read is refused too, unless the bytes are a container only the sidecar reads (a HEIC before PHP 8.5), which is left to the sidecar's own budget |
 | Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
-| Animation | the canonical and every variant are stills | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still, and a fit variant asked for with `_a` does the same (a crop never); an APNG is a still under both, libvips reading its first frame like libpng |
+| Animation | the canonical and every variant are stills, and an animated WebP is refused outright, libgd reading none (the browser-side shrink sends a still of it, "Shrinking in the browser") | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still, and a fit variant asked for with `_a` does the same (a crop never); an APNG is a still under both, libvips reading its first frame like libpng |
 | Where the decode runs | the php-fpm worker | the sidecar |
 | To install | nothing | the container (the compose file runs one) and three env values |
 
