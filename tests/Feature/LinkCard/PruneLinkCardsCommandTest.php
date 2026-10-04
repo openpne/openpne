@@ -112,6 +112,7 @@ class PruneLinkCardsCommandTest extends TestCase
         // touch `updated_at`, and a delete landing between the attach's two writes leaves the body
         // marked examined with no card forever.
         $card = $this->agedCard();
+        $picture = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => $card->id]);
 
         $adopted = false;
         LinkCard::retrieved(function (LinkCard $model) use ($card, &$adopted): void {
@@ -129,6 +130,7 @@ class PruneLinkCardsCommandTest extends TestCase
 
         $this->assertTrue($adopted, 'The adoption must have interleaved for this test to mean anything.');
         $this->assertNotNull(LinkCard::find($card->id), 'A card adopted mid-sweep was deleted.');
+        $this->assertDatabaseHas('files', ['id' => $picture->id]);
     }
 
     public function test_a_recently_touched_card_is_left_alone(): void
