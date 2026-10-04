@@ -10,6 +10,7 @@ rule; the feature documents record how each list applies it.
 | Posting time | when the row was written | `(created_at, id)` | diary lists, timeline feeds, group talk, direct-message conversations, notifications, new members, group search and a member's groups |
 | Last activity | when the thread last moved | a dedicated activity column plus `id`, or a correlated `(latest_at, latest_id)` | group boards, the talk room list, the conversation list, the diary comment-history box |
 | Structural | the row's place inside its parent | `(parent, number)`, `id`, `sort_order`, `role` | comment threads, images, participants, settings tables, the admin tables' key sort |
+| Event date | when the event takes place | `(open_date, id)` | the home issue's upcoming events |
 | Other | relevance or an aggregate | the score, then `id` | home-issue candidates, groups by member count |
 
 A list on the posting-time axis never orders by `id` alone: migrated rows carry OpenPNE 3 ids that
@@ -108,21 +109,24 @@ which the upgrade tool does as well.
 An index follows a paging axis, not a WHERE clause: `(scope…, time column, id)`, one per axis a
 table is paged along; the feature documents list which axes are indexed today. Visibility ranges,
 block anti-joins and LIKE filters are applied while the axis index is scanned and never earn an
-index of their own. That is a trade: a feed page's row query falls from a sort over every visible
-row to a few index reads (its OFFSET count still scans the table), while a keyword search whose hits
-are sparse or absent walks the whole axis index looking for them and runs slower than the table scan
-it replaced (measured on MySQL 8.4 at 200k diaries: the feed 134 ms → 1.5 ms, a six-hit search 0.23
-s → 0.35 s). The feed is every member's page; the sparse search is the price. The `id` suffix is
-implied on both engines — InnoDB stores the primary key at the end of every secondary index and
-SQLite stores the rowid — but writing it keeps the axis legible in the schema. A UUID-keyed table is
-the exception: `notifications` orders by its UUID after `created_at`, which SQLite's rowid suffix
-cannot serve, so a tie there is settled in a temp B-tree the size of that one second (0.3 ms with
-seconds spread out, 8 ms with 20k rows in one second; MySQL scans the index backwards either way). A
-site-wide index leads with the time column so that InnoDB does not adopt it to back a foreign key; a
-scoped `(parent_id, time column)` index is adopted by design and is replaced by creating the new one
-before dropping the old (errno 1553 on a drop that leaves the key unbacked). `timeline_posts` is the
-exception on the site-wide side: its axis leads with the reply flag, a foreign-key column, and is
-treated as adopted.
+index of their own. The one WHERE clause that does is a site-wide window over a time column, which
+the home issue's candidates cut once a day before ranking by score: it has the shape of a
+posting-time axis and the alternative is a walk over every row of the table (measured on MySQL 8.4
+at 50k topics: 64 ms → 2.5 ms). That is a trade: a feed page's row query falls from a sort over
+every visible row to a few index reads (its OFFSET count still scans the table), while a keyword
+search whose hits are sparse or absent walks the whole axis index looking for them and runs slower
+than the table scan it replaced (measured on MySQL 8.4 at 200k diaries: the feed 134 ms → 1.5 ms, a
+six-hit search 0.23 s → 0.35 s). The feed is every member's page; the sparse search is the price.
+The `id` suffix is implied on both engines — InnoDB stores the primary key at the end of every
+secondary index and SQLite stores the rowid — but writing it keeps the axis legible in the schema. A
+UUID-keyed table is the exception: `notifications` orders by its UUID after `created_at`, which
+SQLite's rowid suffix cannot serve, so a tie there is settled in a temp B-tree the size of that one
+second (0.3 ms with seconds spread out, 8 ms with 20k rows in one second; MySQL scans the index
+backwards either way). A site-wide index leads with the time column so that InnoDB does not adopt it
+to back a foreign key; a scoped `(parent_id, time column)` index is adopted by design and is
+replaced by creating the new one before dropping the old (errno 1553 on a drop that leaves the key
+unbacked). `timeline_posts` is the exception on the site-wide side: its axis leads with the reply
+flag, a foreign-key column, and is treated as adopted.
 
 | Table | Site-wide axis | Scoped axis |
 |---|---|---|
@@ -130,7 +134,7 @@ treated as adopted.
 | `timeline_posts` | `(in_reply_to_id, created_at, id)` — the home, friend, all-member and tag feeds and the story candidates, all of them top-level posts; it backs the self-referencing foreign key | `(member_id, in_reply_to_id, created_at)` — a member's timeline and post count, also top-level only; it backs the member key |
 | `members` | `(created_at, id)` — the member list without a name filter, newcomers | — |
 | `groups` | `(created_at, id)` — group search; a member's own groups are read through the membership index and sorted by the engine | — |
-| `group_topics`, `group_events` | `(bumped_at, id)` — the site-wide recent boards; `(created_at, id)` — the day's story candidates, a window over posting time | `(group_id, bumped_at)` — a group's board |
+| `group_topics`, `group_events` | `(bumped_at, id)` — the site-wide recent boards; `(created_at, id)` — the issue window's story candidates | `(group_id, bumped_at)` — a group's board |
 | `group_events` | `(open_date, id)` — the upcoming calendar, a window over the event date | — |
 | `group_messages` | — | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
 | `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |

@@ -18,11 +18,10 @@ class TimeAxisIndexesTest extends TestCase
         }
     }
 
-    public function test_the_boards_carry_a_posting_time_axis_beside_the_bump_axis(): void
+    public function test_the_boards_carry_a_posting_time_axis_and_the_events_a_date_axis(): void
     {
         foreach (['group_topics', 'group_events'] as $table) {
             $this->assertContains(['created_at', 'id'], $this->indexColumns($table), $table);
-            $this->assertContains(['bumped_at', 'id'], $this->indexColumns($table), $table);
         }
         $this->assertContains(['open_date', 'id'], $this->indexColumns('group_events'));
     }
