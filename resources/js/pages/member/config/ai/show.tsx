@@ -16,6 +16,7 @@ import { List, ListRow, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { membersPhrase } from '@/lib/count-phrase';
 import { useShrunkPick } from '@/components/images-field';
+import { SingleImageInput } from '@/components/single-image-input';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import type { MemberRef } from '@/pages/community/types';
@@ -168,16 +169,7 @@ function IdentityPanel({ account, selfIntroduction }: { account: MemberRef; self
                 className="space-y-3"
             >
                 <Field label={t('Profile image')} htmlFor="ai_avatar" error={image.errors.image}>
-                    <input
-                        id="ai_avatar"
-                        type="file"
-                        name="image"
-                        accept={picked.accept}
-                        onChange={picked.pick}
-                        required
-                        className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
-                    />
-                    {picked.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+                    <SingleImageInput id="ai_avatar" name="image" picked={picked} required />
                 </Field>
                 <FormActions>
                     <Button type="submit" variant="outline" size="sm" loading={image.processing}>

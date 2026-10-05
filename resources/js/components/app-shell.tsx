@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { type CSSProperties, type ReactNode, useLayoutEffect, useState } from 'react';
+import { type CSSProperties, type ReactNode, useEffect, useLayoutEffect, useState } from 'react';
 import { ActionFab } from '@/components/action-fab';
 import { BottomNav } from '@/components/bottom-nav';
 import { ComposeSheetProvider, useComposeExitState } from '@/components/compose/compose-sheet-action';
@@ -8,6 +8,7 @@ import { LeftNav } from '@/components/left-nav';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
+import { carriesFiles, carriesPick, takesText } from '@/lib/file-drop';
 import { type Chrome, chromeRecedes, hasBottomNav, lookSpec } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,35 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // One listener for the whole chrome, so the bars and the action cannot fall out of step.
     const hidden = useScrollDirection({ enabled: member && chromeRecedes(chrome) }) === 'down';
     const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
+
+    // A picture dropped outside any target would otherwise open in the tab, over the draft; a file
+    // input keeps its native drop, a field keeps a page link's text, and a target that claimed the
+    // drop has already prevented it.
+    useEffect(() => {
+        const guard = (event: DragEvent) => {
+            if (!carriesFiles(event.dataTransfer) || event.defaultPrevented) {
+                return;
+            }
+            const target = event.target instanceof Element ? event.target : null;
+            if (target?.closest('input[type="file"]')) {
+                return;
+            }
+            if (!carriesPick(event.dataTransfer) && takesText(target)) {
+                return;
+            }
+            event.preventDefault();
+            if (event.type === 'dragover' && event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'none';
+            }
+        };
+        window.addEventListener('dragover', guard);
+        window.addEventListener('drop', guard);
+
+        return () => {
+            window.removeEventListener('dragover', guard);
+            window.removeEventListener('drop', guard);
+        };
+    }, []);
 
     // The body paints --background, so a wrapper here could not recolor what lies behind the shell;
     // cleared on unmount so an admin or auth screen visited next keeps the shipped paper.
