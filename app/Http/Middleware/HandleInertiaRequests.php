@@ -7,6 +7,7 @@ use App\Features\GroupTalk\Queries\NavTalkRooms;
 use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
 use App\Features\Member\Queries\RandomMembers;
+use App\Files\ImageUploadPolicy;
 use App\Models\Member;
 use App\Notifications\Push\WebPushConfig;
 use App\Services\TermService;
@@ -59,7 +60,7 @@ class HandleInertiaRequests extends Middleware
             'autoplayAnimations' => fn () => $user?->autoplayAnimations() === Autoplay::On,
             // Null for a guest, who has no hint to dismiss and no row to keep it in.
             'rowActionsHint' => fn () => $user?->rowActionsHint()->value,
-            'imageUpload' => fn () => ['accept' => image_upload_accept()],
+            'imageUpload' => fn () => ImageUploadPolicy::shared(),
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
             // A plain closure, not Inertia::optional: the rail shows on first render, so the prop must
             // be present then.

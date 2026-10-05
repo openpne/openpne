@@ -63,7 +63,7 @@ function renderShow(canComment: boolean, reactions = topic.reactions, comments: 
             rowActionsHint: hint,
             locale: 'en',
             timezone: 'Asia/Tokyo',
-            imageUpload: { accept: 'image/png' },
+            imageUpload: { accept: 'image/png', shrink: null },
         },
     };
 

@@ -51,7 +51,7 @@ afterEach(() => {
     inertia.posts = [];
 });
 
-const shared = { locale: 'en', timezone: 'Asia/Tokyo', imageUpload: { accept: 'image/png' }, auth: { user: { id: 1, name: 'Rin' } } };
+const shared = { locale: 'en', timezone: 'Asia/Tokyo', imageUpload: { accept: 'image/png', shrink: null }, auth: { user: { id: 1, name: 'Rin' } } };
 
 function choose(label: string): HTMLFormElement {
     const field = screen.getByLabelText(label) as HTMLInputElement;

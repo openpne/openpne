@@ -54,6 +54,13 @@ return [
         'cache_disk' => env('OPENPNE_IMAGE_CACHE_DISK', 'image_cache'),
         // At 100, intervention/image writes a GD WebP variant lossless, several times the same rung at the default quality.
         'quality' => (int) env('OPENPNE_IMAGE_QUALITY', 85),
+        // What the Modern pickers re-encode on the member's device before the upload, switched off per site by
+        // SnsSettingKey::ImageUploadBrowserShrink (docs/internals/images.md, "Shrinking in the browser").
+        'browser_shrink' => [
+            'max_edge' => 2048,
+            'passthrough_kb' => 2048,
+            'jpeg_quality' => 82,
+        ],
         'allowed_sizes' => [
             // OpenPNE 3's default set.
             '48x48', '76x76', '120x120', '180x180', '240x320', '320x320', '600x600',

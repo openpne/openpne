@@ -10,7 +10,7 @@ import type { TalkMessage } from './types';
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
 // The composer reads the upload accept list from the page's shared props.
-vi.mock('@inertiajs/react', () => ({ usePage: () => ({ props: { imageUpload: { accept: 'image/jpeg,image/png,image/gif,image/webp' } } }) }));
+vi.mock('@inertiajs/react', () => ({ usePage: () => ({ props: { imageUpload: { accept: 'image/jpeg,image/png,image/gif,image/webp', shrink: null } } }) }));
 
 afterEach(cleanup);
 

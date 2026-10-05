@@ -65,7 +65,7 @@ function renderShow(user: { id: number } | null) {
     inertia.page = {
         component: 'diary/show',
         url: '/diary/5',
-        props: { diary, thread, older: null, newer: null, auth: { user }, rowActionsHint: user === null ? null : 'shown', reactionVocabulary: ['\u{1F44D}'], renderGeneration: 'g1', locale: 'en', timezone: 'Asia/Tokyo', imageUpload: { accept: 'image/png' } },
+        props: { diary, thread, older: null, newer: null, auth: { user }, rowActionsHint: user === null ? null : 'shown', reactionVocabulary: ['\u{1F44D}'], renderGeneration: 'g1', locale: 'en', timezone: 'Asia/Tokyo', imageUpload: { accept: 'image/png', shrink: null } },
     };
 
     return renderWithProviders(<DiaryShow />);

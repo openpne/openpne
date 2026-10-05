@@ -149,6 +149,12 @@ enum SnsSettingKey: string
 
     case GroupEventCommentReply = 'group_event_comment_reply';
 
+    /**
+     * On by default: a picture over the browser-side thresholds is re-encoded before it is sent, and
+     * off, the original goes up for the upload cap to answer (docs/internals/images.md, "Shrinking in the browser").
+     */
+    case ImageUploadBrowserShrink = 'image_upload_browser_shrink';
+
     /** OpenPNE 3's footer seed. */
     private const FOOTER_DEFAULT = 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>';
 
@@ -181,6 +187,7 @@ enum SnsSettingKey: string
             self::DefaultLook, self::SelectableLooks => SettingGroup::Look,
             self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
+            self::ImageUploadBrowserShrink => SettingGroup::Images,
         };
     }
 
@@ -202,6 +209,7 @@ enum SnsSettingKey: string
             // OpenPNE 3's enable_cmd is not an ancestor of this: it embedded three named services in the
             // reader's browser, where this fetches arbitrary hosts from the server.
             self::LinkCardEnabled => null,
+            self::ImageUploadBrowserShrink => null,
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
             self::AllowWebPublicAge => 'is_allow_web_public_flag_age',
@@ -278,7 +286,7 @@ enum SnsSettingKey: string
             SettingGroup::Auth, SettingGroup::Surface, SettingGroup::Features,
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
             SettingGroup::Ai, SettingGroup::Look,
-            SettingGroup::GroupTalk => false,
+            SettingGroup::GroupTalk, SettingGroup::Images => false,
         };
     }
 
@@ -365,6 +373,7 @@ enum SnsSettingKey: string
             // operator asks for more.
             self::GroupTalkNotifyDefault => GroupTalkNotifyMode::Mentions->value,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => false,
+            self::ImageUploadBrowserShrink => true,
         };
     }
 
@@ -385,7 +394,7 @@ enum SnsSettingKey: string
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled, self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
             self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,
-            self::AiAccountsEnabled => (bool) $value,
+            self::AiAccountsEnabled, self::ImageUploadBrowserShrink => (bool) $value,
             // A non-numeric submission lands on 0, the safe side of a cap.
             self::AiAccountLimit => (int) (is_string($value) ? trim($value) : $value),
             self::DiarySearchPeriodDays => self::clampDays((int) (is_string($value) ? trim($value) : $value)),
@@ -411,7 +420,7 @@ enum SnsSettingKey: string
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::LinkCardEnabled, self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
             self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,
-            self::AiAccountsEnabled => $value ? '1' : '0',
+            self::AiAccountsEnabled, self::ImageUploadBrowserShrink => $value ? '1' : '0',
             self::AiAccountLimit, self::DiarySearchPeriodDays => (string) (int) $value,
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
@@ -463,6 +472,8 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
             self::FeatureMcpEnabled => $value !== '0',
+            // The same direction: the shrink is on unless an operator turned it off.
+            self::ImageUploadBrowserShrink => $value !== '0',
             default => $value,
         };
     }
@@ -521,6 +532,7 @@ enum SnsSettingKey: string
             self::GroupTalkNotifyDefault => __('Talk notification default'),
             self::GroupTopicCommentReply => __('Reply link on %topic% comments'),
             self::GroupEventCommentReply => __('Reply link on event comments'),
+            self::ImageUploadBrowserShrink => __('Shrink pictures in the browser before upload'),
             self::DefaultLook => __('Default UI layout'),
             self::SelectableLooks => __('Selectable UI layouts'),
         };
@@ -543,7 +555,8 @@ enum SnsSettingKey: string
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
             self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks,
-            self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply => false,
+            self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply,
+            self::ImageUploadBrowserShrink => false,
         };
     }
 

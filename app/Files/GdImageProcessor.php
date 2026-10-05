@@ -12,7 +12,7 @@ use Throwable;
  */
 final class GdImageProcessor implements ImageProcessor
 {
-    /** Built with decodeAnimation off, so a decode allocates one frame whatever the source holds. */
+    /** Built with decodeAnimation off, so a decode allocates one frame whatever the source holds; an animated WebP libgd does not read at all. */
     public function __construct(private readonly ImageManager $manager) {}
 
     public function preservesAnimation(): bool
@@ -55,7 +55,7 @@ final class GdImageProcessor implements ImageProcessor
             throw new ImageProcessingException('The image could not be encoded: '.$e->getMessage(), 0, $e);
         }
 
-        // Keeping one frame of anything, GD cannot tell whether a GIF or WebP animates and leaves it unjudged (docs/internals/images.md, "files.width / files.height").
+        // Keeping one frame of anything it reads, GD cannot tell whether a GIF or WebP animates and leaves it unjudged (docs/internals/images.md, "files.width / files.height").
         return new ProcessedImage($encoded->toString(), $encoded->mediaType(), $image->width(), $image->height(), AnimationProbe::mayAnimate($encoded->mediaType()) ? null : false);
     }
 }

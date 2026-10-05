@@ -61,4 +61,7 @@ enum SettingGroup
 
     /** The topic and event boards' shared policy (the reply link on comments), edited on the group settings page. */
     case GroupBoard;
+
+    /** What happens to a picture before it is uploaded, edited on the image settings page. */
+    case Images;
 }
