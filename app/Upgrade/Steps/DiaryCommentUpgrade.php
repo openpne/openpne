@@ -43,8 +43,8 @@ class DiaryCommentUpgrade extends UpgradeStep
         return [
             'has_images' => 'Denormalized flag for the diary_comment_image table; OpenPNE 4 derives it from the relation, so this step migrates the comment record only.',
             'diary_comment_image' => 'Comment image attachments — migrated by DiaryCommentImageUpgrade (its own join-row step), not this record step.',
-            'diary_comment_unread' => 'Per-member unread-comment state — outside this step.',
-            'diary_comment_update' => 'Per-member comment read tracking — outside this step.',
+            'diary_comment_unread' => 'The diary owner\'s per-diary unread-comment flag — not migrated (StepRegistry::unsteppedSourceTables()).',
+            'diary_comment_update' => 'The marker of each diary a member commented on — not migrated (StepRegistry::unsteppedSourceTables()).',
         ];
     }
 }

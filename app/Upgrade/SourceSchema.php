@@ -37,6 +37,14 @@ final class SourceSchema
         return $ddl;
     }
 
+    /** @return list<string> every table the fixture defines, in file order */
+    public function tables(): array
+    {
+        preg_match_all('/^CREATE TABLE `([a-z0-9_]+)`/m', $this->contents(), $matches);
+
+        return $matches[1];
+    }
+
     /** @return list<string> column names of a source table, in definition order */
     public function columns(string $table): array
     {
