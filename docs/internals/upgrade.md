@@ -18,7 +18,8 @@ reverse: source columns or tables with no target).
 cannot be wired into one without the other.
 
 `StepRegistry::classes()` is the run order (FK order: `files` first, image join rows last).
-`tests/Feature/Upgrade/UpgradeMatrixAuditTest.php` pins every source column to a mapping or a
+`tests/Feature/Upgrade/UpgradeMatrixAuditTest.php` pins every source table to a step or an
+`unsteppedSourceTables()` disposition, every source column to a mapping or a
 `gaps()` entry, every target column to a mapping, `targetDefaults()` or `pendingTargets()`, every
 `file` / `member` FK to a treatment, and every nullable FROM-table column a mapping reads
 (`Column::uses`) into a NOT NULL target column to a filter clause that pins it, an outermost
