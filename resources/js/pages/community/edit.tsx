@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useShrunkPick } from '@/components/images-field';
+import { SingleImageInput } from '@/components/single-image-input';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -176,14 +177,7 @@ export default function CommunityEdit() {
                         the existing-image + remove control is a sibling below, not a second child. */}
                     <div className="space-y-2">
                         <Field label={t('Image')} htmlFor="image" error={form.errors.image}>
-                            <input
-                                id="image"
-                                type="file"
-                                accept={image.accept}
-                                onChange={image.pick}
-                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
-                            />
-                            {image.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+                            <SingleImageInput id="image" picked={image} />
                         </Field>
                         {group?.imageUrl && (
                             <div className="flex items-center gap-3">

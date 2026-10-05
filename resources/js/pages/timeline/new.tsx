@@ -8,6 +8,7 @@ import { Heading } from '@/components/ui/heading';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
 import { useShrunkPick } from '@/components/images-field';
+import { SingleImageInput } from '@/components/single-image-input';
 import { useT } from '@/lib/i18n';
 import { toPayload, type DraftMention } from '@/lib/mention-draft';
 import { BodyCounter, overBodyLimit } from './body-counter';
@@ -87,14 +88,7 @@ export default function TimelineNew({
                     </Field>
 
                     <Field label={t('Image')} htmlFor="timeline_image" error={errors.image}>
-                        <input
-                            id="timeline_image"
-                            type="file"
-                            accept={image.accept}
-                            onChange={image.pick}
-                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
-                        />
-                        {image.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+                        <SingleImageInput id="timeline_image" picked={image} paste />
                     </Field>
 
                     {/* The sheet header carries this action below lg (ComposeSheetAction above). */}

@@ -589,6 +589,13 @@ takes the **whole message** down, and the composer keeps the whole draft: body, 
 every picked file. Nothing is cleared until the message is actually written, so a retry carries what
 the first attempt had.
 
+A picture dropped on the bar, or pasted into it, is attached the way the button attaches one, and
+ignored while the button is disabled (a send in flight, the cap reached). A paste that carries
+plain text pastes the text and no picture: a copy from a spreadsheet or a document puts both on the
+clipboard. Dropped outside the bar, a picture does nothing — the Modern shell swallows the drop that
+would otherwise open the file in the tab and take the draft with it ([images](images.md),
+"Dropping and pasting").
+
 ### A picture is a message
 
 [`StoreGroupMessageRequest`](../../app/Http/Requests/GroupTalk/StoreGroupMessageRequest.php) requires

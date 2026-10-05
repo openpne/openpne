@@ -4,6 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
+import { useDropTarget } from '@/lib/use-drop-target';
+import { cn } from '@/lib/utils';
 import type { ImageUploadPolicy, PageProps } from '@/types';
 
 /**
@@ -156,6 +158,10 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
     // that happened while it ran, instead of resurrecting them.
     const latest = useRef(files);
     latest.current = files;
+    const root = useRef<HTMLDivElement>(null);
+    // The form around the field takes a dropped or pasted picture the way the input takes a pick;
+    // while a shrink runs or the cap is reached it ignores one, as the disabled input does.
+    const dragging = useDropTarget(root, { onFiles: add, enabled: !busy && files.length < max, paste: true });
 
     const serverError = Object.entries(errors)
         .filter(([key, message]) => message && (key === name || key.startsWith(`${name}.`)))
@@ -166,10 +172,14 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
     const error = serverError || clientError || undefined;
     const errorId = error ? `${id}-error` : undefined;
 
-    async function pick(e: ChangeEvent<HTMLInputElement>) {
+    function pick(e: ChangeEvent<HTMLInputElement>) {
         const picked = Array.from(e.target.files ?? []);
         // The chips below are the visible selection; the input itself must never retain one.
         e.target.value = '';
+        void add(picked);
+    }
+
+    async function add(picked: File[]) {
         if (picked.length === 0) {
             return;
         }
@@ -201,8 +211,9 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
     }
 
     return (
-        <div className="space-y-2">
+        <div ref={root} className={cn('space-y-2 rounded-md', dragging && 'ring-2 ring-ring ring-offset-2 ring-offset-background')}>
             <Label htmlFor={id}>{label}</Label>
+            {dragging && <p className="text-xs text-muted-foreground">{t('Drop a picture here')}</p>}
             {files.length > 0 && (
                 <ul className="space-y-1">
                     {files.map((file, index) => (

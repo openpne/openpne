@@ -8,6 +8,7 @@ import { Heading } from '@/components/ui/heading';
 import { headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { useShrunkPick } from '@/components/images-field';
+import { SingleImageInput } from '@/components/single-image-input';
 import { useT } from '@/lib/i18n';
 import { pickReadableTextColor } from '@/lib/identity-mark';
 import { cn } from '@/lib/utils';
@@ -80,16 +81,7 @@ export default function MemberAvatar() {
                     className="space-y-3"
                 >
                     <Field label={t('Choose Image')} htmlFor="avatar_image" error={upload.errors.image}>
-                        <input
-                            id="avatar_image"
-                            type="file"
-                            name="image"
-                            accept={image.accept}
-                            onChange={image.pick}
-                            required
-                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
-                        />
-                        {image.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+                        <SingleImageInput id="avatar_image" name="image" picked={image} required />
                     </Field>
                     <Button type="submit" loading={upload.processing}>
                         {t('Upload')}

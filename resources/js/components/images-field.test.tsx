@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
 import { ImagesField, shrink, useShrunkPick } from './images-field';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
@@ -249,4 +250,45 @@ test('the processing hint stays up until the last of two overlapping picks has s
 
     gates[1]!();
     await waitFor(() => expect(queryByText('Processing')).toBeNull());
+});
+
+test('a picture dropped on the field\'s form, or pasted into it, is added like a pick; neither is while a shrink runs', async () => {
+    decodesEverything();
+    const onChange = vi.fn();
+    const { container } = render(
+        <form>
+            <textarea aria-label="Body" />
+            <ImagesField id="images" label="Images" files={[]} onChange={onChange} errors={{}} />
+        </form>,
+    );
+    const form = container.querySelector('form') as HTMLFormElement;
+    const drag = { types: ['Files'], files: [small('image/png', 'dropped.png')], getData: () => '' };
+
+    fireEvent.drop(form, { dataTransfer: drag });
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ name: 'dropped.png' })]);
+    // Ignored while the drop's shrink is still running, as the disabled input would be; taken once it has settled.
+    expect(fireEvent.paste(container.querySelector('textarea')!, { clipboardData: { files: [small('image/png', 'early.png')], getData: () => '' } })).toBe(false);
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2));
+    expect(onChange.mock.calls.flat(2).map((file) => (file as File).name)).not.toContain('early.png');
+    expect(fireEvent.paste(container.querySelector('textarea')!, { clipboardData: { files: [small('image/png', 'shot.png')], getData: () => '' } })).toBe(false);
+    expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ name: 'shot.png' })]);
+    // The field shows the ring while a picture is over its form, once nothing is running.
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(4));
+    fireEvent.dragEnter(form, { dataTransfer: drag });
+    expect(container.textContent).toContain('Drop a picture here');
+});
+
+test('at the cap a drop is swallowed without a note, as the disabled input takes no pick', () => {
+    const onChange = vi.fn();
+    const full = [small('image/png', 'a.png'), small('image/png', 'b.png'), small('image/png', 'c.png')];
+    const { container } = renderWithProviders(
+        <form>
+            <ImagesField id="images" label="Images" files={full} onChange={onChange} errors={{}} />
+        </form>,
+    );
+
+    fireEvent.drop(container.querySelector('form')!, { dataTransfer: { types: ['Files'], files: [small('image/png', 'd.png')], getData: () => '' } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(container.textContent).not.toContain('You can attach up to');
 });
