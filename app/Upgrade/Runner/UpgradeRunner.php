@@ -2,7 +2,10 @@
 
 namespace App\Upgrade\Runner;
 
+use App\Mail\Template\MailTemplateService;
 use App\Models\UpgradeState;
+use App\Services\GadgetService;
+use App\Services\NavigationService;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Support\SnsSettingKey;
@@ -161,10 +164,6 @@ final class UpgradeRunner
 
             $walked = $this->walk($options, $out);
 
-            // Each step commits its own rows, so the cached term map is stale from here even when a
-            // later pass fails.
-            app(TermService::class)->clearCache();
-
             // Wrap after the walk: the steps land the OpenPNE 3 MD5 verbatim (bcrypt is not
             // expressible in an INSERT...SELECT), and this pass converts it before the run can
             // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
@@ -221,7 +220,23 @@ final class UpgradeRunner
             return $walked;
         } finally {
             $preflight->drop($created, $options->sourcePrefix, $options->sourceDatabase);
+            // Reported, not thrown: a cache store that is down must not replace the run's own outcome.
+            rescue(fn () => $this->forgetCachedMaps());
         }
+    }
+
+    /**
+     * Every step and every pass commits its own rows, so each map they wrote and the app caches for an
+     * hour is stale when the run ends, however it ends; an app warmed before the cutover would otherwise
+     * serve the stock rows until the TTL.
+     */
+    private function forgetCachedMaps(): void
+    {
+        app(TermService::class)->clearCache();
+        app(SnsSettingService::class)->clearCache();
+        app(NavigationService::class)->clearCache();
+        app(GadgetService::class)->clearCache();
+        app(MailTemplateService::class)->clearCache();
     }
 
     /**
