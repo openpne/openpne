@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { membersPhrase } from '@/lib/count-phrase';
-import { useImageAccept } from '@/components/images-field';
+import { useShrunkPick } from '@/components/images-field';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import type { MemberRef } from '@/pages/community/types';
@@ -130,9 +130,9 @@ function NewToken({ value }: { value: string }) {
 /** Three writes, so three posts: a file upload is its own submit. */
 function IdentityPanel({ account, selfIntroduction }: { account: MemberRef; selfIntroduction: SelfIntroduction | null }) {
     const t = useT();
-    const accept = useImageAccept();
     const identity = useForm({ name: account.name, self_introduction: selfIntroduction?.value ?? '' });
     const image = useForm<{ image: File | null }>({ image: null });
+    const picked = useShrunkPick(image.data.image, (file) => image.setData('image', file));
     const removeImage = useForm({});
 
     return (
@@ -172,11 +172,12 @@ function IdentityPanel({ account, selfIntroduction }: { account: MemberRef; self
                         id="ai_avatar"
                         type="file"
                         name="image"
-                        accept={accept}
-                        onChange={(e) => image.setData('image', e.target.files?.[0] ?? null)}
+                        accept={picked.accept}
+                        onChange={picked.pick}
                         required
                         className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
                     />
+                    {picked.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
                 </Field>
                 <FormActions>
                     <Button type="submit" variant="outline" size="sm" loading={image.processing}>

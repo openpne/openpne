@@ -71,7 +71,7 @@ function renderShow(canComment: boolean, reactions = event.reactions, comments: 
             auth: { user: { id: 3 } },
             locale: 'en',
             timezone: 'Asia/Tokyo',
-            imageUpload: { accept: 'image/png' },
+            imageUpload: { accept: 'image/png', shrink: null },
         },
     };
 

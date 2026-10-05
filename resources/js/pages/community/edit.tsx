@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
-import { useImageAccept } from '@/components/images-field';
+import { useShrunkPick } from '@/components/images-field';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -42,7 +42,6 @@ interface EditProps extends PageProps {
 
 export default function CommunityEdit() {
     const t = useT();
-    const accept = useImageAccept();
     const confirm = useConfirm();
     const { group, categories, policies, topicReadChoices, topicPostChoices, canDelete } = usePage<EditProps>().props;
     const isEdit = group !== null;
@@ -58,6 +57,7 @@ export default function CommunityEdit() {
         image: null as File | null,
         remove_image: false,
     });
+    const image = useShrunkPick(form.data.image, (file) => form.setData('image', file));
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -179,10 +179,11 @@ export default function CommunityEdit() {
                             <input
                                 id="image"
                                 type="file"
-                                accept={accept}
-                                onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)}
+                                accept={image.accept}
+                                onChange={image.pick}
                                 className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
                             />
+                            {image.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
                         </Field>
                         {group?.imageUrl && (
                             <div className="flex items-center gap-3">
