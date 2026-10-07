@@ -66,7 +66,7 @@ services:
   # Dev mail sink: catches every outgoing mail instead of delivering it and shows
   # it at http://localhost:8025. The app reaches it over SMTP on the compose network.
   mailpit:
-    image: axllent/mailpit:v1.31.2
+    image: axllent/mailpit:v1.31.4
     ports:
       - "${OPENPNE_MAILPIT_PORT:-8025}:8025"
 
@@ -75,7 +75,7 @@ services:
   # this dev stack's; a production stack generates its own (openssl rand -hex 32) and sets the same
   # values on the app. Security options are allowed because every URL the app sends is signed.
   imgproxy:
-    image: ghcr.io/imgproxy/imgproxy:v4.0.16
+    image: ghcr.io/imgproxy/imgproxy:v4.0.17
     environment:
       IMGPROXY_KEY: 943b421c9eb07c830af81030552c86009268de4e532ba2ee2eab8247c6da0881
       IMGPROXY_SALT: 520f986b998545b4785e0defbc4f3c1203f22de2374a3d53cb7a7fe9fea309c5
