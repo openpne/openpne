@@ -13,7 +13,7 @@ class TimeAxisIndexesTest extends TestCase
 
     public function test_every_site_wide_posting_time_list_has_its_axis_index(): void
     {
-        foreach (['diaries', 'members', 'groups'] as $table) {
+        foreach (['diaries', 'members', 'groups', 'group_messages'] as $table) {
             $this->assertContains(['created_at', 'id'], $this->indexColumns($table), $table);
         }
     }
