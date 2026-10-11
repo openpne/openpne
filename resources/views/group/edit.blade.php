@@ -18,30 +18,27 @@
         <form method="POST" action="{{ route('group.save', $group ? ['id' => $group->getKey()] : []) }}" enctype="multipart/form-data">
             @csrf
             <x-classic.required-notice />
-            <table class="formTable">
+            <table>
                 <tr>
-                    <th>{{ __('Name') }} <x-classic.required-mark /></th>
-                    <td><input type="text" name="name" value="{{ old('name', $group?->name) }}" maxlength="64" required></td>
+                    <th><label for="community_name">{{ __('Name') }} <x-classic.required-mark /></label></th>
+                    <td><input type="text" class="input_text" id="community_name" name="name" value="{{ old('name', $group?->name) }}" maxlength="64" required></td>
                 </tr>
                 <tr>
-                    <th>{{ __('Description') }}</th>
-                    <td><textarea name="description">{{ old('description', $group?->description) }}</textarea></td>
-                </tr>
-                <tr>
-                    <th>{{ __('Join policy') }} <x-classic.required-mark /></th>
+                    <th><label for="community_community_category_id">{{ __('Category') }}</label></th>
                     <td>
-                        <ul class="radio_list">
-                            @foreach ($policies as $policy)
-                                <li><input type="radio" name="register_policy" value="{{ $policy['slug'] }}" id="community_config_register_policy_{{ $policy['op3Value'] }}" class="input_radio" @checked(old('register_policy', $group?->register_policy?->slug() ?? $policies[0]['slug']) === $policy['slug'])> <label for="community_config_register_policy_{{ $policy['op3Value'] }}">{{ __($policy['label']) }}</label></li>
+                        <select id="community_community_category_id" name="group_category_id">
+                            <option value="">{{ __('No category') }}</option>
+                            @foreach ($categories as $category)
+                                <option value="{{ $category->getKey() }}" @selected((int) old('group_category_id', $group?->group_category_id) === $category->getKey())>{{ $category->name }}</option>
                             @endforeach
-                        </ul>
+                        </select>
                     </td>
                 </tr>
                 {{-- OpenPNE 3's two opCommunityTopicPlugin settings (community_config.yml
                      public_flag / topic_authority), radios as its form drew them. The wording is
                      the enums' — the same captions the community home prints. --}}
                 <tr>
-                    <th>{{ __('Authority to Read %Topic%') }} <x-classic.required-mark /></th>
+                    <th><label>{{ __('Authority to Read %Topic%') }} <x-classic.required-mark /></label></th>
                     <td>
                         <ul class="radio_list">
                             @foreach ($topicReadChoices as $choice)
@@ -51,7 +48,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th>{{ __('Authority to Create %Topic%') }} <x-classic.required-mark /></th>
+                    <th><label>{{ __('Authority to Create %Topic%') }} <x-classic.required-mark /></label></th>
                     <td>
                         <ul class="radio_list">
                             @foreach ($topicPostChoices as $choice)
@@ -60,10 +57,24 @@
                         </ul>
                     </td>
                 </tr>
+                <tr>
+                    <th><label>{{ __('Join policy') }} <x-classic.required-mark /></label></th>
+                    <td>
+                        <ul class="radio_list">
+                            @foreach ($policies as $policy)
+                                <li><input type="radio" name="register_policy" value="{{ $policy['slug'] }}" id="community_config_register_policy_{{ $policy['op3Value'] }}" class="input_radio" @checked(old('register_policy', $group?->register_policy?->slug() ?? $policies[0]['slug']) === $policy['slug'])> <label for="community_config_register_policy_{{ $policy['op3Value'] }}">{{ __($policy['label']) }}</label></li>
+                            @endforeach
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="community_config_description">{{ __('Description') }}</label></th>
+                    <td><textarea id="community_config_description" name="description">{{ old('description', $group?->description) }}</textarea></td>
+                </tr>
                 {{-- CommunityConfigForm offered the choice only while the join-notice mail was enabled site-wide. --}}
                 @if (app(\App\Mail\Template\MailTemplateService::class)->isEnabled(\App\Mail\Template\MailTemplate::GroupJoinNotice))
                 <tr>
-                    <th>{{ __('Receive a notice mail when member joined') }}</th>
+                    <th><label>{{ __('Receive a notice mail when member joined') }}</label></th>
                     <td>
                         {{-- OpenPNE 3 CommunityConfigForm's two-option radio (Receive / Don't Receive) with
                              its help line, under its field name is_send_pc_joinCommunity_mail in the ids; a radio is always submitted, so an unchecked state survives a
@@ -78,26 +89,17 @@
                 </tr>
                 @endif
                 <tr>
-                    <th>{{ __('Category') }}</th>
+                    <th><label for="community_file_file">{{ __('Image') }}</label></th>
                     <td>
-                        <select name="group_category_id">
-                            <option value="">{{ __('No category') }}</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category->getKey() }}" @selected((int) old('group_category_id', $group?->group_category_id) === $category->getKey())>{{ $category->name }}</option>
-                            @endforeach
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <th>{{ __('Image') }}</th>
-                    <td>
+                        {{-- sfWidgetFormInputFileEditable with_delete: the current photo, the file input, then the delete checkbox. --}}
                         @if ($group?->image)
-                            <p class="photo">
-                                <img src="{{ $group->image->thumbnailUrl(120, 120, square: true) }}" alt="">
-                                <label><input type="checkbox" name="remove_image" value="1"> {{ __('Delete') }}</label>
-                            </p>
+                            <a href="{{ $group->image->url() }}" target="_blank" rel="noopener"><img src="{{ $group->image->thumbnailUrl(120, 120, square: true) }}" alt=""></a><br>
                         @endif
-                        <input type="file" name="image" accept="{{ image_upload_accept() }}">
+                        <input type="file" class="input_file" id="community_file_file" name="image" accept="{{ image_upload_accept() }}">
+                        @if ($group?->image)
+                            <br>
+                            <input type="checkbox" class="input_file" id="community_file_file_delete" name="remove_image" value="1"> <label for="community_file_file_delete">{{ __('Delete') }}</label>
+                        @endif
                         @error('image')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>

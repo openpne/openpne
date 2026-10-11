@@ -97,16 +97,16 @@ class GroupTopicRouteParity extends RouteParity
             ],
             // newSuccess.php (PluginCommunityTopicForm) → group-topic/new.blade.php
             'new' => [
-                new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityTopicForm name sfWidgetFormInput'),
-                new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'OpenPNE 4 adds the shared body-format toggle'),
+                new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityTopicForm name sfWidgetFormInput', 'input#community_topic_name'),
+                new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'textarea#community_topic_body; OpenPNE 4 adds the shared body-format toggle'),
                 new ScreenElement('image upload (×3)', L::Two, S::Ported, 'photo_1..3 embedded opCommunityTopicPluginImageForm, ul#community_topic_photo_N', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#community_topic_photo_N'),
                 new ScreenElement('post button', L::Two, S::Ported, "op_include_form('formCommunityTopic') button", 'relabelled from Send, with a Cancel link beside it'),
                 new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
             ],
             // editSuccess.php (same form as new) → group-topic/edit.blade.php
             'edit' => [
-                new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityTopicForm name sfWidgetFormInput'),
-                new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'OpenPNE 4 adds the shared body-format toggle'),
+                new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityTopicForm name sfWidgetFormInput', 'input#community_topic_name'),
+                new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityTopicForm body', 'textarea#community_topic_body; OpenPNE 4 adds the shared body-format toggle'),
                 new ScreenElement('existing image edit / delete', L::Two, S::Partial, 'communityTopic/_formEditImage.php (thumbnail + %input% + %delete%)', 'an occupied slot shows its photo and the remove checkbox, keyed by the slot number; OpenPNE 3 also swapped the photo in place from the same row, here that is a removal now and an upload into the freed slot'),
                 new ScreenElement('new image upload (×3)', L::Two, S::Ported, 'photo_1..3 embedded opCommunityTopicPluginImageForm', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#community_topic_photo_N'),
                 new ScreenElement('save button', L::Two, S::Ported, "op_include_form('formCommunityTopic') button", 'relabelled from Send, with a Cancel link beside it'),

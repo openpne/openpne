@@ -27,9 +27,9 @@ class GroupEventFormOrderTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeInOrder([
-            'for="event_name"', 'for="event_body"', 'for="event_open_date"',
-            'for="event_open_date_comment">Open date comment</label>',
-            'for="event_area"', 'for="event_application_deadline"', 'for="event_capacity"',
+            'for="community_event_name"', 'for="community_event_body"', 'for="community_event_open_date"',
+            'for="community_event_open_date_comment">Open date comment</label>',
+            'for="community_event_area"', 'for="community_event_application_deadline"', 'for="community_event_capacity"',
             '<ul id="community_event_photo_1">', '<ul id="community_event_photo_2">', '<ul id="community_event_photo_3">',
         ], false);
         $this->assertDoesNotMatchRegularExpression('/<input[^>]*name="open_date_comment"[^>]*placeholder=/', (string) $response->getContent());

@@ -68,8 +68,7 @@ class GroupRoutesTest extends TestCase
         $response = $this->actingAs($applicant)->get(route('group.show', $group));
 
         $response->assertOk();
-        $response->assertSee('id="Top"', false); // the Top slot, present only while pending
-        $response->assertSee('waiting for the participation approval', false);
+        $response->assertSeeInOrder(['<div id="Top">', 'id="informationAboutCommunity"', 'waiting for the participation approval'], false);
     }
 
     public function test_search_route_is_not_captured_by_the_show_wildcard(): void

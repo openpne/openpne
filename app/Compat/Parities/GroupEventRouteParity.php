@@ -100,8 +100,8 @@ class GroupEventRouteParity extends RouteParity
             ],
             // newSuccess.php (PluginCommunityEventForm) → group-event/new.blade.php
             'new' => [
-                new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityEventForm name sfWidgetFormInput'),
-                new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityEventForm body', 'OpenPNE 4 adds the shared body-format toggle'),
+                new ScreenElement('title input', L::Two, S::Ported, 'PluginCommunityEventForm name sfWidgetFormInput', 'input#community_event_name; the fields keep their OpenPNE 3 ids (community_event_*), except the two dates, whose year / month / day parts are one native date input'),
+                new ScreenElement('body textarea', L::Two, S::Ported, 'BaseCommunityEventForm body', 'textarea#community_event_body; OpenPNE 4 adds the shared body-format toggle'),
                 new ScreenElement('open date', L::Two, S::Partial, 'open_date opWidgetFormDate (month_format number, can_be_empty)', 'a native date input is kept on purpose; OpenPNE 3 drew a year input with month / day selects'),
                 new ScreenElement('open-date supplement input', L::Two, S::Ported, 'open_date_comment sfWidgetFormInput', 'its own labelled row after the open date'),
                 new ScreenElement('area input', L::Two, S::Ported, 'area sfWidgetFormInput'),
