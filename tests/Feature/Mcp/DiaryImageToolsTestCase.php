@@ -85,6 +85,12 @@ abstract class DiaryImageToolsTestCase extends McpTestCase
         return $file;
     }
 
+    protected function attachmentId(File $file): int
+    {
+        return (int) (DiaryImage::query()->where('file_id', $file->getKey())->value('id')
+            ?? DiaryCommentImage::query()->where('file_id', $file->getKey())->value('id'));
+    }
+
     protected function store(string $relatedType, int $relatedId, int $width, int $height): File
     {
         return app(FileUploader::class)->store(
