@@ -58,7 +58,7 @@ class AuthenticationTest extends TestCase
     {
         $this->get('/login')
             ->assertStatus(200)
-            ->assertSee('<label for="login_remember">Remember me</label>', false)
+            ->assertSee('<label for="authMailAddress_is_remember_me">Remember me</label>', false)
             ->assertSee('name="remember"', false);
     }
 

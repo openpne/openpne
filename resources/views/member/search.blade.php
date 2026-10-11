@@ -7,8 +7,8 @@
         <form method="GET" action="{{ route('member.search') }}">
             <table>
                 <tr>
-                    <th><label for="search_name">{{ __('%nickname%') }}</label></th>
-                    <td><input type="text" class="input_text" id="search_name" name="name" value="{{ $name }}"></td>
+                    <th><label for="member_name">{{ __('%nickname%') }}</label></th>
+                    <td><input type="text" class="input_text" id="member_name" name="name" value="{{ $name }}"></td>
                 </tr>
 
                 @foreach ($profiles as $profile)
@@ -16,9 +16,11 @@
                         $id = $profile->getKey();
                         $current = $filters[$id] ?? null;
                         $range = $dateRanges[$id] ?? [];
+                        $fieldId = 'member_profile_'.$profile->name;
+                        $labelled = ! in_array($profile->form_type, ['checkbox', 'date'], true) && $profile->name !== $birthdayName;
                     @endphp
                     <tr>
-                        <th><label>{{ $profile->getCaption($lang) }}</label></th>
+                        <th><label @if ($labelled)for="{{ $fieldId }}"@endif>{{ $profile->getCaption($lang) }}</label></th>
                         <td>
                             @if ($profile->name === $birthdayName)
                                 @php($md = $monthDayRanges[$id] ?? [])

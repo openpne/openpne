@@ -124,8 +124,9 @@ class MemberRouteParity extends RouteParity
                 new ScreenElement('configured profile fields as rows (input / textarea / select / radio / checkbox / date / country / region)', L::One, S::Ported, 'MemberProfileForm::setConfigWidgets + opWidgetFormProfile', 'profile/_fields, shared with registration so the two cannot drift'),
                 new ScreenElement('per-field visibility select beside the input', L::Two, S::Ported, "_partsForm.php opWidgetFormProfile template '<div class=\"input\">%input%</div><div class=\"publicFlag\">%public_flag%</div>'", 'div.input / div.publicFlag reproduced, so the skin still floats them'),
                 new ScreenElement('date fields as separate year / month / day inputs', L::Three, S::Partial, "opFormItemGenerator FormType 'date' → opWidgetFormDate (month_format number, can_be_empty)", 'a single input[type=date]; the three-part widget, its per-part ids and its field names are not reproduced, so a skin or script keyed on them finds nothing'),
-                new ScreenElement('required-field markers and the notice above the table', L::Three, S::Partial, "_partsForm.php mark_required_field '<strong>*</strong>' + '%0% is required field.'", 'profile rows carry span.required instead of strong, the %nickname% row carries no marker, and the notice line is dropped'),
-                new ScreenElement('per-field help text', L::Three, S::Partial, '_partsForm.php renderRow help → div.help', 'rendered as p.help, so a skin selector written for div.help misses it'),
+                new ScreenElement('required-field markers and the notice above the table', L::Three, S::Ported, "_partsForm.php mark_required_field '<strong>*</strong>' + '%0% is required field.'", 'x-classic.required-mark in the label (the %nickname% row included), x-classic.required-notice above the table'),
+                new ScreenElement('per-field help text', L::Three, S::Ported, '_partsForm.php renderRow help → div.help'),
+                new ScreenElement('field ids', L::Three, S::Ported, 'widgetSchema name format profile[%s] → profile_{name}_value, _value_{option} per radio / checkbox, _public_flag on the audience select', 'profile/_fields; a choice list is ul.radio_list / ul.checkbox_list of input.input_radio / input.input_checkbox + label, and the audience select wears the widget class _partsForm.php handed the whole profile widget'),
                 new ScreenElement('per-field validation errors', L::Three, S::Ported, '$field->renderError()', 'p.error under the input'),
                 new ScreenElement('submit button in div.operation > ul.moreInfo.button', L::Two, S::Ported, '_partsForm.php operation block'),
                 new ScreenElement('save returns to the own profile page', L::Two, S::Partial, "executeEditProfile redirect('@member_profile_mine')", 'OpenPNE 4 returns to the editor with a status flash, so the saved page is one click further away'),
@@ -145,6 +146,7 @@ class MemberRouteParity extends RouteParity
             ],
             // member/search → searchSuccess.php + _partsSearchResultList.php → resources/views/member/search.blade.php
             'search' => [
+                new ScreenElement('field ids', L::Three, S::Ported, 'MemberSearchForm name format member[%s] → member_name, member_profile_{name}', 'the %nickname% input and each select / text profile filter; a checkbox profile is drawn as checkboxes, which OpenPNE 3 drew as one select, and the month / day birthday selects carry no id'),
                 new ScreenElement('last-login row on each result', L::Three, S::Missing, 'searchSuccess.php op_format_last_login_time', 'OpenPNE 4 stores no last-login time, so the row has no source'),
             ],
             // member/config → configSuccess.php (pageNav sidemenu + one category form) + configCompleteSuccess.php
@@ -173,7 +175,7 @@ class MemberRouteParity extends RouteParity
                 new ScreenElement('form box id inviteForm', L::Two, S::Partial, "inviteInput.php op_include_form('inviteForm', \$form, array('title' => 'Invite a friend to %sns_name%'))", 'the id and kind are kept; the heading drops the SNS name ("Invite a new member")'),
                 new ScreenElement('mail address input', L::One, S::Ported, 'InviteForm mail_address'),
                 new ScreenElement('optional message textarea', L::Two, S::Ported, "InviteForm message (label 'Message(Arbitrary)')"),
-                new ScreenElement('two-column form table', L::Two, S::Partial, '_partsForm.php table > tr > th/td', 'the fields are a dl > dt/dd list under a div.block intro, so a skin styling the form table does not reach them'),
+                new ScreenElement('two-column form table', L::Two, S::Ported, '_partsForm.php table > tr > th/td', 'input#member_config_mail_address.input_text and textarea#member_config_message under th > label, as the member_config[%s] name format drew them'),
                 new ScreenElement('submit button in div.operation > ul.moreInfo.button', L::Two, S::Ported, '_partsForm.php operation block'),
                 new ScreenElement('address that already has an account is refused', L::Two, S::Ported, 'InviteForm::validate → validateAddress (MemberConfig uniqueness)', 'answered as a status message on the form rather than a field error; the caller is authenticated, so this is not the enumeration leak the anonymous entry must avoid'),
                 new ScreenElement('pending-invitation list (id invitelistForm) with the invite date', L::Two, S::Missing, 'inviteInput.php div.dparts.recentList#invitelistForm over Member::getInvitingMembers + InvitelistForm', 'OpenPNE 4 keeps no member-facing list of outstanding invitations'),
@@ -197,8 +199,8 @@ class MemberRouteParity extends RouteParity
             ],
             // member/login → _partsLogin.php (.loginForm) → resources/views/auth/login.blade.php
             'login' => [
-                new ScreenElement('mail address + password inputs', L::One, S::Ported, 'opAuthLoginFormMailAddress (mail_address, password)', 'field names not preserved (email/password, Level 3)'),
-                new ScreenElement('remember-me checkbox', L::Two, S::Ported, 'opAuthLoginForm is_remember_me', 'field name not preserved (remember, Level 3) — Fortify reads it'),
+                new ScreenElement('mail address + password inputs', L::One, S::Ported, 'opAuthLoginFormMailAddress (mail_address, password)', 'field names not preserved (email/password, Level 3); the ids are (authMailAddress_mail_address / authMailAddress_password), and like OpenPNE 3 the inputs carry no widget class'),
+                new ScreenElement('remember-me checkbox', L::Two, S::Ported, 'opAuthLoginForm is_remember_me', 'field name not preserved (remember, Level 3) — Fortify reads it; the id is (authMailAddress_is_remember_me)'),
                 new ScreenElement('login button', L::Two, S::Ported, '_partsLogin input_submit'),
                 new ScreenElement('password reminder link', L::One, S::Ported, 'link_to help_login_error_action', 'links to /forgot-password (password.request)'),
                 new ScreenElement('self-registration link', L::Two, S::Ported, 'link_to self_invite_action', 'shown when open registration is on, mirroring OpenPNE 3\'s invite_mode==2 + enable_registration gate'),
