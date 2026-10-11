@@ -81,6 +81,14 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "test-frontend": [
+            "npm run lint",
+            "npm run type-check",
+            "npm test",
+            "@php artisan test tests/Unit",
+            "@php artisan test tests/Feature/Frontend",
+            "@php artisan test tests/Feature/Architecture"
+        ],
         "i18n-check": [
             "@php artisan i18n:check"
         ],
