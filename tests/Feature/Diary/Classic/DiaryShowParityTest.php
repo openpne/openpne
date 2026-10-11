@@ -43,7 +43,8 @@ class DiaryShowParityTest extends TestCase
 
         $response->assertOk();
         $response->assertSee("/diary/{$diary->getKey()}/comment/create", false); // post form action
-        $response->assertSee('class="attention"', false);                        // is_open notice branch
+        // The is_open notice is the form's `body` option: bare text in a div.block, as _partsForm.php printed it.
+        $response->assertSee('<div class="block">Your comment is visible to everyone on the web.</div>', false);
     }
 
     public function test_web_public_notice_is_absent_when_the_diary_is_not_open(): void
@@ -53,7 +54,7 @@ class DiaryShowParityTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/{$diary->getKey()}")
             ->assertOk()
-            ->assertDontSee('class="attention"', false);
+            ->assertDontSee('Your comment is visible to everyone on the web.');
     }
 
     public function test_renders_the_visibility_label_in_the_public_hook(): void

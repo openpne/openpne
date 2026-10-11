@@ -11,16 +11,17 @@
     <x-classic.parts id="diaryForm" name="form" :title="__('Edit %diary%')">
         <form method="POST" action="{{ route('diary.update', $diary) }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table>
                 <tr>
-                    <th><label for="diary_title">{{ __('Title') }}</label></th>
+                    <th><label for="diary_title">{{ __('Title') }} <x-classic.required-mark /></label></th>
                     <td>
                         <input type="text" class="input_text" id="diary_title" name="title" value="{{ old('title', $diary->title) }}" required>
                         @error('title')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="diary_body">{{ __('Body') }}</label></th>
+                    <th><label for="diary_body">{{ __('Body') }} <x-classic.required-mark /></label></th>
                     <td>
                         <textarea id="diary_body" name="body" required>{{ old('body', $diary->body) }}</textarea>
                         @error('body')<p class="error">{{ $message }}</p>@enderror
@@ -28,33 +29,17 @@
                 </tr>
                 @include('compose._format-toggle', ['format' => $diary->format])
                 <tr>
-                    <th><label for="diary_visibility">{{ __('Visibility') }}</label></th>
+                    <th><label>{{ __('Visibility') }} <x-classic.required-mark /></label></th>
                     <td>
-                        <select id="diary_visibility" name="visibility">
+                        <ul class="radio_list">
                             @foreach ($visibilityOptions as $option)
-                                <option value="{{ $option->value }}" @selected(old('visibility', $diary->visibility->value) == $option->value)>{{ __($option->label()) }}</option>
+                                <li><input type="radio" name="visibility" value="{{ $option->value }}" id="diary_public_flag_{{ $option->openPne3PublicFlag() }}" class="input_radio" @checked(old('visibility', $diary->visibility->value) == $option->value)> <label for="diary_public_flag_{{ $option->openPne3PublicFlag() }}">{{ __($option->label()) }}</label></li>
                             @endforeach
-                        </select>
+                        </ul>
                         @error('visibility')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
-                @if ($diary->images->isNotEmpty())
-                    <tr>
-                        <th>{{ __('Current images') }}</th>
-                        <td>
-                            <ul class="photo">
-                                @foreach ($diary->images as $image)
-                                    @continue($image->file === null)
-                                    <li>
-                                        <img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
-                                        <label><input type="checkbox" name="remove_images[]" value="{{ $image->id }}"> {{ __('Delete') }}</label>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </td>
-                    </tr>
-                @endif
-                @include('group-topic._image_fields')
+                <x-classic.photo-rows name="diary" :images="$diary->images" />
             </table>
             <div class="operation">
                 <ul class="moreInfo button">

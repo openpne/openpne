@@ -44,8 +44,8 @@ class DiaryFriendOffAudienceTest extends TestCase
 
         $this->actingAs($member)->get('/diary/new')
             ->assertOk()
-            ->assertSee('<option value="1"', false)
-            ->assertDontSee('<option value="2"', false);
+            ->assertSee('id="diary_public_flag_1"', false)
+            ->assertDontSee('id="diary_public_flag_2"', false);
     }
 
     public function test_the_modern_compose_form_does_not_offer_friends(): void
@@ -79,7 +79,7 @@ class DiaryFriendOffAudienceTest extends TestCase
 
         $this->actingAs($member)->get("/diary/edit/{$diary->getKey()}")
             ->assertOk()
-            ->assertSee('<option value="2" selected>', false);
+            ->assertSee('value="2" id="diary_public_flag_2" class="input_radio" checked', false);
     }
 
     public function test_the_modern_edit_form_keeps_the_stored_friends_option(): void

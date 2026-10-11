@@ -47,6 +47,17 @@ enum Visibility: int
         };
     }
 
+    /** The inverse of fromOpenPne3PublicFlag(). */
+    public function openPne3PublicFlag(): int
+    {
+        return match ($this) {
+            self::Open => 4,
+            self::Members => 1,
+            self::Friends => 2,
+            self::Private => 3,
+        };
+    }
+
     /** String slug for serialization. Never pass raw int to the frontend. */
     public function slug(): string
     {
