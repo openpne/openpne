@@ -127,7 +127,7 @@ class GroupRouteParity extends RouteParity
             ],
             // searchSuccess.php → group/search.blade.php
             'search' => [
-                new ScreenElement('keyword + category search form', L::Two, S::Ported, "op_include_form('searchCommunity', \$filters, method get)"),
+                new ScreenElement('keyword + category search form', L::Two, S::Ported, "op_include_form('searchCommunity', \$filters, method get)", 'input#community_name and select#community_community_category_id, as the community[%s] filter name format drew them'),
                 new ScreenElement('create-a-community link', L::Two, S::Ported, "searchSuccess.php moreInfo link_to('@community_edit')"),
                 new ScreenElement('search results (thumbnail, name / member count / description, detail link)', L::Two, S::Ported, "op_include_parts('searchResultList', 'searchCommunityResult')", 'x-classic.search-result-list; the id keeps OpenPNE 3\'s spelling'),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'searchResultList pager + link_to_page'),
