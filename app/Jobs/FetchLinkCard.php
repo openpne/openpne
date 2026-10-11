@@ -98,10 +98,19 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
             $attributes = $this->failed($card);
         }
 
-        if (! $card->completeFetch($lease, $attributes) && $imported !== null) {
+        $previous = $card->image_file_id;
+
+        if (! $card->completeFetch($lease, $attributes)) {
             // The lease moved on while this was fetching, so the row keeps what the newer worker
             // wrote and the image downloaded here is referenced by nothing.
-            $imported->delete();
+            $imported?->delete();
+
+            return;
+        }
+
+        // A success re-points the row (to the new picture or to none), so the one it held is referenced by nothing.
+        if ($previous !== null && array_key_exists('image_file_id', $attributes) && $attributes['image_file_id'] !== $previous) {
+            LinkCardImage::deleteGeneration($previous, $card->id);
         }
     }
 

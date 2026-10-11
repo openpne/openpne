@@ -29,10 +29,10 @@ final class LinkCardImage
     public const RELATED_TYPE = 'link_card';
 
     /**
-     * Every picture ever stored for the card, not the one `image_file_id` points at: a refetch stores
-     * a new File and only re-points the card. Call it after the write that breaks a fetch's fence (the
-     * row's delete or conversion), so a picture a fetch in flight stores meanwhile is either swept
-     * here or deleted by that worker when its fence fails, never left behind.
+     * Every picture ever stored for the card, not the one `image_file_id` points at: a fetch cut short
+     * between its write and its delete of the replaced picture leaves one. Call it after the write that
+     * breaks a fetch's fence (the row's delete or conversion), so a picture stored meanwhile is swept
+     * here or deleted by that worker at its fence.
      */
     public static function deleteAllFor(int $linkCardId): void
     {
@@ -46,6 +46,20 @@ final class LinkCardImage
         foreach ($pictures as $picture) {
             $picture->delete();
         }
+    }
+
+    /**
+     * The one picture a completed refetch replaced. Both halves again: the pointer is not trusted,
+     * since by now the id may name a picture that was never this card's.
+     */
+    public static function deleteGeneration(int $fileId, int $linkCardId): void
+    {
+        File::query()
+            ->whereKey($fileId)
+            ->where('related_entity_type', self::RELATED_TYPE)
+            ->where('related_entity_id', $linkCardId)
+            ->first()
+            ?->delete();
     }
 
     /** Formats the card renders. SVG is absent deliberately: it is a document, not a picture. */
