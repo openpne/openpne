@@ -4,18 +4,12 @@ namespace Tests\Feature\GroupTalk;
 
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Models\GroupMessage;
-use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Pins the plan the room list's mentions arm gets on each engine: the member-led index on SQLite,
- * where a member_id-only one would scan every mention of the viewer, and an index lookup on MySQL,
- * whose statistics pick the unique key led by the message id (docs/internals/ordering.md, "SQLite
- * foreign-key indexes").
- */
+/** Each engine's plan for the room list's mentions arm, read off EXPLAIN (docs/internals/ordering.md, "SQLite foreign-key indexes"). */
 class UnreadMentionsPlanTest extends TalkTestCase
 {
-    public function test_the_mentions_arm_is_served_by_an_index_lookup(): void
+    public function test_the_mentions_arm_is_looked_up_by_both_key_columns(): void
     {
         $group = $this->group();
         $viewer = $this->memberOf($group);
@@ -32,12 +26,13 @@ class UnreadMentionsPlanTest extends TalkTestCase
         $query = app(JoinedTalkRooms::class)->ordered($viewer, true);
         $plan = $this->plan($query->toSql(), $query->getBindings());
 
+        // Both key columns, not only the index's name: a prefix-only search would read every mention of the viewer.
         $this->assertMatchesRegularExpression(
             DB::getDriverName() === 'sqlite'
-                ? '/group_message_mentions USING (COVERING )?INDEX group_message_mentions_member_id_group_message_id_index/'
-                : '/index lookup on group_message_mentions using \S+/i',
+                ? '/group_message_mentions USING (COVERING )?INDEX group_message_mentions_member_id_group_message_id_index \(member_id=\? AND group_message_id=\?\)/'
+                : '/index lookup on group_message_mentions using group_message_mentions_group_message_id_offset_unique \(group_message_id=group_messages\.id\)/i',
             $plan,
-            "the mentions arm is not read through an index:\n{$plan}",
+            "the mentions arm is not looked up by its key columns:\n{$plan}",
         );
     }
 
