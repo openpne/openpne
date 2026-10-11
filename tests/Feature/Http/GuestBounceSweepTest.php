@@ -10,9 +10,10 @@ use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * Every member-realm route is requested as a guest and must end at the login screen unless its name
- * is listed here or in PublicRouteBoundaryTest, so a route added without `auth` fails the day it
- * lands. Compat redirects are followed, so they are judged by where they end.
+ * Every member-realm route is requested as a guest and must answer with the login redirect itself
+ * unless its name is listed here or in PublicRouteBoundaryTest. Only a Closure route's redirect is
+ * followed: a controller's redirect elsewhere is a miss even when that page would bounce next, as a
+ * validation redirect back would.
  */
 class GuestBounceSweepTest extends TestCase
 {
@@ -62,8 +63,8 @@ class GuestBounceSweepTest extends TestCase
 
         $this->assertSame([], $failures, "A guest did not end at /login on:\n".implode("\n", $failures)
             ."\nGive the route `auth`, or list it in GUEST_FLOW / SITE_PUBLIC here or in PublicRouteBoundaryTest::publicMemberRoutes() if a guest may open it.");
-        // A page, a POST, a DELETE and a compat redirect: the sweep reached each kind.
-        foreach (['dashboard', 'group.talk.store', 'member.config.passkeys.destroy', 'group.show.compat'] as $sentinel) {
+        // A page, a POST, a POST validated by a FormRequest, a DELETE and a compat redirect: the sweep reached each kind.
+        foreach (['dashboard', 'group.talk.store', 'message.bulk', 'member.config.passkeys.destroy', 'group.show.compat'] as $sentinel) {
             $this->assertContains($sentinel, $swept);
         }
     }
@@ -120,15 +121,16 @@ class GuestBounceSweepTest extends TestCase
         return '/'.ltrim($uri, '/');
     }
 
-    /** Returns null once the guest reaches /login or a listed guest route, else the path taken and where it ended. */
+    /** Returns null once the guest gets the login redirect or a listed guest route, else the path taken and where it ended. */
     private function whereAGuestLands(string $method, string $url): ?string
     {
         $trail = [];
         for ($hop = 0; $hop < 5; $hop++) {
             $trail[] = "{$method} {$url}";
             $response = $this->call($method, $url);
+            $route = $response->baseRequest->route();
+            $name = $route?->getName();
             if (! $response->isRedirect()) {
-                $name = $response->baseRequest->route()?->getName();
                 if ($name !== null && in_array($name, self::guestRoutes(), true)) {
                     return null;
                 }
@@ -138,16 +140,21 @@ class GuestBounceSweepTest extends TestCase
 
             $target = (string) $response->headers->get('Location');
             $host = parse_url($target, PHP_URL_HOST);
-            if ($host !== null && $host !== parse_url((string) config('app.url'), PHP_URL_HOST)) {
-                return implode(' -> ', $trail)." -> off-site {$target}";
-            }
             $path = parse_url($target, PHP_URL_PATH) ?: '/';
-            if ($path === '/login') {
-                return null;
+            if ($host === null || $host === parse_url((string) config('app.url'), PHP_URL_HOST)) {
+                if ($path === '/login') {
+                    return null;
+                }
+                if ($route?->getActionName() === 'Closure') {
+                    $query = parse_url($target, PHP_URL_QUERY);
+                    $method = 'GET';
+                    $url = $path.(is_string($query) ? "?{$query}" : '');
+
+                    continue;
+                }
             }
-            $query = parse_url($target, PHP_URL_QUERY);
-            $method = 'GET';
-            $url = $path.(is_string($query) ? "?{$query}" : '');
+
+            return implode(' -> ', $trail)." -> redirect to {$target}".($name === null ? '' : " from [{$name}]");
         }
 
         return implode(' -> ', $trail).' -> still redirecting';
