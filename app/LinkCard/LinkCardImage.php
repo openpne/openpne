@@ -48,6 +48,20 @@ final class LinkCardImage
         }
     }
 
+    /**
+     * The one picture a completed refetch replaced. Both halves again: the pointer is not trusted,
+     * since by now the id may name a picture that was never this card's.
+     */
+    public static function deleteGeneration(int $fileId, int $linkCardId): void
+    {
+        File::query()
+            ->whereKey($fileId)
+            ->where('related_entity_type', self::RELATED_TYPE)
+            ->where('related_entity_id', $linkCardId)
+            ->first()
+            ?->delete();
+    }
+
     /** Formats the card renders. SVG is absent deliberately: it is a document, not a picture. */
     private const ACCEPTED = [
         'image/jpeg' => 'jpg',

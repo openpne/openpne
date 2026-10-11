@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\LinkCard\CardContext;
 use App\LinkCard\LinkCardImage;
+use App\Models\File;
 use App\Models\LinkCard;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -31,16 +32,24 @@ class PruneLinkCardsCommand extends Command
             ->where('link_cards.updated_at', '<=', $cutoff)
             ->whereNotExists(fn ($sub) => $this->anyReference($sub));
 
-        $count = (clone $query)->count();
+        // The same grace: a picture younger than the cutoff may belong to a fetch still in flight,
+        // whose card the sweep above has just taken or whose own fence will delete it.
+        $orphans = File::query()
+            ->where('related_entity_type', LinkCardImage::RELATED_TYPE)
+            ->where('files.created_at', '<=', $cutoff)
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw('1'))->from('link_cards')->whereColumn('link_cards.id', 'files.related_entity_id'));
 
-        if ($count === 0) {
-            $this->info('No unreferenced link cards to prune.');
+        $count = (clone $query)->count();
+        $orphanCount = (clone $orphans)->count();
+
+        if ($count === 0 && $orphanCount === 0) {
+            $this->info('No unreferenced link cards or orphaned pictures to prune.');
 
             return self::SUCCESS;
         }
 
         if ($this->option('dry-run')) {
-            $this->info("{$count} unreferenced link card(s) would be pruned.");
+            $this->info("{$count} unreferenced link card(s) and {$orphanCount} orphaned picture(s) would be pruned.");
 
             return self::SUCCESS;
         }
@@ -53,7 +62,15 @@ class PruneLinkCardsCommand extends Command
             }
         });
 
-        $this->info("Pruned {$deleted} unreferenced link card(s).");
+        $swept = 0;
+
+        $orphans->chunkById(200, function ($pictures) use (&$swept): void {
+            foreach ($pictures as $picture) {
+                $swept += $picture->delete() ? 1 : 0;
+            }
+        });
+
+        $this->info("Pruned {$deleted} unreferenced link card(s) and {$swept} orphaned picture(s).");
 
         return self::SUCCESS;
     }

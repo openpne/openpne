@@ -569,8 +569,11 @@ the link was shared here — while a link to one of this site's own pages is pre
 ## Cleaning up
 
 `openpne:prune-link-cards` deletes cards no body points at, and takes every picture stored for them —
-the current one and the generations a refetch replaced, tied to the card only by relation — because
-while a card exists nothing else collects those bytes.
+the current one and any generation a refetch left, tied to the card only by relation — because
+while a card exists nothing else collects those bytes. A refetch that completes deletes the picture
+it replaced, found by the same relation and never by the id alone; the sweep's second step takes the
+pictures whose card is already gone, which earlier sweeps left when they took the current picture
+only, under the same grace period so a picture a fetch in flight has just stored is never a candidate.
 
 It is a sweep rather than something the posting path does inline, because cards are shared by URL: no
 single record stopping its reference proves the card is unused without checking every other record.
@@ -622,7 +625,8 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
 - Reading a page's relations in bulk is a memo of the answers those rules would have read anyway,
   pair by pair, and never a second rule. An unread pair costs a query; it never decides anything.
 - A row leaving the fetch lifecycle takes every picture stored for it, found by the relation and
-  after the row is converted — never by the id the row held before.
+  after the row is converted — never by the id the row held before. A refetch that completes takes
+  the one picture it replaced, by the relation as well.
 - A body is examined once in its life whatever the link-card setting says; the setting withholds the
   fetch alone, so an external first URL waits as a pending card and a URL of ours never waits.
 - One row per normalised URL; a widely-shared link is fetched once.

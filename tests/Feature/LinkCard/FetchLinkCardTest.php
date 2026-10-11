@@ -262,6 +262,49 @@ class FetchLinkCardTest extends TestCase
         $this->assertSame(1, $card->failure_count, 'The failure is still recorded, so the retry backs off.');
     }
 
+    public function test_a_refetch_deletes_the_picture_it_replaced(): void
+    {
+        $card = $this->card('https://example.com/refreshed');
+        $previous = $this->pictureOf($card);
+        $this->queueHtml('<html><head><meta property="og:title" content="New"><meta property="og:image" content="https://example.com/i.png"></head></html>');
+        $this->queueBinary($this->png(), 'image/png');
+
+        $this->runJob($card->fresh());
+
+        $card->refresh();
+        $this->assertNotNull($card->image_file_id);
+        $this->assertNotSame($previous->id, $card->image_file_id);
+        $this->assertDatabaseHas('files', ['id' => $card->image_file_id]);
+        $this->assertDatabaseMissing('files', ['id' => $previous->id]);
+    }
+
+    public function test_a_refetch_that_finds_no_picture_still_drops_the_one_it_replaced(): void
+    {
+        $card = $this->card('https://example.com/picture-gone');
+        $previous = $this->pictureOf($card);
+        $this->queueHtml('<html><head><meta property="og:title" content="Text only now"></head></html>');
+
+        $this->runJob($card->fresh());
+
+        $card->refresh();
+        $this->assertNull($card->image_file_id);
+        $this->assertDatabaseMissing('files', ['id' => $previous->id]);
+    }
+
+    public function test_a_replaced_pointer_naming_another_entitys_file_is_left_alone(): void
+    {
+        // The pointer is not trusted on its own: deleting by id would take whatever the id has come to name.
+        $card = $this->card('https://example.com/crossed');
+        $foreign = File::factory()->create(['related_entity_type' => 'member', 'related_entity_id' => $card->id]);
+        $card->update(['status' => LinkCardStatus::Ok, 'title' => 'Old', 'image_file_id' => $foreign->id, 'expires_at' => CarbonImmutable::now()->subDay()]);
+        $this->queueHtml('<html><head><meta property="og:title" content="New"></head></html>');
+
+        $this->runJob($card->fresh());
+
+        $this->assertNull($card->fresh()->image_file_id);
+        $this->assertDatabaseHas('files', ['id' => $foreign->id]);
+    }
+
     public function test_a_kept_card_is_retried_once_its_backoff_elapses(): void
     {
         // The other half: keeping it must not mean never trying again.
@@ -392,6 +435,20 @@ class FetchLinkCardTest extends TestCase
             'url' => $url,
             'url_hash' => LinkUrl::hash($url),
         ]);
+    }
+
+    /** Makes $card a stale, rendering card holding a stored picture of its own. */
+    private function pictureOf(LinkCard $card): File
+    {
+        $picture = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => $card->id]);
+        $card->update([
+            'status' => LinkCardStatus::Ok,
+            'title' => 'Old',
+            'image_file_id' => $picture->id,
+            'expires_at' => CarbonImmutable::now()->subDay(),
+        ]);
+
+        return $picture;
     }
 
     private function runJob(LinkCard $card): void
