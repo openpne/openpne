@@ -138,6 +138,24 @@ renders under ([`RouteParity::moduleFor()`](../../app/Compat/RouteParity.php)) t
 `config/view.yml` `stylesheets` entry, and the shell links it between the skin and the custom CSS.
 Global linking is not equivalent — each file also restyles shared kinds (`.commentList`,
 `.recentList`, `.prevNextLinkLine`), which OpenPNE 3 left untouched on other modules' screens.
+
+### Themes
+
+OpenPNE 3's `opSkinThemePlugin` themes are vendored under
+[`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin) (eleven packages; the third-party
+notices sit beside them). A theme is a directory whose `css/main.css` opens with the comment
+header the plugin read (`Theme Name:` and `Author:` make it one), found on the filesystem by
+[`ClassicThemes`](../../app/Support/ClassicThemes.php) as `opThemeAssetSearcher` found them, so a
+deployment may add a package by dropping a directory in. The `classic_theme` setting (the
+*Theme* page under *Appearance (Classic)*) names the directory; it is a path segment, so a name
+outside `[A-Za-z0-9_-]` or not on disk reads as the default skin. With a theme chosen, the default
+skin is not linked and the package's `css/*.css` are linked in name order **after** the module and
+custom CSS, which is where OpenPNE 3 placed them: the theme overrides both (its `customizing.css`
+also preceded the module stylesheet, which is not reproduced). The themes' own JavaScript
+(`bootstrap-dropdown.js`, jQuery-bound) is not loaded; `winter`'s footer credit, which its script
+wrote, is drawn by the shell instead. The theme plugin also overrode the shell's templates (a
+`navbar` header with the local nav inside it, a dropdown global nav, `.well` parts frames); that
+shell is not reproduced yet, so a theme's stylesheets currently dress the default-skin markup.
 Plugin images a template names directly are vendored the same way — the message list's row status
 icons, `opMessagePlugin/images/icon_mail_*.gif` — and the byte lock in
 [`PluginStylesheetsTest`](../../tests/Unit/Compat/PluginStylesheetsTest.php) covers both kinds.
@@ -214,7 +232,8 @@ included) gets a notice back on manage rather than a 404, and a self or empty id
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is — and, like the OpenPNE 3 PC
 layout, the Classic shell declares no viewport meta, so a narrow screen scales the skin rather
-than overflowing it; there is a single static skin (no theme switching); the `#SmtSwitch`
+than overflowing it; a theme restyles the default-skin markup rather than the theme plugin's own
+shell templates (see Themes); the `#SmtSwitch`
 smartphone-view toggle is not ported — a phone client is served Modern
 ([feature-modules.md](feature-modules.md#surface-selection)) and the browser's desktop-site mode
 is the way back; the notification center's badges count unread notification rows rather than OpenPNE
@@ -302,12 +321,12 @@ modern_only install, where the operator never sees Classic and the copy must
 not mention surfaces at all:
 
 ```text
-classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / banners / legacy gadget layout / navigation menu settings / the topic and event comment reply link
+classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / banners / theme / legacy gadget layout / navigation menu settings / the topic and event comment reply link
 modern only:   Modern logo / color / header image / modern layout / login screen message
 both:          SNS name / terms / basic navigation labels / policy URLs / favicon
 ```
 
-The Classic-only settings — custom CSS, HTML insertion, banners, the gadget layout, the
+The Classic-only settings — custom CSS, HTML insertion, banners, the theme, the gadget layout, the
 navigation menu, the comment reply link — never reach a phone client, which is served Modern
 whatever the member chose ([feature-modules.md](feature-modules.md#surface-selection)), as in
 OpenPNE 3, whose smartphone layout carried none of the PC skin's customization. A migrated site's

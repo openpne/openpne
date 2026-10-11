@@ -64,4 +64,7 @@ enum SettingGroup
 
     /** What happens to a picture before it is uploaded, edited on the image settings page. */
     case Images;
+
+    /** Which OpenPNE 3 theme package the Classic shell wears, edited on the theme page. */
+    case Theme;
 }
