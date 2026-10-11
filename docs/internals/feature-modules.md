@@ -338,7 +338,8 @@ invariant.
    check, never only in the controller.
 3. A guest-reachable route MUST still carry `auth.session`: without it a session
    whose password hash is stale keeps a non-null viewer, and every gate on the page
-   reads that viewer's clearance (`PublicRouteBoundaryTest`).
+   reads that viewer's clearance (`PublicRouteBoundaryTest`). Every other
+   member-realm route MUST send a guest to `/login` (`GuestBounceSweepTest`).
 4. A feature's side effects (mail, unread, file deletion, counter repair) MUST
    originate in an Action — directly, or via an event the Action emits — never in
    a controller, view, or Filament Resource.

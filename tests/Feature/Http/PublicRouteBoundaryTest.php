@@ -33,6 +33,7 @@ class PublicRouteBoundaryTest extends TestCase
             'profile raw alias' => ['member.profile.raw_compat'],
             'file bytes' => ['file.show'],
             'thumbnail' => ['image.show'],
+            'link card picture' => ['linkCard.image'],
             'diary top' => ['diary.index_compat'],
             'diary feed' => ['diary.list'],
             'diary search' => ['diary.search'],
