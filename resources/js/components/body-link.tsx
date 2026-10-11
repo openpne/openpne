@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { createContext, type MouseEvent, type ReactNode, useContext } from 'react';
 import { useT } from '@/lib/i18n';
-import { inAppHref, isPlainClick } from '@/lib/link-target';
+import { inAppHref, isBytesHref, isPlainClick } from '@/lib/link-target';
 
 export const EXTERNAL_REL = 'noopener noreferrer nofollow';
 
@@ -15,8 +15,9 @@ export const OWN_TAB_REL = 'noopener';
 export const OwnLinksOpen = createContext<'in-app' | 'new-tab'>('in-app');
 
 /**
- * A page of ours that answers without an Inertia page (a file, the admin) is loaded outright, rather
- * than shown in the router's error overlay; an Inertia error page is left to the router.
+ * A page of ours that answers without an Inertia page (the admin) is loaded outright, rather than
+ * shown in the router's error overlay; an Inertia error page is left to the router. A path served as
+ * bytes never comes here: the browser follows it, since the router would download the file to find out.
  */
 export function visitInApp(path: string): void {
     router.visit(path, {
@@ -47,7 +48,7 @@ export function BodyLink({ href, className, children }: { href: string; classNam
     }
 
     const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
-        if (!isPlainClick(event)) {
+        if (!isPlainClick(event) || isBytesHref(path)) {
             return;
         }
         event.preventDefault();

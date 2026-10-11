@@ -4,6 +4,22 @@
  * router can visit (docs/internals/body-text.md, "Where a link opens").
  */
 
+/**
+ * The first path segments under which this site answers with bytes rather than a page; kept equal
+ * to the routes' by BytesRouteSegmentsParityTest.
+ */
+export const BYTES_SEGMENTS = ['app-icon', 'banner', 'cache', 'file', 'linkCard'] as const;
+
+/**
+ * Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find
+ * out. One leading slash exactly: a second one would make the path a host for the browser.
+ */
+export function isBytesHref(path: string): boolean {
+    const segment = /^\/([^/?#]+)/.exec(path)?.[1] ?? '';
+
+    return (BYTES_SEGMENTS as readonly string[]).includes(segment);
+}
+
 /** The path the router visits for $href, or null when it leaves this site. */
 export function inAppHref(href: string, host: string): string | null {
     let url: URL;

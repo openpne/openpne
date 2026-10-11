@@ -2,7 +2,7 @@ import { type MouseEvent, useContext, useLayoutEffect, useMemo, useRef } from 'r
 import { OWN_TAB_REL, OwnLinksOpen, visitInApp } from '@/components/body-link';
 import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
-import { inAppHref, isPlainClick } from '@/lib/link-target';
+import { inAppHref, isBytesHref, isPlainClick } from '@/lib/link-target';
 
 /**
  * `bodyHtml` is exclusively the output of the server-side sanitizer pipeline, never constructed
@@ -67,7 +67,7 @@ export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | 
 
         const path = inAppHref(anchor.href, window.location.host);
 
-        if (path === null) {
+        if (path === null || isBytesHref(path)) {
             return;
         }
 
