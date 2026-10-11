@@ -193,6 +193,7 @@ checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_st
 | `SitePolicyMarkdownTransform` | Markdown rewrite of raw HTML | not idempotent (escapes double); the rewrite and its COMPLETED checkpoint commit in one transaction |
 | `TalkReadCursorBackfill` | `GroupMemberUpgrade` runs before the messages exist, so the walk leaves the read cursor at the schema default, a wall-clock stamp; the pass writes each group's latest `(created_at, id)` tuple, the one `TalkReadCursor::snapshot()` picks, in one UPDATE once they have landed | a function of the migrated rows, so a rescan writes the same tuple; the UPDATE and the COMPLETED checkpoint commit in one transaction |
 | `BoardBumpBackfill` | `GroupTopicUpgrade` / `GroupEventUpgrade` run before the comments exist, so they write `created_at` as the placeholder; the pass settles each thread's `bumped_at` to `COALESCE(MAX(comments.created_at), created_at)` in one UPDATE per table ([group-boards.md](group-boards.md#the-board-key-is-bumped_at)) | a function of the migrated rows, so a rescan writes the same value; the UPDATE and the COMPLETED checkpoint commit in one transaction |
+| `ClassicThemeSelection` | the skin OpenPNE 3 showed is a function of two source tables at once — the `plugin` rows of its two skin plugins (a missing row is an enabled plugin, and only the theme plugin as the one enabled skin dressed the site) and `sns_config.Theme_used`, which a site that never saved the theme page lacks (the first package in directory order stood in) — which no `INSERT ... SELECT` over one of them expresses; writes `sns_settings.classic_theme` ([classic-compatibility.md](classic-compatibility.md#themes)) | a function of the source rows, so a rescan writes the same value; the write and the COMPLETED checkpoint commit in one transaction |
 | `FileBinMigration` move + rewire | `files` must exist for the FK | `information_schema` state (source table presence, FK target) |
 | `surface_mode` stamp | no OpenPNE 3 source column | insert-if-absent, only after full success |
 
@@ -235,6 +236,8 @@ the app's utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
 - **`BoardBumpCheck`** recomputes every topic's and event's `bumped_at` from its comments and fails on
   any row that differs; it consults no checkpoint, so a site migrated before the pass existed verifies
   on its rows alone.
+- **`ClassicThemeCheck`** requires the stored `classic_theme` to be empty or to name a package under
+  `public/opSkinThemePlugin`; it consults no checkpoint.
 - **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and the FK is
   rewired.
 - **Check C**: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and no unknown

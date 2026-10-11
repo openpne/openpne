@@ -53,6 +53,17 @@
 {{-- Operator HTML insertion at the top of #Body. --}}
 {!! classic_html_slot('top') !!}
     <div id="Container">
+        @if ($classicTheme !== null)
+        {{-- The theme plugin's _layout.php: a Bootstrap navbar, inverted on the friend nav set, with the
+             local nav inside it (docs/internals/classic-compatibility.md, "Themes"). --}}
+        <div id="Header" class="navbar{{ classic_local_nav_type() === 'friend' ? ' navbar-inverse' : '' }}">
+            <div id="HeaderContainer" class="navbar-inner">
+                <div class="container">
+                    @include('layouts.partials.theme-header')
+                </div>
+            </div><!-- HeaderContainer -->
+        </div><!-- Header -->
+        @else
         <div id="Header">
             <div id="HeaderContainer">
                 <h1 id="logo"><a href="{{ url('/') }}">{{ sns_name() }}</a></h1>
@@ -63,15 +74,18 @@
                 <div id="topBanner">{!! classic_top_banner() !!}</div>
             </div><!-- HeaderContainer -->
         </div><!-- Header -->
+        @endif
 
         <div id="Contents">
             <div id="ContentsContainer">
+                @if ($classicTheme === null)
                 {{-- The secondary nav bar (admin Navigation data, secure pages only): the
                      `default` set on own pages, the `friend` set when viewing another member.
                      See layouts.partials.local-nav. --}}
                 <div id="localNav">
                     @include('layouts.partials.local-nav')
                 </div>
+                @endif
 
                 {{-- Gadget pages (home/profile/login) pass the configured layout's letter; every
                      other Classic screen resolves it from the route-parity registry, defaulting
@@ -127,8 +141,9 @@
                      HTML chosen by the page's secure_page/insecure_page class. $classicFooterHtml
                      stays a per-request override seam. --}}
                 @php($footerHtml = $classicFooterHtml ?? classic_footer_html(($pageClass ?? 'secure_page') !== 'insecure_page'))
-                @if ($classicTheme?->credit() !== null)
-                    <span id="license">{!! $classicTheme->credit() !!}</span>
+                @if ($classicTheme !== null)
+                    {{-- The theme plugin's _footer.php opens with this span for a theme's credit line. --}}
+                    <span id="license">{!! $classicTheme->credit() ?? '' !!}</span>
                 @endif
                 <p>
                     <a href="{{ route('policy.privacy') }}" target="_blank" rel="noopener">{{ __('Privacy policy') }}</a>

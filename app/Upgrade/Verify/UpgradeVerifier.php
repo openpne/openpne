@@ -68,6 +68,7 @@ final class UpgradeVerifier
             (new TalkReadCursorCheck)->verify($options, $this->targetTables(), $record);
         }
         (new BoardBumpCheck)->verify($this->targetTables(), $record);
+        (new ClassicThemeCheck)->verify($this->targetTables(), $record);
 
         $this->verifyPasswords($report, $out);
 

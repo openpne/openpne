@@ -138,6 +138,7 @@ final class UpgradeRunner
             (new SitePolicyMarkdownTransform)->plan($out);
             (new TalkReadCursorBackfill)->plan($out);
             (new BoardBumpBackfill)->plan($out);
+            (new ClassicThemeSelection)->plan($out);
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
@@ -198,6 +199,12 @@ final class UpgradeRunner
             // Only after the comments landed: the thread steps write created_at as the placeholder.
             if ($walked) {
                 $walked = (new BoardBumpBackfill)->run($this->targetTables(), $out);
+            }
+
+            // After the settings step: the skin is decided by two source tables at once, which no
+            // INSERT...SELECT over one of them can express.
+            if ($walked) {
+                $walked = (new ClassicThemeSelection)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $out);
             }
 
             // Only after the walk: FileUpgrade has populated `files`, so the FK rewire's existing-row

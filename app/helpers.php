@@ -128,6 +128,26 @@ if (! function_exists('classic_theme')) {
     }
 }
 
+if (! function_exists('classic_frame_inner_class')) {
+    /** The parts frame's inner class: OpenPNE 3's .parts, or the .well its theme plugin's _partsLayout.php wrote. */
+    function classic_frame_inner_class(): string
+    {
+        return classic_theme() === null ? 'parts' : 'well';
+    }
+}
+
+if (! function_exists('classic_local_nav_type')) {
+    /** The localNav set this request renders: `group` on a group page, `friend` about another member, else `default`. */
+    function classic_local_nav_type(): string
+    {
+        return match (true) {
+            request()->attributes->get('localNavGroup') !== null => 'group',
+            request()->attributes->get('localNavSubject') !== null => 'friend',
+            default => 'default',
+        };
+    }
+}
+
 if (! function_exists('classic_plugin_css_url')) {
     /**
      * The vendored OpenPNE 3 plugin stylesheet URL for the current route — the module's view.yml

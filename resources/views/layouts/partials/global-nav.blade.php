@@ -6,6 +6,43 @@
     $navType = auth()->check() ? 'secure_global' : 'insecure_global';
     $navItems = app(\App\Services\NavigationService::class)->visibleEntries($navType, app()->getLocale());
 @endphp
+@if (classic_theme() !== null)
+    {{-- The theme plugin's _globalNav.php: the whole set folded into one dropdown, the li carrying
+         the same id as its container (its stylesheet addresses `li#globalNav`), the viewer's own
+         name as the profile item's caption. Its bootstrap-dropdown.js is not loaded; the toggle is
+         classic-theme-nav.js, and without script the menu stands open. --}}
+    @once
+        <style>
+            :where(#globalNav .dropdown-menu li form) { margin: 0; }
+            :where(#globalNav .dropdown-menu li form button) { font: inherit; display: block; width: 100%; padding: 3px 20px; text-align: left; color: inherit; background: none; border: 0; cursor: pointer; }
+        </style>
+        <noscript><style>#globalNav .dropdown-menu { display: block; position: static; float: none; }</style></noscript>
+    @endonce
+    <div id="globalNav">
+        <ul class="nav pull-right">
+            @if (! empty($navItems))
+                <li id="globalNav" class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <p>menu</p><i class="fa fa-sort-asc"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        @foreach ($navItems as $item)
+                            @include('layouts.partials.nav-item', ['item' => $item['domId'] === 'globalNav__member_profile_mine' ? ['label' => auth()->user()->name] + $item : $item])
+                        @endforeach
+                    </ul>
+                </li>
+            @endif
+            @guest
+                @if (empty($navItems))
+                    <li id="globalNav_login"><a href="{{ route('login') }}">{{ __('Log In') }}</a></li>
+                @endif
+            @endguest
+        </ul>
+    </div>
+    @once
+        <script src="{{ asset('js/classic-theme-nav.js') }}" defer></script>
+    @endonce
+@else
 @once
     {{-- The logout tab is a POST form button (nav-item), dressed as the plain tab OpenPNE 3 drew;
          mirrors the skin's #globalNav li a rules so the header reads as one row of tabs.
@@ -30,3 +67,4 @@
         @endguest
     </ul>
 </div>
+@endif
