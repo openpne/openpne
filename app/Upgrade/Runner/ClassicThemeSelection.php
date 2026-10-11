@@ -92,10 +92,10 @@ final class ClassicThemeSelection
     }
 
     /**
-     * OpenPNE 3's own rule read off its tables: the two bundled skin plugins count as enabled without
-     * a `plugin` row, the theme plugin dressed the site only as the one enabled `opSkin*` plugin, and
-     * then a `Theme_used` row named the package (kept as written, even one not vendored here) or the
-     * first package under public/opSkinThemePlugin stood in.
+     * OpenPNE 3's rule as far as its tables show it (it also counted its disk): the two bundled skins
+     * count as enabled without a `plugin` row, and only the theme plugin as the one enabled `opSkin*`
+     * plugin dressed the site. `Theme_used` is kept as written, even unvendored; without the row the
+     * first package under public/opSkinThemePlugin stands in.
      */
     public function select(string $sourcePrefix, ?string $sourceDatabase): string
     {

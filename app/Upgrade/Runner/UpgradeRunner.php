@@ -202,8 +202,8 @@ final class UpgradeRunner
             }
 
             // After the settings step: the skin is decided by two source tables at once, which no
-            // INSERT...SELECT over one of them can express.
-            if ($walked) {
+            // INSERT...SELECT over one of them can express; gated on sns_config as the preflight is.
+            if ($walked && $this->readsSourceTable('sns_config')) {
                 $walked = (new ClassicThemeSelection)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $out);
             }
 
