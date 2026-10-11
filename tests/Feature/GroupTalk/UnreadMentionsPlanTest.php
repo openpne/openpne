@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 /** Each engine's plan for the room list's mentions arm, read off EXPLAIN (docs/internals/ordering.md, "SQLite foreign-key indexes"). */
 class UnreadMentionsPlanTest extends TalkTestCase
 {
-    public function test_the_mentions_arm_is_looked_up_by_both_key_columns(): void
+    public function test_the_mentions_arm_is_looked_up_by_the_key_each_engine_searches_on(): void
     {
         $group = $this->group();
         $viewer = $this->memberOf($group);
@@ -26,7 +26,7 @@ class UnreadMentionsPlanTest extends TalkTestCase
         $query = app(JoinedTalkRooms::class)->ordered($viewer, true);
         $plan = $this->plan($query->toSql(), $query->getBindings());
 
-        // Both key columns, not only the index's name: a prefix-only search would read every mention of the viewer.
+        // The search key, not only the index's name: on SQLite a member_id-only prefix would read every mention of the viewer.
         $this->assertMatchesRegularExpression(
             DB::getDriverName() === 'sqlite'
                 ? '/group_message_mentions USING (COVERING )?INDEX group_message_mentions_member_id_group_message_id_index \(member_id=\? AND group_message_id=\?\)/'
