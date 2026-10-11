@@ -93,9 +93,11 @@ class ClassicThemeShellTest extends TestCase
 
         $html = (string) $this->actingAs($owner)->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('/<div class="dparts diaryDetailBox" id="diary_show">\s*<div class="well">/', $html);
+        // op_include_form / op_include_line frames take the theme's .well; the detail box and the comment list,
+        // which OpenPNE 3's showSuccess.php and _list.php wrote by hand, keep .parts as they did there.
+        $this->assertMatchesRegularExpression('/<div class="dparts form" id="formDiaryComment">\s*<div class="well">/', $html);
         $this->assertStringContainsString('<div class="well line" id="lineLinkToDiaryMemberList">', $html);
-        $this->assertStringNotContainsString('<div class="parts">', $html);
+        $this->assertMatchesRegularExpression('/<div class="dparts diaryDetailBox" id="diary_show">\s*<div class="parts">/', $html);
 
         $box = Blade::render('<x-classic.parts id="information_9" name="informationBox"><div class="body sortHandle">text</div></x-classic.parts>');
         $this->assertMatchesRegularExpression('/<div class="well informationBox" id="information_9">\s*<div>Information<\/div>\s*<div class="body sortHandle">/', $box);

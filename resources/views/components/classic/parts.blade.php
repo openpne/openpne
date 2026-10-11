@@ -5,10 +5,11 @@
      table) stays with the caller, as it did with OpenPNE 3's per-kind body partial: .body is not
      universal (listBox / alertBox put a table under .parts; form puts form > table there). Under a
      theme the plugin's own _partsLayout.php swaps .parts for .well and its information box partial
-     opens with an "Information" label (docs/internals/classic-compatibility.md, "Themes"). --}}
-@props(['id' => null, 'name' => null, 'single' => null, 'title' => null])
+     opens with an "Information" label; a frame OpenPNE 3's template wrote as literal markup never
+     went through that partial, so `hand-written` keeps .parts (docs/internals/classic-compatibility.md, "Themes"). --}}
+@props(['id' => null, 'name' => null, 'single' => null, 'title' => null, 'handWritten' => false])
 @php($single ??= in_array($name, ['informationBox', 'line', 'memberImageBox', 'searchFormLine'], true))
-@php($frame = classic_frame_inner_class())
+@php($frame = $handWritten ? 'parts' : classic_frame_inner_class())
 @php($outerClass = ($single ? $frame : 'dparts').($name ? ' '.$name : ''))
 @if ($single)
     <div class="{{ $outerClass }}"@if ($id) id="{{ $id }}"@endif>

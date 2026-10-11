@@ -76,7 +76,7 @@
     @endif
 
     @if ($thread->total > 0)
-        <x-classic.parts id="communityEvent_comment_list" name="commentList" :title="__('Comments')">
+        <x-classic.parts id="communityEvent_comment_list" name="commentList" :hand-written="true" :title="__('Comments')">
             {{-- Reversible pager (fixed size 20), order toggle. --}}
             @if ($thread->hasPages())
                 <div class="pagerRelative">
@@ -138,7 +138,7 @@
              lone .parts.form, not the other way round, and the box carries no id. --}}
         <form method="POST" action="{{ route('group.events.comment.store', $event) }}" enctype="multipart/form-data">
             @csrf
-            <x-classic.parts id="communityEvent_comment_form" name="form" :single="true" :title="__('Post a new event comment')">
+            <x-classic.parts id="communityEvent_comment_form" name="form" :hand-written="true" :single="true" :title="__('Post a new event comment')">
                 <x-classic.required-notice />
                 <table>
                     <tr>

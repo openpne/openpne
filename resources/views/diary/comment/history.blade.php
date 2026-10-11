@@ -12,7 +12,7 @@
         {{-- historySuccess.php: one recentList (no id on its frame), the pager above and below,
              one dl per diary — the last comment's datetime in the dt, the diary link with its
              comment count and author in the dd (op_diary_link_to_show withName, no camera). --}}
-        <x-classic.parts name="recentList" :title="__('%Diary% Comment History')">
+        <x-classic.parts name="recentList" :hand-written="true" :title="__('%Diary% Comment History')">
             <x-classic.pager :paginator="$diaries" />
             @foreach ($diaries as $diary)
                 <dl>

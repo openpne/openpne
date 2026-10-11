@@ -7,7 +7,7 @@
 @endsection
 
 @section('content')
-    <x-classic.parts id="diary_show" name="diaryDetailBox">
+    <x-classic.parts id="diary_show" name="diaryDetailBox" :hand-written="true">
         {{-- OpenPNE 3 showSuccess.php heads the box with the author, not the entry title (that sits
              in the dd), and keeps the diary's effective audience beside it in the .public hook. --}}
         <x-slot:heading>
@@ -56,7 +56,7 @@
     </x-classic.parts>
 
     @if ($thread->total > 0)
-        <x-classic.parts id="diary_comment_list" name="commentList" :title="__('Comments')">
+        <x-classic.parts id="diary_comment_list" name="commentList" :hand-written="true" :title="__('Comments')">
             @if ($thread->offersSizeSwitch())
                 <div class="pagerRelative">
                     @foreach ($thread->otherSizes() as $n)

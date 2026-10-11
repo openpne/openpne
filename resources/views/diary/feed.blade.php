@@ -37,7 +37,7 @@
         {{-- listFriendSuccess.php renders the recentList skin: one dl per entry, datetime in the dt
              and op_diary_link_to_show in the dd. Neither the author photo nor the body excerpt the
              all-member feed carries appears here. --}}
-        <x-classic.parts id="diary_feed" name="recentList" :title="$title">
+        <x-classic.parts id="diary_feed" name="recentList" :hand-written="true" :title="$title">
             @include('diary._feed-pager')
             @foreach ($diaries as $entry)
                 <dl>
@@ -55,7 +55,7 @@
              datetime with the entry link. Kept hand-written here for the same reason — folding these
              differences into <x-classic.search-result-list> would parameterise the shared partial for
              a single caller. --}}
-        <x-classic.parts id="diary_feed" name="searchResultList" :title="$title">
+        <x-classic.parts id="diary_feed" name="searchResultList" :hand-written="true" :title="$title">
             @include('diary._feed-pager')
             <div class="block">
                 @foreach ($diaries as $entry)
