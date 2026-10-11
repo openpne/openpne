@@ -118,11 +118,11 @@ search whose hits are sparse or absent walks the whole axis index looking for th
 than the table scan it replaced (measured on MySQL 8.4 at 200k diaries: the feed 134 ms → 1.5 ms, a
 six-hit search 0.23 s → 0.35 s). The feed is every member's page; the sparse search is the price.
 
-A window query that groups its rows joins any other count per group rather than correlating it per
-row: MySQL evaluates a correlated projection before GROUP BY, once for every row the range scan
-returns, so the talk candidates' week-long window took 850 ms on its index with the reaction count
-correlated per message and 47 ms with it joined per room. The story candidates rank single rows and
-keep their correlated counts.
+A window query that groups its rows joins any other count per room rather than correlating it per
+row: when MySQL sorts the range scan's rows for GROUP BY it evaluates a correlated projection once
+for every row the scan returns, so the talk candidates' week-long window took 850 ms on its index
+with the reaction count correlated per message and 47 ms with it joined per room. The story
+candidates rank single rows and keep their correlated counts.
 The `id` suffix is implied on both engines — InnoDB stores the primary key at the end of every
 secondary index and SQLite stores the rowid — but writing it keeps the axis legible in the schema. A
 UUID-keyed table is the exception: `notifications` orders by its UUID after `created_at`, which

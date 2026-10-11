@@ -30,9 +30,9 @@ final class TalkBurstCandidates
     /** @return Collection<int, PlannedItem> */
     public function __invoke(HomeIssueWindow $window, int $limit): Collection
     {
-        // One row per room rather than a subquery correlated per message: MySQL evaluates a correlated
-        // projection before GROUP BY, once for every message in the window (docs/internals/ordering.md,
-        // "One index per axis").
+        // One row per room rather than a subquery correlated per message: when MySQL sorts the range
+        // scan's rows for GROUP BY, a correlated projection runs once per message in the window
+        // (docs/internals/ordering.md, "One index per axis").
         $reactions = DB::table('reactions')
             ->join('group_messages as reacted_messages', 'reacted_messages.id', '=', 'reactions.reactable_id')
             ->where('reactions.reactable_type', (new GroupMessage)->getMorphClass())

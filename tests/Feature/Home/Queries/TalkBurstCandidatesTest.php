@@ -119,7 +119,8 @@ class TalkBurstCandidatesTest extends TestCase
         $this->said($quietEarly, $member, $window->end->subHours(5));
         $wordy = Group::factory()->create();
         $this->said($wordy, $member, $window->end->subHours(8));
-        $this->said($wordy, $member, $window->end->subHours(7));
+        // Reacted to as well, so each room's count has to be its own and not the site's.
+        $this->reacted($this->said($wordy, $member, $window->end->subHours(7)), Member::factory()->create());
         $liked = Group::factory()->create();
         $once = $this->said($liked, $member, $window->end->subHours(9));
         foreach (Member::factory()->count(3)->create() as $reader) {
@@ -129,5 +130,6 @@ class TalkBurstCandidatesTest extends TestCase
         $items = app(TalkBurstCandidates::class)($window, 3);
 
         $this->assertSame([$liked->getKey(), $wordy->getKey(), $quietLate->getKey()], $this->ids($items));
+        $this->assertSame([3, 1, 0], $items->map(fn (PlannedItem $item): int => $item->stats['reactions'])->all());
     }
 }
