@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { inAppHref, isPlainClick } from './link-target.ts';
+import { inAppHref, isBytesHref, isPlainClick } from './link-target.ts';
 
 // Mirrors tests/Unit/Support/LinkTargetTest.php for the host rule; the server's refusals are its own.
 
@@ -52,4 +52,14 @@ test('what the server refuses to read is read here as the browser will land: on 
     assert.equal(inAppHref('https://sns.example.test\\evil.example/', 'sns.example.test'), '/evil.example/');
     assert.equal(inAppHref('https://user:pw@sns.example.test/x', 'sns.example.test'), '/x');
     assert.equal(inAppHref('https://evil.example\\@sns.example.test/', 'sns.example.test'), null);
+});
+
+test('a path under a segment that serves bytes is not a page, judged by its first segment alone', () => {
+    for (const path of ['/file/abc.pdf', '/file/public/x.png', '/cache/img/jpg/w120_h120/abc.jpg', '/linkCard/diary/1/img/jpg/w_h/x.jpg', '/banner/image/x.png', '/app-icon/t/192.png']) {
+        assert.equal(isBytesHref(path), true, path);
+    }
+    assert.equal(isBytesHref('/file?x=1'), true);
+    for (const path of ['/diary/1', '/files/1', '/member/1/file', '/', '/cache-list', '']) {
+        assert.equal(isBytesHref(path), false, path);
+    }
 });

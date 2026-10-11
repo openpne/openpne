@@ -75,6 +75,18 @@ test('a page of ours that answers without an Inertia page is loaded outright', (
     vi.unstubAllGlobals();
 });
 
+test('a file of ours is loaded outright without the router downloading it first', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, host: 'sns.example.test', assign });
+    render(<BodyLink href="https://sns.example.test/file/abc.pdf">an attachment</BodyLink>);
+
+    fireEvent.click(screen.getByRole('link'));
+
+    expect(visit).not.toHaveBeenCalled();
+    expect(assign).toHaveBeenCalledWith('/file/abc.pdf');
+    vi.unstubAllGlobals();
+});
+
 test("an Inertia error page is the router's to show, not a reason to reload", () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { ...window.location, host: 'sns.example.test', assign });
