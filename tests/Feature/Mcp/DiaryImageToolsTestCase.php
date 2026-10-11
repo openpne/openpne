@@ -85,7 +85,6 @@ abstract class DiaryImageToolsTestCase extends McpTestCase
         return $file;
     }
 
-    /** The attachment row's id, which the answer reports beside the number; an entry's row or a comment's. */
     protected function attachmentId(File $file): int
     {
         return (int) (DiaryImage::query()->where('file_id', $file->getKey())->value('id')

@@ -70,8 +70,9 @@ class ReadTalkMessageImagesTool extends TalkTool
     }
 
     /**
-     * A named slot or id holding no picture is refused rather than answered empty, so the numbers
-     * cannot be walked to count what a message carries; with neither named those slots are passed over.
+     * A named slot or id with no picture to draw is refused rather than answered empty, so the
+     * numbers cannot be walked to count what a message carries; a row that is not a picture is passed
+     * over either way, named or not.
      *
      * @return Response|list<array{0: int, 1: File, 2: int}>
      */
@@ -97,10 +98,6 @@ class ReadTalkMessageImagesTool extends TalkTool
             }
 
             if ($file === null || $file->imageFormat() === null) {
-                if ($named) {
-                    return $this->refused();
-                }
-
                 continue;
             }
 
@@ -123,7 +120,7 @@ class ReadTalkMessageImagesTool extends TalkTool
             'size' => $schema->string()->enum(self::SIZES)->default('thumbnail')
                 ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the full-size re-encode the site keeps of the upload (never the uploaded bytes themselves) — ask for it only when the detail decides something.'),
             'number' => $schema->integer()->min(1)
-                ->description('The pictures in one slot of the message, numbered from 1 in the order they were attached; a migrated message can hold two in one slot, which the answer tells apart by id. Omit it for every picture on the message, which is also the way to learn the numbers and ids.'),
+                ->description('The pictures in one slot of the message, numbered from 1 in the order they were attached; nothing keeps a slot to one picture, and the answer tells two apart by id. Omit it for every picture on the message, which is also the way to learn the numbers and ids.'),
             'image_id' => $schema->integer()->min(1)
                 ->description('One picture exactly, by the id the answer reports beside its number.'),
         ];

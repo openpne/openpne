@@ -66,7 +66,6 @@ class TalkImageToolTest extends McpTestCase
         return $file;
     }
 
-    /** The attachment row's id, which the answer reports beside the slot number. */
     private function slotId(File $file): int
     {
         return (int) GroupMessageImage::query()->where('file_id', $file->getKey())->value('id');
@@ -201,7 +200,7 @@ class TalkImageToolTest extends McpTestCase
 
     public function test_two_pictures_in_one_slot_are_told_apart_by_id_and_image_id_names_one(): void
     {
-        // A migrated message can carry two rows in one slot: (message, number) is not unique.
+        // Nothing in the schema keeps (message, number) unique.
         $group = $this->group();
         $member = $this->memberOf($group);
         $message = $this->say($group, $member, 'a doubled slot');
@@ -234,6 +233,26 @@ class TalkImageToolTest extends McpTestCase
         $this->read([...$where, 'image_id' => $this->slotId($elsewhere)])
             ->assertHasErrors(['No such'])
             ->assertDontSee($this->wire($this->original($elsewhere)));
+    }
+
+    public function test_a_named_slot_passes_over_a_row_that_is_not_a_picture_and_answers_with_the_one_that_is(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $message = $this->say($group, $member, 'a mixed slot');
+        $this->link($message, 1, File::factory()->create([
+            'type' => 'application/pdf',
+            'related_entity_type' => 'groupMessage',
+            'related_entity_id' => $message->getKey(),
+        ]));
+        $picture = $this->attach($message, 1, 800, 400);
+
+        $this->acting($member);
+
+        $this->read(['group_id' => $group->getKey(), 'message_id' => $message->getKey(), 'size' => 'original', 'number' => 1])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($picture)))
+            ->assertStructuredContent(fn ($json) => $json->count('images', 1)->where('images.0.id', $this->slotId($picture))->etc());
     }
 
     public function test_a_message_without_pictures_answers_with_none_rather_than_a_refusal(): void

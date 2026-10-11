@@ -165,10 +165,11 @@ a re-encode that can be larger than the stored bytes.
 
 **A slot holding no picture is refused when `number` names it, and passed over when it does not** —
 the refusal rule above, applied inside a message: being told "that one is empty" would let the slots
-be walked to count what a message carries. A slot is not a picture: `(message, number)` is not
-unique, since a migrated message may carry two rows in one slot, so every picture is reported with
-the `id` of its attachment row as well, and `image_id` names one exactly where `number` names the
-slot. Authorization is the message's own, since
+be walked to count what a message carries. A slot is not a picture: nothing in the schema keeps
+`(message, number)` unique, so every picture is reported with the `id` of its attachment row as
+well, and `image_id` names one exactly where `number` names the slot. A row in a named slot that is
+not a picture is passed over as it is in an unnamed answer; only a slot with nothing left to draw
+refuses. Authorization is the message's own, since
 [`FilePolicy`](../../app/Policies/FilePolicy.php) resolves a talk image through the same
 `GroupTalkAccess::canView` the room was resolved through; the tool asks it per file anyway, as a belt.
 
@@ -222,7 +223,8 @@ a `number` holding no picture refused when named and passed over when not — th
 differs: on an entry it is the stored slot; on a comment, whose images have no slot column (OpenPNE 3
 has none), it is the position in that comment's own pictures — counted over every row before any of
 them is judged, and never a row id. The `id` reported beside it is the attachment row, which
-`image_id` names exactly on either. `comment_id` is looked up **within** the entry the caller has
+`image_id` names exactly within the same scope: an entry picture's id with no `comment_id`, a
+comment picture's with the `comment_id` that reported it. `comment_id` is looked up **within** the entry the caller has
 just passed `ShowDiary` on, so a comment of another entry refuses exactly as one that is not there.
 
 **Pictures are posted as base64**, this wire carrying JSON where the compose forms carry files, and

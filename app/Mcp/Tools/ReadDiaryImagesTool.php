@@ -101,8 +101,9 @@ class ReadDiaryImagesTool extends DiaryTool
     }
 
     /**
-     * A named number or id holding no picture is refused rather than answered empty, so the numbers
-     * cannot be walked to count what an entry carries; with neither named those rows are passed over.
+     * A named number or id with no picture to draw is refused rather than answered empty, so the
+     * numbers cannot be walked to count what an entry carries; a row that is not a picture is passed
+     * over either way, named or not.
      *
      * @param  list<array{0: int, 1: File|null, 2: int}>  $rows
      * @return Response|list<array{0: int, 1: File, 2: int}>
@@ -124,10 +125,6 @@ class ReadDiaryImagesTool extends DiaryTool
             }
 
             if ($file === null || $file->imageFormat() === null) {
-                if ($named) {
-                    return $this->refused();
-                }
-
                 continue;
             }
 
@@ -150,9 +147,9 @@ class ReadDiaryImagesTool extends DiaryTool
             'size' => $schema->string()->enum(self::SIZES)->default('thumbnail')
                 ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the full-size re-encode the site keeps of the upload (never the uploaded bytes themselves) — ask for it only when the detail decides something.'),
             'number' => $schema->integer()->min(1)
-                ->description('The pictures in one slot rather than all of them. On the entry it is the slot the picture was attached in, which a migrated entry can hold two in; on a comment, whose pictures have no slots, it is their position in the comment, counting from 1. Omit it for every picture, which is also the way to learn the numbers and ids.'),
+                ->description('The pictures in one slot rather than all of them. On the entry it is the slot the picture was attached in, which nothing keeps to one picture; on a comment, whose pictures have no slots, it is their position in the comment, counting from 1. Omit it for every picture, which is also the way to learn the numbers and ids.'),
             'image_id' => $schema->integer()->min(1)
-                ->description('One picture exactly, by the id the answer reports beside its number.'),
+                ->description('One picture exactly, by the id the answer reports beside its number; an id is an entry picture\'s or a comment picture\'s as the answer that reported it was, so pass the same comment_id with it.'),
         ];
     }
 }

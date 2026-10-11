@@ -43,7 +43,7 @@ trait AnswersWithImages
     }
 
     /**
-     * @param  list<array{0: int, 1: File, 2: int}>  $targets  the pictures to answer with, the numbers they are known by and the attachment ids that name each exactly
+     * @param  list<array{0: int, 1: File, 2: int}>  $targets  number, file and attachment id of each picture to answer with
      */
     protected function answerWithImages(ImageCache $cache, ImageTransform $transform, array $targets): Response|ResponseFactory
     {
@@ -114,7 +114,7 @@ trait AnswersWithImages
     {
         return Response::error(
             'These pictures come to more than the '.intdiv(self::MAX_BYTES, 1024 * 1024)
-            .' MB one call may return. Ask for a single one with image_id or number, or for size=thumbnail.',
+            .' MB one call may return. Ask for size=thumbnail, which also reports the ids, or for a single one with image_id.',
         );
     }
 }

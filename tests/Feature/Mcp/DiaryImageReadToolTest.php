@@ -45,7 +45,7 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
 
     public function test_two_pictures_in_one_slot_are_told_apart_by_id_and_image_id_names_one(): void
     {
-        // A migrated entry can carry two rows in one slot: (entry, number) is not unique.
+        // Nothing in the schema keeps (entry, number) unique.
         $author = Member::factory()->create();
         $diary = $this->diary($author);
         $first = $this->attach($diary, 1, 800, 400);
@@ -75,6 +75,25 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
         $this->read([...$where, 'image_id' => $this->attachmentId($elsewhere)])
             ->assertHasErrors(['No such diary'])
             ->assertDontSee($this->wire($this->original($elsewhere)));
+    }
+
+    public function test_a_named_slot_passes_over_a_row_that_is_not_a_picture_and_answers_with_the_one_that_is(): void
+    {
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        DiaryImage::factory()->create([
+            'diary_id' => $diary->getKey(),
+            'file_id' => $this->notAPicture('diary', (int) $diary->getKey())->getKey(),
+            'number' => 1,
+        ]);
+        $picture = $this->attach($diary, 1, 800, 400);
+
+        $this->acting(Member::factory()->create());
+
+        $this->read(['diary_id' => $diary->getKey(), 'size' => 'original', 'number' => 1])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($picture)))
+            ->assertStructuredContent(fn ($json) => $json->count('images', 1)->where('images.0.id', $this->attachmentId($picture))->etc());
     }
 
     public function test_the_original_size_answers_with_the_canonical(): void
