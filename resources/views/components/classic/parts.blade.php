@@ -1,12 +1,6 @@
-{{-- OpenPNE 3 `_partsLayout.php`: the frame every Classic parts box shares. `name` is the kind
-     class skins target (e.g. nineTable, informationBox); a `single` kind drops the inner div.parts,
-     and the kinds whose OpenPNE 3 body partial forced it default to true. `id` is the kind's DOM id
-     (custom-CSS seam); null when the kind has none. The body structure (.body, .block, a bare
-     table) stays with the caller, as it did with OpenPNE 3's per-kind body partial: .body is not
-     universal (listBox / alertBox put a table under .parts; form puts form > table there). Under a
-     theme the plugin's own _partsLayout.php swaps .parts for .well and its information box partial
-     opens with an "Information" label; a frame OpenPNE 3's template wrote as literal markup never
-     went through that partial, so `hand-written` keeps .parts (docs/internals/classic-compatibility.md, "Themes"). --}}
+{{-- The body structure (.body, .block, a bare table) stays with the caller, as it did with OpenPNE 3's
+     per-kind body partial. `hand-written` marks a frame OpenPNE 3 wrote as literal markup, which keeps
+     .parts under a theme where this frame turns into .well (docs/internals/classic-compatibility.md, "Themes"). --}}
 @props(['id' => null, 'name' => null, 'single' => null, 'title' => null, 'handWritten' => false])
 @php($single ??= in_array($name, ['informationBox', 'line', 'memberImageBox', 'searchFormLine'], true))
 @php($frame = $handWritten ? 'parts' : classic_frame_inner_class())

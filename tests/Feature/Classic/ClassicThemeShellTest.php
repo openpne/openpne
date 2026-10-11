@@ -12,11 +12,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
 use Tests\TestCase;
 
-/**
- * With a theme chosen the shell takes the theme plugin's template overrides: a navbar header holding
- * the local nav and one dropdown global nav, .well frames, the information label, the footer's
- * credit span.
- */
 class ClassicThemeShellTest extends TestCase
 {
     use RefreshDatabase;

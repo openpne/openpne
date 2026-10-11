@@ -43,7 +43,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-sakura'", $this->out);
     }
 
-    public function test_a_missing_or_unknown_theme_used_falls_to_the_first_package_as_openpne3_substituted(): void
+    public function test_a_missing_theme_used_falls_to_the_first_package_as_openpne3_substituted(): void
     {
         $this->seedPlugin('opSkinBasicPlugin', false);
 
@@ -51,10 +51,38 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertSame('bamboo', $this->stored());
 
         UpgradeState::query()->delete();
-        $this->seedConfig('Theme_used', 'no-such-theme');
+        $this->seedConfig('Theme_used', '');
 
         $this->assertTrue($this->runPass());
         $this->assertSame('bamboo', $this->stored());
+    }
+
+    public function test_a_theme_used_not_vendored_here_is_kept_and_reported_and_fails_verify_until_copied_in(): void
+    {
+        $this->seedPlugin('opSkinBasicPlugin', false);
+        $this->seedConfig('Theme_used', 'mysite');
+
+        $this->assertTrue($this->runPass());
+
+        $this->assertSame('mysite', $this->stored());
+        $this->assertContains('WARN '.ClassicThemeSelection::missingPackageMessage('mysite'), $this->out);
+
+        $verdicts = [];
+        (new ClassicThemeCheck)->verify(['sns_settings'], function (string $name, bool $pass) use (&$verdicts): void {
+            $verdicts[] = $pass;
+        });
+        $this->assertSame([false], $verdicts);
+    }
+
+    public function test_a_third_party_skin_enabled_beside_the_theme_plugin_is_the_default_skin_as_openpne3_counted(): void
+    {
+        $this->seedPlugin('opSkinBasicPlugin', false);
+        $this->seedPlugin('opSkinOtherPlugin', true);
+        $this->seedConfig('Theme_used', 'cerulean');
+
+        $this->assertTrue($this->runPass());
+
+        $this->assertSame('', $this->stored());
     }
 
     public function test_a_disabled_theme_plugin_is_the_default_skin_whatever_theme_used_says(): void

@@ -247,8 +247,9 @@ trigger of three icons, the panel as an `alert`) and the items bare of their `ul
 nav as one `li#globalNav.dropdown` under `div#globalNav` — the duplicate id is the theme's own, its
 stylesheet addresses `li#globalNav` — captioning the profile item with the viewer's name, then
 `#topBanner`; the Contents-level `#localNav` is gone; `x-classic.parts` writes `.well` where
-`.parts` was (the information box opening with the `Information` label), while the hand-written
-frames OpenPNE 3 itself wrote as literal markup keep `.parts`, as they did there. The dropdown's
+`.parts` was (the information box opening with the `Information` label), while the frames marked
+`hand-written` keep `.parts`: those OpenPNE 3 itself wrote as literal markup, plus the OpenPNE 4-only
+pages (`timeline/index`, `timeline/tag`, the group talk box) drawn in their image. The dropdown's
 `bootstrap-dropdown.js` is not loaded: [`classic-theme-nav.js`](../../public/js/classic-theme-nav.js)
 toggles it on a plain click and closes it on Escape or a click elsewhere, and a `noscript` rule
 leaves the menu open, where OpenPNE 3's stayed shut, since Settings, Invite and Log out live only

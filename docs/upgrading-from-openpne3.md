@@ -254,9 +254,12 @@ change from a problem when you go through it.
   to set, or tells you the OpenPNE 3 value could not be read as a size. A copied setting whose
   OpenPNE 3 row holds NULL (the admin screens wrote an empty string, so only a hand-edited row does)
   is left out where OpenPNE 3 itself read its default, and the report names it. The Classic theme is
-  not a copied row either: a pass after the walk reads which skin plugin OpenPNE 3 had enabled, and
-  only when the theme plugin was the one enabled skin does `Theme_used` (or, absent, the first theme
-  package) become `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*.
+  not a copied row either: a pass after the walk reads which skin plugins OpenPNE 3 had enabled (from
+  its `plugin` table; an activation written in `data/config/plugin.yml` is not seen), and only when the
+  theme plugin was the one enabled skin does `Theme_used` (or, absent, the first theme package) become
+  `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*. A theme of your own, one
+  not among the vendored packages, is kept by name with a warning and shows the default skin until you
+  copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then).
 - **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.

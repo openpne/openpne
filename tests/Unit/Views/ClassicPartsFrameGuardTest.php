@@ -53,6 +53,33 @@ class ClassicPartsFrameGuardTest extends TestCase
         ], $this->viewsContaining('class="parts '));
     }
 
+    public function test_frames_keeping_parts_under_a_theme_are_a_locked_set(): void
+    {
+        // Each transcribes an OpenPNE 3 template that wrote the frame as literal markup, which the
+        // theme plugin's _partsLayout.php never touched; dropping the mark turns it into .well.
+        $this->assertSame([
+            'components/diary/sidemenu',
+            'diary/comment/delete',
+            'diary/comment/history',
+            'diary/delete',
+            'diary/edit',
+            'diary/feed',
+            'diary/list',
+            'diary/show',
+            'group-event/index',
+            'group-event/show',
+            'group-topic/index',
+            'group-topic/show',
+            'group/manage',
+            'group/show',
+            'message/list',
+            'timeline/index',
+            'timeline/member',
+            'timeline/show',
+            'timeline/tag',
+        ], $this->viewsContaining(':hand-written="true"'));
+    }
+
     /** @return list<string> */
     private function viewsContaining(string $needle): array
     {

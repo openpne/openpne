@@ -54,8 +54,6 @@
 {!! classic_html_slot('top') !!}
     <div id="Container">
         @if ($classicTheme !== null)
-        {{-- The theme plugin's _layout.php: a Bootstrap navbar, inverted on the friend nav set, with the
-             local nav inside it (docs/internals/classic-compatibility.md, "Themes"). --}}
         <div id="Header" class="navbar{{ classic_local_nav_type() === 'friend' ? ' navbar-inverse' : '' }}">
             <div id="HeaderContainer" class="navbar-inner">
                 <div class="container">

@@ -7,10 +7,8 @@
     $navItems = app(\App\Services\NavigationService::class)->visibleEntries($navType, app()->getLocale());
 @endphp
 @if (classic_theme() !== null)
-    {{-- The theme plugin's _globalNav.php: the whole set folded into one dropdown, the li carrying
-         the same id as its container (its stylesheet addresses `li#globalNav`), the viewer's own
-         name as the profile item's caption. Its bootstrap-dropdown.js is not loaded; the toggle is
-         classic-theme-nav.js, and without script the menu stands open. --}}
+    {{-- The li repeats its container's id because the theme stylesheets address `li#globalNav`;
+         without script the menu stands open, since Settings, Invite and Log out live only there. --}}
     @once
         <style>
             :where(#globalNav .dropdown-menu li form) { margin: 0; }

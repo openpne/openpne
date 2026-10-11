@@ -25,6 +25,11 @@ final class ClassicThemeSelection
 
     private const BASIC_PLUGIN = 'opSkinBasicPlugin';
 
+    public static function missingPackageMessage(string $theme): string
+    {
+        return self::KEY.": Theme_used '{$theme}' is not under public/opSkinThemePlugin, so the default skin shows until the package is copied there (verify-upgrade fails until then); or choose another on Appearance (Classic) > Theme.";
+    }
+
     public function plan(Closure $out): void
     {
         $out('PLAN would set classic_theme from the OpenPNE 3 skin plugins and Theme_used.');
@@ -79,24 +84,28 @@ final class ClassicThemeSelection
         }
 
         $out('DONE '.self::KEY.': classic_theme = '.($theme === '' ? 'the default skin' : "'{$theme}'"));
+        if ($theme !== '' && ClassicThemes::find($theme) === null) {
+            $out('WARN '.self::missingPackageMessage($theme));
+        }
 
         return true;
     }
 
     /**
-     * OpenPNE 3's own rule read off its tables: a skin plugin with no `plugin` row counts as enabled,
-     * only a theme plugin that is the one enabled skin dressed the site, and then `Theme_used` named
-     * the package or the first one in directory order stood in.
+     * OpenPNE 3's own rule read off its tables: the two bundled skin plugins count as enabled without
+     * a `plugin` row, the theme plugin dressed the site only as the one enabled `opSkin*` plugin, and
+     * then a `Theme_used` row named the package (kept as written, even one not vendored here) or the
+     * first package under public/opSkinThemePlugin stood in.
      */
     public function select(string $sourcePrefix, ?string $sourceDatabase): string
     {
         $enabled = [self::THEME_PLUGIN => true, self::BASIC_PLUGIN => true];
         $plugin = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'plugin');
-        foreach (DB::select('select `name`, `is_enabled` from '.$plugin.' where `name` in (?, ?)', [self::THEME_PLUGIN, self::BASIC_PLUGIN]) as $row) {
+        foreach (DB::select('select `name`, `is_enabled` from '.$plugin.' where `name` like ?', ['opSkin%']) as $row) {
             $enabled[$row->name] = (bool) $row->is_enabled;
         }
 
-        if (! $enabled[self::THEME_PLUGIN] || $enabled[self::BASIC_PLUGIN]) {
+        if (array_keys(array_filter($enabled)) !== [self::THEME_PLUGIN]) {
             return '';
         }
 
@@ -104,7 +113,7 @@ final class ClassicThemeSelection
         $rows = DB::select('select `value` from '.$config.' where `name` = ? limit 1', ['Theme_used']);
         $used = $rows === [] ? null : $rows[0]->value;
 
-        if (is_string($used) && ClassicThemes::find($used) !== null) {
+        if (is_string($used) && $used !== '') {
             return $used;
         }
 

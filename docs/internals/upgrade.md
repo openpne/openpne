@@ -136,7 +136,9 @@ unknown-name scan, the member-reference counts and the `UncopiedSettingsNotice` 
 settings step leaves out because OpenPNE 3 read its default there —
 `SnsSettingKey::op3NullValueIsKept()` names the keys it copies as empty instead) read columns the
 structural check guards, so they run only on a clean structural verdict; the notice also runs only
-when a step has `sns_config` as its source table.
+when a step has `sns_config` as its source table. A table or column only a post-walk pass reads
+(`activity_data`'s template columns; `plugin` beside `sns_config`) is required by the same check, so
+the pass cannot fail after the walk has committed.
 
 `ActivityPreflight` counts what the activity routing ("Activity threads" above) drops, re-parents or
 refuses, one WARN per class with the first ids, so no disposition is silent; a timeline thread starter whose
@@ -193,7 +195,7 @@ checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_st
 | `SitePolicyMarkdownTransform` | Markdown rewrite of raw HTML | not idempotent (escapes double); the rewrite and its COMPLETED checkpoint commit in one transaction |
 | `TalkReadCursorBackfill` | `GroupMemberUpgrade` runs before the messages exist, so the walk leaves the read cursor at the schema default, a wall-clock stamp; the pass writes each group's latest `(created_at, id)` tuple, the one `TalkReadCursor::snapshot()` picks, in one UPDATE once they have landed | a function of the migrated rows, so a rescan writes the same tuple; the UPDATE and the COMPLETED checkpoint commit in one transaction |
 | `BoardBumpBackfill` | `GroupTopicUpgrade` / `GroupEventUpgrade` run before the comments exist, so they write `created_at` as the placeholder; the pass settles each thread's `bumped_at` to `COALESCE(MAX(comments.created_at), created_at)` in one UPDATE per table ([group-boards.md](group-boards.md#the-board-key-is-bumped_at)) | a function of the migrated rows, so a rescan writes the same value; the UPDATE and the COMPLETED checkpoint commit in one transaction |
-| `ClassicThemeSelection` | the skin OpenPNE 3 showed is a function of two source tables at once — the `plugin` rows of its two skin plugins (a missing row is an enabled plugin, and only the theme plugin as the one enabled skin dressed the site) and `sns_config.Theme_used`, which a site that never saved the theme page lacks (the first package in directory order stood in) — which no `INSERT ... SELECT` over one of them expresses; writes `sns_settings.classic_theme` ([classic-compatibility.md](classic-compatibility.md#themes)) | a function of the source rows, so a rescan writes the same value; the write and the COMPLETED checkpoint commit in one transaction |
+| `ClassicThemeSelection` | the skin OpenPNE 3 showed is a function of two source tables at once — the `opSkin*` rows of `plugin` (the two bundled skins count as enabled without a row, and only the theme plugin as the one enabled skin dressed the site; an activation written in `plugin.yml` is not visible here) and `sns_config.Theme_used`, which a site that never saved the theme page lacks (the first package under `public/opSkinThemePlugin` stands in) — which no `INSERT ... SELECT` over one of them expresses; writes `sns_settings.classic_theme` ([classic-compatibility.md](classic-compatibility.md#themes)), and a `Theme_used` naming a package not vendored here is written as it was with a WARN, so `ClassicThemeCheck` fails until the package is copied in | a function of the source rows, so a rescan writes the same value; the write and the COMPLETED checkpoint commit in one transaction |
 | `FileBinMigration` move + rewire | `files` must exist for the FK | `information_schema` state (source table presence, FK target) |
 | `surface_mode` stamp | no OpenPNE 3 source column | insert-if-absent, only after full success |
 

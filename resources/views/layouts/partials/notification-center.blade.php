@@ -21,17 +21,9 @@
         : null;
 @endphp
 @if ($ncCounts !== null)
-    @once('classic-notification-center-style')
-        {{-- OpenPNE 3's rows were plain divs it made clickable with script; ours submit, so the
-             button has to stop looking like one. Class selectors, so a site can outrank these with
-             an ordinary more-specific rule. --}}
-        <style>
-            .ncbuttonLink { text-decoration: none; }
-            .notificationCenterRowLink { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-        </style>
-    @endonce
-    {{-- The theme plugin's _header.php makes the center a list item of the navbar's local nav: a text
-         trigger of three icons in place of the sprite, and the panel styled as a Bootstrap alert. --}}
+    {{-- OpenPNE 3's rows were plain divs it made clickable with script; ours submit, so the row
+         button has to stop looking like one (class selectors, so a site can outrank them). --}}
+    @include('layouts.partials.notification-center-assets')
     @php($ncThemed = classic_theme() !== null)
     <{{ $ncThemed ? 'li' : 'div' }} id="notificationCenter">
         <a href="{{ route('notifications.index') }}" class="{{ $ncThemed ? 'ncbutton ncbuttonLink' : 'ncbuttonLink' }}" aria-label="{{ __('Notification Center') }}"
@@ -61,7 +53,4 @@
             @endif
         @endforeach
     </{{ $ncThemed ? 'li' : 'div' }}>
-    @once('classic-notification-center-script')
-        <script src="{{ asset('js/classic-notification-center.js') }}" defer></script>
-    @endonce
 @endif

@@ -24,7 +24,7 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
 {
     protected function sourceTables(): array
     {
-        return ['member', 'member_config', 'sns_config', 'admin_user'];
+        return ['member', 'member_config', 'sns_config', 'plugin', 'admin_user'];
     }
 
     protected function setUp(): void
