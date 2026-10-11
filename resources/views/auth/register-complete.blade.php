@@ -8,27 +8,28 @@
     <x-classic.parts id="RegisterForm" name="form" :title="__('Register')">
         <form method="POST" action="{{ route('register.complete', ['token' => $token]) }}">
             @csrf
+            <x-classic.required-notice />
             <table>
                 <tr>
                     <th>{{ __('Mail Address') }}</th>
                     <td>{{ $email }}</td>
                 </tr>
                 <tr>
-                    <th><label for="register_name">{{ __('%nickname%') }}</label></th>
+                    <th><label for="register_name">{{ __('%nickname%') }} <x-classic.required-mark /></label></th>
                     <td>
                         <input type="text" class="input_text" id="register_name" name="name" value="{{ old('name') }}" maxlength="255" autofocus required>
                         @error('name')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="register_password">{{ __('Password') }}</label></th>
+                    <th><label for="register_password">{{ __('Password') }} <x-classic.required-mark /></label></th>
                     <td>
                         <input type="password" class="input_text" id="register_password" name="password" autocomplete="new-password" required>
                         @error('password')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="register_password_confirmation">{{ __('Confirm password') }}</label></th>
+                    <th><label for="register_password_confirmation">{{ __('Confirm password') }} <x-classic.required-mark /></label></th>
                     <td>
                         <input type="password" class="input_text" id="register_password_confirmation" name="password_confirmation" autocomplete="new-password" required>
                     </td>
