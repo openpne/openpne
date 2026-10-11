@@ -65,26 +65,24 @@ test('a modified click on a link to this site is left to the browser', () => {
 test('a page of ours that answers without an Inertia page is loaded outright', () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { ...window.location, host: 'sns.example.test', assign });
-    render(<BodyLink href="https://sns.example.test/img/1.png">a file</BodyLink>);
+    render(<BodyLink href="https://sns.example.test/admin/x">the admin</BodyLink>);
 
     fireEvent.click(screen.getByRole('link'));
     const options = visit.mock.calls[0]?.[1] as { onHttpException: (response: { headers: Record<string, string> }) => boolean | void };
 
-    expect(options.onHttpException({ headers: { 'content-type': 'image/png' } })).toBe(false);
-    expect(assign).toHaveBeenCalledWith('/img/1.png');
+    expect(options.onHttpException({ headers: { 'content-type': 'text/html' } })).toBe(false);
+    expect(assign).toHaveBeenCalledWith('/admin/x');
     vi.unstubAllGlobals();
 });
 
-test('a file of ours is loaded outright without the router downloading it first', () => {
-    const assign = vi.fn();
-    vi.stubGlobal('location', { ...window.location, host: 'sns.example.test', assign });
+test('a file of ours is a plain anchor the browser follows, so the router never downloads it', () => {
     render(<BodyLink href="https://sns.example.test/file/abc.pdf">an attachment</BodyLink>);
+    const link = screen.getByRole('link');
 
-    fireEvent.click(screen.getByRole('link'));
-
+    expect(link.getAttribute('href')).toBe('/file/abc.pdf');
+    expect(link.hasAttribute('target')).toBe(false);
+    expect(clickIsLeftToBrowser(link)).toBe(true);
     expect(visit).not.toHaveBeenCalled();
-    expect(assign).toHaveBeenCalledWith('/file/abc.pdf');
-    vi.unstubAllGlobals();
 });
 
 test("an Inertia error page is the router's to show, not a reason to reload", () => {

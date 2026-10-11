@@ -45,6 +45,13 @@ test('a link the server sent to a new tab is left to the browser', () => {
     expect(visit).not.toHaveBeenCalled();
 });
 
+test('a link to a file of ours inside server-rendered html is left to the browser, not downloaded by the router', () => {
+    render(<RichBody body="" bodyHtml='<p><a href="https://sns.example.test/file/abc.pdf">attached</a></p>' />);
+
+    expect(clickIsLeftToBrowser(screen.getByText('attached'))).toBe(true);
+    expect(visit).not.toHaveBeenCalled();
+});
+
 test('a click beside the links, or a modified click on one, is left to the browser', () => {
     render(<RichBody body="" bodyHtml={html} />);
 

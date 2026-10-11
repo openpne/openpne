@@ -37,26 +37,31 @@ class BytesRouteSegmentsParityTest extends TestCase
     public function test_the_client_lists_exactly_the_segments_the_byte_routes_answer_under(): void
     {
         $expected = [];
+        $pagesUnderListed = [];
+        $listed = $this->clientSegments();
 
         foreach (Route::getRoutes() as $route) {
             $uri = $route->uri();
             if (AdminRealm::matches(Request::create('/'.ltrim(preg_replace('/\{[^}]+\}/', 'x', $uri), '/')))) {
                 continue;
             }
-            $controller = $route->getControllerClass();
-            if ($controller !== null && in_array($controller, self::BYTES_CONTROLLERS, true)) {
-                $expected[] = explode('/', $uri)[0];
+            $segment = explode('/', $uri)[0];
+            $bytes = in_array($route->getControllerClass(), self::BYTES_CONTROLLERS, true);
+            if ($bytes) {
+                $expected[] = $segment;
+            } elseif (in_array($segment, $listed, true)) {
+                $pagesUnderListed[] = $uri;
             }
         }
 
         $expected = array_values(array_unique($expected));
         sort($expected);
+        sort($listed);
 
-        $actual = $this->clientSegments();
-        sort($actual);
-
-        $this->assertSame($expected, $actual,
+        $this->assertSame($expected, $listed,
             'BYTES_SEGMENTS in resources/js/lib/link-target.ts and the byte-serving routes disagree: a segment the client leaves to the browser must answer with bytes, and every byte route needs its segment listed.');
+        $this->assertSame([], $pagesUnderListed,
+            'A route under a listed segment is not a byte route, so a body link to it would reload the page: '.implode(', ', $pagesUnderListed));
     }
 
     /** The string literals of the BYTES_SEGMENTS array. @return list<string> */

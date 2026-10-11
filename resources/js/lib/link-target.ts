@@ -10,9 +10,12 @@
  */
 export const BYTES_SEGMENTS = ['app-icon', 'banner', 'cache', 'file', 'linkCard'] as const;
 
-/** Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find out. */
+/**
+ * Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find
+ * out. One leading slash exactly: a second one would make the path a host for the browser.
+ */
 export function isBytesHref(path: string): boolean {
-    const segment = path.replace(/^\/+/, '').split(/[/?#]/, 1)[0] ?? '';
+    const segment = /^\/([^/?#]+)/.exec(path)?.[1] ?? '';
 
     return (BYTES_SEGMENTS as readonly string[]).includes(segment);
 }

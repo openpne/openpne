@@ -59,7 +59,8 @@ test('a path under a segment that serves bytes is not a page, judged by its firs
         assert.equal(isBytesHref(path), true, path);
     }
     assert.equal(isBytesHref('/file?x=1'), true);
-    for (const path of ['/diary/1', '/files/1', '/member/1/file', '/', '/cache-list', '']) {
+    // A doubled slash is a host to the browser, never a segment of ours.
+    for (const path of ['/diary/1', '/files/1', '/member/1/file', '/', '/cache-list', '', '//file/x', 'file/x']) {
         assert.equal(isBytesHref(path), false, path);
     }
 });

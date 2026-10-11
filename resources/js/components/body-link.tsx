@@ -16,16 +16,10 @@ export const OwnLinksOpen = createContext<'in-app' | 'new-tab'>('in-app');
 
 /**
  * A page of ours that answers without an Inertia page (the admin) is loaded outright, rather than
- * shown in the router's error overlay; an Inertia error page is left to the router. A path served
- * as bytes is loaded outright without asking, since the router would download the file to find out.
+ * shown in the router's error overlay; an Inertia error page is left to the router. A path served as
+ * bytes never comes here: the browser follows it, since the router would download the file to find out.
  */
 export function visitInApp(path: string): void {
-    if (isBytesHref(path)) {
-        window.location.assign(path);
-
-        return;
-    }
-
     router.visit(path, {
         onHttpException: (response) => {
             if (response.headers['x-inertia']) {
@@ -49,6 +43,14 @@ export function BodyLink({ href, className, children }: { href: string; classNam
             <a href={path ?? href} target="_blank" rel={path === null ? EXTERNAL_REL : OWN_TAB_REL} className={className}>
                 {children}
                 <span className="sr-only"> {t('Opens in a new tab')}</span>
+            </a>
+        );
+    }
+
+    if (isBytesHref(path)) {
+        return (
+            <a href={path} className={className}>
+                {children}
             </a>
         );
     }
