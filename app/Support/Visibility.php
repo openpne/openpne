@@ -47,7 +47,7 @@ enum Visibility: int
         };
     }
 
-    /** The inverse of fromOpenPne3PublicFlag(), for the ids a Classic form keeps from OpenPNE 3. */
+    /** The inverse of fromOpenPne3PublicFlag(). */
     public function openPne3PublicFlag(): int
     {
         return match ($this) {

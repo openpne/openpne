@@ -2,11 +2,15 @@
 
 namespace Tests\Feature\Diary\Classic;
 
+use App\Features\Diary\Actions\CreateDiary;
+use App\Features\Diary\Data\DiaryFormData;
 use App\Models\Diary;
+use App\Models\DiaryImage;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /** Locks the new/edit form elements openpne:screen-parity marks Ported, which the inventory leans on. */
@@ -105,7 +109,7 @@ class DiaryFormParityTest extends TestCase
     public function test_the_edit_form_shows_an_occupied_slot_as_its_photo_and_remove_checkbox(): void
     {
         $owner = Member::factory()->create();
-        $diary = app(\App\Features\Diary\Actions\CreateDiary::class)($owner, new \App\Features\Diary\Data\DiaryFormData(title: 'T', body: 'B', visibility: Visibility::Members), [\Illuminate\Http\UploadedFile::fake()->image('i.png', 20, 20)]);
+        $diary = app(CreateDiary::class)($owner, new DiaryFormData(title: 'T', body: 'B', visibility: Visibility::Members), [UploadedFile::fake()->image('i.png', 20, 20)]);
         $image = $diary->images()->with('file')->first();
 
         $response = $this->actingAs($owner)->get("/diary/edit/{$diary->getKey()}");
@@ -121,6 +125,31 @@ class DiaryFormParityTest extends TestCase
             '<input type="file" name="images[]" id="diary_photo_3_photo"',
         ], false);
         $this->assertSame(2, substr_count((string) $response->getContent(), 'name="images[]"'));
+    }
+
+    public function test_an_image_outside_the_slots_or_sharing_one_keeps_a_remove_only_row(): void
+    {
+        // Upgraded diaries keep OpenPNE 3's numbers, which a site could raise above three, and (diary, number) is not unique here.
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        $fifth = DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 5]);
+        [$first, $twin] = [
+            DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]),
+            DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]),
+        ];
+
+        $response = $this->actingAs($owner)->get("/diary/edit/{$diary->getKey()}");
+
+        $response->assertOk();
+        $content = (string) $response->getContent();
+        foreach ([$fifth, $first, $twin] as $image) {
+            $this->assertStringContainsString('name="remove_images[]" value="'.$image->id.'"', $content);
+        }
+        $this->assertSame(3, substr_count($content, 'name="remove_images[]"'));
+        $this->assertSame(2, substr_count($content, 'name="images[]"'));
+        $this->assertSame(1, substr_count($content, 'id="diary_photo_1_photo"'));
+        $response->assertSeeInOrder(['<ul id="diary_photo_3">', '<label>Photo 5</label>'], false);
+        $response->assertSeeInOrder(['<ul id="diary_photo_3">', '<label>Photo 1</label>'], false);
     }
 
     public function test_the_comment_form_names_its_box_and_photo_rows_as_openpne3_did(): void

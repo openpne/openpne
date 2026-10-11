@@ -30,7 +30,6 @@
                 <tr>
                     <th><label>{{ __('Visibility') }} <x-classic.required-mark /></label></th>
                     <td>
-                        {{-- OpenPNE 3 public_flag radios under their public_flag ids; the stored default pre-selects (clamped to the selectable audiences). --}}
                         <ul class="radio_list">
                             @foreach ($visibilityOptions as $option)
                                 <li><input type="radio" name="visibility" value="{{ $option->value }}" id="diary_public_flag_{{ $option->openPne3PublicFlag() }}" class="input_radio" @checked(old('visibility', $defaultVisibility->value) == $option->value)> <label for="diary_public_flag_{{ $option->openPne3PublicFlag() }}">{{ __($option->label()) }}</label></li>
