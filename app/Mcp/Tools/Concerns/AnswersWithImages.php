@@ -43,7 +43,7 @@ trait AnswersWithImages
     }
 
     /**
-     * @param  list<array{0: int, 1: File}>  $targets  the pictures to answer with, and the numbers they are known by
+     * @param  list<array{0: int, 1: File, 2: int}>  $targets  number, file and attachment id of each picture to answer with
      */
     protected function answerWithImages(ImageCache $cache, ImageTransform $transform, array $targets): Response|ResponseFactory
     {
@@ -58,7 +58,7 @@ trait AnswersWithImages
         $described = [];
         $read = 0;
 
-        foreach ($targets as [$number, $file]) {
+        foreach ($targets as [$number, $file, $id]) {
             // byte_size can disagree with the bytes it describes, so what is left of the cap goes down
             // with the request and a row understating its file stops the read rather than the answer.
             try {
@@ -73,7 +73,7 @@ trait AnswersWithImages
             } catch (CanonicalUnavailableException|ImageProcessingException) {
                 // A picture the processor refused, as a canonical or as this variant, is reported in
                 // its slot; the others still answer.
-                $described[] = ['number' => $number, 'unavailable' => true];
+                $described[] = ['number' => $number, 'id' => $id, 'unavailable' => true];
 
                 continue;
             } catch (ImageProcessorUnavailableException) {
@@ -94,6 +94,7 @@ trait AnswersWithImages
             $images[] = Response::image($bytes, (string) $file->type);
             $described[] = [
                 'number' => $number,
+                'id' => $id,
                 'width' => $width,
                 'height' => $height,
                 'mimeType' => (string) $file->type,
@@ -113,7 +114,7 @@ trait AnswersWithImages
     {
         return Response::error(
             'These pictures come to more than the '.intdiv(self::MAX_BYTES, 1024 * 1024)
-            .' MB one call may return. Ask for a single one with number, or for size=thumbnail.',
+            .' MB one call may return. Ask for size=thumbnail, which also reports the ids, or for a single one with image_id.',
         );
     }
 }

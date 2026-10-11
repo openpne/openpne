@@ -35,6 +35,7 @@ class ReadTalkMessageImagesTool extends TalkTool
             'message_id' => ['required', 'integer', 'min:1'],
             'size' => ['sometimes', 'string', 'in:'.implode(',', self::SIZES)],
             'number' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'image_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
         ]);
 
         $member = $this->member($request);
@@ -58,22 +59,31 @@ class ReadTalkMessageImagesTool extends TalkTool
             return Response::error(self::NO_THUMBNAIL);
         }
 
-        $targets = $this->targets($member, $message, isset($validated['number']) ? (int) $validated['number'] : null);
+        $targets = $this->targets(
+            $member,
+            $message,
+            isset($validated['number']) ? (int) $validated['number'] : null,
+            isset($validated['image_id']) ? (int) $validated['image_id'] : null,
+        );
 
         return $targets instanceof Response ? $targets : $this->answerWithImages($cache, $transform, $targets);
     }
 
     /**
-     * A named slot holding no picture is refused rather than answered empty, so the numbers cannot be
-     * walked to count what a message carries; with no number those slots are passed over.
+     * A named slot or id with no picture to draw is refused rather than answered empty, so the
+     * numbers cannot be walked to count what a message carries; a row that is not a picture is passed
+     * over either way, named or not.
      *
-     * @return Response|list<array{0: int, 1: File}>
+     * @return Response|list<array{0: int, 1: File, 2: int}>
      */
-    private function targets(Member $member, GroupMessage $message, ?int $number): Response|array
+    private function targets(Member $member, GroupMessage $message, ?int $number, ?int $imageId): Response|array
     {
+        $named = $number !== null || $imageId !== null;
+
         $slots = $message->images()
             ->with('file')
             ->when($number !== null, fn ($query) => $query->where('number', $number))
+            ->when($imageId !== null, fn ($query) => $query->whereKey($imageId))
             ->get();
 
         $targets = [];
@@ -88,17 +98,13 @@ class ReadTalkMessageImagesTool extends TalkTool
             }
 
             if ($file === null || $file->imageFormat() === null) {
-                if ($number !== null) {
-                    return $this->refused();
-                }
-
                 continue;
             }
 
-            $targets[] = [(int) $slot->number, $file];
+            $targets[] = [(int) $slot->number, $file, (int) $slot->getKey()];
         }
 
-        return $number !== null && $targets === [] ? $this->refused() : $targets;
+        return $named && $targets === [] ? $this->refused() : $targets;
     }
 
     /**
@@ -114,7 +120,9 @@ class ReadTalkMessageImagesTool extends TalkTool
             'size' => $schema->string()->enum(self::SIZES)->default('thumbnail')
                 ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the full-size re-encode the site keeps of the upload (never the uploaded bytes themselves) — ask for it only when the detail decides something.'),
             'number' => $schema->integer()->min(1)
-                ->description('One picture of the message, numbered from 1 in the order they were attached. Omit it for every picture on the message, which is also the way to learn how they are numbered.'),
+                ->description('The pictures in one slot of the message, numbered from 1 in the order they were attached; nothing keeps a slot to one picture, and the answer tells two apart by id. Omit it for every picture on the message, which is also the way to learn the numbers and ids.'),
+            'image_id' => $schema->integer()->min(1)
+                ->description('One picture exactly, by the id the answer reports beside its number.'),
         ];
     }
 }

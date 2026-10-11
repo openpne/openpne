@@ -38,9 +38,62 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
             ->assertSee($this->wire($this->thumbnail($second)))
             // Fitted into the 640 box, so the reported size is the thumbnail's and not the source's.
             ->assertStructuredContent(['images' => [
-                ['number' => 1, 'width' => 640, 'height' => 320, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($first))],
-                ['number' => 2, 'width' => 320, 'height' => 640, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($second))],
+                ['number' => 1, 'id' => $this->attachmentId($first), 'width' => 640, 'height' => 320, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($first))],
+                ['number' => 2, 'id' => $this->attachmentId($second), 'width' => 320, 'height' => 640, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($second))],
             ]]);
+    }
+
+    public function test_two_pictures_in_one_slot_are_told_apart_by_id_and_image_id_names_one(): void
+    {
+        // Nothing in the schema keeps (entry, number) unique.
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        $first = $this->attach($diary, 1, 800, 400);
+        $second = $this->attach($diary, 1, 400, 800);
+        $elsewhere = $this->attach($this->diary($author), 1);
+        $where = ['diary_id' => $diary->getKey(), 'size' => 'original'];
+
+        $this->acting(Member::factory()->create());
+
+        $this->read([...$where, 'number' => 1])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($first)))
+            ->assertSee($this->wire($this->original($second)))
+            ->assertStructuredContent(fn ($json) => $json
+                ->count('images', 2)
+                ->where('images.0.id', $this->attachmentId($first))
+                ->where('images.1.id', $this->attachmentId($second))
+                ->etc());
+
+        $this->read([...$where, 'image_id' => $this->attachmentId($second)])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($second)))
+            ->assertDontSee($this->wire($this->original($first)))
+            ->assertStructuredContent(fn ($json) => $json->count('images', 1)->where('images.0.id', $this->attachmentId($second))->etc());
+
+        // Another entry's row is no more findable through this one than an id that names nothing.
+        $this->read([...$where, 'image_id' => $this->attachmentId($elsewhere)])
+            ->assertHasErrors(['No such diary'])
+            ->assertDontSee($this->wire($this->original($elsewhere)));
+    }
+
+    public function test_a_named_slot_passes_over_a_row_that_is_not_a_picture_and_answers_with_the_one_that_is(): void
+    {
+        $author = Member::factory()->create();
+        $diary = $this->diary($author);
+        DiaryImage::factory()->create([
+            'diary_id' => $diary->getKey(),
+            'file_id' => $this->notAPicture('diary', (int) $diary->getKey())->getKey(),
+            'number' => 1,
+        ]);
+        $picture = $this->attach($diary, 1, 800, 400);
+
+        $this->acting(Member::factory()->create());
+
+        $this->read(['diary_id' => $diary->getKey(), 'size' => 'original', 'number' => 1])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($picture)))
+            ->assertStructuredContent(fn ($json) => $json->count('images', 1)->where('images.0.id', $this->attachmentId($picture))->etc());
     }
 
     public function test_the_original_size_answers_with_the_canonical(): void
@@ -57,6 +110,7 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
             ->assertSee($this->wire($stored))
             ->assertStructuredContent(['images' => [[
                 'number' => 1,
+                'id' => $this->attachmentId($file),
                 'width' => 800,
                 'height' => 400,
                 'mimeType' => 'image/png',
@@ -101,7 +155,7 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
         $author = Member::factory()->create();
         $diary = $this->diary($author);
         $first = $this->attach($diary, 1);
-        $this->attachStoredBytes($diary, 2, 'not an image at all');
+        $broken = $this->attachStoredBytes($diary, 2, 'not an image at all');
         $third = $this->attach($diary, 3);
 
         $this->acting($author);
@@ -113,7 +167,7 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->count('images', 3)
                 ->where('images.0.number', 1)
-                ->where('images.1', ['number' => 2, 'unavailable' => true])
+                ->where('images.1', ['number' => 2, 'id' => $this->attachmentId($broken), 'unavailable' => true])
                 ->where('images.2.number', 3)
                 ->etc());
 
@@ -141,7 +195,7 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
         $this->attach($diary, 1);
         $this->acting($author);
         $this->read(['diary_id' => $diary->getKey()])->assertOk();
-        $this->attach($diary, 2);
+        $refused = $this->attach($diary, 2);
         $inner = $this->app->make(ImageProcessor::class);
         $this->app->instance(ImageProcessor::class, new class($inner) implements ImageProcessor
         {
@@ -173,7 +227,7 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->count('images', 2)
                 ->where('images.0.number', 1)
-                ->where('images.1', ['number' => 2, 'unavailable' => true])
+                ->where('images.1', ['number' => 2, 'id' => $this->attachmentId($refused), 'unavailable' => true])
                 ->etc());
         $this->read(['diary_id' => $diary->getKey(), 'number' => 2])->assertHasErrors(['cannot be drawn']);
     }
@@ -243,6 +297,13 @@ class DiaryImageReadToolTest extends DiaryImageToolsTestCase
             ->assertOk()
             ->assertSee($this->wire($this->original($first)))
             ->assertDontSee($this->wire($this->original($second)));
+
+        // The row id, reported beside the position, names the picture exactly.
+        $this->read(['diary_id' => $diary->getKey(), 'comment_id' => $comment->getKey(), 'size' => 'original', 'image_id' => $this->attachmentId($second)])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($second)))
+            ->assertDontSee($this->wire($this->original($first)))
+            ->assertStructuredContent(fn ($json) => $json->count('images', 1)->where('images.0.number', 2)->where('images.0.id', $this->attachmentId($second))->etc());
 
         // The row ids of those same two pictures, which are positions this comment does not have.
         foreach ([3, 4] as $rowId) {
