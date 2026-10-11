@@ -14,8 +14,12 @@
     <link rel="apple-touch-icon" href="{{ app_icon_url(180) }}">
     <link rel="manifest" href="{{ route('webmanifest') }}">
     <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
-    {{-- Default skin, served statically; $classicSkinCss overrides which skin stylesheet is linked. --}}
-    <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
+    @php($classicTheme = classic_theme())
+    {{-- Default skin, served statically; $classicSkinCss overrides which skin stylesheet is linked. A theme
+         replaces it and is linked last, after the module and custom CSS, as OpenPNE 3 stacked it. --}}
+    @if ($classicTheme === null)
+        <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
+    @endif
     {{-- The page module's OpenPNE 3 plugin stylesheet, linked after the skin it overrides.
          $suppressPluginCss is for a screen rendered over a route it is not the screen of (the
          error page): the route's module would otherwise lend it a stylesheet it never had. --}}
@@ -30,6 +34,11 @@
     {{-- Admin custom CSS, linked after the skin so it overrides it. --}}
     @if ($customCssUrl = classic_custom_css_url())
         <link rel="stylesheet" href="{{ $customCssUrl }}">
+    @endif
+    @if ($classicTheme !== null)
+        @foreach ($classicTheme->stylesheetUrls() as $themeCssUrl)
+            <link rel="stylesheet" href="{{ $themeCssUrl }}">
+        @endforeach
     @endif
     {{-- The OpenPNE 3 skin has no visually-hidden class, and the body HTML the server renders for
          both surfaces carries Tailwind's (docs/internals/body-text.md, "Where a link opens"). --}}
@@ -118,6 +127,9 @@
                      HTML chosen by the page's secure_page/insecure_page class. $classicFooterHtml
                      stays a per-request override seam. --}}
                 @php($footerHtml = $classicFooterHtml ?? classic_footer_html(($pageClass ?? 'secure_page') !== 'insecure_page'))
+                @if ($classicTheme?->credit() !== null)
+                    <span id="license">{!! $classicTheme->credit() !!}</span>
+                @endif
                 <p>
                     <a href="{{ route('policy.privacy') }}" target="_blank" rel="noopener">{{ __('Privacy policy') }}</a>
                     <a href="{{ route('policy.terms') }}" target="_blank" rel="noopener">{{ __('Terms of service') }}</a>

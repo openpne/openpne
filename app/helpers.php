@@ -9,6 +9,8 @@ use App\Files\ImageProcessor;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
+use App\Support\ClassicTheme;
+use App\Support\ClassicThemes;
 use App\Support\LinkTarget;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\Schema;
@@ -115,6 +117,14 @@ if (! function_exists('classic_custom_css_url')) {
     function classic_custom_css_url(): ?string
     {
         return app(SnsSettingService::class)->hasCustomCss() ? route('design.customizing_css') : null;
+    }
+}
+
+if (! function_exists('classic_theme')) {
+    /** The theme package the Classic shell wears, or null for the default skin. */
+    function classic_theme(): ?ClassicTheme
+    {
+        return ClassicThemes::find((string) app(SnsSettingService::class)->get(SnsSettingKey::ClassicTheme));
     }
 }
 
