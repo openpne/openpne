@@ -6,6 +6,7 @@ use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -36,6 +37,19 @@ class GroupShowTopSlotTest extends TestCase
         $response = $this->actingAs($admin)->get(route('group.members.manage', $group));
 
         $response->assertOk();
-        $response->assertSeeInOrder(['<table>', '<tbody>', '<td class="member">', '</tbody>', '</table>'], false);
+        $this->assertMatchesRegularExpression('/id="community_memberManage".*?<div class="item">\s*<table>\s*<tbody>\s*<tr>/s', (string) $response->getContent());
+    }
+
+    public function test_a_member_profile_draws_the_top_slot_when_the_notice_box_has_nothing_to_say(): void
+    {
+        $guestVisible = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->setSnsSetting(SnsSettingKey::FeatureFriendEnabled, false);
+
+        $response = $this->actingAs($viewer)->get(route('member.profile.show', $guestVisible));
+
+        $response->assertOk();
+        $response->assertSee('<div id="Top">', false);
+        $response->assertDontSee('id="informationAboutThisIsYourProfilePage"', false);
     }
 }

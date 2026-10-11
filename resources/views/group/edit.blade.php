@@ -18,7 +18,6 @@
         <form method="POST" action="{{ route('group.save', $group ? ['id' => $group->getKey()] : []) }}" enctype="multipart/form-data">
             @csrf
             <x-classic.required-notice />
-            {{-- Rows in the order the three OpenPNE 3 forms ran: CommunityForm, CommunityConfigForm, CommunityFileForm. --}}
             <table>
                 <tr>
                     <th><label for="community_name">{{ __('Name') }} <x-classic.required-mark /></label></th>

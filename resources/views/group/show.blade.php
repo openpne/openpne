@@ -17,9 +17,8 @@
     <x-group.sidemenu :group="$group" :members="$sidebarMembers" :can-manage-members="$role?->canManage() ?? false" />
 @endsection
 
-{{-- OpenPNE 3 homeSuccess.php declares the op_top slot on every visit, so #Top is drawn even empty.
-     One section: the two notices are mutually exclusive (a nominee is a member, a pending applicant
-     is not), and two @section('top') blocks would collide. --}}
+{{-- Declared on every visit as OpenPNE 3's op_top slot was, so #Top is drawn even empty; the two
+     notices are mutually exclusive (a nominee is a member, a pending applicant is not). --}}
 @section('top')
     @if ($isPending || $isTransferNominee)
         @if ($isPending)
