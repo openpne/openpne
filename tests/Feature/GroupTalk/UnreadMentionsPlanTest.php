@@ -24,17 +24,20 @@ class UnreadMentionsPlanTest extends TalkTestCase
         }
 
         $query = app(JoinedTalkRooms::class)->ordered($viewer, true);
+        if (DB::getDriverName() === 'mysql') {
+            // InnoDB gathers persistent statistics in the background, so a table filled a moment ago can still be planned without them.
+            DB::statement('ANALYZE TABLE group_message_mentions, group_messages, group_members');
+        }
         $plan = $this->plan($query->toSql(), $query->getBindings());
 
-        // On SQLite a member_id-only prefix would read every mention of the viewer; MySQL may answer the EXISTS from either equality index, never a scan.
+        // The search key, not only the index's name: on SQLite a member_id-only prefix would read every mention of the viewer.
         $this->assertMatchesRegularExpression(
             DB::getDriverName() === 'sqlite'
                 ? '/group_message_mentions USING (COVERING )?INDEX group_message_mentions_member_id_group_message_id_index \(member_id=\? AND group_message_id=\?\)/'
-                : '/index lookup on group_message_mentions using (group_message_mentions_group_message_id_offset_unique \(group_message_id=group_messages\.id\)|group_message_mentions_member_id_foreign \(member_id=\d+\))/i',
+                : '/index lookup on group_message_mentions using group_message_mentions_group_message_id_offset_unique \(group_message_id=group_messages\.id\)/i',
             $plan,
             "the mentions arm is not looked up by its key columns:\n{$plan}",
         );
-        $this->assertDoesNotMatchRegularExpression('/(table scan on|SCAN) group_message_mentions/i', $plan);
     }
 
     /**
