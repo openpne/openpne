@@ -44,12 +44,12 @@ class GroupAdminScreensParityTest extends TestCase
         $response->assertOk();
         $response->assertSeeInOrder([
             '<ul class="radio_list">',
+            'name="topic_read_access" value="members_only" id="community_config_public_flag_auth_commu_member" class="input_radio"',
+            'name="topic_post_authority" value="admins_only" id="community_config_topic_authority_admin_only" class="input_radio"',
             'name="register_policy" value="open" id="community_config_register_policy_open" class="input_radio"',
             '<label for="community_config_register_policy_open">',
             'name="register_policy" value="approval" id="community_config_register_policy_close" class="input_radio"',
-            'name="topic_read_access" value="members_only" id="community_config_public_flag_auth_commu_member" class="input_radio"',
-            'name="topic_post_authority" value="admins_only" id="community_config_topic_authority_admin_only" class="input_radio"',
-            '<th>Receive a notice mail when member joined</th>',
+            '<th><label>Receive a notice mail when member joined</label></th>',
             'name="is_join_notification_enabled" value="1" id="community_config_is_send_pc_joinCommunity_mail_1" class="input_radio" checked',
             '<label for="community_config_is_send_pc_joinCommunity_mail_1">Receive</label>',
             'name="is_join_notification_enabled" value="0" id="community_config_is_send_pc_joinCommunity_mail_0" class="input_radio"',
@@ -147,16 +147,17 @@ class GroupAdminScreensParityTest extends TestCase
         $response->assertOk();
         $response->assertSeeInOrder([
             '<strong>*</strong> is required field.',
-            '<table class="formTable">',
-            '<th>Name <strong>*</strong>',
-            '<th>Description</th>',
-            '<th>Join policy <strong>*</strong>',
-            '<th>Authority to Read Topic <strong>*</strong>',
-            '<th>Authority to Create Topic <strong>*</strong>',
-            '<th>Receive a notice mail when member joined</th>',
-            '<th>Category</th>',
-            '<th>Image</th>',
+            '<table>',
+            '<th><label for="community_name">Name <strong>*</strong>',
+            '<th><label for="community_community_category_id">Category</label></th>',
+            '<th><label>Authority to Read Topic <strong>*</strong>',
+            '<th><label>Authority to Create Topic <strong>*</strong>',
+            '<th><label>Join policy <strong>*</strong>',
+            '<th><label for="community_config_description">Description</label></th>',
+            '<th><label>Receive a notice mail when member joined</label></th>',
+            '<th><label for="community_file_file">Image</label></th>',
         ], false);
+        $response->assertDontSee('formTable', false);
         // The four labels GroupRequest requires, plus the notice line.
         $this->assertSame(5, substr_count((string) $response->getContent(), '<strong>*</strong>'));
 

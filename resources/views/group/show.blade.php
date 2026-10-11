@@ -17,10 +17,10 @@
     <x-group.sidemenu :group="$group" :members="$sidebarMembers" :can-manage-members="$role?->canManage() ?? false" />
 @endsection
 
-@if ($isPending || $isTransferNominee)
-    {{-- One Top section: the two notices are mutually exclusive (a nominee is a member, a pending
-         applicant is not), and two @section('top') blocks would collide. --}}
-    @section('top')
+{{-- Declared on every visit as OpenPNE 3's op_top slot was, so #Top is drawn even empty; the two
+     notices are mutually exclusive (a nominee is a member, a pending applicant is not). --}}
+@section('top')
+    @if ($isPending || $isTransferNominee)
         @if ($isPending)
             {{-- The pending-approval notice, shown only while waiting. --}}
             <x-classic.parts id="informationAboutCommunity" name="descriptionBox">
@@ -52,8 +52,8 @@
                 </div>
             </x-classic.parts>
         @endif
-    @endsection
-@endif
+    @endif
+@endsection
 
 @section('content')
     {{-- The slot the community timeline's box used to fill (OpenPNE 3's plugin view customize

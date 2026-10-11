@@ -84,7 +84,8 @@
                         </x-classic.parts>
                     @endif
 
-                    @hasSection('top')
+                    {{-- @hasSection trims the content; a declared-but-empty top still draws the slot, as OpenPNE 3's has_slot did. --}}
+                    @if (View::hasSection('top'))
                         <div id="Top">
                             @yield('top')
                         </div><!-- Top -->

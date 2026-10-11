@@ -27,6 +27,7 @@ class LinkTargetProducersTest extends TestCase
         'resources/views/filament/components/image-lightbox.blade.php',
         'resources/views/group-event/_images.blade.php',
         'resources/views/group-topic/_images.blade.php',
+        'resources/views/group/edit.blade.php',
         'resources/views/layouts/classic.blade.php',
         'resources/views/message/show.blade.php',
     ];

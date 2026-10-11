@@ -10,6 +10,7 @@
         <x-classic.pager :paginator="$members" />
         <div class="item">
             <table>
+                <tbody>
                 @foreach ($members as $membership)
                     @php($rowMember = $membership->member)
                     <tr>
@@ -56,6 +57,7 @@
                         @endif
                     </tr>
                 @endforeach
+                </tbody>
             </table>
         </div>
         <x-classic.pager :paginator="$members" />
