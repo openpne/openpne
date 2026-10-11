@@ -123,17 +123,18 @@
             @csrf
             {{-- OpenPNE 3's form parts renders its `body` option as a .block inside the form tag. --}}
             @if ($diary->visibility === \App\Support\Visibility::Open)
-                <div class="block"><p class="attention">{{ __('Your comment is visible to everyone on the web.') }}</p></div>
+                <div class="block">{{ __('Your comment is visible to everyone on the web.') }}</div>
             @endif
+            <x-classic.required-notice />
             <table>
                 <tr>
-                    <th><label for="comment_body">{{ __('Comment') }}</label></th>
+                    <th><label for="diary_comment_body">{{ __('Comment') }} <x-classic.required-mark /></label></th>
                     <td>
-                        <textarea id="comment_body" name="body" rows="8" required>{{ old('body') }}</textarea>
+                        <textarea id="diary_comment_body" name="body" rows="8" required>{{ old('body') }}</textarea>
                         @error('body')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
-                @include('group-topic._image_fields')
+                <x-classic.photo-rows name="diary_comment" />
             </table>
             <div class="operation">
                 <ul class="moreInfo button">

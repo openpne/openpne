@@ -91,7 +91,7 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('comment images', L::Three, S::Ported, '_list.php $comment->getImages() ul.photo'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->getBody()))', 'x-user-text (BodyText)'),
                 new ScreenElement('reply (>>N) quote link', L::Three, S::Ported, '_list.php a.reply + SnsConfig op_community_topic_plugin_community_topic_comment_reply', 'a.reply on each comment while the viewer may comment, gated by the upgraded SnsSettingKey; classic-comment-reply.js appends >>N name to the box, the bare link jumps to the form'),
-                new ScreenElement('comment post form + image upload', L::One, S::Ported, "op_include_form('formCommunityTopicComment', isMultipart)", 'up to PostImages::MAX_IMAGES on one Images row; OpenPNE 3 gave each photo its own labelled row'),
+                new ScreenElement('comment post form + image upload', L::One, S::Ported, "op_include_form('formCommunityTopicComment', isMultipart)", 'textarea#community_topic_comment_body; x-classic.photo-rows under ul#community_topic_comment_photo_N'),
                 new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
                 new ScreenElement('community top-page line link', L::Two, S::Ported, "op_include_line('linkLine', link_to('community/home'))", '#linkLine to the community home, labelled [name] %Community% Top Page'),
             ],

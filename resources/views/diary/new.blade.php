@@ -10,16 +10,17 @@
     <x-classic.parts id="diaryForm" name="form" :title="__('Write a %diary%')">
         <form method="POST" action="{{ route('diary.store') }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table>
                 <tr>
-                    <th><label for="diary_title">{{ __('Title') }}</label></th>
+                    <th><label for="diary_title">{{ __('Title') }} <x-classic.required-mark /></label></th>
                     <td>
                         <input type="text" class="input_text" id="diary_title" name="title" value="{{ old('title') }}" required>
                         @error('title')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="diary_body">{{ __('Body') }}</label></th>
+                    <th><label for="diary_body">{{ __('Body') }} <x-classic.required-mark /></label></th>
                     <td>
                         <textarea id="diary_body" name="body" required>{{ old('body') }}</textarea>
                         @error('body')<p class="error">{{ $message }}</p>@enderror
@@ -27,18 +28,18 @@
                 </tr>
                 @include('compose._format-toggle', ['format' => null])
                 <tr>
-                    <th><label for="diary_visibility">{{ __('Visibility') }}</label></th>
+                    <th><label>{{ __('Visibility') }} <x-classic.required-mark /></label></th>
                     <td>
-                        <select id="diary_visibility" name="visibility">
-                            {{-- Pre-selects the member's stored default (clamped to the selectable audiences). --}}
+                        {{-- OpenPNE 3 public_flag radios under their public_flag ids; the stored default pre-selects (clamped to the selectable audiences). --}}
+                        <ul class="radio_list">
                             @foreach ($visibilityOptions as $option)
-                                <option value="{{ $option->value }}" @selected(old('visibility', $defaultVisibility->value) == $option->value)>{{ __($option->label()) }}</option>
+                                <li><input type="radio" name="visibility" value="{{ $option->value }}" id="diary_public_flag_{{ $option->openPne3PublicFlag() }}" class="input_radio" @checked(old('visibility', $defaultVisibility->value) == $option->value)> <label for="diary_public_flag_{{ $option->openPne3PublicFlag() }}">{{ __($option->label()) }}</label></li>
                             @endforeach
-                        </select>
+                        </ul>
                         @error('visibility')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
-                @include('group-topic._image_fields')
+                <x-classic.photo-rows name="diary" />
             </table>
             <div class="operation">
                 <ul class="moreInfo button">

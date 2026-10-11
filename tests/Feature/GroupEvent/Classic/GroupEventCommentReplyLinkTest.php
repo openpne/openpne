@@ -64,10 +64,10 @@ class GroupEventCommentReplyLinkTest extends TestCase
         $response = $this->actingAs($member)->get(route('group.events.show', $record));
 
         $response->assertOk();
-        $response->assertSee('<a class="reply" href="#communityEvent_comment_form" data-comment-reply="#comment_body" data-number="1" data-name="'.e($author->name).'">Reply</a>', false);
+        $response->assertSee('<a class="reply" href="#communityEvent_comment_form" data-comment-reply="#community_event_comment_body" data-number="1" data-name="'.e($author->name).'">Reply</a>', false);
         $response->assertSee('js/classic-comment-reply.js', false);
         // The link's selector and anchor name real elements on the page.
-        $response->assertSee('id="comment_body"', false);
+        $response->assertSee('id="community_event_comment_body"', false);
         $response->assertSee('id="communityEvent_comment_form"', false);
     }
 
