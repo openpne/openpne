@@ -58,26 +58,26 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
         LinkCardImage $images,
         LinkCardSettings $settings,
     ): void {
-        // Re-checked here, not only where the job was queued: the setting can be turned off while
-        // work is already on the queue, and that must stop the outbound request rather than merely
-        // hide its result.
-        if (! $settings->enabled()) {
-            return;
-        }
-
         $card = LinkCard::find($this->linkCardId);
 
         if ($card === null) {
             return;
         }
 
-        // Decided from the URL, before the lease and before the row's own status is trusted, so this
-        // app never requests its own pages whatever state a row is in.
+        // Decided from the URL, before the setting, the lease and the row's own status, so this app
+        // never requests its own pages whatever state a row is in and converts one whatever the setting says.
         $link = InternalUrl::of($card->url);
 
         if ($link->isSelfHosted) {
             InternalCardRow::convert($card, $link);
 
+            return;
+        }
+
+        // Re-checked here, not only where the job was queued: the setting can be turned off while
+        // work is already on the queue, and that must stop the outbound request rather than merely
+        // hide its result.
+        if (! $settings->enabled()) {
             return;
         }
 

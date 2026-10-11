@@ -85,6 +85,8 @@ that is what keeps a list trigger from being a crawl:
 
 - a record is examined **once in its life**, so re-opening a room queues nothing;
 - a due card is decided by `isDueForFetch`, so a URL serving out its backoff is not re-queued per view;
+  the one row offered outside that predicate, a URL of ours still carrying a fetch, converges in a
+  single conversion and is then never offered again;
 - a URL is one card, so what a room costs is its number of *distinct* links, not of rows.
 
 Relax any one of them and the exception stops holding — including when OpenPNE 3 history is one day
@@ -224,9 +226,12 @@ the first URL, and going looking would make a body's card depend on when the job
 
 `FetchLinkCard` resolves the URL **before the claim**, and converts a row of ours instead of
 requesting it. That is the repair as well as the guard: rows minted earlier hold a card of the login
-screen or a failure, nothing else revisits them, and the read trigger goes on offering them to the
-fetch job week after week. They correct themselves the next time a page they are on is opened — no
-migration, no command. The same repair runs from the sync side, and there it does not depend on the
+screen or a failure, and nothing else revisits them. The read trigger offers such a row to the fetch
+job whatever the setting says and whether or not the row is due, and the job converts before it
+consults the setting, since the repair fetches nothing. They correct themselves the next time a page
+they are on is opened — no migration, no command, no waiting for the card to expire — and that page
+still draws the row as it read it, so the card appears from the view after. The same repair
+runs from the sync side, and there it does not depend on the
 address resolving: no row is *minted* for one of ours that names nothing, but one already there is
 converted anyway, since the row is shared by every body that mentions the URL and would otherwise go
 on drawing a login screen under all of them.
@@ -664,7 +669,8 @@ every one since link cards arrived. `--dry-run` says how many that is before it 
 - The read trigger fires on detail pages only, with the one exception below, and only ever queues
   work.
 - Talk's conversation page is the single exception to that, and it rests on three bounds together —
-  a record examined once in its life, a due predicate that respects the backoff, one card per URL.
+  a record examined once in its life, a due predicate that respects the backoff (a URL of ours still
+  carrying a fetch is the one row offered past it, and one conversion ends that), one card per URL.
   Weaken any of them and the exception no longer holds.
 - The sweep's list of body tables comes from `CardContext`, and carries no row filter from it: a
   reference the sweep cannot see is a card deleted while it is still in use.

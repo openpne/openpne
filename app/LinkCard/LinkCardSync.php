@@ -7,6 +7,7 @@ namespace App\LinkCard;
 use App\Jobs\FetchLinkCard;
 use App\Jobs\SyncLinkCard;
 use App\Models\LinkCard;
+use App\Support\LinkCardStatus;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -21,10 +22,10 @@ final class LinkCardSync
     public function __construct(private readonly LinkCardSettings $settings) {}
 
     /**
-     * Talk's read trigger, which stays bounded only because a record is examined once in its life,
-     * a refresh is gated by `LinkCard::isDueForFetch`, and a URL is one card. Pass only the records
-     * the page renders: a reply's parent arrives without its card loaded, so examining it would mark
-     * a body nobody looked at and lazy-load a query per row.
+     * Talk's read trigger, bounded because a record is examined once in its life, a refresh is gated
+     * by `LinkCard::isDueForFetch` (a row of ours by its one conversion), and a URL is one card. Pass
+     * only the records the page renders: a reply's parent arrives without its card loaded, so
+     * examining it would mark a body nobody looked at.
      *
      * @param  iterable<Model>  $records
      */
@@ -55,16 +56,28 @@ final class LinkCardSync
             return;
         }
 
-        if (! $this->settings->enabled()) {
-            return;
-        }
-
         $card = $record->getAttribute('link_card_id') === null
             ? null
             : ($record->relationLoaded('linkCard') ? $record->getRelation('linkCard') : LinkCard::find($record->getAttribute('link_card_id')));
 
+        if (! $card instanceof LinkCard) {
+            return;
+        }
+
+        // A row of ours still carrying a fetch needs no fetch to be repaired, so neither the setting
+        // nor due-ness holds it back (docs/internals/link-cards.md, "Rows written before this existed").
+        if ($card->status !== LinkCardStatus::Internal && InternalUrl::of($card->url)->isSelfHosted) {
+            FetchLinkCard::dispatch($card->id);
+
+            return;
+        }
+
+        if (! $this->settings->enabled()) {
+            return;
+        }
+
         // The same predicate the queueing side and the claim use — see LinkCard::isDueForFetch.
-        if ($card instanceof LinkCard && $card->isDueForFetch()) {
+        if ($card->isDueForFetch()) {
             FetchLinkCard::dispatch($card->id);
         }
     }
