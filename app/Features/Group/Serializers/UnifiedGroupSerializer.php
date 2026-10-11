@@ -8,6 +8,7 @@ use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\Home\Serializers\UnifiedSections;
+use App\Files\FileOwners;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMember;
@@ -193,6 +194,8 @@ final class UnifiedGroupSerializer
      */
     private static function readableImages(Member $viewer, Model $parent, Collection $images, callable $shape): Generator
     {
+        app(FileOwners::class)->note($parent);
+
         foreach ($images as $image) {
             $file = $image->file;
 

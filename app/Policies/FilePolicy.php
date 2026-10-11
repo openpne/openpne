@@ -8,6 +8,7 @@ use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Timeline\TimelineAccess;
+use App\Files\FileOwners;
 use App\Models\BannerImage;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -108,6 +109,6 @@ class FilePolicy extends BasePolicy
             return null;
         }
 
-        return $class::find($file->related_entity_id);
+        return app(FileOwners::class)->find($class, (int) $file->related_entity_id);
     }
 }

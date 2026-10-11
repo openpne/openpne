@@ -7,6 +7,7 @@ namespace App\Features\GroupTalk\Queries;
 use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\FileOwners;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
@@ -52,7 +53,8 @@ final class TalkSampleDigest
             // count, so they get their own capped read in `thumbnails()`.
             ->with('author.avatar.file')
             ->limit($limit)
-            ->get();
+            ->get()
+            ->each(fn (GroupMessage $message) => $message->setRelation('group', $group));
     }
 
     /**
@@ -71,6 +73,7 @@ final class TalkSampleDigest
             ->with(['author.avatar.file', 'images.file', 'mentions'])
             ->limit($limit)
             ->get()
+            ->each(fn (GroupMessage $message) => $message->setRelation('group', $group))
             ->reverse()
             ->values();
     }
@@ -268,6 +271,8 @@ final class TalkSampleDigest
         if ($ownerClass === null || ! $message instanceof $ownerClass) {
             return false;
         }
+
+        app(FileOwners::class)->note($message);
 
         return Gate::forUser($viewer)->allows('view', $file);
     }

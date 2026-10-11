@@ -174,7 +174,7 @@ final class SummarizeHomeIssues
         $shown = collect($summaries)->flatMap(fn (HomeIssueSummary $summary): array => $summary->items());
 
         $talk = $shown->whereInstanceOf(TalkStretch::class);
-        $said = $talk->map(fn (TalkStretch $stretch): GroupMessage => $stretch->last)->values();
+        $said = $talk->map(fn (TalkStretch $stretch): GroupMessage => $stretch->last->setRelation('group', $stretch->group))->values();
 
         foreach ($shown->whereInstanceOf(Model::class)->groupBy(fn (Model $story): string => $story::class) as $stories) {
             EloquentCollection::make($stories->all())->load('images.file');

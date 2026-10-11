@@ -8,9 +8,11 @@ use App\Features\Home\HomeIssueSection;
 use App\Features\Home\Queries\ShowHomeIssue;
 use App\Features\Home\Serializers\HomeIssueSerializer;
 use App\Models\Diary;
+use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageImage;
 use App\Models\GroupTopic;
 use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
@@ -35,12 +37,12 @@ class HomeIssueQueryBudgetTest extends TestCase
     private const NOW = '2026-08-27 06:00:00';
 
     /**
-     * Measured at 47 against the fixture below, with a little headroom for a relation the fixture
+     * Measured at 50 against the fixture below, with a little headroom for a relation the fixture
      * leaves null. The margin is kept BELOW the smallest per-item loop that could appear: the fixture
-     * fills every band to its cap, so one read per story (8), face (12) or group (6) puts it past
-     * this.
+     * fills every band to its cap, so one read per story (8), face (12), group (6), room drawn (3) or
+     * picture (9) puts it past this.
      */
-    private const CEILING = 51;
+    private const CEILING = 52;
 
     public function test_a_full_issue_costs_a_bounded_number_of_reads(): void
     {
@@ -67,11 +69,15 @@ class HomeIssueQueryBudgetTest extends TestCase
         $rank = 0;
         foreach (range(1, 3) as $ignored) {
             $group = Group::factory()->create();
-            GroupMessage::factory()->count(4)->create([
+            $said = GroupMessage::factory()->count(4)->create([
                 'group_id' => $group->getKey(),
                 'created_at' => $now->subHours(3),
                 'updated_at' => $now->subHours(3),
             ]);
+            // Three pictures on the last message of each room: each one is asked of the file gate.
+            foreach ([1, 2, 3] as $number) {
+                $this->attach($said->last(), $number);
+            }
             $this->feature($issue, HomeIssueSection::Talk, $group, ++$rank, [
                 'since' => $now->subDay()->toIso8601String(),
                 'until' => $now->toIso8601String(),
@@ -108,11 +114,29 @@ class HomeIssueQueryBudgetTest extends TestCase
         // The fixture really did fill every band — a budget met by rendering nothing is not a budget.
         $this->assertCount(8, $payload['issue']['stories']);
         $this->assertCount(3, $payload['issue']['talkBursts']);
+        foreach ($payload['issue']['talkBursts'] as $burst) {
+            $this->assertCount(3, end($burst['messages'])['images']);
+        }
         $this->assertCount(12, $payload['issue']['newcomers']);
         $this->assertCount(6, $payload['issue']['newGroups']);
         $this->assertCount(6, $payload['issue']['upcomingEvents']);
 
         $this->assertLessThanOrEqual(self::CEILING, $queries, "a full issue cost {$queries} queries");
+    }
+
+    private function attach(GroupMessage $message, int $number): void
+    {
+        $file = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'groupMessage',
+            'related_entity_id' => $message->getKey(),
+        ]);
+
+        GroupMessageImage::query()->create([
+            'group_message_id' => $message->getKey(),
+            'file_id' => $file->getKey(),
+            'number' => $number,
+        ]);
     }
 
     private function feature(HomeIssue $issue, HomeIssueSection $section, Model $source, int $rank, array $stats = []): void

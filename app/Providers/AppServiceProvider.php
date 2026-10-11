@@ -10,6 +10,7 @@ use App\Captcha\ConfigurableCaptcha;
 use App\Features\GroupTalk\GroupTalkNotifyDefault;
 use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
+use App\Files\FileOwners;
 use App\Http\Middleware\StartSession;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\LinkCard\InternalCardResolver;
@@ -92,6 +93,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Scoped for the same reason as LinkCardSettings.
         $this->app->scoped(ViewerRelations::class);
+
+        // Likewise: it holds the owners one page's file gates read (see FileOwners).
+        $this->app->scoped(FileOwners::class);
 
         // Likewise scoped: it is a catalog kind's default, so a fan-out asks it once per job and a
         // settings page once per request, and an administrator's flip must reach the next one.
