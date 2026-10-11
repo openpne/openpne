@@ -1,7 +1,6 @@
 {{-- Configurable profile fields as form rows, shared by profile-edit and registration so the two
      never drift. Expects $fields (Collection<EditableField>) and $lang. Each row repopulates from
-     old() so it survives a validation redirect. Ids follow OpenPNE 3's profile[name][value] widgets:
-     profile_{name}_value, _value_{option} for a choice, _public_flag for the audience select. --}}
+     old() so it survives a validation redirect. --}}
 @foreach ($fields as $field)
     @php
         $profile = $field->profile;

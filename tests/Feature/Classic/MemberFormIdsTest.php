@@ -28,8 +28,10 @@ class MemberFormIdsTest extends TestCase
             'id="authMailAddress_password" name="password"',
             '<label for="authMailAddress_is_remember_me">',
             'id="authMailAddress_is_remember_me" name="remember"',
-            'data-remember-input="authMailAddress_is_remember_me"',
         ], false);
+        // OpenPNE 3's login inputs carried no widget class; the skin reaches them through #MailAddressLogin.
+        $response->assertDontSee('id="authMailAddress_mail_address" name="email" value="" class=', false);
+        $response->assertDontSee('class="input_checkbox" id="authMailAddress_is_remember_me"', false);
     }
 
     public function test_the_invite_form_is_a_table_under_the_member_config_ids(): void
@@ -98,6 +100,18 @@ class MemberFormIdsTest extends TestCase
             '<input type="text" class="input_text" id="profile_book_value"',
             '<select id="profile_book_public_flag" name="visibility['.$text->getKey().']" class="input_text">',
         ], false);
+    }
+
+    public function test_a_select_field_leaves_its_audience_select_without_a_widget_class(): void
+    {
+        $select = Profile::factory()->create(['name' => 'blood_type', 'form_type' => 'select']);
+        $select->setTranslation('en', 'Blood type');
+        ProfileOption::factory()->create(['profile_id' => $select->getKey()]);
+
+        $response = $this->actingAs(Member::factory()->create())->get(route('member.profile.edit'));
+
+        $response->assertOk();
+        $response->assertSee('<select id="profile_blood_type_public_flag" name="visibility['.$select->getKey().']">', false);
     }
 
     public function test_the_member_search_form_keeps_the_member_ids(): void
