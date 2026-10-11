@@ -7,13 +7,13 @@
         <form method="GET" action="{{ route('group.search') }}">
             <table>
                 <tr>
-                    <th><label for="search_name">{{ __('Keyword') }}</label></th>
-                    <td><input type="text" class="input_text" id="search_name" name="community[name]" value="{{ $keyword }}"></td>
+                    <th><label for="community_name">{{ __('Keyword') }}</label></th>
+                    <td><input type="text" class="input_text" id="community_name" name="community[name]" value="{{ $keyword }}"></td>
                 </tr>
                 <tr>
-                    <th><label for="search_category">{{ __('%Community% Category') }}</label></th>
+                    <th><label for="community_community_category_id">{{ __('%Community% Category') }}</label></th>
                     <td>
-                        <select id="search_category" name="community[community_category_id]">
+                        <select id="community_community_category_id" name="community[community_category_id]">
                             <option value="">{{ __('All categories') }}</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category->getKey() }}" @selected($categoryId === $category->getKey())>{{ $category->name }}</option>
