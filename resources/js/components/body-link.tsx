@@ -48,7 +48,6 @@ export function BodyLink({ href, className, children }: { href: string; classNam
     }
 
     const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
-        // A file is left to the browser, which follows the anchor as written.
         if (!isPlainClick(event) || isBytesHref(path)) {
             return;
         }
