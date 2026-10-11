@@ -188,11 +188,50 @@ class PruneLinkCardsCommandTest extends TestCase
         $this->assertDatabaseHas('files', ['id' => $sameIdElsewhere->id]);
     }
 
+    public function test_a_picture_whose_card_is_already_gone_is_collected(): void
+    {
+        // A picture with no card to be found through: no sweep by relation can reach it.
+        $orphan = $this->agedPicture(424242);
+        $fresh = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => 424242]);
+        $held = $this->agedPicture(LinkCard::factory()->create()->id);
+        $sameIdElsewhere = File::factory()->create(['related_entity_type' => 'member', 'related_entity_id' => 424242]);
+        File::whereKey($sameIdElsewhere->id)->update(['created_at' => CarbonImmutable::now()->subDays(30)]);
+
+        $this->artisan('openpne:prune-link-cards')
+            ->expectsOutputToContain('1 orphaned picture(s)')
+            ->assertSuccessful();
+
+        $this->assertDatabaseMissing('files', ['id' => $orphan->id]);
+        $this->assertDatabaseHas('files', ['id' => $fresh->id]);
+        $this->assertDatabaseHas('files', ['id' => $held->id]);
+        $this->assertDatabaseHas('files', ['id' => $sameIdElsewhere->id]);
+    }
+
+    public function test_a_dry_run_counts_the_orphaned_pictures_too(): void
+    {
+        $orphan = $this->agedPicture(424242);
+
+        $this->artisan('openpne:prune-link-cards --dry-run')
+            ->expectsOutputToContain('0 unreferenced link card(s) and 1 orphaned picture(s) would be pruned')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('files', ['id' => $orphan->id]);
+    }
+
     public function test_it_says_so_when_there_is_nothing_to_do(): void
     {
         $this->artisan('openpne:prune-link-cards')
             ->expectsOutputToContain('No unreferenced link cards')
             ->assertSuccessful();
+    }
+
+    /** A card picture stored for $linkCardId long enough ago to be past the default grace period. */
+    private function agedPicture(int $linkCardId): File
+    {
+        $picture = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => $linkCardId]);
+        File::whereKey($picture->id)->update(['created_at' => CarbonImmutable::now()->subDays(30)]);
+
+        return $picture;
     }
 
     /** A card old enough to be past the default grace period. */
