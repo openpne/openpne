@@ -410,10 +410,11 @@ class UnifiedGroupTest extends TestCase
             ->assertSee($first->name)
             ->assertSee($second->name)
             ->assertDontSee($strayFile->name);
-        $reread = [];
-        foreach (['groups', 'group_messages', 'group_topics', 'group_events'] as $table) {
-            $reread = [...$reread, ...$this->queriesWith("select * from \"{$table}\" where \"{$table}\".\"id\" = ? limit 1")];
-        }
+        // Quotes stripped, so the needle reads the same under sqlite's "" and MySQL's ``.
+        $reread = array_values(array_filter(
+            DB::getQueryLog(),
+            fn (array $q): bool => (bool) preg_match('/^select \* from (groups|group_messages|group_topics|group_events) where \1\.id = \? limit 1$/', str_replace(['"', '`'], '', $q['query'])),
+        ));
         DB::disableQueryLog();
 
         // The parents are noted for the gate with the group they were read through, so it reads neither again.

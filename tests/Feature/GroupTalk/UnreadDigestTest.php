@@ -342,10 +342,10 @@ class UnreadDigestTest extends TalkTestCase
 
         DB::enableQueryLog();
         $digest = app(TalkAbsenceDigest::class)($group, $viewer, $snapshot);
+        // Quotes stripped, so the needle reads the same under sqlite's "" and MySQL's ``.
         $reread = array_values(array_filter(
             DB::getQueryLog(),
-            fn (array $q): bool => str_contains($q['query'], 'select * from "groups" where "groups"."id" = ? limit 1')
-                || str_contains($q['query'], 'select * from "group_messages" where "group_messages"."id" = ? limit 1'),
+            fn (array $q): bool => (bool) preg_match('/^select \* from (groups|group_messages) where \1\.id = \? limit 1$/', str_replace(['"', '`'], '', $q['query'])),
         ));
         DB::disableQueryLog();
 
