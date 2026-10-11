@@ -37,7 +37,7 @@ final class TalkBurstCandidates
             ->join('group_messages as reacted_messages', 'reacted_messages.id', '=', 'reactions.reactable_id')
             ->where('reactions.reactable_type', (new GroupMessage)->getMorphClass())
             ->select('reacted_messages.group_id')
-            // Named apart from the alias below: an ORDER BY expression resolves a name against the joined columns first.
+            // Named apart from the alias below: SQLite resolves a name in an ORDER BY expression against the joined columns before the select list.
             ->selectRaw('count(*) as reactions')
             ->groupBy('reacted_messages.group_id');
         $window->apply($reactions, 'reacted_messages.created_at');

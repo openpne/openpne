@@ -112,14 +112,17 @@ block anti-joins and LIKE filters are applied while the axis index is scanned an
 index of their own. The one WHERE clause that does is a site-wide window over a time column, which
 the home issue's candidates cut once a day before ranking by score: it has the shape of a
 posting-time axis and the alternative is a walk over every row of the table (measured on MySQL 8.4
-at 50k topics: 64 ms → 2.5 ms). Such a window query aggregates per group and never correlates per
-row: MySQL evaluates a correlated projection before GROUP BY, once for every row the range scan
-returns, so the talk candidates' week-long window took 850 ms on this index with the reaction count
-correlated per message and 47 ms with it joined per room. That is a trade: a feed page's row query falls from a sort over
+at 50k topics: 64 ms → 2.5 ms). That is a trade: a feed page's row query falls from a sort over
 every visible row to a few index reads (its OFFSET count still scans the table), while a keyword
 search whose hits are sparse or absent walks the whole axis index looking for them and runs slower
 than the table scan it replaced (measured on MySQL 8.4 at 200k diaries: the feed 134 ms → 1.5 ms, a
 six-hit search 0.23 s → 0.35 s). The feed is every member's page; the sparse search is the price.
+
+A window query that groups its rows joins any other count per group rather than correlating it per
+row: MySQL evaluates a correlated projection before GROUP BY, once for every row the range scan
+returns, so the talk candidates' week-long window took 850 ms on its index with the reaction count
+correlated per message and 47 ms with it joined per room. The story candidates rank single rows and
+keep their correlated counts.
 The `id` suffix is implied on both engines — InnoDB stores the primary key at the end of every
 secondary index and SQLite stores the rowid — but writing it keeps the axis legible in the schema. A
 UUID-keyed table is the exception: `notifications` orders by its UUID after `created_at`, which
@@ -139,7 +142,7 @@ flag, a foreign-key column, and is treated as adopted.
 | `groups` | `(created_at, id)` — group search; a member's own groups are read through the membership index and sorted by the engine | — |
 | `group_topics`, `group_events` | `(bumped_at, id)` — the site-wide recent boards; `(created_at, id)` — the issue window's story candidates | `(group_id, bumped_at)` — a group's board; `(group_id, created_at, id)` — a group's latest photos, and what keeps MySQL off the site-wide index for that LIMIT (measured: 2.6 ms → 45 ms without it at 50k topics) |
 | `group_events` | `(open_date, id)` — the upcoming calendar, a window over the event date | — |
-| `group_messages` | `(created_at, id)` — the issue window's talk candidates (measured on MySQL 8.4 at 300k messages: a day's window 67 ms → 8 ms, a week's 88 ms → 47 ms) | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
+| `group_messages` | `(created_at, id)` — the issue window's talk candidates (measured on MySQL 8.4 at 300k messages with the reaction count joined per room: a day's window 65 ms → 8 ms, a week's 76 ms → 47 ms) | `(group_id, created_at, id)` — talk keyset, latest message, read cursor |
 | `notifications` | — | `(notifiable_type, notifiable_id, created_at)` — the feed and the center window |
 | comment tables | — | `(parent id, number)` — the thread pagers |
 
