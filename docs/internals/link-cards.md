@@ -571,9 +571,9 @@ the link was shared here — while a link to one of this site's own pages is pre
 `openpne:prune-link-cards` deletes cards no body points at, and takes every picture stored for them —
 the current one and any generation a refetch left, tied to the card only by relation — because
 while a card exists nothing else collects those bytes. A refetch that completes deletes the picture
-it replaced, found by the same relation and never by the id alone; the sweep's second step takes the
-pictures whose card is already gone, which earlier sweeps left when they took the current picture
-only, under the same grace period so a picture a fetch in flight has just stored is never a candidate.
+it replaced, found by the same relation and never by the id alone. The sweep's second step takes the
+pictures whose card is gone, under the same grace period, so a picture a fetch in flight has just
+stored is left to that fetch's own fence.
 
 It is a sweep rather than something the posting path does inline, because cards are shared by URL: no
 single record stopping its reference proves the card is unused without checking every other record.

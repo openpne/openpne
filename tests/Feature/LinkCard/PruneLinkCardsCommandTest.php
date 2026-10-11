@@ -190,8 +190,7 @@ class PruneLinkCardsCommandTest extends TestCase
 
     public function test_a_picture_whose_card_is_already_gone_is_collected(): void
     {
-        // Sweeps before the generations were swept with the card left the replaced ones behind, with
-        // no card to find them through.
+        // A picture with no card to be found through: no sweep by relation can reach it.
         $orphan = $this->agedPicture(424242);
         $fresh = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => 424242]);
         $held = $this->agedPicture(LinkCard::factory()->create()->id);

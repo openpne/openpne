@@ -243,13 +243,9 @@ class FetchLinkCardTest extends TestCase
     public function test_a_failed_refresh_keeps_the_card_that_was_already_working(): void
     {
         $card = $this->card('https://example.com/flaky');
-        $file = File::factory()->create();
-        $card->update([
-            'status' => LinkCardStatus::Ok,
-            'title' => 'Still good',
-            'image_file_id' => $file->id,
-            'expires_at' => CarbonImmutable::now()->subDay(),
-        ]);
+        // The card's own stored picture, so the delete a success makes is what has to hold back here.
+        $file = $this->pictureOf($card);
+        $card->update(['title' => 'Still good']);
         $this->queueResponse(new Response(503, ['Content-Type' => 'text/html'], ''));
 
         $this->runJob($card->fresh());
@@ -265,6 +261,8 @@ class FetchLinkCardTest extends TestCase
     public function test_a_refetch_deletes_the_picture_it_replaced(): void
     {
         $card = $this->card('https://example.com/refreshed');
+        // An older generation of this card's, left by an earlier release: not the one being replaced.
+        $leftover = File::factory()->create(['related_entity_type' => LinkCardImage::RELATED_TYPE, 'related_entity_id' => $card->id]);
         $previous = $this->pictureOf($card);
         $this->queueHtml('<html><head><meta property="og:title" content="New"><meta property="og:image" content="https://example.com/i.png"></head></html>');
         $this->queueBinary($this->png(), 'image/png');
@@ -276,6 +274,7 @@ class FetchLinkCardTest extends TestCase
         $this->assertNotSame($previous->id, $card->image_file_id);
         $this->assertDatabaseHas('files', ['id' => $card->image_file_id]);
         $this->assertDatabaseMissing('files', ['id' => $previous->id]);
+        $this->assertDatabaseHas('files', ['id' => $leftover->id]);
     }
 
     public function test_a_refetch_that_finds_no_picture_still_drops_the_one_it_replaced(): void
@@ -294,15 +293,22 @@ class FetchLinkCardTest extends TestCase
     public function test_a_replaced_pointer_naming_another_entitys_file_is_left_alone(): void
     {
         // The pointer is not trusted on its own: deleting by id would take whatever the id has come to name.
-        $card = $this->card('https://example.com/crossed');
-        $foreign = File::factory()->create(['related_entity_type' => 'member', 'related_entity_id' => $card->id]);
-        $card->update(['status' => LinkCardStatus::Ok, 'title' => 'Old', 'image_file_id' => $foreign->id, 'expires_at' => CarbonImmutable::now()->subDay()]);
+        $this->assertAForeignPointerSurvivesARefetch('member');
+        $this->assertAForeignPointerSurvivesARefetch(LinkCardImage::RELATED_TYPE, $this->card('https://example.com/other')->id);
+    }
+
+    /** A fresh card pointed at a File of $type owned by $ownerId (its own id when null) is refetched without a picture. */
+    private function assertAForeignPointerSurvivesARefetch(string $type, ?int $ownerId = null): void
+    {
+        $card = $this->card('https://example.com/crossed-'.$type);
+        $file = File::factory()->create(['related_entity_type' => $type, 'related_entity_id' => $ownerId ?? $card->id]);
+        $card->update(['status' => LinkCardStatus::Ok, 'title' => 'Old', 'image_file_id' => $file->id, 'expires_at' => CarbonImmutable::now()->subDay()]);
         $this->queueHtml('<html><head><meta property="og:title" content="New"></head></html>');
 
         $this->runJob($card->fresh());
 
         $this->assertNull($card->fresh()->image_file_id);
-        $this->assertDatabaseHas('files', ['id' => $foreign->id]);
+        $this->assertDatabaseHas('files', ['id' => $file->id]);
     }
 
     public function test_a_kept_card_is_retried_once_its_backoff_elapses(): void
@@ -368,15 +374,9 @@ class FetchLinkCardTest extends TestCase
         // The outage path writes the text and the schedule only: overwriting the image columns
         // would strip a working card of its picture and leave the old File referenced by nothing.
         $card = $this->card('https://example.com/article');
-        $file = File::factory()->create();
-        $card->update([
-            'status' => LinkCardStatus::Ok,
-            'title' => 'Old',
-            'image_file_id' => $file->id,
-            'image_width' => 20,
-            'image_height' => 20,
-            'expires_at' => CarbonImmutable::now()->subDay(),
-        ]);
+        // The card's own stored picture, so the delete a success makes is what has to hold back here.
+        $file = $this->pictureOf($card);
+        $card->update(['image_width' => 20, 'image_height' => 20]);
         $this->queueHtml(<<<'HTML'
             <html><head>
             <meta property="og:title" content="New">

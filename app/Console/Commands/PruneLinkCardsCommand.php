@@ -21,7 +21,7 @@ class PruneLinkCardsCommand extends Command
         {--days=7 : Only prune cards untouched for at least this many days}
         {--dry-run : Report what would be deleted without deleting it}';
 
-    protected $description = 'Delete link preview cards no post refers to any more';
+    protected $description = 'Delete link preview cards no post refers to any more, and pictures no card refers to';
 
     public function handle(): int
     {
@@ -32,8 +32,7 @@ class PruneLinkCardsCommand extends Command
             ->where('link_cards.updated_at', '<=', $cutoff)
             ->whereNotExists(fn ($sub) => $this->anyReference($sub));
 
-        // The same grace: a picture younger than the cutoff may belong to a fetch still in flight,
-        // whose card the sweep above has just taken or whose own fence will delete it.
+        // The same grace, so a picture a fetch in flight has just stored is left to that fetch's own fence.
         $orphans = File::query()
             ->where('related_entity_type', LinkCardImage::RELATED_TYPE)
             ->where('files.created_at', '<=', $cutoff)
