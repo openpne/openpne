@@ -7,6 +7,7 @@ namespace Tests\Feature\LinkCard;
 use App\Jobs\FetchLinkCard;
 use App\Jobs\SyncLinkCard;
 use App\LinkCard\LinkCardSync;
+use App\LinkCard\LinkUrl;
 use App\Models\Diary;
 use App\Models\LinkCard;
 use App\Models\Member;
@@ -120,7 +121,7 @@ class LinkCardSyncTest extends TestCase
     {
         config(['app.url' => 'https://sns.example.com']);
         $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
-        $card = LinkCard::factory()->create(['url' => 'https://sns.example.com/diary/1', 'expires_at' => CarbonImmutable::now()->addDays(6)]);
+        $card = $this->cardOfOurs(['expires_at' => CarbonImmutable::now()->addDays(6)]);
         $diary = $this->diary(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()]);
 
         $this->sync()->ensure($diary);
@@ -131,12 +132,20 @@ class LinkCardSyncTest extends TestCase
     public function test_a_converted_row_of_ours_is_left_alone(): void
     {
         config(['app.url' => 'https://sns.example.com']);
-        $card = LinkCard::factory()->create(['url' => 'https://sns.example.com/diary/1', 'status' => LinkCardStatus::Internal, 'expires_at' => null]);
+        $card = $this->cardOfOurs(['status' => LinkCardStatus::Internal, 'expires_at' => null]);
         $diary = $this->diary(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()]);
 
         $this->sync()->ensure($diary);
 
         Queue::assertNothingPushed();
+    }
+
+    /** A card whose URL is one of this site's pages, hash and URL agreeing. */
+    private function cardOfOurs(array $attributes): LinkCard
+    {
+        $url = 'https://sns.example.com/diary/1';
+
+        return LinkCard::factory()->create($attributes + ['url' => $url, 'url_hash' => LinkUrl::hash($url)]);
     }
 
     public function test_a_due_card_is_not_fetched_while_the_setting_is_off_and_is_once_it_returns(): void

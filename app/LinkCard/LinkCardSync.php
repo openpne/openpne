@@ -22,10 +22,10 @@ final class LinkCardSync
     public function __construct(private readonly LinkCardSettings $settings) {}
 
     /**
-     * Talk's read trigger, which stays bounded only because a record is examined once in its life,
-     * a refresh is gated by `LinkCard::isDueForFetch`, and a URL is one card. Pass only the records
-     * the page renders: a reply's parent arrives without its card loaded, so examining it would mark
-     * a body nobody looked at and lazy-load a query per row.
+     * Talk's read trigger, bounded because a record is examined once in its life, a refresh is gated
+     * by `LinkCard::isDueForFetch` (a row of ours by its one conversion), and a URL is one card. Pass
+     * only the records the page renders: a reply's parent arrives without its card loaded, so
+     * examining it would mark a body nobody looked at.
      *
      * @param  iterable<Model>  $records
      */
