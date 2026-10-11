@@ -3,6 +3,7 @@
 namespace Tests;
 
 use App\Features\Profile\ProfileVisibilityPolicy;
+use App\Files\FileOwners;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,18 +36,21 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * A request sent through here starts and ends with an empty memoized cache, as in production where
-     * the memo lives for one request; the test container outlives the request, so the scope is closed
-     * by hand (Livewire's test requests go through its own broker and keep theirs).
+     * A request sent through here starts and ends with an empty memoized cache and no noted file
+     * owners, as in production where both live for one request; the test container outlives the
+     * request, so the scope is closed by hand (Livewire's test requests go through its own broker and
+     * keep theirs).
      */
     public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
     {
         $this->forgetMemoizedCaches();
+        $this->app->forgetInstance(FileOwners::class);
 
         try {
             return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
         } finally {
             $this->forgetMemoizedCaches();
+            $this->app->forgetInstance(FileOwners::class);
         }
     }
 
