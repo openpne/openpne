@@ -25,9 +25,10 @@ docker compose exec app vendor/bin/pint --test    # drop --test to auto-format
 docker compose exec vite npm run type-check
 ```
 
-A change under `resources/js` is checked by the frontend lane and by PHP tests
-that read those files, so run both at once before pushing (host toolchain, as it
-needs npm and php together; the production build is not part of it):
+A change under `resources/js` is checked by the frontend lane, by `i18n:check`
+and by PHP tests that read those files, so run them at once before pushing (host
+toolchain, as it needs npm and php together; the production build is not part of
+it):
 
 ```bash
 composer test-frontend

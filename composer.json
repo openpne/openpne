@@ -82,9 +82,11 @@
             "@php artisan test"
         ],
         "test-frontend": [
-            "npm run lint",
-            "npm run type-check",
-            "npm test",
+            "@php artisan config:clear --ansi @no_additional_args",
+            "npm run lint @no_additional_args",
+            "npm run type-check @no_additional_args",
+            "npm test @no_additional_args",
+            "@php artisan i18n:check @no_additional_args",
             "@php artisan test tests/Unit",
             "@php artisan test tests/Feature/Frontend",
             "@php artisan test tests/Feature/Architecture"
