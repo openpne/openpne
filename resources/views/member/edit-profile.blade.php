@@ -6,9 +6,10 @@
     <x-classic.parts id="profileForm" name="form" :title="__('Edit Profile')">
         <form method="POST" action="{{ route('member.profile.update') }}">
             @csrf
+            <x-classic.required-notice />
             <table>
                 <tr>
-                    <th><label for="member_name">{{ __('%nickname%') }}</label></th>
+                    <th><label for="member_name">{{ __('%nickname%') }} <x-classic.required-mark /></label></th>
                     <td>
                         <input type="text" class="input_text" id="member_name" name="name" value="{{ old('name', $member->name) }}" maxlength="255" required>
                         @error('name')<p class="error">{{ $message }}</p>@enderror

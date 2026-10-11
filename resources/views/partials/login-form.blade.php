@@ -11,20 +11,20 @@
             @csrf
             <table>
                 <tr>
-                    <th><label for="login_email">{{ __('Mail Address') }}</label></th>
-                    <td><input type="email" id="login_email" name="email" value="{{ old('email') }}"
-                               class="input_text" autocomplete="email" autofocus required></td>
+                    <th><label for="authMailAddress_mail_address">{{ __('Mail Address') }}</label></th>
+                    <td><input type="email" id="authMailAddress_mail_address" name="email" value="{{ old('email') }}"
+                               autocomplete="email" autofocus required></td>
                 </tr>
                 <tr>
-                    <th><label for="login_password">{{ __('Password') }}</label></th>
-                    <td><input type="password" id="login_password" name="password"
-                               class="input_text" autocomplete="current-password" required></td>
+                    <th><label for="authMailAddress_password">{{ __('Password') }}</label></th>
+                    <td><input type="password" id="authMailAddress_password" name="password"
+                               autocomplete="current-password" required></td>
                 </tr>
                 {{-- OpenPNE 3 appends is_remember_me to the login form after the credentials, so it
                      renders as the row below the password. Fortify reads the `remember` input. --}}
                 <tr>
-                    <th><label for="login_remember">{{ __('Remember me') }}</label></th>
-                    <td><input type="checkbox" class="input_checkbox" id="login_remember" name="remember" value="1"
+                    <th><label for="authMailAddress_is_remember_me">{{ __('Remember me') }}</label></th>
+                    <td><input type="checkbox" id="authMailAddress_is_remember_me" name="remember" value="1"
                                @checked(old('remember'))></td>
                 </tr>
                 <tr>
@@ -45,7 +45,6 @@
                                 data-passkey-login
                                 data-options-url="{{ route('passkey.login-options') }}"
                                 data-submit-url="{{ route('passkey.login') }}"
-                                data-remember-input="login_remember"
                                 data-messages="{{ json_encode([
                                     'The passkey prompt was cancelled.' => __('The passkey prompt was cancelled.'),
                                     'This browser does not support passkeys.' => __('This browser does not support passkeys.'),

@@ -8,9 +8,15 @@
         $valueKey = "profile.{$id}";
         $current = old($valueKey, $field->value);
         $fieldId = 'profile_'.$profile->name.'_value';
+        $widgetClass = match ($profile->form_type) {
+            'checkbox' => 'input_checkbox',
+            'radio' => 'input_radio',
+            'textarea', 'select', 'date', 'country_select', 'region_select' => null,
+            default => 'input_text',
+        };
     @endphp
     <tr>
-        <th><label for="{{ $fieldId }}">{{ $profile->getCaption($lang) }}@if ($profile->is_required)<span class="required" aria-label="required">*</span>@endif</label></th>
+        <th><label for="{{ $fieldId }}">{{ $profile->getCaption($lang) }}@if ($profile->is_required) <x-classic.required-mark />@endif</label></th>
         <td>
             {{-- The skin floats the field (.input) left and the visibility (.publicFlag) right. --}}
             @if ($profile->is_edit_public_flag)<div class="input">@endif
@@ -30,16 +36,20 @@
                     @break
 
                 @case('radio')
-                    @foreach ($profile->choices($lang) as $choice)
-                        <label><input type="radio" name="profile[{{ $id }}]" value="{{ $choice['id'] }}" @checked((string) $current === (string) $choice['id'])> {{ $choice['caption'] }}</label>
-                    @endforeach
+                    <ul class="radio_list">
+                        @foreach ($profile->choices($lang) as $choice)
+                            <li><input type="radio" name="profile[{{ $id }}]" value="{{ $choice['id'] }}" id="{{ $fieldId }}_{{ $choice['id'] }}" class="input_radio" @checked((string) $current === (string) $choice['id'])> <label for="{{ $fieldId }}_{{ $choice['id'] }}">{{ $choice['caption'] }}</label></li>
+                        @endforeach
+                    </ul>
                     @break
 
                 @case('checkbox')
                     @php $selected = array_map('strval', (array) $current); @endphp
-                    @foreach ($profile->choices($lang) as $choice)
-                        <label><input type="checkbox" name="profile[{{ $id }}][]" value="{{ $choice['id'] }}" @checked(in_array((string) $choice['id'], $selected, true))> {{ $choice['caption'] }}</label>
-                    @endforeach
+                    <ul class="checkbox_list">
+                        @foreach ($profile->choices($lang) as $choice)
+                            <li><input type="checkbox" name="profile[{{ $id }}][]" value="{{ $choice['id'] }}" id="{{ $fieldId }}_{{ $choice['id'] }}" class="input_checkbox" @checked(in_array((string) $choice['id'], $selected, true))> <label for="{{ $fieldId }}_{{ $choice['id'] }}">{{ $choice['caption'] }}</label></li>
+                        @endforeach
+                    </ul>
                     @break
 
                 @case('date')
@@ -85,7 +95,8 @@
                 </div>
                 @php $currentVisibility = (int) old("visibility.{$id}", $field->visibility->value); @endphp
                 <div class="publicFlag">
-                    <select name="visibility[{{ $id }}]">
+                    {{-- _partsForm.php hands the widget's class to the whole profile widget, so the audience select wears it too. --}}
+                    <select id="profile_{{ $profile->name }}_public_flag" name="visibility[{{ $id }}]"@if ($widgetClass) class="{{ $widgetClass }}"@endif>
                         @foreach ($profile->visibilityOptions($field->visibility) as $option)
                             <option value="{{ $option->value }}" @selected($currentVisibility === $option->value)>{{ __($option->label()) }}</option>
                         @endforeach
@@ -94,7 +105,7 @@
             @endif
 
             @if ($profile->getInfo($lang))
-                <p class="help">{{ $profile->getInfo($lang) }}</p>
+                <div class="help">{{ $profile->getInfo($lang) }}</div>
             @endif
         </td>
     </tr>
