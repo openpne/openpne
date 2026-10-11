@@ -123,6 +123,7 @@ row: when MySQL sorts the range scan's rows for GROUP BY it evaluates a correlat
 for every row the scan returns, so the talk candidates' week-long window took 850 ms on its index
 with the reaction count correlated per message and 47 ms with it joined per room. The story
 candidates rank single rows and keep their correlated counts.
+
 The `id` suffix is implied on both engines — InnoDB stores the primary key at the end of every
 secondary index and SQLite stores the rowid — but writing it keeps the axis legible in the schema. A
 UUID-keyed table is the exception: `notifications` orders by its UUID after `created_at`, which
