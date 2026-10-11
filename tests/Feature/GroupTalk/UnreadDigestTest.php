@@ -9,6 +9,7 @@ use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
 use App\Models\Member;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -326,6 +327,31 @@ class UnreadDigestTest extends TalkTestCase
             array_map(fn (File $file): string => $file->url(), $wanted),
             array_column($digest['thumbnails'], 'url'),
         );
+    }
+
+    public function test_a_thumbnail_gate_reads_neither_the_message_nor_the_room_again(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $messages = $this->say($group, $this->memberOf($group), TalkAbsenceDigest::THRESHOLD);
+        $this->rewindCursors($group);
+        foreach ([0, 1, 2] as $index) {
+            $this->attach($messages[$index], 1);
+        }
+        $snapshot = ['count' => TalkAbsenceDigest::THRESHOLD, 'at' => CarbonImmutable::instance($this->start)->subHour(), 'id' => 0];
+
+        DB::enableQueryLog();
+        $digest = app(TalkAbsenceDigest::class)($group, $viewer, $snapshot);
+        // Quotes stripped, so the needle reads the same under sqlite's "" and MySQL's ``.
+        $reread = array_values(array_filter(
+            DB::getQueryLog(),
+            fn (array $q): bool => (bool) preg_match('/^select \* from (groups|group_messages) where \1\.id = \? limit 1$/', str_replace(['"', '`'], '', $q['query'])),
+        ));
+        DB::disableQueryLog();
+
+        $this->assertCount(3, $digest['thumbnails'] ?? []);
+        // The sample carries its room and is noted for the gate, so a picture's gate reads neither again.
+        $this->assertSame([], $reread, 'a thumbnail gate re-read its message or the room');
     }
 
     public function test_a_join_row_borrowing_another_messages_file_is_left_out(): void

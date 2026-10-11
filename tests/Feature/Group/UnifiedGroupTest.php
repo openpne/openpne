@@ -394,6 +394,7 @@ class UnifiedGroupTest extends TestCase
 
         $messageHref = "/groups/{$group->getKey()}/talk?m={$message->getKey()}";
 
+        DB::enableQueryLog();
         $this->actingAs($author)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('recentPhotos', 4)
@@ -409,6 +410,15 @@ class UnifiedGroupTest extends TestCase
             ->assertSee($first->name)
             ->assertSee($second->name)
             ->assertDontSee($strayFile->name);
+        // Quotes stripped, so the needle reads the same under sqlite's "" and MySQL's ``.
+        $reread = array_values(array_filter(
+            DB::getQueryLog(),
+            fn (array $q): bool => (bool) preg_match('/^select \* from (groups|group_messages|group_topics|group_events) where \1\.id = \? limit 1$/', str_replace(['"', '`'], '', $q['query'])),
+        ));
+        DB::disableQueryLog();
+
+        // The parents are noted for the gate with the group they were read through, so it reads neither again.
+        $this->assertSame([], $reread, 'a file gate re-read a picture parent or its group');
     }
 
     public function test_the_strip_caps_at_eight_without_disturbing_the_order(): void

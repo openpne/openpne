@@ -45,10 +45,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** What the file policy reads to answer for one picture: its owner, the owner's room and the two settings its unit hangs on. */
-    private const PER_PICTURE = 4;
-
-    /** The files of the pictures asked about, read once for the month. */
+    /** The files of the pictures asked about, read once for the month; the gate itself reads nothing the page does not hold. */
     private const PICTURES = 1;
 
     protected function setUp(): void
@@ -101,12 +98,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $this->assertSame(30, $talking - $one, 'an issue that holds talk cost more than its stretch');
         $this->assertGreaterThan($silent, $one);
 
-        $this->assertGreaterThan(0, $pictured - $talking);
-        $this->assertLessThanOrEqual(
-            self::PER_PICTURE * 31,
-            $pictured - $talking - self::PICTURES,
-            'a picture cost '.(($pictured - $talking) / 31).' reads',
-        );
+        $this->assertSame(self::PICTURES, $pictured - $talking, 'a picture cost '.(($pictured - $talking) / 31).' reads');
     }
 
     /**
@@ -129,12 +121,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $this->assertFilled($picturedDays, days: 31, talking: 93, pictured: 93, stories: 0);
         $this->assertSame(array_fill(0, 31, 1), array_column($picturedDays, 'more'));
 
-        $this->assertGreaterThan(0, $pictured - $bare);
-        $this->assertLessThanOrEqual(
-            self::PER_PICTURE * 93,
-            $pictured - $bare - self::PICTURES,
-            'a picture cost '.(($pictured - $bare) / 93).' reads',
-        );
+        $this->assertSame(self::PICTURES, $pictured - $bare, 'a picture cost '.(($pictured - $bare) / 93).' reads');
     }
 
     /** Once unmeasured: the first read of a process also loads the site's settings. */

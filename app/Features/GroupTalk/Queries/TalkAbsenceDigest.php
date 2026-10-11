@@ -73,6 +73,7 @@ class TalkAbsenceDigest
             ->orderBy('created_at')
             ->orderBy('id')
             ->limit(self::SAMPLE)
-            ->get();
+            ->get()
+            ->each(fn (GroupMessage $message) => $message->setRelation('group', $group));
     }
 }
