@@ -66,6 +66,12 @@ class TalkImageToolTest extends McpTestCase
         return $file;
     }
 
+    /** The attachment row's id, which the answer reports beside the slot number. */
+    private function slotId(File $file): int
+    {
+        return (int) GroupMessageImage::query()->where('file_id', $file->getKey())->value('id');
+    }
+
     /** The canonical off the same cache the tool reads: what `size=original` answers, never the stored bytes. */
     private function original(File $file): string
     {
@@ -108,6 +114,7 @@ class TalkImageToolTest extends McpTestCase
             // Fitted into the 640 box, so the reported size is the thumbnail's and not the source's.
             ->assertStructuredContent(['images' => [[
                 'number' => 1,
+                'id' => $this->slotId($file),
                 'width' => 640,
                 'height' => 320,
                 'mimeType' => 'image/png',
@@ -130,6 +137,7 @@ class TalkImageToolTest extends McpTestCase
             ->assertSee($this->wire($stored))
             ->assertStructuredContent(['images' => [[
                 'number' => 1,
+                'id' => $this->slotId($file),
                 'width' => 800,
                 'height' => 400,
                 'mimeType' => 'image/png',
@@ -185,10 +193,47 @@ class TalkImageToolTest extends McpTestCase
 
         // Slot order, and the smallest one is not upscaled into the box.
         $response->assertStructuredContent(['images' => [
-            ['number' => 1, 'width' => 640, 'height' => 320, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($files[0]))],
-            ['number' => 2, 'width' => 320, 'height' => 640, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($files[1]))],
-            ['number' => 3, 'width' => 200, 'height' => 100, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($files[2]))],
+            ['number' => 1, 'id' => $this->slotId($files[0]), 'width' => 640, 'height' => 320, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($files[0]))],
+            ['number' => 2, 'id' => $this->slotId($files[1]), 'width' => 320, 'height' => 640, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($files[1]))],
+            ['number' => 3, 'id' => $this->slotId($files[2]), 'width' => 200, 'height' => 100, 'mimeType' => 'image/png', 'byteSize' => strlen($this->thumbnail($files[2]))],
         ]]);
+    }
+
+    public function test_two_pictures_in_one_slot_are_told_apart_by_id_and_image_id_names_one(): void
+    {
+        // A migrated message can carry two rows in one slot: (message, number) is not unique.
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $message = $this->say($group, $member, 'a doubled slot');
+        $first = $this->attach($message, 1, 800, 400);
+        $second = $this->attach($message, 1, 400, 800);
+        $elsewhere = $this->attach($this->say($group, $member, 'another message'), 1);
+        $where = ['group_id' => $group->getKey(), 'message_id' => $message->getKey(), 'size' => 'original'];
+
+        $this->acting($member);
+
+        $this->read([...$where, 'number' => 1])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($first)))
+            ->assertSee($this->wire($this->original($second)))
+            ->assertStructuredContent(fn ($json) => $json
+                ->count('images', 2)
+                ->where('images.0.number', 1)
+                ->where('images.0.id', $this->slotId($first))
+                ->where('images.1.number', 1)
+                ->where('images.1.id', $this->slotId($second))
+                ->etc());
+
+        $this->read([...$where, 'image_id' => $this->slotId($second)])
+            ->assertOk()
+            ->assertSee($this->wire($this->original($second)))
+            ->assertDontSee($this->wire($this->original($first)))
+            ->assertStructuredContent(fn ($json) => $json->count('images', 1)->where('images.0.id', $this->slotId($second))->etc());
+
+        // Another message's row is no more findable through this one than an id that names nothing.
+        $this->read([...$where, 'image_id' => $this->slotId($elsewhere)])
+            ->assertHasErrors(['No such'])
+            ->assertDontSee($this->wire($this->original($elsewhere)));
     }
 
     public function test_a_message_without_pictures_answers_with_none_rather_than_a_refusal(): void

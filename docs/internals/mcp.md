@@ -61,12 +61,12 @@ its owner ([`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorElig
 |---|---|---|
 | `list-talk-rooms` | `mcp:read` | The caller's own rooms, most recently talked in first, with their unread count and `unreadMentions`, how many of those are addressed to the caller. Paged; the page is an argument, since there is no URL to read one off. |
 | `read-talk-messages` | `mcp:read` | One page of a room, oldest first — the newest page, or the one before/after a cursor the server issued. |
-| `read-talk-message-images` | `mcp:read` | The pictures on one message, as image data: every one of them, or the slot named by `number`. Thumbnails unless `size=original` is asked for. |
+| `read-talk-message-images` | `mcp:read` | The pictures on one message, as image data: every one of them, the slot named by `number`, or the one named by `image_id`. Thumbnails unless `size=original` is asked for. |
 | `post-talk-message` | `+ mcp:write` | Says something in a room the caller belongs to. Text, plus an optional `reply_to_message_id` that records the answer against that message and addresses its author. |
 | `mark-talk-read` | `+ mcp:write` | Moves the caller's read cursor to a message. Forward only. |
 | `list-diaries` | `mcp:read` | The site's newest diaries, an excerpt each. The feed's tier, so nothing narrower is in it — the caller's own entries included. Older pages by the `olderCursor` an answer hands out; a cursor it cannot read, a well-formed one of the wrong key type included, is refused. |
 | `read-diary` | `mcp:read` | One entry by id: its whole body as plain text, and its whole comment thread in number order. |
-| `read-diary-images` | `mcp:read` | The pictures on an entry, or on one of its comments (`comment_id`), as image data — every one of them, or the one named by `number`. Thumbnails unless `size=original` is asked for. |
+| `read-diary-images` | `mcp:read` | The pictures on an entry, or on one of its comments (`comment_id`), as image data — every one of them, the slot named by `number`, or the one named by `image_id`. Thumbnails unless `size=original` is asked for. |
 | `post-diary` | `+ mcp:write` | Writes an entry as the caller. Title, text, an optional audience and body format, and optional pictures as base64. |
 | `post-diary-comment` | `+ mcp:write` | Comments on an entry the caller may read, with optional pictures as base64. |
 
@@ -165,7 +165,10 @@ a re-encode that can be larger than the stored bytes.
 
 **A slot holding no picture is refused when `number` names it, and passed over when it does not** —
 the refusal rule above, applied inside a message: being told "that one is empty" would let the slots
-be walked to count what a message carries. Authorization is the message's own, since
+be walked to count what a message carries. A slot is not a picture: `(message, number)` is not
+unique, since a migrated message may carry two rows in one slot, so every picture is reported with
+the `id` of its attachment row as well, and `image_id` names one exactly where `number` names the
+slot. Authorization is the message's own, since
 [`FilePolicy`](../../app/Policies/FilePolicy.php) resolves a talk image through the same
 `GroupTalkAccess::canView` the room was resolved through; the tool asks it per file anyway, as a belt.
 
@@ -218,7 +221,8 @@ a `number` holding no picture refused when named and passed over when not — th
 [`AnswersWithImages`](../../app/Mcp/Tools/Concerns/AnswersWithImages.php). What `number` means
 differs: on an entry it is the stored slot; on a comment, whose images have no slot column (OpenPNE 3
 has none), it is the position in that comment's own pictures — counted over every row before any of
-them is judged, and never a row id. `comment_id` is looked up **within** the entry the caller has
+them is judged, and never a row id. The `id` reported beside it is the attachment row, which
+`image_id` names exactly on either. `comment_id` is looked up **within** the entry the caller has
 just passed `ShowDiary` on, so a comment of another entry refuses exactly as one that is not there.
 
 **Pictures are posted as base64**, this wire carrying JSON where the compose forms carry files, and

@@ -38,6 +38,7 @@ class ReadDiaryImagesTool extends DiaryTool
             'comment_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'size' => ['sometimes', 'string', 'in:'.implode(',', self::SIZES)],
             'number' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'image_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
         ]);
 
         $member = $this->member($request);
@@ -54,24 +55,25 @@ class ReadDiaryImagesTool extends DiaryTool
         }
 
         $number = isset($validated['number']) ? (int) $validated['number'] : null;
+        $imageId = isset($validated['image_id']) ? (int) $validated['image_id'] : null;
 
         $targets = isset($validated['comment_id'])
-            ? $this->commentTargets($member, $diary, (int) $validated['comment_id'], $number)
-            : $this->diaryTargets($member, $diary, $number);
+            ? $this->commentTargets($member, $diary, (int) $validated['comment_id'], $number, $imageId)
+            : $this->diaryTargets($member, $diary, $number, $imageId);
 
         return $targets instanceof Response ? $targets : $this->answerWithImages($cache, $transform, $targets);
     }
 
     /**
-     * @return Response|list<array{0: int, 1: File}>
+     * @return Response|list<array{0: int, 1: File, 2: int}>
      */
-    private function diaryTargets(Member $member, Diary $diary, ?int $number): Response|array
+    private function diaryTargets(Member $member, Diary $diary, ?int $number, ?int $imageId): Response|array
     {
         $rows = $diary->images()->with('file')->get()
-            ->map(fn (DiaryImage $image): array => [(int) $image->number, $image->file])
+            ->map(fn (DiaryImage $image): array => [(int) $image->number, $image->file, (int) $image->getKey()])
             ->all();
 
-        return $this->chosen($member, $rows, $number);
+        return $this->chosen($member, $rows, $number, $imageId);
     }
 
     /**
@@ -81,9 +83,9 @@ class ReadDiaryImagesTool extends DiaryTool
      * A comment image carries no slot column (OpenPNE 3 has none), so `number` is a position counted
      * over every row before any is judged, never a row id.
      *
-     * @return Response|list<array{0: int, 1: File}>
+     * @return Response|list<array{0: int, 1: File, 2: int}>
      */
-    private function commentTargets(Member $member, Diary $diary, int $commentId, ?int $number): Response|array
+    private function commentTargets(Member $member, Diary $diary, int $commentId, ?int $number, ?int $imageId): Response|array
     {
         $comment = $diary->comments()->whereKey($commentId)->first();
         if ($comment === null) {
@@ -92,25 +94,26 @@ class ReadDiaryImagesTool extends DiaryTool
 
         $rows = $comment->images()->with('file')->get()
             ->values()
-            ->map(fn (DiaryCommentImage $image, int $index): array => [$index + 1, $image->file])
+            ->map(fn (DiaryCommentImage $image, int $index): array => [$index + 1, $image->file, (int) $image->getKey()])
             ->all();
 
-        return $this->chosen($member, $rows, $number);
+        return $this->chosen($member, $rows, $number, $imageId);
     }
 
     /**
-     * A named number holding no picture is refused rather than answered empty, so the numbers cannot
-     * be walked to count what an entry carries; with no number those rows are passed over.
+     * A named number or id holding no picture is refused rather than answered empty, so the numbers
+     * cannot be walked to count what an entry carries; with neither named those rows are passed over.
      *
-     * @param  list<array{0: int, 1: File|null}>  $rows
-     * @return Response|list<array{0: int, 1: File}>
+     * @param  list<array{0: int, 1: File|null, 2: int}>  $rows
+     * @return Response|list<array{0: int, 1: File, 2: int}>
      */
-    private function chosen(Member $member, array $rows, ?int $number): Response|array
+    private function chosen(Member $member, array $rows, ?int $number, ?int $imageId): Response|array
     {
+        $named = $number !== null || $imageId !== null;
         $targets = [];
 
-        foreach ($rows as [$position, $file]) {
-            if ($number !== null && $position !== $number) {
+        foreach ($rows as [$position, $file, $id]) {
+            if (($number !== null && $position !== $number) || ($imageId !== null && $id !== $imageId)) {
                 continue;
             }
 
@@ -121,17 +124,17 @@ class ReadDiaryImagesTool extends DiaryTool
             }
 
             if ($file === null || $file->imageFormat() === null) {
-                if ($number !== null) {
+                if ($named) {
                     return $this->refused();
                 }
 
                 continue;
             }
 
-            $targets[] = [$position, $file];
+            $targets[] = [$position, $file, $id];
         }
 
-        return $number !== null && $targets === [] ? $this->refused() : $targets;
+        return $named && $targets === [] ? $this->refused() : $targets;
     }
 
     /**
@@ -147,7 +150,9 @@ class ReadDiaryImagesTool extends DiaryTool
             'size' => $schema->string()->enum(self::SIZES)->default('thumbnail')
                 ->description('thumbnail: fitted into a 640px box, which is enough to see what a picture is and a fraction of the context the original costs. original: the full-size re-encode the site keeps of the upload (never the uploaded bytes themselves) — ask for it only when the detail decides something.'),
             'number' => $schema->integer()->min(1)
-                ->description('One picture rather than all of them. On the entry it is the slot the picture was attached in; on a comment, whose pictures have no slots, it is their position in the comment, counting from 1. Omit it for every picture, which is also the way to learn the numbers.'),
+                ->description('The pictures in one slot rather than all of them. On the entry it is the slot the picture was attached in, which a migrated entry can hold two in; on a comment, whose pictures have no slots, it is their position in the comment, counting from 1. Omit it for every picture, which is also the way to learn the numbers and ids.'),
+            'image_id' => $schema->integer()->min(1)
+                ->description('One picture exactly, by the id the answer reports beside its number.'),
         ];
     }
 }
