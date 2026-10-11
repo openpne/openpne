@@ -30,18 +30,21 @@ final class TalkBurstCandidates
     /** @return Collection<int, PlannedItem> */
     public function __invoke(HomeIssueWindow $window, int $limit): Collection
     {
-        // Correlated rather than a second pass, because the reaction count is part of the score;
-        // nothing bounds the window but the range itself — no index leads with created_at — which is
-        // what once a day affords.
+        // One row per room rather than a subquery correlated per message: when MySQL sorts the range
+        // scan's rows for GROUP BY, a correlated projection runs once per message in the window
+        // (docs/internals/ordering.md, "One index per axis").
         $reactions = DB::table('reactions')
-            ->selectRaw('count(*)')
             ->join('group_messages as reacted_messages', 'reacted_messages.id', '=', 'reactions.reactable_id')
             ->where('reactions.reactable_type', (new GroupMessage)->getMorphClass())
-            ->whereColumn('reacted_messages.group_id', 'groups.id');
+            ->select('reacted_messages.group_id')
+            // Named apart from the alias below: SQLite resolves a name in an ORDER BY expression against the joined columns before the select list.
+            ->selectRaw('count(*) as reactions')
+            ->groupBy('reacted_messages.group_id');
         $window->apply($reactions, 'reacted_messages.created_at');
 
         $bursts = DB::table('group_messages')
             ->join('groups', 'groups.id', '=', 'group_messages.group_id')
+            ->leftJoinSub($reactions, 'reacted', 'reacted.group_id', '=', 'groups.id')
             ->where('groups.topic_read_access', TopicReadAccess::Everyone->value)
             ->select('groups.id')
             ->selectRaw('count(*) as message_count')
@@ -49,7 +52,8 @@ final class TalkBurstCandidates
             // nobody is not somebody who spoke.
             ->selectRaw('count(distinct group_messages.member_id) as author_count')
             ->selectRaw('max(group_messages.created_at) as last_said')
-            ->selectSub($reactions, 'reaction_count')
+            // One joined row per room, so MAX() is that row's count; it keeps MySQL's only-full-group-by happy.
+            ->selectRaw('coalesce(max(reacted.reactions), 0) as reaction_count')
             ->groupBy('groups.id')
             ->orderByRaw('message_count + author_count + reaction_count desc')
             ->orderByDesc('last_said')
