@@ -224,9 +224,11 @@ the first URL, and going looking would make a body's card depend on when the job
 
 `FetchLinkCard` resolves the URL **before the claim**, and converts a row of ours instead of
 requesting it. That is the repair as well as the guard: rows minted earlier hold a card of the login
-screen or a failure, nothing else revisits them, and the read trigger goes on offering them to the
-fetch job week after week. They correct themselves the next time a page they are on is opened — no
-migration, no command. The same repair runs from the sync side, and there it does not depend on the
+screen or a failure, and nothing else revisits them. The read trigger offers such a row to the fetch
+job whatever the setting says and whether or not the row is due, and the job converts before it
+consults the setting, since the repair fetches nothing. They correct themselves the next time a page
+they are on is opened — no migration, no command, no waiting for the card to expire. The same repair
+runs from the sync side, and there it does not depend on the
 address resolving: no row is *minted* for one of ours that names nothing, but one already there is
 converted anyway, since the row is shared by every body that mentions the URL and would otherwise go
 on drawing a login screen under all of them.

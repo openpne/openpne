@@ -7,6 +7,7 @@ namespace App\LinkCard;
 use App\Jobs\FetchLinkCard;
 use App\Jobs\SyncLinkCard;
 use App\Models\LinkCard;
+use App\Support\LinkCardStatus;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -55,16 +56,28 @@ final class LinkCardSync
             return;
         }
 
-        if (! $this->settings->enabled()) {
-            return;
-        }
-
         $card = $record->getAttribute('link_card_id') === null
             ? null
             : ($record->relationLoaded('linkCard') ? $record->getRelation('linkCard') : LinkCard::find($record->getAttribute('link_card_id')));
 
+        if (! $card instanceof LinkCard) {
+            return;
+        }
+
+        // A row of ours still carrying a fetch needs no fetch to be repaired, so neither the setting
+        // nor due-ness holds it back (docs/internals/link-cards.md, "Rows written before this existed").
+        if ($card->status !== LinkCardStatus::Internal && InternalUrl::of($card->url)->isSelfHosted) {
+            FetchLinkCard::dispatch($card->id);
+
+            return;
+        }
+
+        if (! $this->settings->enabled()) {
+            return;
+        }
+
         // The same predicate the queueing side and the claim use — see LinkCard::isDueForFetch.
-        if ($card instanceof LinkCard && $card->isDueForFetch()) {
+        if ($card->isDueForFetch()) {
             FetchLinkCard::dispatch($card->id);
         }
     }

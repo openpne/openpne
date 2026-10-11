@@ -349,6 +349,48 @@ class InternalLinkCardTest extends TestCase
         $this->assertSame([], $this->outboundRequests);
     }
 
+    public function test_opening_a_page_repairs_a_row_of_ours_while_the_setting_is_off(): void
+    {
+        // A row fetched before internal cards existed, under a body examined back then: the setting
+        // withholds fetches, and this repair is not one.
+        $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
+        $this->app->instance(SafeHttpFetcher::class, $this->fakeFetcher());
+        $card = $this->fetchedCard($this->selfUrl());
+        $image = $card->image;
+        $diary = $this->bodyLinking($this->selfUrl());
+        $diary->forceFill(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()])->save();
+
+        $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk();
+
+        $this->assertSame(LinkCardStatus::Internal, $card->fresh()->status);
+        $this->assertDatabaseMissing('files', ['id' => $image->id]);
+        $this->assertSame([], $this->outboundRequests);
+    }
+
+    public function test_opening_a_page_repairs_a_row_of_ours_before_it_expires(): void
+    {
+        $this->app->instance(SafeHttpFetcher::class, $this->fakeFetcher());
+        $card = $this->fetchedCard($this->selfUrl(), ['expires_at' => CarbonImmutable::now()->addDays(6)]);
+        $diary = $this->bodyLinking($this->selfUrl());
+        $diary->forceFill(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()])->save();
+
+        $this->actingAs($this->author)->get("/diary/{$diary->id}")->assertOk();
+
+        $this->assertSame(LinkCardStatus::Internal, $card->fresh()->status);
+        $this->assertSame([], $this->outboundRequests);
+    }
+
+    public function test_the_fetch_job_converts_one_of_our_urls_while_the_setting_is_off(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
+        $card = $this->fetchedCard($this->selfUrl());
+
+        $this->runFetch($card);
+
+        $this->assertSame(LinkCardStatus::Internal, $card->fresh()->status);
+        $this->assertSame([], $this->outboundRequests);
+    }
+
     private function selfUrl(): string
     {
         return 'https://sns.example.com/diary/'.$this->target->id;

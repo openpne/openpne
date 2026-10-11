@@ -116,6 +116,29 @@ class LinkCardSyncTest extends TestCase
         Queue::assertPushed(SyncLinkCard::class);
     }
 
+    public function test_a_fetched_row_of_ours_is_offered_to_the_job_whatever_the_setting_or_its_expiry(): void
+    {
+        config(['app.url' => 'https://sns.example.com']);
+        $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
+        $card = LinkCard::factory()->create(['url' => 'https://sns.example.com/diary/1', 'expires_at' => CarbonImmutable::now()->addDays(6)]);
+        $diary = $this->diary(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()]);
+
+        $this->sync()->ensure($diary);
+
+        Queue::assertPushed(FetchLinkCard::class);
+    }
+
+    public function test_a_converted_row_of_ours_is_left_alone(): void
+    {
+        config(['app.url' => 'https://sns.example.com']);
+        $card = LinkCard::factory()->create(['url' => 'https://sns.example.com/diary/1', 'status' => LinkCardStatus::Internal, 'expires_at' => null]);
+        $diary = $this->diary(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()]);
+
+        $this->sync()->ensure($diary);
+
+        Queue::assertNothingPushed();
+    }
+
     public function test_a_due_card_is_not_fetched_while_the_setting_is_off_and_is_once_it_returns(): void
     {
         // A body examined while the setting was off holds a pending card; the read trigger is what
