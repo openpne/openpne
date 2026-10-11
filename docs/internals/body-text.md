@@ -52,9 +52,12 @@ the two the fetcher dials, and the path is not consulted: the same host is this 
 [`link-target.ts`](../../resources/js/lib/link-target.ts) decides on the client by the page's own
 host, the one origin the router can visit. [`BodyLink`](../../resources/js/components/body-link.tsx)
 is the Modern component, and `RichBody` applies the same rule on click to the bare anchors the server
-left in `bodyHtml`; a page of ours that answers without an Inertia page (a file, the admin) is loaded
-outright rather than shown as the router's error overlay, which means a file of ours is fetched
-twice on such a click. In the compose preview every link opens a new tab and says so (`OwnLinksOpen`),
+left in `bodyHtml`; a page of ours that answers without an Inertia page (the admin) is loaded
+outright rather than shown as the router's error overlay. A link under a first segment that serves
+bytes (`BYTES_SEGMENTS` in `link-target.ts`, kept equal to the byte-serving routes' by
+[`BytesRouteSegmentsParityTest`](../../tests/Feature/Frontend/BytesRouteSegmentsParityTest.php)) is
+left to the browser outright, since the router would download the file to learn it is not a page.
+In the compose preview every link opens a new tab and says so (`OwnLinksOpen`),
 so a click there cannot take the draft with it. The rule covers every body
 format, link cards and operator banners, and
 [`LinkTargetProducersTest`](../../tests/Feature/Architecture/LinkTargetProducersTest.php) names the
