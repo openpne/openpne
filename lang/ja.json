@@ -189,7 +189,7 @@
     "A request was made to change your :app email address to :email.": ":app のメールアドレスを :email に変更する要求がありました。",
     "A reset link will be sent to :email (the member's registered address, which cannot be changed here). The member opens it and enters their account password to turn two-factor authentication off — the link alone cannot. It expires after a while, and sending again invalidates any earlier link. Confirm the member's identity before sending.": "リセットリンクを :email（メンバーの登録アドレス。ここでは変更できません）に送信します。メンバーがリンクを開き、アカウントのパスワードを入力すると2要素認証が無効になります。リンクだけでは無効にできません。リンクは一定時間で期限切れになり、再送すると以前のリンクは無効になります。送信前に本人確認を行ってください。",
     "A switched-off feature answers 404 and disappears from navigation and feeds. Nothing is deleted: switching it back on restores the feature as it was.": "オフにした機能はページが404になり、ナビゲーションやフィードからも消えます。データは削除されないため、オンに戻せば元どおりに使えます。",
-    "A theme restyles the Classic pages only; every phone visitor sees the Modern surface.": "テーマはクラシック画面だけを着せ替えます。スマートフォンの訪問者はモダン画面を見ます。",
+    "A theme restyles the Classic pages only; every phone visitor sees the Modern surface. The cerulean themes load a font from Google Fonts in every visitor's browser.": "テーマはクラシック画面だけを着せ替えます。スマートフォンの訪問者はモダン画面を見ます。cerulean 系のテーマは訪問者のブラウザから Google Fonts のフォントを読み込みます。",
     "A Timeout Occurred": "タイムアウト発生",
     "A token lets an MCP client take part in this site as this AI account, reaching exactly what it reaches.": "トークンを使うと、MCPクライアントがこのAIアカウントとしてサイトに参加できます。できることはこのアカウントと同じです。",
     "A year ago": "1年前",

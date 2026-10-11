@@ -138,24 +138,6 @@ renders under ([`RouteParity::moduleFor()`](../../app/Compat/RouteParity.php)) t
 `config/view.yml` `stylesheets` entry, and the shell links it between the skin and the custom CSS.
 Global linking is not equivalent — each file also restyles shared kinds (`.commentList`,
 `.recentList`, `.prevNextLinkLine`), which OpenPNE 3 left untouched on other modules' screens.
-
-### Themes
-
-OpenPNE 3's `opSkinThemePlugin` themes are vendored under
-[`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin) (eleven packages; the third-party
-notices sit beside them). A theme is a directory whose `css/main.css` opens with the comment
-header the plugin read (`Theme Name:` and `Author:` make it one), found on the filesystem by
-[`ClassicThemes`](../../app/Support/ClassicThemes.php) as `opThemeAssetSearcher` found them, so a
-deployment may add a package by dropping a directory in. The `classic_theme` setting (the
-*Theme* page under *Appearance (Classic)*) names the directory; it is a path segment, so a name
-outside `[A-Za-z0-9_-]` or not on disk reads as the default skin. With a theme chosen, the default
-skin is not linked and the package's `css/*.css` are linked in name order **after** the module and
-custom CSS, which is where OpenPNE 3 placed them: the theme overrides both (its `customizing.css`
-also preceded the module stylesheet, which is not reproduced). The themes' own JavaScript
-(`bootstrap-dropdown.js`, jQuery-bound) is not loaded; `winter`'s footer credit, which its script
-wrote, is drawn by the shell instead. The theme plugin also overrode the shell's templates (a
-`navbar` header with the local nav inside it, a dropdown global nav, `.well` parts frames); that
-shell is not reproduced yet, so a theme's stylesheets currently dress the default-skin markup.
 Plugin images a template names directly are vendored the same way — the message list's row status
 icons, `opMessagePlugin/images/icon_mail_*.gif` — and the byte lock in
 [`PluginStylesheetsTest`](../../tests/Unit/Compat/PluginStylesheetsTest.php) covers both kinds.
@@ -243,6 +225,26 @@ hardcoded Japanese; the unread-`%diary%`-comment caution has nothing to port to 
 no per-entry comment read state); and the group talk that replaced the OpenPNE 3 community timeline
 is Modern-only ([group-talk.md](group-talk.md)) — the Classic group home offers it as a link box,
 and the OpenPNE 3 timeline URLs redirect into the Modern surface even for a Classic viewer.
+
+### Themes
+
+OpenPNE 3's `opSkinThemePlugin` themes are vendored under
+[`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin) (eleven packages; the third-party
+notices sit beside them). A theme is a directory whose `css/main.css` opens with the comment
+header the plugin read (`Theme Name:` and `Author:` make it one), found on the filesystem by
+[`ClassicThemes`](../../app/Support/ClassicThemes.php) as `opThemeAssetSearcher` found them, so a
+deployment may add a package by dropping a directory in. The `classic_theme` setting (the
+*Theme* page under *Appearance (Classic)*) names the directory; it is a path segment, so a name
+outside `[A-Za-z0-9_-]` or not on disk reads as the default skin. With a theme chosen, the default
+skin is not linked and the package's `css/*.css` are linked in name order **after** the module and
+custom CSS, which is where OpenPNE 3 placed them: the theme overrides both (its `customizing.css`
+also preceded the module stylesheet, which is not reproduced). The themes' own JavaScript
+(`bootstrap-dropdown.js`, jQuery-bound) is not loaded; `winter`'s footer credit, which its script
+wrote, is drawn by the shell instead. The theme plugin also overrode the shell's templates (a
+`navbar` header with the local nav inside it, a dropdown global nav, `.well` parts frames); that
+shell is not reproduced yet, so a theme's stylesheets currently dress the default-skin markup. The
+`cerulean*` packages' `bootstrap.css` imports a font from fonts.googleapis.com, so choosing one makes
+every Classic visitor's browser fetch from that host (the Theme page says so).
 
 ### Error screens
 

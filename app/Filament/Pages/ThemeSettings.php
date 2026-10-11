@@ -130,10 +130,10 @@ class ThemeSettings extends Page
                     ->options($options)
                     ->in(array_keys($options))
                     ->descriptions(array_map(
-                        static fn (ClassicTheme $theme): string => trim($theme->description.' — '.$theme->author, ' —'),
+                        static fn (ClassicTheme $theme): string => implode(' — ', array_filter([$theme->description, $theme->author], static fn (string $part): bool => $part !== '')),
                         $themes,
                     ))
-                    ->helperText(__('A theme restyles the Classic pages only; every phone visitor sees the Modern surface.')),
+                    ->helperText(__('A theme restyles the Classic pages only; every phone visitor sees the Modern surface. The cerulean themes load a font from Google Fonts in every visitor\'s browser.')),
             ]);
     }
 }

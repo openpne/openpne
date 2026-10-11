@@ -247,7 +247,8 @@ change from a problem when you go through it.
   counterpart are dropped; for example the PC / mobile split (`enable_pc`, `enable_mobile`), the
   feature-phone options (`is_check_mobile_ip`, `retrieve_uid`), the OpenID / external-connection /
   JSON API / Google Maps options, `daily_news_day`, `richtextarea_*` (the rich-text editor is frozen),
-  `Theme_used` (Classic ships one skin plus custom CSS) and `pc_home_information` (OpenPNE 3 itself
+  `Theme_used` (choose the Classic theme on *Appearance (Classic) → Theme* after the cutover; the
+  upgrade does not read it yet) and `pc_home_information` (OpenPNE 3 itself
   rendered the information box from the gadget's own config, never from this row, which the
   gadget upgrade carries). `image_max_filesize` is not a site setting here but an environment
   variable, `OPENPNE_IMAGE_MAX_UPLOAD_KB`; the report (dry run and real run alike) prints the value

@@ -11,7 +11,7 @@ namespace App\Support;
 final class ClassicThemes
 {
     /** OpenPNE 3's rule for a theme directory name; the name is also a path segment, so nothing else may pass. */
-    private const DIR_PATTERN = '/^[A-Za-z0-9_-]+$/';
+    private const DIR_PATTERN = '/^[A-Za-z0-9_-]+$/D';
 
     private const HEADERS = [
         'name' => 'Theme Name',
@@ -43,7 +43,7 @@ final class ClassicThemes
         return public_path('opSkinThemePlugin');
     }
 
-    /** Drop the per-process memo, for a test that adds or removes a package. */
+    /** Drop the per-process memo (one scan per PHP-FPM request), for a test that adds or removes a package. */
     public static function forget(): void
     {
         self::$themes = null;

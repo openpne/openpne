@@ -214,7 +214,7 @@ enum SnsSettingKey: string
             // reader's browser, where this fetches arbitrary hosts from the server.
             self::LinkCardEnabled => null,
             self::ImageUploadBrowserShrink => null,
-            // Theme_used alone does not say which skin OpenPNE 3 showed; the theme step reads the plugin table with it.
+            // Theme_used alone does not say which skin OpenPNE 3 showed: the active skin plugin decided.
             self::ClassicTheme => null,
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',

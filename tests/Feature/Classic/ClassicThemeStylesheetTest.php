@@ -34,10 +34,9 @@ class ClassicThemeStylesheetTest extends TestCase
             ['opDiaryPlugin/css/diary.css', '/cache/css/customizing.css', 'opSkinThemePlugin/cerulean/css/bootstrap.css', 'opSkinThemePlugin/cerulean/css/font-awesome.css', 'opSkinThemePlugin/cerulean/css/foundation.css', 'opSkinThemePlugin/cerulean/css/main.css'],
         );
         $this->assertNotContains(false, $positions);
-        $this->assertSame($positions, array_values(array_filter($positions)), 'theme stylesheets follow the module and custom CSS, in name order');
         $sorted = $positions;
         sort($sorted);
-        $this->assertSame($sorted, $positions);
+        $this->assertSame($sorted, $positions, 'theme stylesheets follow the module and custom CSS, in name order');
     }
 
     public function test_the_default_skin_stays_when_no_theme_is_chosen_or_the_chosen_one_is_not_on_disk(): void

@@ -41,7 +41,7 @@ class ClassicThemesTest extends TestCase
 
     public function test_a_name_outside_the_directory_rule_or_not_on_disk_finds_nothing(): void
     {
-        foreach (['', '../opSkinBasicPlugin', 'cerulean/..', 'no-such-theme', 'cerulean ', "cerulean\0"] as $dir) {
+        foreach (['', '../opSkinBasicPlugin', 'cerulean/..', 'no-such-theme', 'cerulean ', "cerulean\0", "cerulean\n"] as $dir) {
             $this->assertNull(ClassicThemes::find($dir), json_encode($dir));
         }
         $this->assertNotNull(ClassicThemes::find('cerulean'));
