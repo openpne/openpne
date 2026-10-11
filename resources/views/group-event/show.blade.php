@@ -113,7 +113,7 @@
                                     <a href="{{ route('group.events.comment.delete.show', $comment) }}">{{ __('Delete') }}</a>
                                 @endif
                                 @if ($commentReplyLink && $canComment)
-                                    <a class="reply" href="#communityEvent_comment_form" data-comment-reply="#comment_body" data-number="{{ $comment->number }}" data-name="{{ $comment->member?->name ?? __('Withdrawn member') }}">{{ __('Reply') }}</a>
+                                    <a class="reply" href="#communityEvent_comment_form" data-comment-reply="#community_event_comment_body" data-number="{{ $comment->number }}" data-name="{{ $comment->member?->name ?? __('Withdrawn member') }}">{{ __('Reply') }}</a>
                                 @endif
                             </p>
                         </div>
@@ -142,13 +142,13 @@
                 <x-classic.required-notice />
                 <table>
                     <tr>
-                        <th><label for="comment_body">{{ __('Comment') }} <x-classic.required-mark /></label></th>
+                        <th><label for="community_event_comment_body">{{ __('Comment') }} <x-classic.required-mark /></label></th>
                         <td>
-                            <textarea id="comment_body" name="body" rows="8" required>{{ old('body') }}</textarea>
+                            <textarea id="community_event_comment_body" name="body" rows="8" required>{{ old('body') }}</textarea>
                             @error('body')<p class="error">{{ $message }}</p>@enderror
                         </td>
                     </tr>
-                    @include('group-event._image_fields')
+                    <x-classic.photo-rows name="community_event_comment" />
                 </table>
                 <div class="operation">
                     <ul class="moreInfo button">

@@ -100,7 +100,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('comment images', L::Three, S::Ported, '$comment->getDiaryCommentImagesJoinFile()', 'DiaryCommentImage thumbnails via the shared _images partial; FilePolicy-gated by the diary visibility'),
                 // Comment post form.
                 new ScreenElement('comment post form + is_open notice', L::One, S::Ported, 'op_include_form formDiaryComment'),
-                new ScreenElement('comment image upload', L::Three, S::Ported, 'formDiaryComment isMultipart + DiaryCommentImageForm x3', 'up to PostImages::MAX_IMAGES via the shared _image_fields partial; PostImageRules validation'),
+                new ScreenElement('comment image upload', L::Three, S::Ported, 'formDiaryComment isMultipart + DiaryCommentImageForm x3', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#diary_comment_photo_N; PostImageRules validation'),
                 // Diary record.
                 new ScreenElement('owner edit entry', L::One, S::Ported, "operation form url_for('diary_edit')"),
                 new ScreenElement('visibility label', L::Two, S::Ported, '$diary->getPublicFlagLabel()'),
@@ -116,11 +116,11 @@ class DiaryRouteParity extends RouteParity
             // newSuccess.php + _form.php (PluginDiaryForm) → diary/new.blade.php
             'new' => [
                 new ScreenElement('title input', L::Two, S::Ported, 'sfWidgetFormInput title'),
-                new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice'),
+                new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice', 'ul.radio_list radios under the OpenPNE 3 ids diary_public_flag_{4,1,2,3}'),
                 new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'gated by SnsSettingKey::DiaryAllowWebPublic (OpenPNE 3 op_diary_plugin_use_open_diary, default on)'),
                 new ScreenElement('remembered default visibility', L::Three, S::Ported, 'MemberConfigDiaryForm::PUBLIC_FLAG default', 'DiaryVisibility::defaultFor — the diary_default_visibility preference the %diary% settings category writes, pre-selected on the form'),
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea + per-record Markdown toggle and live preview; the OpenPNE 3 WYSIWYG rich-text widget is a separate later stage'),
-                new ScreenElement('image upload (x3)', L::Three, S::Ported, 'app_diary_is_upload_images + DiaryImageForm', 'up to PostImages::MAX_IMAGES via the shared _image_fields partial; PostImageRules validation'),
+                new ScreenElement('image upload (x3)', L::Three, S::Ported, 'app_diary_is_upload_images + DiaryImageForm', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#diary_photo_N; PostImageRules validation'),
                 new ScreenElement('post button', L::Two, S::Ported, 'op_include_form diaryForm button'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; author avatar links to the profile'),
                 new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
@@ -128,10 +128,10 @@ class DiaryRouteParity extends RouteParity
             // editSuccess.php + _form.php (shared with new) → diary/edit.blade.php
             'edit' => [
                 new ScreenElement('title input', L::Two, S::Ported, 'sfWidgetFormInput title'),
-                new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice'),
+                new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice', 'ul.radio_list radios under the OpenPNE 3 ids diary_public_flag_{4,1,2,3}'),
                 new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'shared diary form; gated by SnsSettingKey::DiaryAllowWebPublic'),
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea + per-record Markdown toggle and live preview; the OpenPNE 3 WYSIWYG rich-text widget is a separate later stage'),
-                new ScreenElement('existing image edit / delete', L::Three, S::Ported, '_formEditImage / DiaryImageForm', 'current-image thumbnails + remove_images[] checkboxes; UpdateDiary frees and refills the slots'),
+                new ScreenElement('existing image edit / delete', L::Three, S::Ported, '_formEditImage / DiaryImageForm', 'x-classic.photo-rows: an occupied slot shows its photo and the remove_images[] checkbox, keyed by the slot number; UpdateDiary frees and refills the slots'),
                 new ScreenElement('save button', L::Two, S::Ported, 'op_include_form diaryForm button'),
                 new ScreenElement('delete-diary box', L::Three, S::Ported, "formDiaryDelete url_for('diary_delete_confirm')", 'GET form to the delete confirm page; the show page keeps its own delete entry'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; author avatar links to the profile'),

@@ -9,7 +9,7 @@
             <x-classic.required-notice />
             <table>
                 @include('group-event._fields', ['event' => $event])
-                <x-classic.photo-rows kind="event" :images="$event->images" />
+                <x-classic.photo-rows name="community_event" :images="$event->images" />
             </table>
             <div class="operation">
                 <ul class="moreInfo button">

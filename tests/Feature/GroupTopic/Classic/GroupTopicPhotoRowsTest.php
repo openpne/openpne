@@ -96,4 +96,23 @@ class GroupTopicPhotoRowsTest extends TestCase
         ], false);
         $this->assertSame(1, substr_count((string) $response->getContent(), 'name="images[]"'));
     }
+
+    public function test_the_comment_form_has_the_same_rows_under_the_comment_form_name(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData(name: 'T', body: 'B'), []);
+
+        $response = $this->actingAs($author)->get(route('group.topics.show', $topic));
+
+        $response->assertOk();
+        $response->assertSeeInOrder([
+            '<textarea id="community_topic_comment_body" name="body"',
+            '<label for="community_topic_comment_photo_1_photo">Photo 1</label>',
+            '<ul id="community_topic_comment_photo_1">',
+            '<input type="file" name="images[]" id="community_topic_comment_photo_1_photo"',
+            '<ul id="community_topic_comment_photo_2">',
+            '<ul id="community_topic_comment_photo_3">',
+        ], false);
+    }
 }
