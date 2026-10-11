@@ -179,8 +179,8 @@ SQLite plans without statistics, so a single-column index is not always harmless
 the `(group_message_id, offset)` unique key and scans every mention of the viewer. On SQLite that
 table, and `timeline_post_mentions` with it for the same shape, carry `member_id` followed by the post
 column instead; on MySQL the foreign key's own single-column index stays, since with current
-statistics InnoDB plans the unique key — a freshly filled table may be planned before its background
-statistics exist, which is why only the SQLite plan is pinned by a test. `IS NULL` counts as an equality for the same purpose: a
+statistics InnoDB plans the unique key, though a freshly filled table may be planned before its
+background statistics exist. `IS NULL` counts as an equality for the same purpose: a
 `timeline_posts.in_reply_to_id` index alone made SQLite pick it for every feed's top-level filter and
 sort the whole table per page (100k rows: 0.02 ms → 20 ms, with or without `ANALYZE`), so the feed
 axis there is `(in_reply_to_id, created_at, id)` and the member axis `(member_id, in_reply_to_id,
