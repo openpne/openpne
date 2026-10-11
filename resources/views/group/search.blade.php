@@ -7,7 +7,7 @@
         <form method="GET" action="{{ route('group.search') }}">
             <table>
                 <tr>
-                    <th><label for="community_name">{{ __('Keyword') }}</label></th>
+                    <th><label for="community_name">{{ __('%Community% Name') }}</label></th>
                     <td><input type="text" class="input_text" id="community_name" name="community[name]" value="{{ $keyword }}"></td>
                 </tr>
                 <tr>
