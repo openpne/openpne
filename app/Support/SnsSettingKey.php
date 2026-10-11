@@ -78,6 +78,9 @@ enum SnsSettingKey: string
 
     case FooterAfter = 'footer_after';
 
+    /** The theme package under public/opSkinThemePlugin the Classic shell wears; '' is the default skin. */
+    case ClassicTheme = 'classic_theme';
+
     /** An absent row means enabled (OpenPNE 3's lazy `plugin` rows). */
     case FeatureDiaryEnabled = 'feature_diary_enabled';
 
@@ -188,6 +191,7 @@ enum SnsSettingKey: string
             self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
             self::ImageUploadBrowserShrink => SettingGroup::Images,
+            self::ClassicTheme => SettingGroup::Theme,
         };
     }
 
@@ -210,6 +214,8 @@ enum SnsSettingKey: string
             // reader's browser, where this fetches arbitrary hosts from the server.
             self::LinkCardEnabled => null,
             self::ImageUploadBrowserShrink => null,
+            // Theme_used alone does not say which skin OpenPNE 3 showed: the active skin plugin decided.
+            self::ClassicTheme => null,
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
             self::AllowWebPublicAge => 'is_allow_web_public_flag_age',
@@ -286,7 +292,7 @@ enum SnsSettingKey: string
             SettingGroup::Auth, SettingGroup::Surface, SettingGroup::Features,
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
             SettingGroup::Ai, SettingGroup::Look,
-            SettingGroup::GroupTalk, SettingGroup::Images => false,
+            SettingGroup::GroupTalk, SettingGroup::Images, SettingGroup::Theme => false,
         };
     }
 
@@ -374,6 +380,8 @@ enum SnsSettingKey: string
             self::GroupTalkNotifyDefault => GroupTalkNotifyMode::Mentions->value,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => false,
             self::ImageUploadBrowserShrink => true,
+            // The default skin, OpenPNE 3's own choice on a fresh install.
+            self::ClassicTheme => '',
         };
     }
 
@@ -474,6 +482,8 @@ enum SnsSettingKey: string
             self::FeatureMcpEnabled => $value !== '0',
             // The same direction: the shrink is on unless an operator turned it off.
             self::ImageUploadBrowserShrink => $value !== '0',
+            // The value is a path segment: a package not on disk, or a name outside OpenPNE 3's rule, reads as the default skin.
+            self::ClassicTheme => ClassicThemes::find($value) === null ? '' : $value,
             default => $value,
         };
     }
@@ -534,6 +544,7 @@ enum SnsSettingKey: string
             self::GroupEventCommentReply => __('Reply link on event comments'),
             self::ImageUploadBrowserShrink => __('Shrink pictures in the browser before upload'),
             self::DefaultLook => __('Default UI layout'),
+            self::ClassicTheme => __('Theme'),
             self::SelectableLooks => __('Selectable UI layouts'),
         };
     }
@@ -556,7 +567,7 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
             self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks,
             self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply,
-            self::ImageUploadBrowserShrink => false,
+            self::ImageUploadBrowserShrink, self::ClassicTheme => false,
         };
     }
 

@@ -7,6 +7,7 @@ namespace Tests\Feature\Filament;
 use App\Filament\Pages\BannerSettings;
 use App\Filament\Pages\DesignSettings;
 use App\Filament\Pages\GadgetLayoutSettings;
+use App\Filament\Pages\ThemeSettings;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
@@ -36,11 +37,11 @@ class AppearanceNavigationTest extends TestCase
     {
         return [
             GadgetResource::class, NavigationResource::class, BannerImageResource::class,
-            GadgetLayoutSettings::class, BannerSettings::class, DesignSettings::class,
+            GadgetLayoutSettings::class, BannerSettings::class, DesignSettings::class, ThemeSettings::class,
         ];
     }
 
-    public function test_the_six_appearance_screens_share_one_group(): void
+    public function test_the_seven_appearance_screens_share_one_group(): void
     {
         foreach ($this->appearanceScreens() as $screen) {
             $this->assertSame(__('Appearance (Classic)'), $screen::getNavigationGroup(), $screen);
@@ -59,6 +60,7 @@ class AppearanceNavigationTest extends TestCase
 
         $labels = (new Collection($appearance->getItems()))->map->getLabel()->values()->all();
         $this->assertSame([
+            __('Theme'),
             __('Gadget layout'),
             __('Gadgets'),
             __('Navigation'),
