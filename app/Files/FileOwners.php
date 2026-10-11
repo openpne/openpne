@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * The owners a request has read, so FilePolicy asks the database for none of them twice; a caller
- * that already holds one notes it, relations and all. Scoped to the request or job, never static.
+ * notes only a full row whose loaded relations match the database, since the gate decides on what
+ * the instance holds. Scoped to the request or job (a console command is one scope), never static.
  */
 final class FileOwners
 {

@@ -94,7 +94,6 @@ class AppServiceProvider extends ServiceProvider
         // Scoped for the same reason as LinkCardSettings.
         $this->app->scoped(ViewerRelations::class);
 
-        // Likewise: it holds the owners one page's file gates read (see FileOwners).
         $this->app->scoped(FileOwners::class);
 
         // Likewise scoped: it is a catalog kind's default, so a fan-out asks it once per job and a

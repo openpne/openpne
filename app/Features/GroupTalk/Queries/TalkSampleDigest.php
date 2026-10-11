@@ -53,8 +53,7 @@ final class TalkSampleDigest
             // count, so they get their own capped read in `thumbnails()`.
             ->with('author.avatar.file')
             ->limit($limit)
-            ->get()
-            ->each(fn (GroupMessage $message) => $message->setRelation('group', $group));
+            ->get();
     }
 
     /**

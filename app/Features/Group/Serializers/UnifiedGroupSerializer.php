@@ -180,7 +180,8 @@ final class UnifiedGroupSerializer
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit(UnifiedSections::PHOTOS)
-            ->get();
+            ->get()
+            ->each(fn (Model $parent) => $parent->setRelation('group', $parents->getParent()));
     }
 
     /**
