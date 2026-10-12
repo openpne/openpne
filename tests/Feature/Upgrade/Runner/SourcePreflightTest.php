@@ -19,6 +19,7 @@ use App\Upgrade\Steps\MailTemplateUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\PluginFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -108,6 +109,19 @@ class SourcePreflightTest extends TestCase
 
         $this->assertTrue($ok, $output);
         $this->assertStringContainsString('DONE classic_theme_selection', $output);
+    }
+
+    public function test_a_run_writing_sns_settings_without_reading_sns_config_leaves_the_theme_pass_out(): void
+    {
+        $this->createSource('plugin');
+
+        [$ok, $output] = $this->runSteps([new PluginFeatureUpgrade], new RunOptions(dryRun: true));
+        $this->assertTrue($ok, $output);
+        $this->assertStringNotContainsString('classic_theme', $output);
+
+        [$ok, $output] = $this->runSteps([new PluginFeatureUpgrade]);
+        $this->assertTrue($ok, $output);
+        $this->assertStringNotContainsString('classic_theme', $output);
     }
 
     public function test_partial_plugin_group_aborts(): void
