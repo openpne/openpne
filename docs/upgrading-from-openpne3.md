@@ -260,6 +260,9 @@ change from a problem when you go through it.
   `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*. A theme of your own, one
   not among the vendored packages, is kept by name with a warning and shows the default skin until you
   copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then).
+  A site wearing `cat` or `sunflower` loses its background photograph, which is not bundled here:
+  copy OpenPNE 3's `web/opSkinThemePlugin/<name>/img/bg.jpg` to the same path under
+  `public/opSkinThemePlugin/` to keep it.
 - **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.
