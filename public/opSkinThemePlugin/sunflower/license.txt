@@ -2,5 +2,5 @@ The background photograph this theme was made with (img/bg.jpg, a ぱくたそ p
 https://www.pakutaso.com) is not included: ぱくたそ allows free redistribution only at its
 S size, which is too small for a page background. To wear the theme with a photograph, pick
 one whose terms allow your use, agree to those terms yourself, and place it at img/bg.jpg
-beside this file; main.css already points there. Without the file the theme shows its
-background colour.
+beside this file; main.css already points there. Without the file the page background is
+plain white.
