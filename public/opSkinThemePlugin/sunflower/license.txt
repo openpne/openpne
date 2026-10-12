@@ -1,1 +1,6 @@
-このテンプレートの写真は、ぱくたそ(http://pakutaso.com）の写真素材を利用しています。この写真を継続して利用する場合は、ぱくたそ公式サイトからご自身でダウンロードしていただくか、ぱくたそのご利用規約(http://pakutaso.com）に同意していただく必要があります。同意しない場合は写真のご利用はできませんのでご注意ください。 
+The background photograph this theme was made with (img/bg.jpg, a ぱくたそ photo:
+https://www.pakutaso.com) is not included: ぱくたそ allows free redistribution only at its
+S size, which is too small for a page background. To wear the theme with a photograph, pick
+one whose terms allow your use, agree to those terms yourself, and place it at img/bg.jpg
+beside this file; main.css already points there. Without the file the theme shows its
+background colour.
