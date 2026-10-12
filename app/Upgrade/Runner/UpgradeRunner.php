@@ -138,7 +138,9 @@ final class UpgradeRunner
             (new SitePolicyMarkdownTransform)->plan($out);
             (new TalkReadCursorBackfill)->plan($out);
             (new BoardBumpBackfill)->plan($out);
-            (new ClassicThemeSelection)->plan($out);
+            if ($this->readsSourceTable('sns_config')) {
+                (new ClassicThemeSelection)->plan($out);
+            }
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
