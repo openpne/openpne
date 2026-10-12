@@ -28,8 +28,14 @@ final class SourcePreflight
         'sns_term' => ['id', 'name', 'application'],
     ];
 
-    /** Source columns a post-walk pass reads by its own SELECT (ActivityTemplateTransform). */
-    private const PASS_READ_COLUMNS = ['activity_data' => ['template', 'template_param', 'uri']];
+    /** Source columns a post-walk pass reads by its own SELECT (ActivityTemplateTransform, ClassicThemeSelection). */
+    private const PASS_READ_COLUMNS = [
+        'activity_data' => ['template', 'template_param', 'uri'],
+        'plugin' => ['name', 'is_enabled'],
+    ];
+
+    /** Source tables a post-walk pass reads beside a step's table (ClassicThemeSelection reads `plugin` with sns_config). */
+    private const PASS_READ_TABLES = ['sns_config' => ['plugin']];
 
     /**
      * The source tables scanned for names the upgrade does not recognise, each with the one name prefix
@@ -195,6 +201,12 @@ final class SourcePreflight
                 foreach (SourceRef::tablesIn($meta['scope'] ?? '') as $scopeTable) {
                     $extra[$scopeTable] = true;
                 }
+            }
+        }
+
+        foreach (self::PASS_READ_TABLES as $table => $companions) {
+            if (isset($tables[$table])) {
+                $extra += array_fill_keys($companions, true);
             }
         }
 

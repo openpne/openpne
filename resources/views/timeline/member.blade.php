@@ -12,7 +12,7 @@
          server-side. The id is _timelineProfile.php's non-gadget branch, which suffixes the member
          id (the gadget branch suffixes the gadget id into the same prefix). No compose path here,
          as OpenPNE 3 had none: posting is the home gadget's box. --}}
-    <x-classic.parts :id="'profileTimeline_'.$owner->getKey()" name="profileTimeline" :title="$title">
+    <x-classic.parts :id="'profileTimeline_'.$owner->getKey()" name="profileTimeline" :hand-written="true" :title="$title">
         @if ($posts->isEmpty())
             <p>{{ $newerUrl !== null ? __('No older posts.') : __('No %activity% posts to show.') }}</p>
         @else

@@ -6,7 +6,7 @@
     {{-- OpenPNE 3 showSuccess.php hand-writes the article as a topicDetailBox with no id (the id is
          OpenPNE 4's): one dl whose dt is the stacked datetime and whose dd holds the title, name
          and body blocks, then the Edit button; deletion is reached from the edit screen. --}}
-    <x-classic.parts id="communityTopic_show" name="topicDetailBox" :title="'['.$topic->group->name.'] '.__('%Topic%')">
+    <x-classic.parts id="communityTopic_show" name="topicDetailBox" :hand-written="true" :title="'['.$topic->group->name.'] '.__('%Topic%')">
         <dl>
             <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($topic->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
             <dd>
@@ -45,7 +45,7 @@
     </x-classic.parts>
 
     @if ($thread->total > 0)
-        <x-classic.parts id="communityTopic_comment_list" name="commentList" :title="__('Comments')">
+        <x-classic.parts id="communityTopic_comment_list" name="commentList" :hand-written="true" :title="__('Comments')">
             {{-- Reversible pager (fixed size 20), order toggle. --}}
             @if ($thread->hasPages())
                 <div class="pagerRelative">

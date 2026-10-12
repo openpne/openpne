@@ -214,8 +214,7 @@ included) gets a notice back on manage rather than a 404, and a self or empty id
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is — and, like the OpenPNE 3 PC
 layout, the Classic shell declares no viewport meta, so a narrow screen scales the skin rather
-than overflowing it; a theme restyles the default-skin markup rather than the theme plugin's own
-shell templates (see Themes); the `#SmtSwitch`
+than overflowing it; the `#SmtSwitch`
 smartphone-view toggle is not ported — a phone client is served Modern
 ([feature-modules.md](feature-modules.md#surface-selection)) and the browser's desktop-site mode
 is the way back; the notification center's badges count unread notification rows rather than OpenPNE
@@ -240,11 +239,22 @@ skin is not linked and the package's `css/*.css` are linked in name order **afte
 custom CSS, which is where OpenPNE 3 placed them: the theme overrides both (its `customizing.css`
 also preceded the module stylesheet, which is not reproduced). The themes' own JavaScript
 (`bootstrap-dropdown.js`, jQuery-bound) is not loaded; `winter`'s footer credit, which its script
-wrote, is drawn by the shell instead. The theme plugin also overrode the shell's templates (a
-`navbar` header with the local nav inside it, a dropdown global nav, `.well` parts frames); that
-shell is not reproduced yet, so a theme's stylesheets currently dress the default-skin markup. The
-`cerulean*` packages' `bootstrap.css` imports a font from fonts.googleapis.com, so choosing one makes
-every Classic visitor's browser fetch from that host (the Theme page says so).
+wrote, is drawn in the `#license` span the themed footer always opens with. The theme plugin also
+overrode the shell's templates, and with a theme chosen the shell follows them: `#Header` is a
+`navbar` (`navbar-inverse` on the `friend` nav set) whose `div.container` holds the `a.brand` link in
+place of `h1#logo`, the local nav as `ul.nav#localNav` with `li#notificationCenter` first (a text
+trigger of three icons, the panel as an `alert`) and the items bare of their `ul.<type>`, the global
+nav as one `li#globalNav.dropdown` under `div#globalNav` — the duplicate id is the theme's own, its
+stylesheet addresses `li#globalNav` — captioning the profile item with the viewer's name, then
+`#topBanner`; the Contents-level `#localNav` is gone; `x-classic.parts` writes `.well` where
+`.parts` was (the information box opening with the `Information` label), while the frames marked
+`hand-written` keep `.parts`: those OpenPNE 3 itself wrote as literal markup, plus the OpenPNE 4-only
+pages (`timeline/index`, `timeline/tag`, the group talk box) drawn in their image. The dropdown's
+`bootstrap-dropdown.js` is not loaded: [`classic-theme-nav.js`](../../public/js/classic-theme-nav.js)
+toggles it on a plain click and closes it on Escape or a click elsewhere, and a `noscript` rule
+leaves the menu open, where OpenPNE 3's stayed shut, since Settings, Invite and Log out live only
+there. The `cerulean*` packages' `bootstrap.css` imports a font from fonts.googleapis.com, so choosing
+one makes every Classic visitor's browser fetch from that host (the Theme page says so).
 
 ### Error screens
 

@@ -51,7 +51,7 @@
 
     {{-- OpenPNE 3 editSuccess.php hand-writes this box below the form: a GET form to the delete
          confirm page, so the entry point sits where the entry is being edited. --}}
-    <x-classic.parts id="formDiaryDelete" name="box" :title="__('Delete this %diary%')">
+    <x-classic.parts id="formDiaryDelete" name="box" :hand-written="true" :title="__('Delete this %diary%')">
         <div class="block">
             <form method="GET" action="{{ route('diary.delete.show', $diary) }}">
                 <div class="operation">

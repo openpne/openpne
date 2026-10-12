@@ -3,7 +3,7 @@
 @section('title', __('Delete the comment'))
 
 @section('content')
-    <x-classic.parts id="diary_comment_delete" name="box" :title="__('Delete the comment')">
+    <x-classic.parts id="diary_comment_delete" name="box" :hand-written="true" :title="__('Delete the comment')">
         <div class="block">
             <p>{{ __('Do you really want to delete this comment?') }}</p>
             <blockquote class="commentPreview">{{ $comment->body }}</blockquote>

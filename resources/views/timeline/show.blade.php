@@ -11,7 +11,7 @@
     {{-- OpenPNE 3's showSuccess.php emits a bare partsHeading over a .timeline-large div its themes
          alias to the box treatment, so there is no kind to reproduce; the frame keeps the heading
          inside the box and the OpenPNE 4 id stands. --}}
-    <x-classic.parts id="timeline_show" :title="$title">
+    <x-classic.parts id="timeline_show" :hand-written="true" :title="$title">
         @if (session('status'))
             <p role="status">{{ session('status') }}</p>
         @endif

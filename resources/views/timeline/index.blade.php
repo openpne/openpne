@@ -11,7 +11,7 @@
          server-side with a pager. It served this feed only as the homeAllTimeline gadget, whose id
          carries a gadget suffix; the standalone page keeps the bare kind name as its id. --}}
     @php($canPost = \App\Features\Timeline\TimelinePosting::enabled())
-    <x-classic.parts id="homeAllTimeline" name="homeAllTimeline" :title="$title">
+    <x-classic.parts id="homeAllTimeline" name="homeAllTimeline" :hand-written="true" :title="$title">
         {{-- The no-JS compose path; classic-timeline-compose.js swaps it for the inline form. --}}
         @if ($canPost)
             <p data-timeline-compose-fallback><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>

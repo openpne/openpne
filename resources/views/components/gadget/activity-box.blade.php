@@ -5,7 +5,7 @@
      dropped, as a profile activityBox (never a form) always was. --}}
 @php($offersPost = $context === 'home' && \App\Features\Timeline\TimelinePosting::enabled())
 @if ($posts->isNotEmpty() || $offersPost)
-    <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="parts">
+    <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="{{ classic_frame_inner_class() }}">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="body">
             @if ($offersPost)

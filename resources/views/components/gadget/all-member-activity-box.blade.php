@@ -4,7 +4,7 @@
      an empty box is dropped. --}}
 @php($offersPost = $showForm && \App\Features\Timeline\TimelinePosting::enabled())
 @if ($posts->isNotEmpty() || $offersPost)
-    <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="parts">
+    <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="{{ classic_frame_inner_class() }}">
         <div class="partsHeading"><h3>{{ __("SNS Member's %activity%") }}</h3></div>
         <div class="body">
             @if ($offersPost)

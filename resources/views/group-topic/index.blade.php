@@ -20,7 +20,7 @@
         </x-classic.parts>
     @endif
 
-    <x-classic.parts id="communityTopic_board" name="recentList" :title="__('List of %topics%')">
+    <x-classic.parts id="communityTopic_board" name="recentList" :hand-written="true" :title="__('List of %topics%')">
         @if ($topics->isEmpty())
             <p>{{ __('No %topics% to show.') }}</p>
         @else

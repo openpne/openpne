@@ -27,8 +27,8 @@ test('every Classic script that cancels a click carries the plain-click predicat
     // The set is locked: a script joining or leaving it is the prompt to classify it.
     assert.deepEqual(cancelling.sort(), [
         'classic-comment-reply.js', 'classic-history-back.js', 'classic-notification-center.js',
-        'classic-timeline-dialogs.js', 'classic-timeline-mention.js', 'classic-timeline-more.js',
-        'classic-timeline-replies.js',
+        'classic-theme-nav.js', 'classic-timeline-dialogs.js', 'classic-timeline-mention.js',
+        'classic-timeline-more.js', 'classic-timeline-replies.js',
     ]);
 
     for (const name of cancelling) {
