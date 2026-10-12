@@ -3,7 +3,7 @@
 @section('title', __('Delete %diary%'))
 
 @section('content')
-    <x-classic.parts id="formDiaryDelete" name="box" :title="__('Delete %diary%')">
+    <x-classic.parts id="formDiaryDelete" name="box" :hand-written="true" :title="__('Delete %diary%')">
         <div class="block">
             <p>{{ __('Delete ":title"?', ['title' => $diary->title]) }}</p>
             <form method="POST" action="{{ route('diary.delete', $diary) }}">

@@ -247,14 +247,19 @@ change from a problem when you go through it.
   counterpart are dropped; for example the PC / mobile split (`enable_pc`, `enable_mobile`), the
   feature-phone options (`is_check_mobile_ip`, `retrieve_uid`), the OpenID / external-connection /
   JSON API / Google Maps options, `daily_news_day`, `richtextarea_*` (the rich-text editor is frozen),
-  `Theme_used` (choose the Classic theme on *Appearance (Classic) → Theme* after the cutover; the
-  upgrade does not read it yet) and `pc_home_information` (OpenPNE 3 itself
+  `pc_home_information` (OpenPNE 3 itself
   rendered the information box from the gadget's own config, never from this row, which the
   gadget upgrade carries). `image_max_filesize` is not a site setting here but an environment
   variable, `OPENPNE_IMAGE_MAX_UPLOAD_KB`; the report (dry run and real run alike) prints the value
   to set, or tells you the OpenPNE 3 value could not be read as a size. A copied setting whose
   OpenPNE 3 row holds NULL (the admin screens wrote an empty string, so only a hand-edited row does)
-  is left out where OpenPNE 3 itself read its default, and the report names it.
+  is left out where OpenPNE 3 itself read its default, and the report names it. The Classic theme is
+  not a copied row either: a pass after the walk reads which skin plugins OpenPNE 3 had enabled (from
+  its `plugin` table; an activation written in `data/config/plugin.yml` is not seen), and only when the
+  theme plugin was the one enabled skin does `Theme_used` (or, absent, the first theme package) become
+  `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*. A theme of your own, one
+  not among the vendored packages, is kept by name with a warning and shows the default skin until you
+  copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then).
 - **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.

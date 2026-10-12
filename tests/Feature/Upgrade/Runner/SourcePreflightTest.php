@@ -19,6 +19,8 @@ use App\Upgrade\Steps\MailTemplateUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\PluginFeatureUpgrade;
+use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +32,7 @@ class SourcePreflightTest extends TestCase
     use DatabaseMigrations;
 
     private const SOURCE_TABLES = ['diary', 'diary_image', 'community_member', 'community_member_position', 'member_relationship',
-        'member_config', 'community', 'community_config', 'community_category', 'member', 'sns_config', 'notification_mail'];
+        'member_config', 'community', 'community_config', 'community_category', 'member', 'sns_config', 'plugin', 'notification_mail'];
 
     protected function setUp(): void
     {
@@ -92,6 +94,34 @@ class SourcePreflightTest extends TestCase
         $this->assertStringContainsString(SourcePreflight::missingTableMessage('community_member_position'), $output);
         $this->assertDatabaseCount('group_members', 0);
         $this->assertDatabaseCount('openpne4_upgrade_state', 0);
+    }
+
+    public function test_a_run_reading_sns_config_requires_the_plugin_table_its_theme_pass_reads(): void
+    {
+        $this->createSource('sns_config');
+        [$ok, $output] = $this->runSteps([new SnsSettingUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::missingTableMessage('plugin'), $output);
+
+        $this->createSource('plugin');
+        [$ok, $output] = $this->runSteps([new SnsSettingUpgrade]);
+
+        $this->assertTrue($ok, $output);
+        $this->assertStringContainsString('DONE classic_theme_selection', $output);
+    }
+
+    public function test_a_run_writing_sns_settings_without_reading_sns_config_leaves_the_theme_pass_out(): void
+    {
+        $this->createSource('plugin');
+
+        [$ok, $output] = $this->runSteps([new PluginFeatureUpgrade], new RunOptions(dryRun: true));
+        $this->assertTrue($ok, $output);
+        $this->assertStringNotContainsString('classic_theme', $output);
+
+        [$ok, $output] = $this->runSteps([new PluginFeatureUpgrade]);
+        $this->assertTrue($ok, $output);
+        $this->assertStringNotContainsString('classic_theme', $output);
     }
 
     public function test_partial_plugin_group_aborts(): void

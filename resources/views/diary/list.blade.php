@@ -29,7 +29,7 @@
             <div class="body">{{ __('No %diary% entries to show.') }}</div>
         </x-classic.parts>
     @else
-        <x-classic.parts id="diary_list" name="recentList">
+        <x-classic.parts id="diary_list" name="recentList" :hand-written="true">
             <x-slot:heading>
                 <h3>{{ $title }}@if ($period) <span class="archivePeriod">{{ $period }}</span>@endif</h3>
             </x-slot:heading>

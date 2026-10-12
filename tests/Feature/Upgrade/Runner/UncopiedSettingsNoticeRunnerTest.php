@@ -236,16 +236,21 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
         DB::table('sns_config')->insert(['name' => 'image_max_filesize', 'value' => $value]);
     }
 
+    // `plugin` beside it: the preflight requires it of every run reading sns_config (the theme pass).
     private function createSourceTable(string $prefix): void
     {
-        $statement = SourceSchema::default()->createStatement('sns_config', withoutForeignKeys: true);
+        foreach (['sns_config', 'plugin'] as $table) {
+            $statement = SourceSchema::default()->createStatement($table, withoutForeignKeys: true);
 
-        DB::statement(str_replace('CREATE TABLE `sns_config`', "CREATE TABLE `{$prefix}sns_config`", $statement));
+            DB::statement(str_replace("CREATE TABLE `{$table}`", "CREATE TABLE `{$prefix}{$table}`", $statement));
+        }
     }
 
     private function dropSourceTables(): void
     {
-        DB::statement('DROP TABLE IF EXISTS `sns_config`');
-        DB::statement('DROP TABLE IF EXISTS `'.self::PREFIX.'sns_config`');
+        foreach (['sns_config', 'plugin'] as $table) {
+            DB::statement("DROP TABLE IF EXISTS `{$table}`");
+            DB::statement('DROP TABLE IF EXISTS `'.self::PREFIX.$table.'`');
+        }
     }
 }

@@ -51,11 +51,11 @@ class ClassicThemeStylesheetTest extends TestCase
         $this->assertStringNotContainsString('opSkinThemePlugin/', $html);
     }
 
-    public function test_winter_draws_its_photo_credit_in_the_footer_and_the_others_draw_none(): void
+    public function test_winter_draws_its_photo_credit_in_the_footer_span_the_others_leave_empty(): void
     {
         $this->setSnsSetting(SnsSettingKey::ClassicTheme, 'winter');
 
         $this->setSnsSetting(SnsSettingKey::ClassicTheme, 'cerulean');
-        $this->assertStringNotContainsString('id="license"', $this->diaryPage());
+        $this->assertStringContainsString('<span id="license"></span>', $this->diaryPage());
     }
 }

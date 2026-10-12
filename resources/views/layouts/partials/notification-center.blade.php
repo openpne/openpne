@@ -21,23 +21,24 @@
         : null;
 @endphp
 @if ($ncCounts !== null)
-    @once
-        {{-- OpenPNE 3's rows were plain divs it made clickable with script; ours submit, so the
-             button has to stop looking like one. Class selectors, so a site can outrank these with
-             an ordinary more-specific rule. --}}
-        <style>
-            .ncbuttonLink { text-decoration: none; }
-            .notificationCenterRowLink { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-        </style>
-    @endonce
-    <div id="notificationCenter">
-        <a href="{{ route('notifications.index') }}" class="ncbuttonLink" aria-label="{{ __('Notification Center') }}"
+    {{-- OpenPNE 3's rows were plain divs it made clickable with script; ours submit, so the row
+         button has to stop looking like one (class selectors, so a site can outrank them). --}}
+    @include('layouts.partials.notification-center-assets')
+    @php($ncThemed = classic_theme() !== null)
+    <{{ $ncThemed ? 'li' : 'div' }} id="notificationCenter">
+        <a href="{{ route('notifications.index') }}" class="{{ $ncThemed ? 'ncbutton ncbuttonLink' : 'ncbuttonLink' }}" aria-label="{{ __('Notification Center') }}"
            aria-expanded="false" aria-controls="notificationCenterDetail"
            data-notification-center-url="{{ route('notifications.center') }}"
            data-notification-center-counts-url="{{ route('notifications.center.counts') }}">
-            <img class="ncbutton" src="{{ asset('images/NOTIFY_CENTER.png') }}" width="92" height="32" alt="">
+            @if ($ncThemed)
+                <i class="fa fa-envelope-o"></i>
+                <i class="fa fa-users"></i>
+                <b>@</b>
+            @else
+                <img class="ncbutton" src="{{ asset('images/NOTIFY_CENTER.png') }}" width="92" height="32" alt="">
+            @endif
         </a>
-        <div id="notificationCenterDetail">
+        <div id="notificationCenterDetail"@if ($ncThemed) class="alert alert-block"@endif>
             <div id="notificationCenterDetailHeader">{{ __('Notification Center') }}</div>
             <div id="notificationCenterLoading"><img src="{{ asset('images/ajax-loader.gif') }}" alt=""></div>
             <div id="notificationCenterError">{{ __('There is no new notification.') }}</div>
@@ -51,8 +52,5 @@
                 <span id="{{ $ncCategory->badgeId() }}">{{ $ncCount }}</span>
             @endif
         @endforeach
-    </div>
-    @once
-        <script src="{{ asset('js/classic-notification-center.js') }}" defer></script>
-    @endonce
+    </{{ $ncThemed ? 'li' : 'div' }}>
 @endif

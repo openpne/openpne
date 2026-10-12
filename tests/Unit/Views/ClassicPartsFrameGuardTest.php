@@ -53,8 +53,40 @@ class ClassicPartsFrameGuardTest extends TestCase
         ], $this->viewsContaining('class="parts '));
     }
 
+    public function test_frames_keeping_parts_under_a_theme_are_a_locked_set(): void
+    {
+        // Marks per view, so dropping one of a view's several frames shows (docs/internals/classic-compatibility.md, "Themes").
+        $this->assertSame([
+            'components/diary/sidemenu' => 3,
+            'diary/comment/delete' => 1,
+            'diary/comment/history' => 1,
+            'diary/delete' => 1,
+            'diary/edit' => 1,
+            'diary/feed' => 2,
+            'diary/list' => 1,
+            'diary/show' => 2,
+            'group-event/index' => 1,
+            'group-event/show' => 2,
+            'group-topic/index' => 1,
+            'group-topic/show' => 2,
+            'group/manage' => 1,
+            'group/show' => 1,
+            'message/list' => 1,
+            'timeline/index' => 1,
+            'timeline/member' => 1,
+            'timeline/show' => 1,
+            'timeline/tag' => 1,
+        ], $this->occurrencesByView(':hand-written="true"'));
+    }
+
     /** @return list<string> */
     private function viewsContaining(string $needle): array
+    {
+        return array_keys($this->occurrencesByView($needle));
+    }
+
+    /** @return array<string, int> view => occurrences, for the views holding at least one */
+    private function occurrencesByView(string $needle): array
     {
         $views = dirname(__DIR__, 3).'/resources/views';
         $found = [];
@@ -65,11 +97,12 @@ class ClassicPartsFrameGuardTest extends TestCase
             if ($file->getExtension() !== 'php') {
                 continue;
             }
-            if (str_contains((string) file_get_contents($file->getPathname()), $needle)) {
-                $found[] = str_replace([$views.'/', '.blade.php'], '', $file->getPathname());
+            $count = substr_count((string) file_get_contents($file->getPathname()), $needle);
+            if ($count > 0) {
+                $found[str_replace([$views.'/', '.blade.php'], '', $file->getPathname())] = $count;
             }
         }
-        sort($found);
+        ksort($found);
 
         return $found;
     }

@@ -61,7 +61,7 @@
          screen renders Modern for every member, so the link is Classic's whole surface. Gated on
          the same read answer the Modern card uses. --}}
     @if ($canViewTalk)
-        <x-classic.parts id="groupTalk" name="groupTalk" :title="__('Talk')">
+        <x-classic.parts id="groupTalk" name="groupTalk" :hand-written="true" :title="__('Talk')">
             <p><a href="{{ route('group.talk.show', ['group' => $group]) }}">{{ __('Go to talk') }}</a></p>
         </x-classic.parts>
     @endif

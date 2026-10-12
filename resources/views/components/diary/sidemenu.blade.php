@@ -3,13 +3,13 @@
 
 {{-- The author's avatar box (always rendered, no_image fallback when unset) linked to their
      profile, then their name. --}}
-<x-classic.parts name="memberImageBox">
+<x-classic.parts name="memberImageBox" :hand-written="true">
     @php($avatar = $member->avatar?->file)
     <p class="photo"><a href="{{ route('member.profile.show', $member) }}"><x-classic.image :file="$avatar" :size="120" :alt="$member->name" /></a></p>
     <p class="text"><a href="{{ route('member.profile.show', $member) }}">{{ $member->name }}</a></p>
 </x-classic.parts>
 
-<x-classic.parts name="calendar" :single="true">
+<x-classic.parts name="calendar" :single="true" :hand-written="true">
     <x-slot:heading>
         <h3>
             <a href="{{ route('diary.list_member.archive', ['member' => $member, ...$calendar->previousMonth()]) }}">&lt;&lt;</a>
@@ -46,7 +46,7 @@
 </x-classic.parts>
 
 @if ($recentDiaries->isNotEmpty())
-    <x-classic.parts name="pageNav" :single="true" :title="__('Recently Posted %Diaries%')">
+    <x-classic.parts name="pageNav" :single="true" :hand-written="true" :title="__('Recently Posted %Diaries%')">
         <ul>
             @foreach ($recentDiaries as $entry)
                 <li><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a></li>

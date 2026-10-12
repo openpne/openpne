@@ -6,7 +6,7 @@
     @php($pageQuery = $members->currentPage() > 1 ? ['page' => $members->currentPage()] : [])
     {{-- OpenPNE 3 memberManageSuccess.php hand-writes this box as a lone .parts with no kind and no
          id, and wraps the roster table in a div.item; the id here is OpenPNE 4's own. --}}
-    <x-classic.parts id="community_memberManage" :single="true" :title="__('Management member')">
+    <x-classic.parts id="community_memberManage" :single="true" :hand-written="true" :title="__('Management member')">
         <x-classic.pager :paginator="$members" />
         <div class="item">
             <table>

@@ -10,7 +10,7 @@
     @php($openRoute = $box->openRoute())
     @php($isTrash = $box === \App\Features\DirectMessage\DirectMessageBox::Trash)
     @php($toggleAll = fn (string $checked): string => 'this.closest(\'form\').querySelectorAll(\'input[name="ids[]"]\').forEach(function(c){c.checked='.$checked.'});return false')
-    <x-classic.parts id="message_list" name="searchResultList" :title="$box->heading()">
+    <x-classic.parts id="message_list" name="searchResultList" :hand-written="true" :title="$box->heading()">
         @if ($messages->isEmpty())
             <div class="body">{{ __('There are no messages') }}</div>
         @else

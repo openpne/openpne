@@ -7,20 +7,27 @@
 @auth
     @php
         $navService = app(\App\Services\NavigationService::class);
-        $navGroup = request()->attributes->get('localNavGroup');
-        $navSubject = request()->attributes->get('localNavSubject');
-        [$navType, $navContextId] = match (true) {
-            $navGroup !== null => ['group', $navGroup->getKey()],
-            $navSubject !== null => ['friend', $navSubject->getKey()],
-            default => ['default', null],
+        $navType = classic_local_nav_type();
+        $navContextId = match ($navType) {
+            'group' => request()->attributes->get('localNavGroup')->getKey(),
+            'friend' => request()->attributes->get('localNavSubject')->getKey(),
+            default => null,
         };
         $navItems = $navService->visibleEntries($navType, app()->getLocale(), $navContextId);
     @endphp
     @if (! empty($navItems))
-        <ul class="{{ \App\Models\Navigation::presentationToken($navType) }}">
+        {{-- The theme plugin's _localNav.php writes the items straight into the header's list, with no
+             ul.<type> of their own ($bare). --}}
+        @if ($bare ?? false)
             @foreach ($navItems as $item)
                 @include('layouts.partials.nav-item', ['item' => $item])
             @endforeach
-        </ul>
+        @else
+            <ul class="{{ \App\Models\Navigation::presentationToken($navType) }}">
+                @foreach ($navItems as $item)
+                    @include('layouts.partials.nav-item', ['item' => $item])
+                @endforeach
+            </ul>
+        @endif
     @endif
 @endauth
