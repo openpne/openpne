@@ -22,6 +22,13 @@ class InitialsAvatarProviderTest extends TestCase
         $this->assertStringContainsString('>S<', rawurldecode($url));
     }
 
+    public function test_two_words_give_two_initials_with_leading_punctuation_dropped(): void
+    {
+        $admin = AdminUser::factory()->create(['username' => '[bot] <x> & yo']);
+
+        $this->assertStringContainsString('>BX<', rawurldecode(app(InitialsAvatarProvider::class)->get($admin)));
+    }
+
     public function test_a_name_without_letters_still_draws_something(): void
     {
         $admin = AdminUser::factory()->create(['username' => '***']);

@@ -6,6 +6,8 @@ namespace App\Filament\Support;
 
 use Filament\AvatarProviders\Contracts\AvatarProvider;
 use Filament\Facades\Filament;
+use Filament\Support\Colors\Color;
+use Filament\Support\Facades\FilamentColor;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -22,11 +24,13 @@ final class InitialsAvatarProvider implements AvatarProvider
             ->take(2)
             ->implode('');
 
+        // Each initial is a letter or a digit by construction, so none needs escaping for the XML.
         $svg = sprintf(
             '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">'
-            .'<rect width="64" height="64" rx="32" fill="#030712"/>'
+            .'<rect width="64" height="64" rx="32" fill="%s"/>'
             .'<text x="32" y="32" dy=".35em" text-anchor="middle" font-family="sans-serif" font-size="26" fill="#fff">%s</text></svg>',
-            htmlspecialchars($initials === '' ? '?' : mb_strtoupper($initials), ENT_QUOTES | ENT_XML1, 'UTF-8'),
+            Color::convertToHex(FilamentColor::getColor('gray')[950] ?? Color::Gray[950]),
+            $initials === '' ? '?' : mb_strtoupper($initials),
         );
 
         return 'data:image/svg+xml;utf8,'.rawurlencode($svg);
