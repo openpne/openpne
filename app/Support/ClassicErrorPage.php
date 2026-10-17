@@ -11,9 +11,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
- * OpenPNE 3 `default/error`: 403/404/419 render inside the Classic shell. A 5xx keeps the
- * framework's dependency-free page, because the shell reads the database, which is what tends to be
- * broken.
+ * OpenPNE 3 `default/error`: 403/404/419 render inside the Classic shell. A 5xx keeps the plain
+ * page (errors/plain.blade.php) that reads no settings, because the shell reads the database, which
+ * is what tends to be broken.
  */
 final class ClassicErrorPage
 {

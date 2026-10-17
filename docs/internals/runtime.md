@@ -167,11 +167,13 @@ to stagger them.
 A reply that is not an Inertia page — the maintenance page, an uncaught 500, an
 expired session's 419 — would otherwise appear in Inertia's raw overlay, which is
 not gated by environment. The Modern app cancels that overlay and shows its own
-dialog instead, worded by status and leaving the page as it was
-(`resources/js/lib/http-exception.ts`). A full navigation that meets a 5xx gets
-`errors/plain.blade.php`, which reads only `config('app.name')`: the database is
-what tends to be broken when one is shown. 403, 404 and 419 on a full Classic
-navigation keep their OpenPNE 3 rendering
+dialog instead, worded by status and leaving the page as it was, in development
+too (`resources/js/lib/http-exception.ts`; the trace is in the log). An Inertia
+page that carries an error status is left to the router. A full navigation that
+meets a 5xx gets `errors/plain.blade.php` in every realm, the admin panel
+included: it reads no settings and carries no `%term%` placeholder, because the
+database is what tends to be broken when one is shown. 403, 404 and 419 on a full
+Classic navigation keep their OpenPNE 3 rendering
 ([classic-compatibility.md](classic-compatibility.md)).
 
 ## Queue

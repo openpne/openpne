@@ -12,11 +12,11 @@ interface Copy {
     action: Action;
 }
 
-function describe(status: number): Copy {
+export function copyFor(status: number): Copy {
     switch (status) {
         case 401:
         case 419:
-            return { title: 'Your session has expired', body: 'Sign in again to continue. What you typed is still on this page.', action: 'sign-in' };
+            return { title: 'Your session has expired', body: 'Sign in again to continue.', action: 'sign-in' };
         case 403:
             return { title: 'You cannot do that', body: 'This action is not allowed for your account.', action: 'close' };
         case 404:
@@ -37,7 +37,7 @@ function describe(status: number): Copy {
 export function HttpErrorDialog() {
     const failure = useHttpFailure();
     const { t } = useLaravelReactI18n();
-    const copy = describe(failure?.status ?? 500);
+    const copy = copyFor(failure?.status ?? 500);
 
     return (
         <Dialog

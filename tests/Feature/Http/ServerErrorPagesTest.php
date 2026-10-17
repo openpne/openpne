@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http;
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -18,6 +19,22 @@ class ServerErrorPagesTest extends TestCase
         $response->assertSee('Test SNS');
         $response->assertSee(__('Under maintenance'));
         $response->assertSee(__('Back to the top page'));
+    }
+
+    public function test_maintenance_mode_renders_the_plain_page(): void
+    {
+        config(['app.name' => 'Test SNS']);
+        Artisan::call('down');
+
+        try {
+            $response = $this->get('/');
+        } finally {
+            Artisan::call('up');
+        }
+
+        $response->assertStatus(503);
+        $response->assertSee('Test SNS');
+        $response->assertSee(__('Under maintenance'));
     }
 
     public function test_a_500_page_is_the_plain_branded_one(): void

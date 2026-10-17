@@ -2,8 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { dismissHttpFailure, installHttpExceptionHandling, useHttpFailure } from '@/lib/http-exception';
 
-function fire(status: number): CustomEvent {
-    const event = new CustomEvent('inertia:httpException', { cancelable: true, detail: { response: { status, data: '', headers: {} } } });
+function fire(status: number, headers: Record<string, string> = {}): CustomEvent {
+    const event = new CustomEvent('inertia:httpException', { cancelable: true, detail: { response: { status, data: '', headers } } });
     document.dispatchEvent(event);
 
     return event;
@@ -29,6 +29,19 @@ describe('installHttpExceptionHandling', () => {
 
         expect(event!.defaultPrevented).toBe(true);
         expect(result.current).toEqual({ status: 503 });
+    });
+
+    it('leaves an Inertia page with an error status to the router', () => {
+        off = installHttpExceptionHandling();
+        const { result } = renderHook(() => useHttpFailure());
+
+        let event: CustomEvent | null = null;
+        act(() => {
+            event = fire(403, { 'x-inertia': 'true' });
+        });
+
+        expect(event!.defaultPrevented).toBe(false);
+        expect(result.current).toBeNull();
     });
 
     it('lets the overlay through once uninstalled', () => {
