@@ -203,7 +203,14 @@ Two things are the timeline's own:
   consistent read would show the transaction's snapshot, taken before the thread was held, and miss
   a reply committed since. While it runs, a reaction onto any thread the member wrote in waits for
   the commit; reads do not, and a reply waits only where it would be the first under the root just
-  after a swept one — the locking read's next-key lock covers that gap, as InnoDB's do.
+  after a swept one — the locking read's next-key lock covers that gap, as InnoDB's do. A reply
+  that mentions someone takes those members' share locks **before** it holds its root: the
+  withdrawal holds the member row first and only then its roots, so a reply that held the root
+  first and then waited on the member row would complete a cycle, and InnoDB fails one side — the
+  withdrawal retries, the reply had no retry. A root swept
+  while the reply waited is caught by the hold, as a not-found. The author's own member row is
+  still taken after the root, by the insert's foreign key: a member replying to their own root on
+  one device while withdrawing on another can lose that reply the same way, which is accepted.
 
 Nothing polls a feed, so no watermark moves; a page carries each row's chips from one grouped read,
 and a write answers with the row's whole chip row. The dashboard digest carries them too, though its
