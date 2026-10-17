@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Http;
 
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Contracts\Cache\Factory;
+use Illuminate\Foundation\CacheBasedMaintenanceMode;
+use Illuminate\Foundation\MaintenanceModeManager;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -24,13 +26,24 @@ class ServerErrorPagesTest extends TestCase
     public function test_maintenance_mode_renders_the_plain_page(): void
     {
         config(['app.name' => 'Test SNS']);
-        Artisan::call('down');
+        // Held in this process's array cache: the file driver's flag under storage/ would put every
+        // parallel worker, and the local site, into maintenance for the test's duration.
+        $mode = new CacheBasedMaintenanceMode($this->app->make(Factory::class), 'array', 'test-maintenance');
+        $mode->activate(['time' => now()->getTimestamp(), 'retry' => 60]);
+        $this->app->instance(MaintenanceModeManager::class, new class($this->app, $mode) extends MaintenanceModeManager
+        {
+            public function __construct($app, private readonly CacheBasedMaintenanceMode $mode)
+            {
+                parent::__construct($app);
+            }
 
-        try {
-            $response = $this->get('/');
-        } finally {
-            Artisan::call('up');
-        }
+            public function driver($driver = null): CacheBasedMaintenanceMode
+            {
+                return $this->mode;
+            }
+        });
+
+        $response = $this->get('/');
 
         $response->assertStatus(503);
         $response->assertSee('Test SNS');

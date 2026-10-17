@@ -1332,7 +1332,7 @@
     "Side menu": "サイドメニュー",
     "Sidebar plus a right column (%friends% and such).": "サイドバー+右カラム(%friend%等)",
     "Sign in": "サインイン",
-    "Sign in again to continue.": "続けるにはもう一度ログインしてください。",
+    "Sign in again to continue.": "続けるにはもう一度サインインしてください。",
     "Sign in with a passkey": "パスキーでログイン",
     "Sign out": "サインアウト",
     "Signature": "署名",
@@ -1764,7 +1764,7 @@
     "Your password alone will sign you in again.": "無効にすると、パスワードのみでサインインするようになります。",
     "Your recently posted %diaries%.": "自分の新着%diaries%。",
     "Your search \":keyword\" did not match any %diaries%.": "「:keyword」に一致する%diaries%は見つかりませんでした。",
-    "Your session has expired": "ログインの有効期限が切れました",
+    "Your session has expired": "サインインの有効期限が切れました",
     "Your two-factor settings changed while this page was open. Please try again.": "このページを開いている間に2要素認証の設定が変更されました。もう一度お試しください。",
     "Zone": "ゾーン"
 }

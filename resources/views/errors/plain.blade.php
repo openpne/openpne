@@ -1,4 +1,4 @@
-{{-- A 5xx page reads no settings and carries no %term% placeholder: the database is what tends to be broken when one is shown. Overrides the framework page in every realm. --}}
+{{-- A 5xx page reads no settings and carries no %term% placeholder: the database is what tends to be broken when one is shown. --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
