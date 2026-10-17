@@ -44,11 +44,12 @@ class CreateReplyTest extends TestCase
         ]);
 
         $members = $this->firstIndex($queries, fn (string $sql): bool => str_contains($sql, 'from "members"') || str_contains($sql, 'from `members`'));
-        $insert = $this->firstIndex($queries, fn (string $sql): bool => str_starts_with($sql, 'insert into "timeline_posts"') || str_starts_with($sql, 'insert into `timeline_posts`'));
+        // The root hold is the first statement that touches the posts table; the insert follows it.
+        $root = $this->firstIndex($queries, fn (string $sql): bool => str_contains($sql, 'timeline_posts'));
         $this->assertNotNull($members);
-        $this->assertNotNull($insert);
-        // The withdrawal cascade holds the member row first; a reply that held the parent first would deadlock.
-        $this->assertLessThan($insert, $members);
+        $this->assertNotNull($root);
+        $this->assertStringStartsWith('select', $queries[$root]);
+        $this->assertLessThan($root, $members);
     }
 
     public function test_parent_swept_after_the_lookup_is_a_not_found_rather_than_a_constraint_failure(): void

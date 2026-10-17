@@ -28,9 +28,8 @@ class CreateReply
         // so one deleted mid-request fails resolution (row dropped, reply goes through) instead
         // of failing the FK insert (reply rolled back).
         return DB::transaction(function () use ($author, $parent, $body, $mentions): TimelinePost {
-            // Members before the parent row: a withdrawal holds its member row and then cascades
-            // into the parent, so a reply holding the parent first deadlocks on the member row
-            // (docs/internals/timeline.md, "Reactions").
+            // Members before the root: a withdrawal holds its member row and then its roots, so a
+            // reply holding the root first deadlocks on the member row (docs/internals/timeline.md, "Reactions").
             $resolved = ($this->mentions)($author, $body, $mentions);
             // The parent was looked up before the transaction; a thread swept since fails here,
             // not as an FK violation on the insert.
