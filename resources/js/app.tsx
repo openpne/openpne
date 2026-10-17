@@ -2,6 +2,7 @@ import { createInertiaApp, type ResolvedComponent, router } from '@inertiajs/rea
 import { LaravelReactI18nProvider } from 'laravel-react-i18n';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
+import { HttpErrorDialog } from '@/components/http-error-dialog';
 import { MemberLayout } from '@/components/member-layout';
 import { SyncLocaleWithServer } from '@/components/sync-locale';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -11,6 +12,7 @@ import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
 import { conversationVisitOptions } from '@/lib/chat/opening-scroll';
 import { installHistoryRestore } from '@/lib/history-restore';
+import { installHttpExceptionHandling } from '@/lib/http-exception';
 import { installNotificationOpen } from '@/lib/notification-open';
 import { pageModules, pagePath } from '@/lib/page-modules';
 import { installRevalidateOnRestore } from '@/lib/revalidate-on-restore';
@@ -52,6 +54,7 @@ void createInertiaApp({
         // Before the app mounts, so the first `navigate` (the initial load) is counted as the
         // session's floor rather than as a step the detail bar could offer to go back from.
         installBackNav(router);
+        installHttpExceptionHandling();
         // Before the app mounts likewise: a page that revalidates on a restore has to find the
         // record already there when it arrives.
         installHistoryRestore();
@@ -74,6 +77,7 @@ void createInertiaApp({
                     eats the pointer that would have raised that icon's own label. */}
                 <TooltipProvider delayDuration={500} skipDelayDuration={300} disableHoverableContent>
                     <App {...props} />
+                    <HttpErrorDialog />
                 </TooltipProvider>
             </LaravelReactI18nProvider>,
         );

@@ -162,6 +162,18 @@ Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
 operator running many sites on one host gets them together and has no lever here
 to stagger them.
 
+## Failure replies
+
+A reply that is not an Inertia page — the maintenance page, an uncaught 500, an
+expired session's 419 — would otherwise appear in Inertia's raw overlay, which is
+not gated by environment. The Modern app cancels that overlay and shows its own
+dialog instead, worded by status and leaving the page as it was
+(`resources/js/lib/http-exception.ts`). A full navigation that meets a 5xx gets
+`errors/plain.blade.php`, which reads only `config('app.name')`: the database is
+what tends to be broken when one is shown. 403, 404 and 419 on a full Classic
+navigation keep their OpenPNE 3 rendering
+([classic-compatibility.md](classic-compatibility.md)).
+
 ## Queue
 
 Notifications, mail and the link-card fetch are queued, on the `database`
