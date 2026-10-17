@@ -253,31 +253,4 @@ class TalkMentionStorageTest extends TalkTestCase
 
         $this->assertDatabaseHas('group_message_mentions', ['group_message_id' => $id, 'offset' => 2]);
     }
-
-    public function test_mentioned_members_are_read_before_the_message_row_is_written(): void
-    {
-        [$group, $author, $target] = $this->conversation();
-
-        $queries = [];
-        DB::listen(function ($query) use (&$queries): void {
-            $queries[] = $query->sql;
-        });
-        app(CreateGroupMessage::class)($author, $group, 'hi @Bob', [
-            ['member_id' => $target->getKey(), 'offset' => 3, 'length' => 4],
-        ]);
-
-        $members = null;
-        $insert = null;
-        foreach ($queries as $i => $sql) {
-            if ($members === null && (str_contains($sql, 'from "members"') || str_contains($sql, 'from `members`'))) {
-                $members = $i;
-            }
-            if ($insert === null && (str_starts_with($sql, 'insert into "group_messages"') || str_starts_with($sql, 'insert into `group_messages`'))) {
-                $insert = $i;
-            }
-        }
-        $this->assertNotNull($members);
-        $this->assertNotNull($insert);
-        $this->assertLessThan($insert, $members);
-    }
 }

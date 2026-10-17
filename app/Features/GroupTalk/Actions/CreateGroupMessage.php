@@ -56,19 +56,23 @@ class CreateGroupMessage
             'groupMessage',
             $images,
             persist: function () use ($author, $group, $body, $mentions, $mentionsRequired, $inReplyTo): GroupMessage {
-                // Mentioned members before the insert, which share-locks the replied-to message through its FK (docs/internals/timeline.md, "Reactions").
-                $resolved = ($this->mentions)($author, $body, $mentions, $group);
-
-                if ($mentionsRequired && count($resolved) !== count($mentions)) {
-                    throw new GroupTalkActionException(GroupTalkActionFailure::MentionDropped);
-                }
-
                 $message = GroupMessage::create([
                     'group_id' => $group->getKey(),
                     'member_id' => $author->getKey(),
                     'body' => $body,
                     'in_reply_to_id' => $inReplyTo?->getKey(),
                 ]);
+
+                // Resolved inside the transaction: resolution share-locks the members it matches, so
+                // one deleted mid-request drops its row and the message still posts, instead of
+                // failing the FK insert and rolling the message back.
+                $resolved = ($this->mentions)($author, $body, $mentions, $group);
+
+                // Thrown from inside the transaction on purpose: the body carrying the handle is
+                // rolled back along with the row that was supposed to explain it.
+                if ($mentionsRequired && count($resolved) !== count($mentions)) {
+                    throw new GroupTalkActionException(GroupTalkActionFailure::MentionDropped);
+                }
 
                 // createMany answers in the order it was given, so the relation keeps resolution's
                 // ascending offsets.
