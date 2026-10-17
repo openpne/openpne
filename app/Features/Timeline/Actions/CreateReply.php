@@ -4,9 +4,11 @@ namespace App\Features\Timeline\Actions;
 
 use App\Features\Timeline\Events\TimelineReplyPosted;
 use App\Features\Timeline\HashtagParser;
+use App\Features\Timeline\TimelineThreadLock;
 use App\Jobs\SyncLinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 class CreateReply
@@ -26,13 +28,21 @@ class CreateReply
         // so one deleted mid-request fails resolution (row dropped, reply goes through) instead
         // of failing the FK insert (reply rolled back).
         return DB::transaction(function () use ($author, $parent, $body, $mentions): TimelinePost {
+            // Members before the parent row: a withdrawal holds its member row and then cascades
+            // into the parent, so a reply holding the parent first deadlocks on the member row
+            // (docs/internals/timeline.md, "Reactions").
+            $resolved = ($this->mentions)($author, $body, $mentions);
+            // The parent was looked up before the transaction; a thread swept since fails here,
+            // not as an FK violation on the insert.
+            if (! TimelineThreadLock::hold($parent, shared: true)) {
+                throw (new ModelNotFoundException)->setModel(TimelinePost::class, [$parent->getKey()]);
+            }
             $reply = TimelinePost::create([
                 'member_id' => $author->getKey(),
                 'in_reply_to_id' => $parent->getKey(),
                 'body' => $body,
                 'visibility' => $parent->visibility,
             ]);
-            $resolved = ($this->mentions)($author, $body, $mentions);
             $reply->mentions()->createMany($resolved);
             // After resolution, because a mention wins any range the two would both claim.
             $reply->tags()->createMany(HashtagParser::parse($body, $resolved));
