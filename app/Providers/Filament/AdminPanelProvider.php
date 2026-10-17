@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Auth\AdminAppAuthentication;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\SecuritySettings;
+use App\Filament\Support\InitialsAvatarProvider;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
@@ -46,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
             // guard: a logged-in member is never treated as an administrator
             // and vice versa.
             ->authGuard('admin')
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->login(Login::class)
             // Opt-in (isRequired false) by design, and codeWindow(1) tightens Filament's default of 8
             // (docs/internals/security.md).
