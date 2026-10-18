@@ -32,13 +32,22 @@ class TickHousekeepingTest extends TestCase
 
     public function test_it_runs_once_per_site_day_and_not_for_guests(): void
     {
-        $this->mock(Housekeeping::class)->shouldReceive('run')->twice()->andReturn(0);
+        $runs = 0;
+        $this->mock(Housekeeping::class)->shouldReceive('run')->andReturnUsing(function () use (&$runs): int {
+            $runs++;
+
+            return 0;
+        });
         $member = Member::factory()->create();
 
         $this->get('/login');
+        $this->assertSame(0, $runs, 'a guest request took the day');
         $this->actingAs($member)->get('/dashboard');
+        $this->assertSame(1, $runs);
         $this->actingAs($member)->get('/dashboard');
+        $this->assertSame(1, $runs, 'the same day ran twice');
         $this->travel(1)->days();
         $this->actingAs($member)->get('/dashboard');
+        $this->assertSame(2, $runs);
     }
 }

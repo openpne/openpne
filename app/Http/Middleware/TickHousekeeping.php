@@ -25,8 +25,7 @@ final class TickHousekeeping
 
     public function terminate(Request $request, Response $response): void
     {
-        // A signed-in member's request only: guests, health checks and the token realms carry no
-        // session and would pay the cache read for nothing.
+        // Any authenticated request, whichever guard answered; a guest's would pay the cache read for nothing.
         if ($request->user() === null) {
             return;
         }

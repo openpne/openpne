@@ -8,7 +8,6 @@ use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RemoveCookiesFromPublicFileResponses;
 use App\Http\Middleware\SecurityHeaders;
-use App\Http\Middleware\SetContentLength;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\TickHousekeeping;
 use App\Http\Middleware\UseAdminSessionStore;
@@ -64,9 +63,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // the admin realm's Livewire endpoints.
         $middleware->prepend(UseAdminSessionStore::class);
 
-        // Global, every realm: the length is what lets a client finish before deferred work runs,
-        // and the daily tick needs the member's request whatever the route group.
-        $middleware->append([SetContentLength::class, TickHousekeeping::class]);
+        // Global: the daily tick needs the signed-in request whatever the route group.
+        $middleware->append(TickHousekeeping::class);
 
         // An abort unwinds only through middleware already entered, so SecurityHeaders and SetLocale
         // must sit ahead of the first middleware that can abort (docs/internals/security.md).

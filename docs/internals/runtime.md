@@ -189,10 +189,14 @@ link-card fetch afterwards, out of the member's wait. Each deferred job runs on 
 own and a failure is logged, not retried and not kept in `failed_jobs`; the jobs of a
 request that failed (a 4xx or 5xx, even after its writes committed) are dropped
 with it, and a job queued by a console command runs only when the command exits
-with 0. The client sees the end of the response only because every response
-declares its `Content-Length` (`SetContentLength`, global): under mod_php a
-response without one is held open until the script ends. A proxy that strips the
-header, or a compressing module that recomputes it, puts that wait back.
+with 0. The client sees the end of the response only because a response with a
+string body declares its `Content-Length` (`DeclareContentLength`, measured once
+the body is final; a streamed or file reply is not covered): under mod_php a response without one is held open
+until the script ends. A proxy that strips the header, or a compressing module
+that recomputes it, puts that wait back. A web request that runs an artisan
+command in-process drops the jobs queued before it, and `max_execution_time`
+counts the deferred work with the request: a timeout there is fatal and takes the
+remaining jobs with it.
 
 A delayed job runs at once on `deferred` as on `sync`: the grace a talk message
 waits before notifying, so that a member reading the room is not notified of what
