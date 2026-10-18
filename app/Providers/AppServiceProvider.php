@@ -15,6 +15,7 @@ use App\Http\Middleware\StartSession;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\LinkCard\InternalCardResolver;
 use App\LinkCard\LinkCardSettings;
+use App\Listeners\Http\DeclareContentLength;
 use App\Models\BannerImage;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -43,10 +44,12 @@ use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
@@ -137,6 +140,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         SiteTimezone::assertUsable((string) config('app.timezone'));
+
+        // Registered after the package providers' listeners (Livewire's asset injection among them), so it measures the body they leave.
+        Event::listen(RequestHandled::class, DeclareContentLength::class);
 
         if (config('openpne.security.force_https')) {
             // Commit URL generation + the session cookie to HTTPS even when PHP sees a plain-HTTP
