@@ -38,8 +38,9 @@ component child that drops them ends up with no name anywhere, and nothing throw
 ## Why the panel is not a description
 
 Radix associates the panel with its trigger through `aria-describedby`. Here the panel's text *is* the
-name, so the association is dropped (`aria-describedby={undefined}` on the trigger) — kept, it reads
-out as "Reply, button, Reply". Radix's own answer to the double announcement runs the other way: give
+name, so the association is dropped — kept, it reads out as "Reply, button, Reply". Tooltip's trigger
+and Slot both concatenate `aria-describedby` with the panel id, so a second Slot under the trigger
+resets it after their merge. Radix's own answer to the double announcement runs the other way: give
 `Content` an `aria-label` and let the visible text stay a description. That is for a trigger named from
 somewhere else; it is not this case, so the association goes rather than the text.
 
