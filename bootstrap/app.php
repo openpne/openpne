@@ -9,6 +9,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RemoveCookiesFromPublicFileResponses;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\TickHousekeeping;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\Support\ClassicErrorPage;
 use App\Support\GuestLoginRedirect;
@@ -61,6 +62,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // session driver — including the web group's StartSession, which also serves
         // the admin realm's Livewire endpoints.
         $middleware->prepend(UseAdminSessionStore::class);
+
+        // Global: the daily tick needs the signed-in request whatever the route group.
+        $middleware->append(TickHousekeeping::class);
 
         // An abort unwinds only through middleware already entered, so SecurityHeaders and SetLocale
         // must sit ahead of the first middleware that can abort (docs/internals/security.md).

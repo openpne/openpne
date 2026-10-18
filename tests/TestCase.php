@@ -62,28 +62,28 @@ abstract class TestCase extends BaseTestCase
      */
     protected function applicationQueryCounts(callable $run): array
     {
-        DB::flushQueryLog();
-        DB::enableQueryLog();
-
-        try {
-            $run();
-            $counts = [];
-            foreach (DB::getQueryLog() as $query) {
-                if (preg_match('/["`]cache(_locks)?["`]/', $query['query']) === 1) {
-                    continue;
-                }
-                $sql = preg_replace('/ in \([^)]*\)/', ' in (...)', $query['query']);
-                $counts[$sql] = ($counts[$sql] ?? 0) + 1;
-            }
-
-            return $counts;
-        } finally {
-            DB::disableQueryLog();
+        $counts = [];
+        foreach ($this->applicationQueries($run) as $query) {
+            $sql = preg_replace('/ in \([^)]*\)/', ' in (...)', $query['query']);
+            $counts[$sql] = ($counts[$sql] ?? 0) + 1;
         }
+
+        return $counts;
     }
 
-    /** The queries a callback runs, leaving out the cache store's own reads and writes. */
+    /** The queries a callback runs, leaving out the cache store's and the daily housekeeping tick's. */
     protected function countApplicationQueries(callable $run): int
+    {
+        return count($this->applicationQueries($run));
+    }
+
+    /**
+     * The site day's one housekeeping tick (TickHousekeeping) lands on whichever request is first;
+     * it is not the page's cost, so its statements are left out with the cache store's.
+     *
+     * @return list<array{query: string, bindings: array<int, mixed>, time: float}>
+     */
+    private function applicationQueries(callable $run): array
     {
         DB::flushQueryLog();
         DB::enableQueryLog();
@@ -91,9 +91,10 @@ abstract class TestCase extends BaseTestCase
         try {
             $run();
 
-            return count(array_filter(
+            return array_values(array_filter(
                 DB::getQueryLog(),
-                fn (array $query): bool => preg_match('/["`]cache(_locks)?["`]/', $query['query']) !== 1,
+                fn (array $query): bool => preg_match('/["`]cache(_locks)?["`]/', $query['query']) !== 1
+                    && preg_match('/^delete from ["`](registration_tokens|email_change_requests|mfa_reset_requests)["`] where ["`]created_at["`] < \?$/', $query['query']) !== 1,
             ));
         } finally {
             DB::disableQueryLog();

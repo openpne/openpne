@@ -508,6 +508,8 @@ Three asymmetries are deliberate:
   `GRACE_SECONDS` delay so a member sitting in the room marks it read first, and the job then drops
   anyone whose cursor has passed it (`TalkReadCursor::isBehind`, the same tuple `advance()` moves).
   It is a **race, not a guarantee**: a read landing after the check still leaves the notification sent.
+  Only a worker waits the delay; on the `deferred` and `sync` connections the broadcast runs at
+  once and the gate sees only reads that landed before the post ([runtime.md](runtime.md#queue)).
 
 **One feed row per room.** The broadcast writes the room's row, not the message's: once the new row is
 written, [`KeepOneGroupTalkRoomRow`](../../app/Listeners/GroupTalk/KeepOneGroupTalkRoomRow.php) deletes
