@@ -1,5 +1,5 @@
 import { cloneElement, type ComponentProps, type FocusEvent, type ReactElement } from 'react';
-import { Tooltip as TooltipPrimitive } from 'radix-ui';
+import { Slot as SlotPrimitive, Tooltip as TooltipPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
 export const TooltipProvider = TooltipPrimitive.Provider;
@@ -36,6 +36,15 @@ function holdUnlessFocusVisible(event: FocusEvent<HTMLElement>) {
 }
 
 /**
+ * Hands the trigger's props to the control through a second Slot merge, minus the description link:
+ * Tooltip's trigger and Slot both concatenate `aria-describedby` with the panel id, so no prop on the
+ * trigger holds it back.
+ */
+function KeepOwnDescription(props: ComponentProps<typeof SlotPrimitive.Root>) {
+    return <SlotPrimitive.Root {...props} aria-describedby={undefined} />;
+}
+
+/**
  * Names an icon-only control twice over: as its accessible name, and as the panel raised beside it
  * (docs/internals/icon-labels.md, "Naming icon-only controls"). Layered on another Radix trigger both
  * roots write `data-state` and spread order decides which survives, so trigger styling keys on
@@ -61,8 +70,8 @@ export function Tip({
 
     return (
         <Tooltip>
-            <TooltipTrigger asChild aria-describedby={undefined} onFocus={holdUnlessFocusVisible}>
-                {cloneElement(children, { 'aria-label': label })}
+            <TooltipTrigger asChild onFocus={holdUnlessFocusVisible}>
+                <KeepOwnDescription>{cloneElement(children, { 'aria-label': label })}</KeepOwnDescription>
             </TooltipTrigger>
             {!silent && <TooltipContent>{label}</TooltipContent>}
         </Tooltip>
