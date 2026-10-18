@@ -28,7 +28,8 @@ class DeclareContentLengthTest extends TestCase
         $response = $this->get('/admin/login');
 
         $response->assertOk();
-        $this->assertStringContainsString('livewire', $response->getContent());
+        // The injected script tag (livewire.js in debug, livewire.min.js otherwise), not Filament's own wire: markup.
+        $this->assertMatchesRegularExpression('~<script src="[^"]*/livewire(\.min)?\.js~', $response->getContent());
         $this->assertSame(strlen($response->getContent()), (int) $response->headers->get('Content-Length'));
     }
 

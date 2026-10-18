@@ -141,7 +141,7 @@ class AppServiceProvider extends ServiceProvider
     {
         SiteTimezone::assertUsable((string) config('app.timezone'));
 
-        // After the package providers' listeners (Livewire's asset injection among them): app providers boot last.
+        // Registered after the package providers' listeners (Livewire's asset injection among them), so it measures the body they leave.
         Event::listen(RequestHandled::class, DeclareContentLength::class);
 
         if (config('openpne.security.force_https')) {
