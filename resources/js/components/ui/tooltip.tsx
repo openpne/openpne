@@ -1,5 +1,5 @@
 import { cloneElement, type ComponentProps, type FocusEvent, type ReactElement } from 'react';
-import { Tooltip as TooltipPrimitive } from 'radix-ui';
+import { Slot as SlotPrimitive, Tooltip as TooltipPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
 export const TooltipProvider = TooltipPrimitive.Provider;
@@ -36,6 +36,18 @@ function holdUnlessFocusVisible(event: FocusEvent<HTMLElement>) {
 }
 
 /**
+ * Passes the trigger's props on to the control through a second Slot merge, with the description
+ * link reset to the control's own. Radix's Slot unions `aria-describedby` from both sides, so a bare
+ * prop on the trigger no longer holds the panel's link back.
+ */
+function KeepOwnDescription({
+    describedBy,
+    ...triggerProps
+}: ComponentProps<typeof SlotPrimitive.Root> & { describedBy: string | undefined }) {
+    return <SlotPrimitive.Root {...triggerProps} aria-describedby={describedBy} />;
+}
+
+/**
  * Names an icon-only control twice over: as its accessible name, and as the panel raised beside it
  * (docs/internals/icon-labels.md, "Naming icon-only controls"). Layered on another Radix trigger both
  * roots write `data-state` and spread order decides which survives, so trigger styling keys on
@@ -52,7 +64,7 @@ export function Tip({
      * panel held back.
      */
     silent?: boolean;
-    children: ReactElement<{ 'aria-label'?: string }>;
+    children: ReactElement<{ 'aria-label'?: string; 'aria-describedby'?: string }>;
 }) {
     // Before the clone, or the check would be reading the label this very call just injected.
     if (import.meta.env.DEV && children.props['aria-label'] !== undefined) {
@@ -61,8 +73,10 @@ export function Tip({
 
     return (
         <Tooltip>
-            <TooltipTrigger asChild aria-describedby={undefined} onFocus={holdUnlessFocusVisible}>
-                {cloneElement(children, { 'aria-label': label })}
+            <TooltipTrigger asChild onFocus={holdUnlessFocusVisible}>
+                <KeepOwnDescription describedBy={children.props['aria-describedby']}>
+                    {cloneElement(children, { 'aria-label': label })}
+                </KeepOwnDescription>
             </TooltipTrigger>
             {!silent && <TooltipContent>{label}</TooltipContent>}
         </Tooltip>
