@@ -111,6 +111,26 @@ test('a pointer raises the panel', () => {
     expect(screen.getByRole('tooltip').textContent).toBe('Reply');
 });
 
+/** Radix hides a panel it could not anchor at `translate(0, -200%)`, so a lost trigger ref shows here. */
+test('the panel is anchored to the control, which keeps its own ref', async () => {
+    vi.useFakeTimers();
+    const ref = vi.fn();
+    renderWithProviders(
+        <Tip label="Reply">
+            <button type="button" ref={ref} />
+        </Tip>,
+    );
+    const button = screen.getByRole('button');
+
+    hover(button);
+    await act(async () => {});
+
+    expect(ref).toHaveBeenCalledWith(button);
+    const panel = document.querySelector<HTMLElement>('[data-radix-popper-content-wrapper]');
+    expect(panel?.style.transform).toMatch(/^translate\(/);
+    expect(panel?.style.transform).not.toBe('translate(0, -200%)');
+});
+
 test('a silent Tip names the control and floats nothing', () => {
     vi.useFakeTimers();
     renderWithProviders(

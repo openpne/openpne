@@ -36,15 +36,12 @@ function holdUnlessFocusVisible(event: FocusEvent<HTMLElement>) {
 }
 
 /**
- * Passes the trigger's props on to the control through a second Slot merge, with the description
- * link reset to the control's own. Radix's Slot unions `aria-describedby` from both sides, so a bare
- * prop on the trigger no longer holds the panel's link back.
+ * Hands the trigger's props to the control through a second Slot merge, minus the description link:
+ * Tooltip's trigger and Slot both concatenate `aria-describedby` with the panel id, so no prop on the
+ * trigger holds it back.
  */
-function KeepOwnDescription({
-    describedBy,
-    ...triggerProps
-}: ComponentProps<typeof SlotPrimitive.Root> & { describedBy: string | undefined }) {
-    return <SlotPrimitive.Root {...triggerProps} aria-describedby={describedBy} />;
+function KeepOwnDescription(props: ComponentProps<typeof SlotPrimitive.Root>) {
+    return <SlotPrimitive.Root {...props} aria-describedby={undefined} />;
 }
 
 /**
@@ -64,7 +61,7 @@ export function Tip({
      * panel held back.
      */
     silent?: boolean;
-    children: ReactElement<{ 'aria-label'?: string; 'aria-describedby'?: string }>;
+    children: ReactElement<{ 'aria-label'?: string }>;
 }) {
     // Before the clone, or the check would be reading the label this very call just injected.
     if (import.meta.env.DEV && children.props['aria-label'] !== undefined) {
@@ -74,9 +71,7 @@ export function Tip({
     return (
         <Tooltip>
             <TooltipTrigger asChild onFocus={holdUnlessFocusVisible}>
-                <KeepOwnDescription describedBy={children.props['aria-describedby']}>
-                    {cloneElement(children, { 'aria-label': label })}
-                </KeepOwnDescription>
+                <KeepOwnDescription>{cloneElement(children, { 'aria-label': label })}</KeepOwnDescription>
             </TooltipTrigger>
             {!silent && <TooltipContent>{label}</TooltipContent>}
         </Tooltip>
