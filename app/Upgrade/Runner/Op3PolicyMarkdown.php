@@ -30,7 +30,7 @@ final class Op3PolicyMarkdown
     }
 
     /**
-     * Not HtmlConverter: it collapses whitespace runs and escapes only `*_[]` and a leading `#`, so a
+     * Not HtmlConverter: it collapses whitespace runs and leaves a leading `>` or `-` unescaped, so a
      * `> quoted` or `- item` line would change meaning.
      */
     private static function escapePlain(string $text): string
