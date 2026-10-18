@@ -97,6 +97,11 @@ class AdminMfaReauthTest extends TestCase
         return 'admin-mfa-reauth:'.$admin->getKey();
     }
 
+    private function vendorKey(string $action, AdminUser $admin): string
+    {
+        return $action.':'.Filament::getUserScopedAuthIdentifier($admin);
+    }
+
     private function assertThrottleMessage(array $messages, string $key): void
     {
         $this->assertArrayHasKey($key, $messages);
@@ -189,7 +194,7 @@ class AdminMfaReauthTest extends TestCase
                 ->assertHasNoActionErrors(['password']);
         }
         $this->assertSame(0, RateLimiter::attempts($this->throttleKey($admin)));
-        $this->assertSame(0, RateLimiter::attempts('filament-set-up-app-authentication:'.$admin->getKey()));
+        $this->assertSame(0, RateLimiter::attempts($this->vendorKey('filament-set-up-app-authentication', $admin)));
 
         $page->set(self::CODE, $this->currentCode($admin, $secret))
             ->goToNextWizardStep()
@@ -199,7 +204,7 @@ class AdminMfaReauthTest extends TestCase
 
         $this->assertSame($secret, $admin->fresh()->getAppAuthenticationSecret());
         // The final submit still runs the vendor closure, which counts it.
-        $this->assertSame(1, RateLimiter::attempts('filament-set-up-app-authentication:'.$admin->getKey()));
+        $this->assertSame(1, RateLimiter::attempts($this->vendorKey('filament-set-up-app-authentication', $admin)));
     }
 
     // --- disable ------------------------------------------------------------
@@ -301,7 +306,7 @@ class AdminMfaReauthTest extends TestCase
         )->assertHasActionErrors(['password']);
 
         $this->assertSame(1, RateLimiter::attempts($this->throttleKey($admin)));
-        $this->assertSame(0, RateLimiter::attempts('filament-disable-app-authentication:'.$admin->getKey()));
+        $this->assertSame(0, RateLimiter::attempts($this->vendorKey('filament-disable-app-authentication', $admin)));
     }
 
     public function test_code_guesses_with_the_right_password_are_limited_per_admin(): void
@@ -311,7 +316,7 @@ class AdminMfaReauthTest extends TestCase
         $admin = AdminUser::factory()->create(['password' => 'secret-pass-1']);
         $this->enableMfa($admin);
         $disable = TestAction::make('disableAppAuthentication')->schemaComponent();
-        $vendorKey = 'filament-disable-app-authentication:'.$admin->getKey();
+        $vendorKey = $this->vendorKey('filament-disable-app-authentication', $admin);
 
         $this->page($admin)->callAction($disable, ['password' => 'secret-pass-1', 'code' => '000000'])
             ->assertHasActionErrors(['code'])
@@ -384,7 +389,7 @@ class AdminMfaReauthTest extends TestCase
         $this->assertCount(1, $this->securityRecords('mfa.recovery_codes_regenerated'));
         // Rotating backup codes leaves the TOTP factor unchanged, so other sessions are kept.
         $this->assertDatabaseHas('admin_sessions', ['id' => 'other-device']);
-        $this->assertSame(1, RateLimiter::attempts('filament-regenerate-recovery-codes:'.$admin->getKey()));
+        $this->assertSame(1, RateLimiter::attempts($this->vendorKey('filament-regenerate-recovery-codes', $admin)));
     }
 
     // --- legacy provider boundary ------------------------------------------
