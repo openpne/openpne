@@ -148,15 +148,16 @@ Counters that must be read fresh, the login throttle among them, stay on the pla
 ## Scheduled tasks
 
 A deployment should run Laravel's scheduler — `php artisan schedule:run` every
-minute from cron (or a systemd timer). Without it the daily prune of expired
-pending tokens — registration, email-change and MFA-reset links — and the weekly
-prune of unreferenced link cards and the image each holds
-([`routes/console.php`](../../routes/console.php)) never run, and those rows
-accumulate. The daily 06:00 home issue is registered here too but does not depend
-on it: the Modern front page publishes the issue that is due when it is first read
-after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the scheduled
-run only moves publication from that first visit to 06:00 itself. `php artisan
-schedule:list` shows what is registered.
+minute from cron (or a systemd timer). Without it the weekly prune of unreferenced
+link cards and the image each holds ([`routes/console.php`](../../routes/console.php))
+never runs, and those rows accumulate. The daily prune of expired pending tokens —
+registration, email-change and MFA-reset links — is registered here too but does
+not depend on it: the first signed-in request of each site day runs the same prune
+after its response (`TickHousekeeping`, one cache lock per day). Nor does the daily
+06:00 home issue: the Modern front page publishes the issue that is due when it is
+first read after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the
+scheduled run only moves publication from that first visit to 06:00 itself.
+`php artisan schedule:list` shows what is registered.
 
 Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
 operator running many sites on one host gets them together and has no lever here
@@ -178,15 +179,24 @@ Classic navigation keep their OpenPNE 3 rendering
 
 ## Queue
 
-Notifications, mail and the link-card fetch are queued, on the `database`
-connection by default, which needs a worker (`php artisan queue:work`). A host that
-cannot keep one running sets `QUEUE_CONNECTION=sync`: each job then runs inside the
-request that raised it, so a post costs its notifications' sends and its link-card
-fetch in latency, the first view of a page costs the examination of each body on it
-that nobody has looked at yet (once in a body's life, migrated history included), and
-a job that fails — a mail transport that is down — fails that
-request instead of landing in `failed_jobs`. A delayed job runs at once: the grace a
-talk message waits before notifying, so that a member reading the room is not
-notified of what they have just read ([group-talk.md](group-talk.md)), is not
-waited. A host with cron but no worker keeps both by running
+Notifications, mail, web push and the link-card fetch are queued, on the `database`
+connection by default, which needs a worker (`php artisan queue:work`; job timeouts
+need `ext-pcntl`, and a worker is restarted by `queue:restart` after a deploy). A
+host that cannot keep one running sets `QUEUE_CONNECTION=deferred`: each job then
+runs in the same process **after the response has been sent**, so a post answers
+once its rows are written and pays for its notifications, its push sends and its
+link-card fetch afterwards, out of the member's wait. Each deferred job runs on its
+own and a failure is logged, not retried and not kept in `failed_jobs`; the jobs of a
+request that failed (a 4xx or 5xx, even after its writes committed) are dropped
+with it, and a job queued by a console command runs only when the command exits
+with 0. The client sees the end of the response only because every response
+declares its `Content-Length` (`SetContentLength`, global): under mod_php a
+response without one is held open until the script ends. A proxy that strips the
+header, or a compressing module that recomputes it, puts that wait back.
+
+A delayed job runs at once on `deferred` as on `sync`: the grace a talk message
+waits before notifying, so that a member reading the room is not notified of what
+they have just read ([group-talk.md](group-talk.md)), is waited only by a worker.
+`sync` itself — every job inside the request, a failing job failing the request —
+is kept for tests. A host with cron but no worker keeps the grace by running
 `php artisan queue:work --stop-when-empty` from cron instead.
