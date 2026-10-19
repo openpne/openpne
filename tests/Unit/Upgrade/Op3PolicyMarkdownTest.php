@@ -59,6 +59,15 @@ class Op3PolicyMarkdownTest extends TestCase
         $this->assertStringNotContainsString('&lt;h2&gt;', $html);
     }
 
+    /** A backtick or a pipe in the HTML body is text under OpenPNE 3, not a code span or a table. */
+    public function test_code_and_table_punctuation_in_html_stays_literal(): void
+    {
+        $html = $this->render('<p>コマンド `ls` を実行 | 備考</p>');
+
+        $this->assertStringNotContainsString('<code>', $html);
+        $this->assertStringContainsString('`ls` を実行 | 備考', html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
     public function test_script_and_style_are_dropped(): void
     {
         $html = $this->render("<p>本文</p>\n<script>alert(1)</script><style>body{}</style>");
