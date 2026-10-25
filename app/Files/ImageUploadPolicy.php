@@ -10,7 +10,7 @@ use App\Support\SnsSettingKey;
 /** The server's rules stay the gate; a picker that skipped this sends what it picked. */
 final class ImageUploadPolicy
 {
-    /** @return array{accept: string, shrink: array{maxEdge: int, passthroughBytes: int, maxBytes: int, quality: float, keepsFrames: bool}|null} */
+    /** @return array{accept: string, shrink: array{maxEdge: int, passthroughBytes: int, maxBytes: int, quality: float, keepsFrames: bool}|null, attachmentMaxBytes: int} */
     public static function shared(): array
     {
         return [

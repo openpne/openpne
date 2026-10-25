@@ -22,11 +22,16 @@ export function acceptedTypes(accept: string): Set<string> {
 }
 
 /**
- * A picture is what the server's processor reads (the shipped accept list); a typeless pick or an
- * image type outside it goes up as a file, which the server also decides by content.
+ * A picture is what the server's processor reads (the shipped accept list, by type or, for a pick
+ * the browser gave no type, by extension); anything else goes up as a file, which the server also decides by content.
  */
 export function isPicture(file: File, accept: string): boolean {
-    return acceptedTypes(accept).has(file.type);
+    if (file.type !== '') {
+        return acceptedTypes(accept).has(file.type);
+    }
+    const extension = file.name.replace(/^.*\./, '.').toLowerCase();
+
+    return extension !== file.name.toLowerCase() && accept.split(',').some((entry) => entry.trim().toLowerCase() === extension);
 }
 
 /**

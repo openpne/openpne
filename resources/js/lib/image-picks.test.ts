@@ -24,13 +24,14 @@ test('the default cap is the server contract', () => {
 });
 
 test('the cap exempts what the server reads as a picture, and nothing typeless or outside that list', () => {
-    const upload = { accept: 'image/jpeg,image/png', attachmentMaxBytes: 100 };
+    const upload = { accept: 'image/jpeg,image/png,.heic', attachmentMaxBytes: 100 };
     const file = (name: string, type: string, size: number) => new File([new Uint8Array(size)], name, { type });
-    const picked = [file('a.png', 'image/png', 500), file('b.pdf', 'application/pdf', 500), file('c.xdw', '', 500), file('d.psd', 'image/vnd.adobe.photoshop', 500), file('e.pdf', 'application/pdf', 50)];
+    // A typeless pick is a picture only through an extension the accept list names (a HEIC on a browser that does not type it).
+    const picked = [file('a.png', 'image/png', 500), file('b.pdf', 'application/pdf', 500), file('c.xdw', '', 500), file('d.psd', 'image/vnd.adobe.photoshop', 500), file('e.pdf', 'application/pdf', 50), file('IMG_1.HEIC', '', 500), file('heic', '', 500)];
 
     const { files, refused } = withinAttachmentCap(picked, upload);
 
-    assert.deepEqual(files.map((f) => f.name), ['a.png', 'e.pdf']);
+    assert.deepEqual(files.map((f) => f.name), ['a.png', 'e.pdf', 'IMG_1.HEIC']);
     assert.equal(refused, true);
     assert.equal(withinAttachmentCap([file('f.pdf', 'application/pdf', 100)], upload).refused, false);
 });
