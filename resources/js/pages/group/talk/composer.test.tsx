@@ -71,6 +71,12 @@ test('a staged reply to a picture-only message previews as one', () => {
     expect(screen.getByText('Image')).toBeTruthy();
 });
 
+test('a staged reply to a file-only message previews as a file', () => {
+    mount({ replyTo: parent({ body: '', files: [{ id: 1, url: 'https://sns.test/file/x', name: 'minutes.pdf', byteSize: 10, sizeLabel: '10 B', type: 'application/pdf' }] }) });
+
+    expect(screen.getByText('File')).toBeTruthy();
+});
+
 test('a staged reply to a withdrawn author names them with the established label', () => {
     mount({ replyTo: parent({ author: null }) });
 
@@ -129,10 +135,15 @@ test('a file dropped on the bar previews as its name, and one over the attachmen
     const form = screen.getByLabelText('Message').closest('form') as HTMLFormElement;
     const pdf = (name: string, size: number) => new File([new Uint8Array(size)], name, { type: 'application/pdf' });
 
-    fireEvent.drop(form, { dataTransfer: filesDrag([pdf('minutes.pdf', 16), pdf('deck.pdf', 2048)]) });
-    expect(screen.getAllByLabelText(/Remove attachment/)).toHaveLength(1);
+    const typeless = new File([new Uint8Array(16)], 'plan.xdw', { type: '' });
+
+    fireEvent.drop(form, { dataTransfer: filesDrag([pdf('minutes.pdf', 16), typeless, pdf('deck.pdf', 2048)]) });
+    expect(screen.getAllByLabelText(/Remove attachment/)).toHaveLength(2);
+    // Named chips, no object-URL preview, for the PDF and the typeless file alike.
     expect(screen.getByText('minutes.pdf')).toBeTruthy();
-    expect(screen.getByRole('alert').textContent).toContain('A file can be up to 0 MB.');
+    expect(screen.getByText('plan.xdw')).toBeTruthy();
+    expect(form.querySelectorAll('img')).toHaveLength(0);
+    expect(screen.getByRole('alert').textContent).toContain('A file can be up to 1 KB.');
 });
 
 test('at the cap a drop on the bar is swallowed without a note, as the disabled button takes no pick', () => {

@@ -182,9 +182,10 @@ test('a file over the attachment cap is refused with a note; a picture that size
     const onChange = vi.fn();
     const { getByLabelText, container } = render(<ImagesField id="images" label="Attachments" files={[]} onChange={onChange} errors={{}} />);
 
-    fireEvent.change(getByLabelText('Attachments'), { target: { files: [bytes(2048, 'application/pdf', 'big.pdf'), bytes(16, 'application/pdf', 'small.pdf')] } });
+    // A typeless pick (an extension the browser does not know) meets the cap too.
+    fireEvent.change(getByLabelText('Attachments'), { target: { files: [bytes(2048, 'application/pdf', 'big.pdf'), bytes(2048, '', 'plan.xdw'), bytes(16, 'application/pdf', 'small.pdf')] } });
     expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ name: 'small.pdf' })]);
-    expect(container.textContent).toContain('A file can be up to 0 MB.');
+    expect(container.textContent).toContain('A file can be up to 1 KB.');
 
     fireEvent.change(getByLabelText('Attachments'), { target: { files: [bytes(2048, 'image/png', 'big.png')] } });
     await waitFor(() => expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ name: 'big.png' })]));

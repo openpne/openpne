@@ -55,7 +55,7 @@ class UpdateEventRequest extends StoreEventRequest
             }
 
             if (ImageEdit::fromRequest($this)->exceedsCap($event->images()->pluck('id')->all())) {
-                $validator->errors()->add('images', __('An event can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
+                $validator->errors()->add('images', __('An event can have at most :max attachments.', ['max' => PostImages::MAX_IMAGES]));
             }
         });
     }

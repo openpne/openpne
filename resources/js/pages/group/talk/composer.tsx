@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tip } from '@/components/ui/tooltip';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
-import { acceptPicks, isPicture, MAX_POST_IMAGES, megabytes, withinAttachmentCap } from '@/lib/image-picks';
+import { acceptPicks, isPicture, MAX_POST_IMAGES, sizeLabel, withinAttachmentCap } from '@/lib/image-picks';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
 import type { TalkMessage } from './types';
@@ -23,10 +23,10 @@ function imageErrorIn(errors: Record<string, string>): string {
         .join(' ');
 }
 
-function replyPreview(message: TalkMessage, imageLabel: string): string {
+function replyPreview(message: TalkMessage, imageLabel: string, fileLabel: string): string {
     const body = message.body.trim();
 
-    return body !== '' ? body : message.images.length > 0 ? imageLabel : '';
+    return body !== '' ? body : message.images.length > 0 ? imageLabel : message.files.length > 0 ? fileLabel : '';
 }
 
 /**
@@ -70,12 +70,11 @@ export function TalkComposer({
     };
 
     useEffect(() => {
-        // A file that is not a picture previews as its name, so it gets no object URL.
-        const urls = images.map((image) => (isPicture(image) ? URL.createObjectURL(image) : ''));
+        const urls = images.map((image) => (isPicture(image, upload.accept) ? URL.createObjectURL(image) : ''));
         setPreviews(urls);
 
         return () => urls.forEach((url) => url !== '' && URL.revokeObjectURL(url));
-    }, [images]);
+    }, [images, upload.accept]);
 
     // MentionTextarea keeps its textarea ref private, so the composer's form is the handle that
     // reaches the caret.
@@ -98,11 +97,11 @@ export function TalkComposer({
         if (picked.length === 0) {
             return;
         }
-        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload.attachmentMaxBytes);
+        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload);
         const { files: next, refused } = acceptPicks(held.current, fitting, MAX_POST_IMAGES);
         setCapNote(
             oversized
-                ? t('A file can be up to :size.', { size: megabytes(upload.attachmentMaxBytes) })
+                ? t('A file can be up to :size.', { size: sizeLabel(upload.attachmentMaxBytes) })
                 : refused
                   ? t('You can attach up to :max files.', { max: MAX_POST_IMAGES })
                   : null,
@@ -131,7 +130,7 @@ export function TalkComposer({
         select(held.current.filter((_, i) => i !== index));
     };
 
-    // A drop on the bar or an image-only paste into it attaches the way the button does, and is
+    // A drop on the bar or a file-only paste into it attaches the way the button does, and is
     // ignored while the button is: a send in flight would reset what landed during it.
     const dragging = useDropTarget(form, { onFiles: add, enabled: !sending && images.length < MAX_POST_IMAGES, paste: true });
 
@@ -172,7 +171,7 @@ export function TalkComposer({
     const attachmentNote = imageError || capNote;
 
     const replyName = replyTo === null ? '' : (replyTo.author?.name ?? t('Withdrawn member'));
-    const replyLine = replyTo === null ? '' : replyPreview(replyTo, t('Image'));
+    const replyLine = replyTo === null ? '' : replyPreview(replyTo, t('Image'), t('File'));
 
     return (
         <form
@@ -245,7 +244,7 @@ export function TalkComposer({
                             ))}
                         </ul>
                     )}
-                    {shrinking && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+                    {shrinking && <p className="mt-1 text-xs text-muted-foreground">{t('Processing attachments…')}</p>}
                     {attachmentNote !== null && (
                         <p role="alert" className="mt-1 text-xs text-destructive">
                             {attachmentNote}

@@ -11,9 +11,22 @@ export function acceptPicks<T>(held: T[], picked: T[], max: number = MAX_POST_IM
     return { files: [...held, ...picked.slice(0, room)], refused: picked.length > room };
 }
 
-/** A typeless pick counts as a picture: the browser may not know a HEIC, and the decoder settles it. */
-export function isPicture(file: File): boolean {
-    return file.type === '' || file.type.startsWith('image/');
+/** The types in an accept list, exactly; a file's type is matched whole, never as a substring. */
+export function acceptedTypes(accept: string): Set<string> {
+    return new Set(
+        accept
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.startsWith('image/')),
+    );
+}
+
+/**
+ * A picture is what the server's processor reads (the shipped accept list); a typeless pick or an
+ * image type outside it goes up as a file, which the server also decides by content.
+ */
+export function isPicture(file: File, accept: string): boolean {
+    return acceptedTypes(accept).has(file.type);
 }
 
 /**
@@ -21,13 +34,18 @@ export function isPicture(file: File): boolean {
  * it meets; refusing it here spares the member a 413 that loses the draft. A picture is shrunk first
  * and the server's image rule answers it.
  */
-export function withinAttachmentCap(picked: File[], maxBytes: number): { files: File[]; refused: boolean } {
-    const files = picked.filter((file) => isPicture(file) || file.size <= maxBytes);
+export function withinAttachmentCap(picked: File[], upload: { accept: string; attachmentMaxBytes: number }): { files: File[]; refused: boolean } {
+    const files = picked.filter((file) => isPicture(file, upload.accept) || file.size <= upload.attachmentMaxBytes);
 
     return { files, refused: files.length < picked.length };
 }
 
-/** The cap as the member reads it, in whole megabytes. */
-export function megabytes(bytes: number): string {
-    return `${Math.floor(bytes / (1024 * 1024))} MB`;
+/** The cap as the member reads it: whole megabytes, a fraction kept when there is one, kilobytes under one. */
+export function sizeLabel(bytes: number): string {
+    if (bytes < 1024 * 1024) {
+        return `${Math.round(bytes / 1024)} KB`;
+    }
+    const megabytes = bytes / (1024 * 1024);
+
+    return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(1)} MB`;
 }

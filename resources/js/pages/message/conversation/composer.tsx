@@ -10,7 +10,7 @@ import { Tip } from '@/components/ui/tooltip';
 import { useAutoGrow } from '@/lib/auto-grow';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
-import { acceptPicks, isPicture, MAX_POST_IMAGES, megabytes, withinAttachmentCap } from '@/lib/image-picks';
+import { acceptPicks, isPicture, MAX_POST_IMAGES, sizeLabel, withinAttachmentCap } from '@/lib/image-picks';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { cn } from '@/lib/utils';
 
@@ -53,12 +53,11 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
     };
 
     useEffect(() => {
-        // A file that is not a picture previews as its name, so it gets no object URL.
-        const urls = images.map((image) => (isPicture(image) ? URL.createObjectURL(image) : ''));
+        const urls = images.map((image) => (isPicture(image, upload.accept) ? URL.createObjectURL(image) : ''));
         setPreviews(urls);
 
         return () => urls.forEach((url) => url !== '' && URL.revokeObjectURL(url));
-    }, [images]);
+    }, [images, upload.accept]);
 
     const attach = (event: ChangeEvent<HTMLInputElement>) => {
         const picked = Array.from(event.target.files ?? []);
@@ -71,11 +70,11 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
         if (picked.length === 0) {
             return;
         }
-        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload.attachmentMaxBytes);
+        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload);
         const { files: next, refused } = acceptPicks(held.current, fitting, MAX_POST_IMAGES);
         setCapNote(
             oversized
-                ? t('A file can be up to :size.', { size: megabytes(upload.attachmentMaxBytes) })
+                ? t('A file can be up to :size.', { size: sizeLabel(upload.attachmentMaxBytes) })
                 : refused
                   ? t('You can attach up to :max files.', { max: MAX_POST_IMAGES })
                   : null,
@@ -104,7 +103,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
         select(held.current.filter((_, i) => i !== index));
     };
 
-    // A drop on the bar or an image-only paste into it attaches the way the button does, and is
+    // A drop on the bar or a file-only paste into it attaches the way the button does, and is
     // ignored while the button is: a send in flight would reset what landed during it.
     const dragging = useDropTarget(form, { onFiles: add, enabled: !sending && images.length < MAX_POST_IMAGES, paste: true });
 
@@ -195,7 +194,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                             ))}
                         </ul>
                     )}
-                    {shrinking && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+                    {shrinking && <p className="mt-1 text-xs text-muted-foreground">{t('Processing attachments…')}</p>}
                     {attachmentNote !== null && (
                         <p role="alert" className="mt-1 text-xs text-destructive">
                             {attachmentNote}

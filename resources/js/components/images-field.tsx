@@ -3,7 +3,7 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
-import { acceptPicks, isPicture, MAX_POST_IMAGES, megabytes, withinAttachmentCap } from '@/lib/image-picks';
+import { acceptedTypes, acceptPicks, MAX_POST_IMAGES, sizeLabel, withinAttachmentCap } from '@/lib/image-picks';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { cn } from '@/lib/utils';
 import type { ImageUploadPolicy, PageProps } from '@/types';
@@ -14,16 +14,6 @@ import type { ImageUploadPolicy, PageProps } from '@/types';
  */
 export function useImageUpload(): ImageUploadPolicy {
     return usePage<PageProps>().props.imageUpload;
-}
-
-/** The types in an accept list, exactly; a file's type is matched whole, never as a substring. */
-function acceptedTypes(accept: string): Set<string> {
-    return new Set(
-        accept
-            .split(',')
-            .map((entry) => entry.trim())
-            .filter((entry) => entry.startsWith('image/')),
-    );
 }
 
 /** A WebP whose VP8X header sets the animation bit. */
@@ -42,7 +32,8 @@ async function animatedWebp(file: File): Promise<boolean> {
  */
 export async function shrink(file: File, upload: ImageUploadPolicy): Promise<File> {
     const policy = upload.shrink;
-    if (policy === null || !isPicture(file)) {
+    // A typeless pick is still tried: the browser may not know a HEIC, and the decoder settles it.
+    if (policy === null || (file.type !== '' && !file.type.startsWith('image/'))) {
         return file;
     }
     // A GIF stays as picked: the canvas would flatten its animation, so an oversized one fails visibly.
@@ -159,7 +150,7 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
     const latest = useRef(files);
     latest.current = files;
     const root = useRef<HTMLDivElement>(null);
-    // The form around the field takes a dropped or pasted picture the way the input takes a pick;
+    // The form around the field takes a dropped or pasted file the way the input takes a pick;
     // while a shrink runs or the cap is reached it ignores one, as the disabled input does.
     const dragging = useDropTarget(root, { onFiles: add, enabled: !busy && files.length < max, paste: true });
 
@@ -183,10 +174,10 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
         if (picked.length === 0) {
             return;
         }
-        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload.attachmentMaxBytes);
+        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload);
         const { files: next, refused } = acceptPicks(files, fitting, max);
         setClientError(
-            oversized ? t('A file can be up to :size.', { size: megabytes(upload.attachmentMaxBytes) }) : refused ? t('You can attach up to :max files.', { max }) : null,
+            oversized ? t('A file can be up to :size.', { size: sizeLabel(upload.attachmentMaxBytes) }) : refused ? t('You can attach up to :max files.', { max }) : null,
         );
         const accepted = next.slice(files.length);
         if (accepted.length === 0) {
@@ -250,7 +241,7 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
                 onChange={pick}
                 className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80 disabled:opacity-50"
             />
-            {busy && <p className="text-xs text-muted-foreground">{t('Processing images…')}</p>}
+            {busy && <p className="text-xs text-muted-foreground">{t('Processing attachments…')}</p>}
             {error && (
                 <p id={errorId} role="alert" className="text-xs text-destructive">
                     {error}
