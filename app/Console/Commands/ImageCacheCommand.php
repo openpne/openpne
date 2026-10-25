@@ -8,9 +8,9 @@ use App\Files\AnimationProbe;
 use App\Files\CanonicalUnavailableException;
 use App\Files\ImageCache;
 use App\Files\ImageCachePublishException;
+use App\Files\ImageFacts;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
-use App\Files\ProcessedImage;
 use App\Models\File;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -82,7 +82,7 @@ class ImageCacheCommand extends Command
         $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
         $this->listRows($unshownRows, $unshown);
         $this->line("  animated:  {$animated}  (recorded as animating)");
-        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded; `openpne:image-cache warm` records it where the picture can be read, for a GIF or WebP only under a processor that keeps frames, and never for a GIF over ".(AnimationProbe::maxGifWalkBytes() >> 10).' KB)');
+        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded; a first view or `openpne:image-cache warm` records it where the picture can be read, for a GIF or WebP only under a processor that keeps frames, and never for a GIF over ".(AnimationProbe::maxGifWalkBytes() >> 10).' KB)');
 
         return self::SUCCESS;
     }
@@ -146,7 +146,7 @@ class ImageCacheCommand extends Command
 
                 $streak = 0;
                 $n['done']++;
-                $n['facts'] += $this->recordFacts($file, $canonical) ? 1 : 0;
+                $n['facts'] += ImageFacts::record($file, $canonical) ? 1 : 0;
             }
 
             return true;
@@ -166,21 +166,6 @@ class ImageCacheCommand extends Command
     }
 
     /**
-     * From a canonical just made: the size and, when the processor could tell, whether it animates,
-     * each written whenever it differs (a canonical under another encoder is a different picture).
-     */
-    private function recordFacts(File $file, ProcessedImage $canonical): bool
-    {
-        $facts = ['width' => $canonical->width, 'height' => $canonical->height];
-
-        if ($canonical->animated !== null) {
-            $facts['animated'] = $canonical->animated;
-        }
-
-        return $this->write($file, $facts);
-    }
-
-    /**
      * From a canonical already on the disk: only what the row lacks, read from the bytes.
      *
      * @param  callable(): string  $canonical
@@ -196,7 +181,7 @@ class ImageCacheCommand extends Command
         $facts = $file->animated === null && ! AnimationProbe::mayAnimate($type) ? ['animated' => false] : [];
 
         if (! $missingSize && ! $missingAnimated) {
-            return $this->write($file, $facts);
+            return ImageFacts::write($file, $facts);
         }
 
         try {
@@ -213,23 +198,7 @@ class ImageCacheCommand extends Command
             $facts['animated'] = $animated;
         }
 
-        return $this->write($file, $facts);
-    }
-
-    /**
-     * @param  array<string, int|bool>  $facts
-     */
-    private function write(File $file, array $facts): bool
-    {
-        $changed = array_filter($facts, fn (int|bool $value, string $key): bool => $file->{$key} !== $value, ARRAY_FILTER_USE_BOTH);
-
-        if ($changed === []) {
-            return false;
-        }
-
-        $file->update($changed);
-
-        return true;
+        return ImageFacts::write($file, $facts);
     }
 
     /** @return Builder<File> */

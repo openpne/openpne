@@ -115,9 +115,12 @@ that list stays the fit rungs a surface will actually animate. (A GIF over
 
 `FileUploader` records the pixel size of a raster upload from its **canonical**, the full-size
 re-encode [`ImageCache`](../../app/Files/ImageCache.php) keeps at the `w_h` key and draws every
-variant from. Both columns are nullable, and **null means unknown** — a non-raster file, a row written
-before the columns existed, or OpenPNE 3 data (which records no dimensions). A zero side counts as
-unknown too, since consumers divide by it.
+variant from; a first view that makes a canonical records the same facts from the one it makes
+([`ImageFacts`](../../app/Files/ImageFacts.php)), the row's refusal of the write not stopping the
+view, and neither write counts as an edit of the row (`updated_at` keeps the value the upgrade
+imported). Both columns are nullable, and **null means unknown** — a non-raster file, a row written
+before the columns existed, or OpenPNE 3 data (which records no dimensions) not yet viewed or
+warmed. A zero side counts as unknown too, since consumers divide by it.
 
 The recorded size is therefore the **rendered** size, not the container's declared one: the processor
 applies EXIF Orientation as it re-encodes, so a photo shot sideways declares 4032x3024 and is recorded,
@@ -279,8 +282,8 @@ is a still unless its URL asks for the frames with `_a`, and a header over the p
 
 Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
 view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories. Whether a GIF or WebP
-animates is recorded only under `imgproxy`, so after a switch to it `warm` records the pictures GD left
-unknown, including those a view has already made afresh. After a switch to `gd`, a picture only the
+animates is recorded only under `imgproxy`, so after a switch to it each picture GD left unknown is
+recorded by the view that makes it afresh, or by `warm` before one does. After a switch to `gd`, a picture only the
 sidecar could read is refused on its first view, a marker under GD's own encoder directory and a 404: a
 HEIC because GD cannot decode it, an AVIF unless the host's GD was built with AVIF support. It is
 served again after a switch back, from the sidecar's canonical still on the cache disk or, where a
