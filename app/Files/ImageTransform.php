@@ -74,7 +74,17 @@ final class ImageTransform
     {
         $encoder = config('openpne.images.processor').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
 
-        return "{$name}/g".self::GENERATION."/{$encoder}";
+        return self::directory($name).'/g'.self::GENERATION."/{$encoder}";
+    }
+
+    /**
+     * The directory a file's derived files live under: its token, or a hash of any other name. An
+     * OpenPNE 3 upload name holds slashes, may hold `\` or `..`, and Flysystem folds those on write, so
+     * two such names could otherwise share one directory, or reach above the disk root.
+     */
+    public static function directory(string $name): string
+    {
+        return preg_match('/^[A-Za-z0-9_-]+$/', $name) === 1 ? $name : 'legacy/'.hash('sha1', $name);
     }
 
     public function cacheKey(string $name, string $format): string

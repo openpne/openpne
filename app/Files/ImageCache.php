@@ -208,7 +208,7 @@ class ImageCache
     /** Remove every cached variant, canonical and marker of $file (idempotent; a no-op when none exist). */
     public function purge(File $file): void
     {
-        $this->disk()->deleteDirectory($file->name);
+        $this->disk()->deleteDirectory(ImageTransform::directory($file->name));
     }
 
     public function hasCanonical(File $file): bool

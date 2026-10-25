@@ -464,7 +464,8 @@ This holds for rows imported from OpenPNE 3 too: their canonical is produced on 
 of time by `openpne:image-cache warm`, from the same bytes and by the same processor, and the
 OpenPNE 3 upload-plugin link `/f/show/{id}.{ext}` answers by the same two rules. Only
 the admin monitoring route (`/admin/file/{name}/raw`) and a non-raster attachment stream the stored
-bytes as they are, always as `application/octet-stream` with `nosniff`, whatever the name or type says.
+bytes as they are; the attachment is always `application/octet-stream` with `nosniff`, whatever the
+name or type says.
 
 What a re-encode does not do is validate the container: a PNG with a wrong CRC or bytes trailing the
 end marker, which the metadata stripper this replaced used to refuse, is stored as uploaded if the

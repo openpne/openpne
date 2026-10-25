@@ -57,7 +57,8 @@ class FileResponse
 
     /**
      * The stored bytes as a download; the token (hashed, as an OpenPNE 3 name may hold non-ASCII) is the
-     * validator because those bytes never change.
+     * validator because those bytes never change. The upload rules admit no non-raster, so one reaches a
+     * picture route only through an OpenPNE 3 row, copied verbatim by the upgrade.
      *
      * @param  array<string, string>  $headers
      */

@@ -10,8 +10,8 @@ use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * OpenPNE 3's opUploadFilePlugin `f/show`: the row is found by id and the extension is ignored, as
- * there (docs/internals/upgrade.md, "OpenPNE 3 upload files").
+ * OpenPNE 3's opUploadFilePlugin `f/show`: the row is found by the leading id and whatever follows the
+ * first dot is ignored, as OpenPNE 3 ignored the extension (docs/internals/upgrade.md, "OpenPNE 3 upload files").
  */
 class LegacyUploadFileController extends Controller
 {
