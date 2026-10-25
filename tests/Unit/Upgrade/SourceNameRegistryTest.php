@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Upgrade;
 
 use App\Upgrade\SourceNameRegistry;
+use Illuminate\Container\Attributes\Singleton;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -39,5 +40,26 @@ class SourceNameRegistryTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         (new SourceNameRegistry)->recogniseFamily('member_config', '', 'x');
+    }
+
+    public function test_it_rejects_a_non_ascii_family_prefix(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new SourceNameRegistry)->recogniseFamily('member_config', 'お知らせ_', 'x');
+    }
+
+    public function test_it_rejects_a_name_the_upgrade_already_handles(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new SourceNameRegistry)->recognise('community_config', 'register_policy', 'x');
+    }
+
+    public function test_it_is_shared_without_a_provider_binding(): void
+    {
+        // A package registering from its provider's register() runs before the app providers, so the
+        // instance it filled must be the one the preflight later resolves.
+        $this->assertNotEmpty((new \ReflectionClass(SourceNameRegistry::class))->getAttributes(Singleton::class));
     }
 }

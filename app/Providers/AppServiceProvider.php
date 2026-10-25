@@ -40,7 +40,6 @@ use App\Services\TermService;
 use App\Support\SiteTimezone;
 use App\Support\ViewerRelations;
 use App\Translation\TermTranslator;
-use App\Upgrade\SourceNameRegistry;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -68,7 +67,6 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TermService::class);
-        $this->app->singleton(SourceNameRegistry::class);
 
         // Singleton so its constructor captures the member-surface session config
         // once per process, before any request's surface pin mutates it.

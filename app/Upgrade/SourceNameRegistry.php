@@ -2,13 +2,16 @@
 
 namespace App\Upgrade;
 
+use Illuminate\Container\Attributes\Singleton;
 use InvalidArgumentException;
 
 /**
- * Names in the KV source tables that a package outside this repository migrates (or drops) itself,
- * registered from its service provider so the preflight's unknown-name scan stops reporting them and
+ * Names in the KV source tables that a package outside this repository handles itself, registered from
+ * its service provider so the preflight's unknown-name scan stops reporting them and
  * `openpne:upgrade-matrix` lists their disposition (docs/internals/upgrade.md, "KV config tables").
+ * Shared by attribute, not by a provider binding, so a package registering in register() keeps its instance.
  */
+#[Singleton]
 final class SourceNameRegistry
 {
     public const TABLES = ['member_config', 'community_config', 'notification_mail'];
@@ -22,6 +25,9 @@ final class SourceNameRegistry
     public function recognise(string $table, string $name, string $disposition): void
     {
         $this->assertTable($table);
+        if (in_array($name, self::builtIn($table), true)) {
+            throw new InvalidArgumentException("`{$table}`.`{$name}` is already handled by the upgrade itself.");
+        }
         $this->names[$table][$name] = $disposition;
     }
 
@@ -29,8 +35,9 @@ final class SourceNameRegistry
     public function recogniseFamily(string $table, string $prefix, string $disposition): void
     {
         $this->assertTable($table);
-        if ($prefix === '') {
-            throw new InvalidArgumentException('A family prefix must not be empty.');
+        // The scan compares with LEFT(name, n) in characters, so the prefix is kept to one byte per character.
+        if ($prefix === '' || ! mb_check_encoding($prefix, 'ASCII')) {
+            throw new InvalidArgumentException('A family prefix must be a non-empty ASCII string.');
         }
         $this->families[$table][$prefix] = $disposition;
     }
@@ -56,6 +63,16 @@ final class SourceNameRegistry
         }
 
         return $dispositions;
+    }
+
+    /** @return list<string> */
+    private static function builtIn(string $table): array
+    {
+        return match ($table) {
+            'member_config' => StepRegistry::knownMemberConfigNames(),
+            'community_config' => StepRegistry::knownCommunityConfigNames(),
+            'notification_mail' => StepRegistry::knownNotificationMailNames(),
+        };
     }
 
     private function assertTable(string $table): void
