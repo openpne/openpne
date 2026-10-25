@@ -155,6 +155,11 @@ class ImageCache
             $this->forgetRefusal($file);
         }
 
+        // A view's write, reported and not thrown: the picture is served whether or not the row took its facts.
+        if (! $strict) {
+            rescue(fn (): bool => ImageFacts::record($file, $processed));
+        }
+
         return $processed;
     }
 

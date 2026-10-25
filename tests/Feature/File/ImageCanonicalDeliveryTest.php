@@ -73,6 +73,22 @@ class ImageCanonicalDeliveryTest extends TestCase
 
         $this->assertCleanAndUpright($response, $file, 'jpg');
         Storage::disk('image_cache')->assertExists(ImageTransform::raw()->cacheKey($file->name, 'jpg'));
+        // The row took the rendered size and the still verdict from the same canonical, as warm would record them.
+        $this->assertSame(extension_loaded('exif') ? [6, 12, false] : [12, 6, false], [$file->refresh()->width, $file->height, $file->animated]);
+    }
+
+    public function test_a_first_view_that_cannot_record_the_facts_still_serves_the_picture(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
+        File::saving(function (): never {
+            throw new \RuntimeException('row refused');
+        });
+
+        $response = $this->actingAs($owner)->get($file->url())->assertOk();
+
+        $this->assertCleanAndUpright($response, $file, 'jpg');
+        $this->assertNull($file->refresh()->width);
     }
 
     public function test_the_public_and_banner_routes_serve_the_canonical_too(): void

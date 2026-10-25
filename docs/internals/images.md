@@ -115,9 +115,11 @@ that list stays the fit rungs a surface will actually animate. (A GIF over
 
 `FileUploader` records the pixel size of a raster upload from its **canonical**, the full-size
 re-encode [`ImageCache`](../../app/Files/ImageCache.php) keeps at the `w_h` key and draws every
-variant from. Both columns are nullable, and **null means unknown** — a non-raster file, a row written
-before the columns existed, or OpenPNE 3 data (which records no dimensions). A zero side counts as
-unknown too, since consumers divide by it.
+variant from; a first view that makes the canonical of a row stored without one records the same
+([`ImageFacts`](../../app/Files/ImageFacts.php)), the row's refusal of the write not stopping the
+view. Both columns are nullable, and **null means unknown** — a non-raster file, a row written
+before the columns existed, or OpenPNE 3 data (which records no dimensions) not yet viewed or
+warmed. A zero side counts as unknown too, since consumers divide by it.
 
 The recorded size is therefore the **rendered** size, not the container's declared one: the processor
 applies EXIF Orientation as it re-encodes, so a photo shot sideways declares 4032x3024 and is recorded,
