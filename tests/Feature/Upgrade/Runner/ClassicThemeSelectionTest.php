@@ -52,6 +52,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertContains('WARN '.ClassicThemeSelection::unknownPackageMessage(), $this->out);
 
         UpgradeState::query()->delete();
+        $this->out = [];
         $this->seedConfig('Theme_used', '');
 
         $this->assertTrue($this->runPass());
