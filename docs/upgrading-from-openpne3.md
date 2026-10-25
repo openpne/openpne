@@ -243,7 +243,11 @@ change from a problem when you go through it.
   are shown as pictures.
 - **Surface** — the site looks like OpenPNE 3 (the "Classic" surface), matching what its members
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
-  after the cutover: `php artisan openpne:surface-mode modern_only`.
+  after the cutover: `php artisan openpne:surface-mode modern_only`. One exception is fixed: a
+  phone always gets the Modern surface, as OpenPNE 3's phone layout was its own. So before the
+  cutover, set what those visitors see — the brand color and logo under *Branding settings*, the
+  login message under *Login page settings* — because the Classic-only customisations (custom CSS
+  and HTML, gadgets, navigation, banners, theme) do not reach them.
 - **Site settings** — an `sns_config` value is copied only where this version has a matching
   setting, and **the security settings are never copied**: CAPTCHA starts on and registration starts
   invite-only whatever the OpenPNE 3 site had, so set them yourself before the cutover
