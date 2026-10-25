@@ -84,7 +84,7 @@ final class ImageTransform
      */
     public static function directory(string $name): string
     {
-        return preg_match('/^[A-Za-z0-9_-]+$/', $name) === 1 ? $name : 'legacy/'.hash('sha1', $name);
+        return preg_match('/^[A-Za-z0-9_-]+$/D', $name) === 1 ? $name : 'legacy/'.hash('sha1', $name);
     }
 
     public function cacheKey(string $name, string $format): string

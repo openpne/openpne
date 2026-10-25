@@ -51,7 +51,7 @@ class LegacyUploadFileDeliveryTest extends TestCase
         $file = $this->upload(Member::factory()->create(), '/m12/1699000000report.backup_2023', 'report.backup_2023');
         $viewer = Member::factory()->create();
 
-        foreach (["/f/show/{$file->id}", "/f/show/{$file->id}.backup_2023", "/f/show/{$file->id}.pdf", "/f/show/{$file->id}.報告"] as $url) {
+        foreach (["/f/show/{$file->id}", "/f/show/{$file->id}.", "/f/show/{$file->id}.backup_2023", "/f/show/{$file->id}.pdf", "/f/show/{$file->id}.報告", "/f/show/{$file->id}.a/b"] as $url) {
             $this->actingAs($viewer)->get($url)->assertOk();
         }
         // No extension to lift into the ASCII fallback: the id alone.

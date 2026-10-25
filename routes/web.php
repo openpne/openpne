@@ -344,7 +344,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // OpenPNE 3 upload-plugin links (/f/show/{id}.{ext}); the extension is whatever the uploader's name ended in.
     Route::get('/f/show/{file}', [LegacyUploadFileController::class, 'show'])
-        ->where('file', '[0-9]+(\\.[^/]+)?')->name('file.legacy_upload');
+        ->where('file', '[0-9]+(\\..*)?')->name('file.legacy_upload');
 
     // Shell-wide, not notification-owned, so it carries no unit gate (docs/internals/notifications.md).
     Route::get('/unread-counts', [UnreadCountsController::class, 'show'])->name('unread.counts');
