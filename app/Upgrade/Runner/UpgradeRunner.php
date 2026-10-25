@@ -167,6 +167,10 @@ final class UpgradeRunner
 
             $walked = $this->walk($options, $out);
 
+            // Before the passes, not only in finally: a map read during preflight (the mail render
+            // test resolves terms) is memoized, and the template pass would render with it.
+            rescue(fn () => $this->forgetCachedMaps());
+
             // Wrap after the walk: the steps land the OpenPNE 3 MD5 verbatim (bcrypt is not
             // expressible in an INSERT...SELECT), and this pass converts it before the run can
             // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
