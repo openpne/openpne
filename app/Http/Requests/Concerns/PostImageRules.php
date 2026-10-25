@@ -55,6 +55,16 @@ final class PostImageRules
     }
 
     /**
+     * The single-slot shape of rules(): one optional upload, picture or file (the timeline's `image` wire).
+     *
+     * @return array<int, mixed>
+     */
+    public static function singleUpload(): array
+    {
+        return ['nullable', 'file', new PostUpload];
+    }
+
+    /**
      * The types are the processor's (SVG, which can carry script, is never among them), and the pixel
      * dimensions are bounded here only where the decode is in-process, since GD allocates
      * width*height*4 bytes of whatever a small file declares.

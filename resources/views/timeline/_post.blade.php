@@ -22,12 +22,13 @@
         </div>
         <div class="timeline-post-body" id="timeline-post-body-{{ $post->getKey() }}"><x-timeline-body :post="$post" /></div>
         <x-link-card :record="$post" />
-        @foreach ($post->images as $image)
+        @foreach (\App\Files\PostAttachments::partition($post->images)['images'] as $image)
             @if ($image->file)
                 {{-- OpenPNE 3's lightbox link around the thumbnail; the href is the full-size file. --}}
                 <a href="{{ $image->file->url() }}" rel="lightbox"><div><img class="timeline-post-image" src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt=""></div></a>
             @endif
         @endforeach
+        @include('group-topic._files', ['images' => $post->images])
         <div class="timeline-post-control">
             @if ($post->visibility !== \App\Support\Visibility::Members)
                 <span class="public-flag">{{ __('Visibility') }}:{{ __($post->visibility->label()) }}</span>

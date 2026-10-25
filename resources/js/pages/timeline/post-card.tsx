@@ -3,6 +3,7 @@ import { LinkCard } from '@/components/link-card';
 import { Link, router } from '@inertiajs/react';
 import { MessageCircle, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
@@ -85,6 +86,7 @@ export function TimelinePostCard({ post, viewerId, reactions, onOpenActions }: T
             </p>
             <LinkCard card={post.linkCard} />
             <ImageGrid images={post.images} variant="post" />
+            <FileChips files={post.files} className="mt-2" />
             <RowReactionChips reactions={reactions} />
         </li>
     );

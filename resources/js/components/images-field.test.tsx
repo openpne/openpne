@@ -201,6 +201,7 @@ function SinglePicker() {
             <input aria-label="Picture" type="file" accept={picked.accept} onChange={picked.pick} />
             <output data-testid="value">{file?.name ?? 'none'}</output>
             {picked.busy && <p>Processing</p>}
+            {picked.note !== null && <p role="alert">{picked.note}</p>}
         </form>
     );
 }
@@ -226,6 +227,22 @@ test('a single-file pick is replaced by its shrunk file, unless the form was res
     finish();
     await waitFor(() => expect(getByTestId('value').textContent).toBe('IMG_7.jpg'));
     expect(queryByText('Processing')).toBeNull();
+});
+
+test('a single pick over the attachment cap is refused with a note and the input emptied; a picture that size is kept for the shrink', async () => {
+    decodesEverything();
+    page.imageUpload.attachmentMaxBytes = 1024;
+    const { getByLabelText, getByTestId, queryByRole } = render(<SinglePicker />);
+    const input = getByLabelText('Picture') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { files: [bytes(2048, 'application/pdf', 'deck.pdf')] } });
+    expect(getByTestId('value').textContent).toBe('none');
+    expect(queryByRole('alert')?.textContent).toBe('A file can be up to 1 KB.');
+
+    fireEvent.change(input, { target: { files: [bytes(2048, 'image/png', 'big.png')] } });
+    expect(getByTestId('value').textContent).toBe('big.png');
+    expect(queryByRole('alert')).toBeNull();
+    await waitFor(() => expect(getByTestId('value').textContent).toBe('big.png'));
 });
 
 test('a shrink that outlives a reset leaves the emptied form alone', async () => {

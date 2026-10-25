@@ -32,6 +32,7 @@ const reply: TimelinePostEntry = {
     hasImages: false,
     replyCount: 0,
     images: [],
+    files: [],
     mentions: [],
     tags: [],
     linkCard: null,

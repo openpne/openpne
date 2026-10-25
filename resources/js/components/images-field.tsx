@@ -83,13 +83,14 @@ export async function shrink(file: File, upload: ImageUploadPolicy): Promise<Fil
 }
 
 /**
- * A single-file picker's handler. The raw file is set first, so a submit that races the shrink
- * sends it (answered by the server validation) rather than nothing; the shrunk one replaces it
- * only while it is still the pick.
+ * The raw file is set first, so a submit that races the shrink sends it rather than nothing, and
+ * the shrunk one replaces it only while it is still the pick; a file over the attachment cap is refused with `note`.
  */
-export function useShrunkPick(value: File | null, setFile: (file: File | null) => void): { pick: (e: ChangeEvent<HTMLInputElement>) => void; busy: boolean; accept: string } {
+export function useShrunkPick(value: File | null, setFile: (file: File | null) => void): { pick: (e: ChangeEvent<HTMLInputElement>) => void; busy: boolean; accept: string; note: string | null } {
+    const t = useT();
     const upload = useImageUpload();
     const [busy, setBusy] = useState(false);
+    const [note, setNote] = useState<string | null>(null);
     // Counted, not flagged: a second pick before the first shrink ends must not clear the hint early.
     const pending = useRef(0);
     // The form's own value as of the last render, so a shrink that outlives a reset or a re-pick
@@ -99,6 +100,14 @@ export function useShrunkPick(value: File | null, setFile: (file: File | null) =
 
     async function pick(e: ChangeEvent<HTMLInputElement>) {
         const raw = e.target.files?.[0] ?? null;
+        if (raw !== null && withinAttachmentCap([raw], upload).refused) {
+            e.target.value = '';
+            setFile(null);
+            setNote(t('A file can be up to :size.', { size: sizeLabel(upload.attachmentMaxBytes) }));
+
+            return;
+        }
+        setNote(null);
         setFile(raw);
         if (raw === null) {
             return;
@@ -118,7 +127,7 @@ export function useShrunkPick(value: File | null, setFile: (file: File | null) =
         }
     }
 
-    return { pick, busy, accept: upload.accept };
+    return { pick, busy, accept: upload.accept, note };
 }
 
 interface ImagesFieldProps {
