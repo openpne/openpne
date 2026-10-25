@@ -35,12 +35,12 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
     public function test_the_theme_plugin_as_the_one_enabled_skin_carries_theme_used(): void
     {
         $this->seedPlugin('opSkinBasicPlugin', false);
-        $this->seedConfig('Theme_used', 'cerulean-dark');
+        $this->seedConfig('Theme_used', 'cerulean-light');
 
         $this->assertTrue($this->runPass());
 
-        $this->assertSame('cerulean-dark', $this->stored());
-        $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-dark'", $this->out);
+        $this->assertSame('cerulean-light', $this->stored());
+        $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-light'", $this->out);
     }
 
     public function test_a_missing_theme_used_falls_to_bamboo_as_stock_openpne3_substituted(): void
@@ -105,7 +105,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertNull(DB::table('sns_settings')->where('key', 'classic_theme')->value('value'));
 
         $this->assertTrue($this->runPass());
-        $this->seedConfig('Theme_used', 'winter');
+        $this->seedConfig('Theme_used', 'cerulean');
         $this->assertTrue($this->runPass());
 
         $this->assertContains('SKIP classic_theme_selection: already completed', $this->out);
@@ -120,7 +120,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         };
 
         (new ClassicThemeCheck)->verify(['sns_settings'], $record);
-        DB::table('sns_settings')->updateOrInsert(['key' => 'classic_theme'], ['value' => 'winter']);
+        DB::table('sns_settings')->updateOrInsert(['key' => 'classic_theme'], ['value' => 'cerulean']);
         (new ClassicThemeCheck)->verify(['sns_settings'], $record);
         DB::table('sns_settings')->updateOrInsert(['key' => 'classic_theme'], ['value' => 'gone']);
         (new ClassicThemeCheck)->verify(['sns_settings'], $record);

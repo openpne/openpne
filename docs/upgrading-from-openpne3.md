@@ -259,11 +259,8 @@ change from a problem when you go through it.
   theme plugin was the one enabled skin does `Theme_used` (or, absent, `bamboo`, the package a stock
   OpenPNE 3 substituted) become `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*. A theme of your own, one
   not among the vendored packages, is kept by name with a warning and shows the default skin until you
-  copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then).
-  Six OpenPNE 3 packages are not vendored, because their background photograph has no
-  redistributable licence (`bamboo`, `cat`, `cerulean-ocean`, `cerulean-sakura`, `cerulean-tree`,
-  `sunflower`); a site wearing one is kept by name the same way: copy OpenPNE 3's
-  `web/opSkinThemePlugin/<name>/` into `public/opSkinThemePlugin/` to keep it.
+  copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then);
+  see "Bringing an OpenPNE 3 theme" below.
 - **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.
@@ -312,6 +309,16 @@ to one of those members. Stock OpenPNE 3 cannot produce it, so its presence mean
 your database outside OpenPNE 3, and dropping it would take its comments and attachments too. The
 preflight names the table and the row count and stops. Delete or reassign those rows in the source
 and run again.
+
+
+### Bringing an OpenPNE 3 theme
+
+Only `bootstrap`, `cerulean` and `cerulean-light` ship here. To keep any other `opSkinThemePlugin`
+theme your site wore, copy its whole directory from OpenPNE 3's `web/opSkinThemePlugin/<name>/` to
+`public/opSkinThemePlugin/<name>/` on the new site, then run `openpne:verify-upgrade` again (or
+pick it on *Appearance (Classic) → Theme*). A directory counts as a theme when its `css/main.css`
+opens with the `Theme Name:` / `Author:` comment header, and its `css/*.css` are linked in name
+order; its `js/` is not loaded. What the package carries is yours to check before you publish it.
 
 ## 6. Cutover
 

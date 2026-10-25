@@ -51,10 +51,9 @@ class ClassicThemeStylesheetTest extends TestCase
         $this->assertStringNotContainsString('opSkinThemePlugin/', $html);
     }
 
-    public function test_winter_draws_its_photo_credit_in_the_footer_span_the_others_leave_empty(): void
+    public function test_the_themed_footer_opens_with_the_empty_license_span_the_theme_stylesheets_position(): void
     {
-        $this->setSnsSetting(SnsSettingKey::ClassicTheme, 'winter');
-        $this->assertMatchesRegularExpression('/<span id="license">Copyright by <a href="http:\/\/www\.forestwander\.com\/"[^>]*>Forest Wander<\/a><\/span>/', $this->diaryPage());
+        $this->assertStringNotContainsString('id="license"', $this->diaryPage());
 
         $this->setSnsSetting(SnsSettingKey::ClassicTheme, 'cerulean');
         $this->assertStringContainsString('<span id="license"></span>', $this->diaryPage());

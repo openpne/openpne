@@ -18,7 +18,7 @@ class ClassicThemesTest extends TestCase
         $themes = ClassicThemes::all();
 
         $this->assertSame(
-            ['bootstrap', 'cerulean', 'cerulean-dark', 'cerulean-light', 'winter'],
+            ['bootstrap', 'cerulean', 'cerulean-light'],
             array_keys($themes),
         );
         $this->assertSame('cerulean of Bootswatch', $themes['cerulean']->description);
@@ -47,14 +47,6 @@ class ClassicThemesTest extends TestCase
             rmdir($public.'/opSkinThemePlugin');
             rmdir($public);
         }
-    }
-
-    public function test_only_winter_owes_a_footer_credit(): void
-    {
-        $credited = array_keys(array_filter(ClassicThemes::all(), fn ($theme) => $theme->credit() !== null));
-
-        $this->assertSame(['winter'], $credited);
-        $this->assertStringContainsString('forestwander.com', (string) ClassicThemes::find('winter')?->credit());
     }
 
     public function test_a_name_outside_the_directory_rule_or_not_on_disk_finds_nothing(): void

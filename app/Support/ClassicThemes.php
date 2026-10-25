@@ -54,7 +54,7 @@ final class ClassicThemes
     {
         $themes = [];
 
-        // Directories first, as OpenPNE 3 globbed them: "cerulean" sorts before "cerulean-dark" by name, not by path.
+        // Directories first, as OpenPNE 3 globbed them: "cerulean" sorts before "cerulean-light" by name, not by path.
         foreach (glob(self::root().'/*', GLOB_ONLYDIR) ?: [] as $dirPath) {
             $dir = basename($dirPath);
             $cssDir = $dirPath.'/css';

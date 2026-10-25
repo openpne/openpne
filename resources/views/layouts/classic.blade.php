@@ -140,8 +140,8 @@
                      stays a per-request override seam. --}}
                 @php($footerHtml = $classicFooterHtml ?? classic_footer_html(($pageClass ?? 'secure_page') !== 'insecure_page'))
                 @if ($classicTheme !== null)
-                    {{-- The theme plugin's _footer.php opens with this span for a theme's credit line. --}}
-                    <span id="license">{!! $classicTheme->credit() ?? '' !!}</span>
+                    {{-- The theme plugin's _footer.php opens with this span; its themes' stylesheets position it. --}}
+                    <span id="license"></span>
                 @endif
                 <p>
                     <a href="{{ route('policy.privacy') }}" target="_blank" rel="noopener">{{ __('Privacy policy') }}</a>
