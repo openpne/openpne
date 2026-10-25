@@ -227,11 +227,11 @@ and the OpenPNE 3 timeline URLs redirect into the Modern surface even for a Clas
 
 ### Themes
 
-OpenPNE 3's `opSkinThemePlugin` themes are vendored under
-[`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin) (eleven packages; the third-party
-notices sit beside them, and `cat` / `sunflower` ship without the background photograph OpenPNE 3
-bundled, whose terms do not allow redistributing it at that size: the operator drops one in as
-`img/bg.jpg`). A theme is a directory whose `css/main.css` opens with the comment
+Three of OpenPNE 3's `opSkinThemePlugin` themes are vendored under
+[`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin): `bootstrap`, `cerulean` and
+`cerulean-light`. Any other package is brought in by copying
+its directory ([upgrading-from-openpne3.md](../upgrading-from-openpne3.md), "Bringing an OpenPNE 3
+theme"). A theme is a directory whose `css/main.css` opens with the comment
 header the plugin read (`Theme Name:` and `Author:` make it one), found on the filesystem by
 [`ClassicThemes`](../../app/Support/ClassicThemes.php) as `opThemeAssetSearcher` found them, so a
 deployment may add a package by dropping a directory in. The `classic_theme` setting (the
@@ -240,8 +240,8 @@ outside `[A-Za-z0-9_-]` or not on disk reads as the default skin. With a theme c
 skin is not linked and the package's `css/*.css` are linked in name order **after** the module and
 custom CSS, which is where OpenPNE 3 placed them: the theme overrides both (its `customizing.css`
 also preceded the module stylesheet, which is not reproduced). The themes' own JavaScript
-(`bootstrap-dropdown.js`, jQuery-bound) is not loaded; `winter`'s footer credit, which its script
-wrote, is drawn in the `#license` span the themed footer always opens with. The theme plugin also
+(`bootstrap-dropdown.js`, `license.js`, jQuery-bound) is not loaded; the `#license` span the
+themed footer opens with, which a package's script may have filled, stays empty. The theme plugin also
 overrode the shell's templates, and with a theme chosen the shell follows them: `#Header` is a
 `navbar` (`navbar-inverse` on the `friend` nav set) whose `div.container` holds the `a.brand` link in
 place of `h1#logo`, the local nav as `ul.nav#localNav` with `li#notificationCenter` first (a text

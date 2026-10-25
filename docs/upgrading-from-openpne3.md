@@ -256,13 +256,13 @@ change from a problem when you go through it.
   is left out where OpenPNE 3 itself read its default, and the report names it. The Classic theme is
   not a copied row either: a pass after the walk reads which skin plugins OpenPNE 3 had enabled (from
   its `plugin` table; an activation written in `data/config/plugin.yml` is not seen), and only when the
-  theme plugin was the one enabled skin does `Theme_used` (or, absent, the first theme package) become
-  `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*. A theme of your own, one
+  theme plugin was the one enabled skin does `Theme_used` become `classic_theme`; change it afterwards
+  on *Appearance (Classic) → Theme*. A site that never saved that page has no `Theme_used`, and
+  OpenPNE 3 wore the first theme package on its disk, which the upgrade cannot see: the default skin is
+  set and the report says to copy that package in and choose it. A theme of your own, one
   not among the vendored packages, is kept by name with a warning and shows the default skin until you
-  copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then).
-  A site wearing `cat` or `sunflower` loses its background photograph, which is not bundled here:
-  copy OpenPNE 3's `web/opSkinThemePlugin/<name>/img/bg.jpg` to the same path under
-  `public/opSkinThemePlugin/` to keep it.
+  copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then);
+  see "Bringing an OpenPNE 3 theme" below.
 - **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.
@@ -311,6 +311,15 @@ to one of those members. Stock OpenPNE 3 cannot produce it, so its presence mean
 your database outside OpenPNE 3, and dropping it would take its comments and attachments too. The
 preflight names the table and the row count and stops. Delete or reassign those rows in the source
 and run again.
+
+### Bringing an OpenPNE 3 theme
+
+Only `bootstrap`, `cerulean` and `cerulean-light` ship here. To keep any other `opSkinThemePlugin`
+theme your site wore, copy its whole directory from OpenPNE 3's `web/opSkinThemePlugin/<name>/` to
+`public/opSkinThemePlugin/<name>/` on the new site, then run `openpne:verify-upgrade` again (or
+pick it on *Appearance (Classic) → Theme*). A directory counts as a theme when its `css/main.css`
+opens with the `Theme Name:` / `Author:` comment header, and its `css/*.css` are linked in name
+order; its `js/` is not loaded. What the package carries is yours to check before you publish it.
 
 ## 6. Cutover
 

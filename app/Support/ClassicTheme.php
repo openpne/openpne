@@ -8,13 +8,6 @@ namespace App\Support;
 final readonly class ClassicTheme
 {
     /**
-     * winter's background photo is credited by a line its js/license.js wrote into the footer's #license; the
-     * script is not loaded, so the credit is carried here and drawn by the shell.
-     */
-    private const CREDITS = [
-    ];
-
-    /**
      * @param  list<string>  $stylesheets  paths under public/, in the name order OpenPNE 3 globbed them
      */
     public function __construct(
@@ -30,11 +23,5 @@ final readonly class ClassicTheme
     public function stylesheetUrls(): array
     {
         return array_map(static fn (string $path): string => asset($path), $this->stylesheets);
-    }
-
-    /** The HTML credit line the footer owes the theme's photo, or null. */
-    public function credit(): ?string
-    {
-        return self::CREDITS[$this->dir] ?? null;
     }
 }

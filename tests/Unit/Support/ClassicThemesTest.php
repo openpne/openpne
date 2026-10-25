@@ -18,11 +18,9 @@ class ClassicThemesTest extends TestCase
         $themes = ClassicThemes::all();
 
         $this->assertSame(
-            ['bamboo', 'bootstrap', 'cat', 'cerulean', 'cerulean-dark', 'cerulean-light', 'cerulean-ocean', 'cerulean-sakura', 'cerulean-tree', 'sunflower', 'winter'],
+            ['bootstrap', 'cerulean', 'cerulean-light'],
             array_keys($themes),
         );
-        // The header, not the directory, names a theme: cerulean-ocean calls itself "ocean".
-        $this->assertSame('ocean', $themes['cerulean-ocean']->name);
         $this->assertSame('cerulean of Bootswatch', $themes['cerulean']->description);
         $this->assertSame('sonobe', $themes['cerulean']->author);
         $this->assertSame(
@@ -31,11 +29,24 @@ class ClassicThemesTest extends TestCase
         );
     }
 
-    public function test_only_winter_owes_a_footer_credit(): void
+    public function test_the_header_not_the_directory_names_a_theme(): void
     {
-        $credited = array_keys(array_filter(ClassicThemes::all(), fn ($theme) => $theme->credit() !== null));
+        $public = sys_get_temp_dir().'/openpne-themes-'.uniqid();
+        mkdir($public.'/opSkinThemePlugin/my-dir/css', 0777, true);
+        file_put_contents($public.'/opSkinThemePlugin/my-dir/css/main.css', "/*\nTheme Name:ocean\nDescription:blue\nAuthor:someone\n*/\n");
+        $this->app->usePublicPath($public);
+        ClassicThemes::forget();
 
-        $this->assertSame(['winter'], $credited);
+        try {
+            $this->assertSame(['my-dir'], array_keys(ClassicThemes::all()));
+            $this->assertSame('ocean', ClassicThemes::find('my-dir')?->name);
+        } finally {
+            unlink($public.'/opSkinThemePlugin/my-dir/css/main.css');
+            rmdir($public.'/opSkinThemePlugin/my-dir/css');
+            rmdir($public.'/opSkinThemePlugin/my-dir');
+            rmdir($public.'/opSkinThemePlugin');
+            rmdir($public);
+        }
     }
 
     public function test_a_name_outside_the_directory_rule_or_not_on_disk_finds_nothing(): void

@@ -25,6 +25,11 @@ final class ClassicThemeSelection
 
     private const BASIC_PLUGIN = 'opSkinBasicPlugin';
 
+    public static function unknownPackageMessage(): string
+    {
+        return self::KEY.': OpenPNE 3 dressed this site in the first theme package on its disk, which this run cannot see; the default skin is set until you copy that package under public/opSkinThemePlugin and choose it on Appearance (Classic) > Theme.';
+    }
+
     public static function missingPackageMessage(string $theme): string
     {
         return self::KEY.": Theme_used '{$theme}' is not under public/opSkinThemePlugin, so the default skin shows until the package is copied there (verify-upgrade fails until then); or choose another on Appearance (Classic) > Theme.";
@@ -57,7 +62,8 @@ final class ClassicThemeSelection
                 'error' => null,
             ]);
 
-            $theme = $this->select($sourcePrefix, $sourceDatabase);
+            $selected = $this->select($sourcePrefix, $sourceDatabase);
+            $theme = $selected ?? '';
 
             DB::transaction(function () use ($theme): void {
                 DB::table('sns_settings')->updateOrInsert(
@@ -84,7 +90,9 @@ final class ClassicThemeSelection
         }
 
         $out('DONE '.self::KEY.': classic_theme = '.($theme === '' ? 'the default skin' : "'{$theme}'"));
-        if ($theme !== '' && ClassicThemes::find($theme) === null) {
+        if ($selected === null) {
+            $out('WARN '.self::unknownPackageMessage());
+        } elseif ($theme !== '' && ClassicThemes::find($theme) === null) {
             $out('WARN '.self::missingPackageMessage($theme));
         }
 
@@ -92,12 +100,11 @@ final class ClassicThemeSelection
     }
 
     /**
-     * OpenPNE 3's rule as far as its tables show it (it also counted its disk): the two bundled skins
-     * count as enabled without a `plugin` row, and only the theme plugin as the one enabled `opSkin*`
-     * plugin dressed the site. `Theme_used` is kept as written, even unvendored; without the row the
-     * first package under public/opSkinThemePlugin stands in.
+     * OpenPNE 3's rule as far as its tables show it: the two bundled skins count as enabled without a
+     * `plugin` row, and only the theme plugin as the one enabled `opSkin*` plugin dressed the site.
+     * `Theme_used` is kept as written, even unvendored; null when absent or empty, since OpenPNE 3 then wore the first package on its disk.
      */
-    public function select(string $sourcePrefix, ?string $sourceDatabase): string
+    public function select(string $sourcePrefix, ?string $sourceDatabase): ?string
     {
         $enabled = [self::THEME_PLUGIN => true, self::BASIC_PLUGIN => true];
         $plugin = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'plugin');
@@ -117,6 +124,6 @@ final class ClassicThemeSelection
             return $used;
         }
 
-        return (string) (array_key_first(ClassicThemes::all()) ?? '');
+        return null;
     }
 }

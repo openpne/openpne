@@ -35,26 +35,29 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
     public function test_the_theme_plugin_as_the_one_enabled_skin_carries_theme_used(): void
     {
         $this->seedPlugin('opSkinBasicPlugin', false);
-        $this->seedConfig('Theme_used', 'cerulean-sakura');
+        $this->seedConfig('Theme_used', 'cerulean-light');
 
         $this->assertTrue($this->runPass());
 
-        $this->assertSame('cerulean-sakura', $this->stored());
-        $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-sakura'", $this->out);
+        $this->assertSame('cerulean-light', $this->stored());
+        $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-light'", $this->out);
     }
 
-    public function test_a_missing_theme_used_falls_to_the_first_package_as_openpne3_substituted(): void
+    public function test_a_missing_theme_used_sets_the_default_skin_and_reports_that_openpne3_chose_from_its_disk(): void
     {
         $this->seedPlugin('opSkinBasicPlugin', false);
 
         $this->assertTrue($this->runPass());
-        $this->assertSame('bamboo', $this->stored());
+        $this->assertSame('', $this->stored());
+        $this->assertContains('WARN '.ClassicThemeSelection::unknownPackageMessage(), $this->out);
 
         UpgradeState::query()->delete();
+        $this->out = [];
         $this->seedConfig('Theme_used', '');
 
         $this->assertTrue($this->runPass());
-        $this->assertSame('bamboo', $this->stored());
+        $this->assertSame('', $this->stored());
+        $this->assertContains('WARN '.ClassicThemeSelection::unknownPackageMessage(), $this->out);
     }
 
     public function test_a_theme_used_not_vendored_here_is_kept_and_reported_and_fails_verify_until_copied_in(): void
@@ -104,11 +107,11 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertNull(DB::table('sns_settings')->where('key', 'classic_theme')->value('value'));
 
         $this->assertTrue($this->runPass());
-        $this->seedConfig('Theme_used', 'winter');
+        $this->seedConfig('Theme_used', 'cerulean');
         $this->assertTrue($this->runPass());
 
         $this->assertContains('SKIP classic_theme_selection: already completed', $this->out);
-        $this->assertSame('bamboo', $this->stored());
+        $this->assertSame('', $this->stored());
     }
 
     public function test_the_verifier_accepts_the_default_skin_or_a_package_on_disk_and_refuses_the_rest(): void
@@ -119,7 +122,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         };
 
         (new ClassicThemeCheck)->verify(['sns_settings'], $record);
-        DB::table('sns_settings')->updateOrInsert(['key' => 'classic_theme'], ['value' => 'winter']);
+        DB::table('sns_settings')->updateOrInsert(['key' => 'classic_theme'], ['value' => 'cerulean']);
         (new ClassicThemeCheck)->verify(['sns_settings'], $record);
         DB::table('sns_settings')->updateOrInsert(['key' => 'classic_theme'], ['value' => 'gone']);
         (new ClassicThemeCheck)->verify(['sns_settings'], $record);
