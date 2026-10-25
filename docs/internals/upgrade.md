@@ -109,7 +109,7 @@ unknown-name scan subtracts from (a warning, not an abort). A package that handl
 itself, outside `openpne:upgrade-from-3`, registers them on the `SourceNameRegistry` singleton from
 its service provider (a literal name, or a family by prefix); the scan then skips them and
 `openpne:upgrade-matrix` lists them with the package's disposition. The registry ships empty and
-refuses a name the upgrade already handles.
+refuses a literal name the upgrade already handles.
 
 ## Terms
 

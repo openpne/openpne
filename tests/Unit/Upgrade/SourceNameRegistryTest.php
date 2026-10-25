@@ -58,8 +58,6 @@ class SourceNameRegistryTest extends TestCase
 
     public function test_it_is_shared_without_a_provider_binding(): void
     {
-        // A package registering from its provider's register() runs before the app providers, so the
-        // instance it filled must be the one the preflight later resolves.
         $this->assertNotEmpty((new \ReflectionClass(SourceNameRegistry::class))->getAttributes(Singleton::class));
     }
 }
