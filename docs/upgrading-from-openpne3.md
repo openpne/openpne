@@ -213,15 +213,19 @@ $ php artisan openpne:timeline-backfill-hashtags
 
 It is safe to run again, and only the timeline is indexed — a group's talk never parses hashtags.
 
-Then make the site's copy of every migrated picture, so the first visitor does not pay for it, and
-record each picture's size and whether it animates (for a GIF or WebP, only under the `imgproxy`
-processor):
+Pictures need nothing before the cutover: each migrated one is made on its first view, and its size
+and whether it animates (for a GIF or WebP, only under the `imgproxy` processor) are recorded then.
+Optionally, after the cutover and in the background, make the newest ones ahead of time so their
+first viewer does not wait:
 
 ```console
-$ php artisan openpne:image-cache warm
+$ php artisan openpne:image-cache warm --limit 2000
 ```
 
-Also safe to run again. Pictures OpenPNE 3 accepted but this version's limits refuse are listed by
+It goes newest first, stops after that many, and the next run goes on from there — a nightly run
+with a limit works through the archive at whatever pace the disk allows. Without `--limit` it
+makes every picture, which takes about as much disk again as the pictures themselves. Safe to run
+again, and safe to interrupt. Pictures OpenPNE 3 accepted but this version's limits refuse are listed by
 `php artisan openpne:image-cache status`; the site shows nothing for those until the limits are
 raised and `warm --retry-failed` is run. It also lists rows stored under an image type this version
 does not show as a picture; the upgrade folds the two OpenPNE 3 aliases into shown types (below), so

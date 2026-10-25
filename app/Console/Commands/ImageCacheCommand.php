@@ -12,9 +12,12 @@ use App\Files\ImageFacts;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Models\File;
+use Carbon\Exceptions\InvalidFormatException;
+use Closure;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Throwable;
 
 /**
@@ -25,31 +28,34 @@ class ImageCacheCommand extends Command
 {
     protected $signature = 'openpne:image-cache
         {action : status, warm or rebuild}
-        {--retry-failed : with warm, ask the processor again about the pictures it once refused}';
+        {--retry-failed : with warm, ask the processor again about the pictures it once refused}
+        {--limit= : with warm, stop once this many pictures were made}
+        {--since= : only pictures stored on or after this date}';
 
-    protected $description = 'Inspect, warm or rebuild the canonical of every stored picture';
+    protected $description = 'Inspect, warm or rebuild the canonical of every stored picture, newest first';
 
     private const ROWS_TO_LIST = 20;
 
-    /** Refusals in a row that end the run: a full or read-only cache disk, not one row's directory. */
-    private const UNWRITTEN_STREAK_TO_STOP = 3;
+    /** Refused writes or outages in a row that end the run: a full disk or a processor down, not one row's own failure. */
+    private const FAILURE_STREAK_TO_STOP = 3;
 
     public function handle(ImageCache $cache, ImageProcessor $processor): int
     {
         return match ($this->argument('action')) {
-            'status' => $this->status($cache),
-            'warm' => $this->warm($cache, $processor->preservesAnimation(), retryFailed: (bool) $this->option('retry-failed'), rebuild: false),
-            'rebuild' => $this->warm($cache, $processor->preservesAnimation(), retryFailed: false, rebuild: true),
+            'status' => $this->scoped(fn (Builder $pictures): int => $this->status($pictures, $cache)),
+            'warm', 'rebuild' => $this->scoped(fn (Builder $pictures, ?int $limit): int => $this->warm(
+                $pictures, $limit, $cache, $processor->preservesAnimation(), retryFailed: (bool) $this->option('retry-failed'), rebuild: $this->argument('action') === 'rebuild',
+            )),
             default => $this->unknownAction(),
         };
     }
 
-    private function status(ImageCache $cache): int
+    private function status(Builder $pictures, ImageCache $cache): int
     {
         $total = $warm = $refused = $cold = $unshown = $animated = $unknown = 0;
         $refusedRows = $unshownRows = [];
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$animated, &$unknown, &$refusedRows, &$unshownRows): void {
+        $pictures->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$animated, &$unknown, &$refusedRows, &$unshownRows): void {
             foreach ($chunk as $file) {
                 $total++;
 
@@ -87,14 +93,52 @@ class ImageCacheCommand extends Command
         return self::SUCCESS;
     }
 
-    private function warm(ImageCache $cache, bool $keepsFrames, bool $retryFailed, bool $rebuild): int
+    /** @param  Closure(Builder, ?int): int  $run */
+    private function scoped(Closure $run): int
+    {
+        $pictures = $this->images();
+        $limit = $this->option('limit');
+        $since = $this->option('since');
+
+        if ($limit !== null && $this->argument('action') !== 'warm') {
+            $this->error('--limit is for warm only: rebuild starts over from the newest picture, so a limit would never pass it.');
+
+            return self::FAILURE;
+        }
+
+        if ($limit !== null && (! ctype_digit($limit) || (int) $limit < 1)) {
+            $this->error("--limit [{$limit}] is not a positive count.");
+
+            return self::FAILURE;
+        }
+
+        if ($since !== null) {
+            try {
+                if ($since === '') {
+                    throw new InvalidFormatException('empty');
+                }
+
+                $pictures->where('created_at', '>=', Carbon::parse($since));
+            } catch (InvalidFormatException) {
+                $this->error("--since [{$since}] is not a date.");
+
+                return self::FAILURE;
+            }
+        }
+
+        return $run($pictures, $limit === null ? null : (int) $limit);
+    }
+
+    /** $limit counts pictures made: a refusal or a failure is not progress, so counting it could leave a run stuck on the same rows. */
+    private function warm(Builder $pictures, ?int $limit, ImageCache $cache, bool $keepsFrames, bool $retryFailed, bool $rebuild): int
     {
         $n = ['done' => 0, 'facts' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
         $failedRows = $unshownRows = [];
         $streak = 0;
         $stopped = false;
+        $limited = false;
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, $keepsFrames, $retryFailed, $rebuild, &$n, &$failedRows, &$unshownRows, &$streak, &$stopped): bool {
+        $pictures->chunkByIdDesc(200, function (Collection $chunk) use ($cache, $keepsFrames, $retryFailed, $rebuild, $limit, &$n, &$failedRows, &$unshownRows, &$streak, &$stopped, &$limited): bool {
             foreach ($chunk as $file) {
                 if ($file->imageFormat() === null) {
                     $n['unshown']++;
@@ -115,6 +159,12 @@ class ImageCacheCommand extends Command
                     continue;
                 }
 
+                if ($limit !== null && $n['done'] >= $limit) {
+                    $limited = true;
+
+                    return false;
+                }
+
                 try {
                     $canonical = $rebuild ? $cache->rebuild($file) : $cache->warm($file);
                 } catch (CanonicalUnavailableException) {
@@ -124,13 +174,19 @@ class ImageCacheCommand extends Command
                 } catch (ImageProcessorUnavailableException) {
                     $n['unavailable']++;
 
+                    if (++$streak >= self::FAILURE_STREAK_TO_STOP) {
+                        $stopped = true;
+
+                        return false;
+                    }
+
                     continue;
                 } catch (ImageCachePublishException $e) {
                     // Rebuild has discarded before it writes, so a disk refusing everything must not be walked to the end.
                     $n['unwritten']++;
                     $this->remember($failedRows, $file, $e->getMessage());
 
-                    if (++$streak >= self::UNWRITTEN_STREAK_TO_STOP) {
+                    if (++$streak >= self::FAILURE_STREAK_TO_STOP) {
                         $stopped = true;
 
                         return false;
@@ -152,12 +208,15 @@ class ImageCacheCommand extends Command
             return true;
         });
 
-        $this->info(sprintf('%s %d picture(s), recorded facts for %d.', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['facts']));
+        $this->info(sprintf('%s %d picture(s), recorded facts for %d.%s', $rebuild ? 'Rebuilt' : 'Warmed', $n['done'], $n['facts'], $limited ? " Stopped at --limit {$limit}; the next run goes on from there." : ''));
         $this->line("  refused:     {$n['refused']}  (remembered; `warm --retry-failed` asks again)");
         $this->line("  skipped:     {$n['skipped']}  (refused before; pass --retry-failed)");
         $this->line("  unavailable: {$n['unavailable']}  (processor down; nothing remembered)");
+        if ($stopped) {
+            $this->line('  the run stopped after '.self::FAILURE_STREAK_TO_STOP.' failures in a row');
+        }
         $this->line("  unreadable:  {$n['unreadable']}  (the stored bytes could not be read)");
-        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write".($stopped ? '; the run stopped after '.self::UNWRITTEN_STREAK_TO_STOP.' in a row' : '').')');
+        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write)");
         $this->listRows($failedRows, $n['unreadable'] + $n['unwritten']);
         $this->line("  unshown:     {$n['unshown']}  (stored under an image type this version does not show as a picture)");
         $this->listRows($unshownRows, $n['unshown']);

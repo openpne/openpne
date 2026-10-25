@@ -75,6 +75,78 @@ class ImageCacheCommandTest extends TestCase
         $this->assertSame([8, 8], [$sizeless->refresh()->width, $sizeless->height]);
     }
 
+    public function test_warm_goes_newest_first_and_a_limit_counts_only_the_pictures_it_makes(): void
+    {
+        $older = $this->stored('image/png', ImageBytes::png());
+        $newer = $this->stored('image/png', ImageBytes::png());
+        // The newest row is warm already and the one before it has no bytes: neither spends the limit.
+        $gone = File::factory()->create(['type' => 'image/png']);
+        $warm = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 8, 8));
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm', '--limit' => '1'])
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1. Stopped at --limit 1; the next run goes on from there.')
+            ->expectsOutputToContain('unreadable:  1')
+            ->assertFailed();
+
+        $this->assertTrue(app(ImageCache::class)->hasCanonical($newer));
+        $this->assertTrue(app(ImageCache::class)->hasCanonical($warm));
+        $this->assertFalse(app(ImageCache::class)->hasCanonical($older));
+        $this->assertFalse(app(ImageCache::class)->hasCanonical($gone));
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm', '--limit' => '1'])
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
+            ->doesntExpectOutputToContain('Stopped at --limit')
+            ->assertFailed();
+
+        $this->assertTrue(app(ImageCache::class)->hasCanonical($older));
+    }
+
+    public function test_warm_since_a_date_leaves_the_pictures_stored_before_it_cold(): void
+    {
+        $before = $this->stored('image/png', ImageBytes::png());
+        $before->forceFill(['created_at' => '2015-06-01 00:00:00'])->save();
+        $onTheDay = $this->stored('image/png', ImageBytes::png());
+        $onTheDay->forceFill(['created_at' => '2020-01-01 00:00:00'])->save();
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm', '--since' => '2020-01-01'])
+            ->expectsOutputToContain('Warmed 1 picture(s), recorded facts for 1.')
+            ->assertSuccessful();
+
+        $this->assertTrue(app(ImageCache::class)->hasCanonical($onTheDay));
+        $this->assertFalse(app(ImageCache::class)->hasCanonical($before));
+    }
+
+    public function test_a_limit_that_is_not_a_count_or_a_since_that_is_not_a_date_is_refused(): void
+    {
+        $cold = $this->stored('image/png', ImageBytes::png());
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm', '--limit' => '0'])
+            ->expectsOutputToContain('--limit [0] is not a positive count.')
+            ->assertFailed();
+        $this->artisan('openpne:image-cache', ['action' => 'rebuild', '--limit' => '1'])
+            ->expectsOutputToContain('--limit is for warm only:')
+            ->assertFailed();
+        $this->artisan('openpne:image-cache', ['action' => 'rebuild', '--since' => 'yesterday-ish'])
+            ->expectsOutputToContain('--since [yesterday-ish] is not a date.')
+            ->assertFailed();
+        $this->artisan('openpne:image-cache', ['action' => 'warm', '--since' => ''])
+            ->expectsOutputToContain('--since [] is not a date.')
+            ->assertFailed();
+
+        $this->assertFalse(app(ImageCache::class)->hasCanonical($cold));
+    }
+
+    public function test_status_counts_within_the_since_slice(): void
+    {
+        $before = $this->stored('image/png', ImageBytes::png());
+        $before->forceFill(['created_at' => '2015-06-01 00:00:00'])->save();
+        $this->stored('image/png', ImageBytes::png());
+
+        $this->artisan('openpne:image-cache', ['action' => 'status', '--since' => '2020-01-01'])
+            ->expectsOutputToContain('Pictures: 1')
+            ->assertSuccessful();
+    }
+
     public function test_warm_remembers_a_refusal_and_skips_it_until_asked_to_retry(): void
     {
         // Refused under a tight pixel cap (both processors apply it), then accepted once it is raised and retried.
@@ -337,9 +409,23 @@ class ImageCacheCommandTest extends TestCase
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('unavailable: 1')
+            ->doesntExpectOutputToContain('the run stopped')
             ->assertFailed();
 
         $this->assertNull(app(ImageCache::class)->refusal($file));
+    }
+
+    public function test_an_outage_ends_the_run_after_three_pictures_in_a_row(): void
+    {
+        foreach (range(1, 5) as $_) {
+            $this->stored('image/png', ImageBytes::png());
+        }
+        $this->processorIsDown();
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('unavailable: 3')
+            ->expectsOutputToContain('the run stopped after 3 failures in a row')
+            ->assertFailed();
     }
 
     public function test_a_row_whose_bytes_are_gone_fails_the_run_and_the_run_goes_on(): void
@@ -371,7 +457,8 @@ class ImageCacheCommandTest extends TestCase
         try {
             $this->artisan('openpne:image-cache', ['action' => 'warm'])
                 ->expectsOutputToContain('Warmed 0 picture(s)')
-                ->expectsOutputToContain('unwritten:   3  (the cache disk refused the write; the run stopped after 3 in a row)')
+                ->expectsOutputToContain('unwritten:   3  (the cache disk refused the write)')
+                ->expectsOutputToContain('the run stopped after 3 failures in a row')
                 ->assertFailed();
         } finally {
             chmod($root, 0o755);
