@@ -226,7 +226,7 @@ export function TalkComposer({
                                     {previews[index] === '' && (
                                         <span className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-muted px-1 text-3xs text-muted-foreground">
                                             <Paperclip className="size-4 shrink-0" aria-hidden />
-                                            <span className="w-full truncate text-center">{image.name}</span>
+                                            <span className="w-full truncate text-center" title={image.name}>{image.name}</span>
                                         </span>
                                     )}
                                     <Tip label={t('Remove attachment :number', { number: index + 1 })}>
