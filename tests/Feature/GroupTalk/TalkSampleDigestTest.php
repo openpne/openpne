@@ -71,10 +71,10 @@ class TalkSampleDigestTest extends TestCase
     }
 
     /** Attach a picture to $message, owned by $owner as far as the `files` row is concerned. */
-    private function attach(GroupMessage $message, int $number = 1, ?GroupMessage $owner = null): File
+    private function attach(GroupMessage $message, int $number = 1, ?GroupMessage $owner = null, string $type = 'image/png'): File
     {
         $file = File::factory()->create([
-            'type' => 'image/png',
+            'type' => $type,
             'related_entity_type' => 'groupMessage',
             'related_entity_id' => ($owner ?? $message)->getKey(),
         ]);
@@ -484,6 +484,21 @@ class TalkSampleDigestTest extends TestCase
         $this->assertSame([$refused->getKey()], $asked);
     }
 
+    public function test_the_first_picture_is_the_first_raster_slot_not_the_first_slot(): void
+    {
+        $author = $this->member();
+        $message = $this->said($author, $this->start->addMinutes(5));
+        $this->attach($message, 1, type: 'application/pdf');
+        $picture = $this->attach($message, 2);
+
+        $filesOnly = $this->said($author, $this->start->addMinutes(6));
+        $this->attach($filesOnly, 1, type: 'application/pdf');
+
+        $pictures = $this->digest->firstPictures($author, collect([$message, $filesOnly]));
+
+        $this->assertSame([$message->getKey() => $picture->url()], array_map(fn (array $row): string => $row['url'], $pictures));
+    }
+
     public function test_a_first_picture_owned_by_another_message_is_left_out(): void
     {
         $author = $this->member();
@@ -650,6 +665,20 @@ class TalkSampleDigestTest extends TestCase
 
         $this->assertCount(TalkSampleDigest::THUMBNAILS, $shown);
         $this->assertStringContainsString('limit '.TalkSampleDigest::THUMBNAIL_CANDIDATES, $log[0]['query']);
+    }
+
+    public function test_a_file_is_no_thumbnail_and_takes_no_candidate_slot(): void
+    {
+        $viewer = $this->member();
+        $message = $this->said($this->member(), $this->start->addSecond());
+        foreach (range(1, TalkSampleDigest::THUMBNAIL_CANDIDATES) as $number) {
+            $this->attach($message, number: $number, type: 'application/pdf');
+        }
+        $picture = $this->attach($message, number: TalkSampleDigest::THUMBNAIL_CANDIDATES + 1);
+
+        $sample = $this->digest->sampleBetween($this->group, $this->start, $this->until);
+
+        $this->assertSame([$picture->url()], array_map(fn (array $row): string => $row['url'], $this->digest->thumbnails($viewer, $sample)));
     }
 
     public function test_the_candidates_are_cut_in_a_total_order(): void

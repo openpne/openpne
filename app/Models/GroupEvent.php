@@ -60,7 +60,7 @@ class GroupEvent extends Model
         return $this->hasMany(GroupEventImage::class, 'post_id')->orderBy('number')->orderBy('id');
     }
 
-    /** @return HasMany<GroupEventComment, $this> */
+    /** @return HasMany<GroupEventImage, $this> */
     public function pictures(): HasMany
     {
         return PostAttachments::pictures($this->images());

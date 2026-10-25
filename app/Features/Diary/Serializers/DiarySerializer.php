@@ -39,10 +39,8 @@ class DiarySerializer
             'hasImages' => ($diary->pictures_count ?? $diary->loadCount('pictures')->pictures_count) > 0,
             // An unloaded relation yields [] rather than a query per row, nested file guard included.
             'thumbnails' => $diary->relationLoaded('images')
-                ? PostAttachments::partition($diary->images)['images']
-                    ->map(fn (DiaryImage $image): ?string => $image->relationLoaded('file')
-                        ? $image->file?->thumbnailUrl(120, 120, square: true)
-                        : null)
+                ? PostAttachments::partition($diary->images->filter(fn (DiaryImage $image): bool => $image->relationLoaded('file')))['images']
+                    ->map(fn (DiaryImage $image): ?string => $image->file?->thumbnailUrl(120, 120, square: true))
                     ->filter()->values()->all()
                 : [],
             'author' => MemberRefSerializer::ref($diary->member),

@@ -9,16 +9,21 @@ for a file: whoever may read the post may download what hangs on it.
 ## Pictures and files
 
 Which kind a slot row is comes from the stored type alone: [`ImageSpec::rasterMimes()`](../../app/Files/ImageSpec.php)
-is a picture, anything else a file. Two readers exist for that split and no third:
+is a picture, anything else a file. Three readers exist for that split and no fourth:
 
 - `pictures()` on every slot-bearing model ([`PostAttachments::pictures`](../../app/Files/PostAttachments.php))
   is the relation to count or test in SQL — `withCount('pictures')`, `pictures_exists`,
-  `whereHas('pictures')` — wherever a list means "has photos".
-- `PostAttachments::partition()` splits loaded slot rows for display; every serializer that ships an
-  `images` array ships a `files` array from the same call, each file in the
+  `whereHas('pictures')` — wherever a list means "has photos"; a slot query built outside the
+  relation (the talk digest) filters by `PostAttachments::pictureFileIds()`.
+- `PostAttachments::partition()` splits loaded slot rows for display; a serializer that ships
+  `files` beside `images` takes both from the same call, each file in the
   [`AttachmentShape`](../../app/Files/AttachmentShape.php) (`id`, `url`, `name`, `byteSize`,
-  `sizeLabel`, `type`). `images()` itself stays the whole set, read by the editors and the delete
-  actions. `PictureReadersTest` keeps the slot relation out of counts and existence checks.
+  `sizeLabel`, `type`). The talk digest excerpt ships pictures only.
+- `FileResponse::isRaster()` on one row, for the Classic partials that walk a slot list.
+
+`images()` itself stays the whole set, read by the editors and the delete actions.
+`PictureReadersTest` keeps the string forms of the slot-relation counts and existence checks out
+of `app/`, and `images` serializers partitioning; a reader built another way is reviewed, not caught.
 
 A message with files and no pictures previews as "File" where one with pictures previews as
 "Image" (`ChatPreview`); a diary with only a file has no photo marker.

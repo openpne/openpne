@@ -56,7 +56,7 @@ class GroupTopic extends Model
         return $this->hasMany(GroupTopicImage::class, 'post_id')->orderBy('number')->orderBy('id');
     }
 
-    /** @return HasMany<GroupTopicComment, $this> */
+    /** @return HasMany<GroupTopicImage, $this> */
     public function pictures(): HasMany
     {
         return PostAttachments::pictures($this->images());

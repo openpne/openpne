@@ -3,6 +3,7 @@
 namespace App\Files;
 
 use App\Models\File;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
@@ -25,7 +26,17 @@ final class PostAttachments
      */
     public static function pictures(HasMany $slots): HasMany
     {
-        return $slots->whereIn('file_id', File::query()->select('id')->whereIn('type', ImageSpec::rasterMimes()));
+        return $slots->whereIn('file_id', self::pictureFileIds());
+    }
+
+    /**
+     * The `file_id` subquery behind pictures(), for a slot query built outside the relation.
+     *
+     * @return Builder<File>
+     */
+    public static function pictureFileIds(): Builder
+    {
+        return File::query()->select('id')->whereIn('type', ImageSpec::rasterMimes());
     }
 
     /**

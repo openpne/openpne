@@ -50,7 +50,7 @@ class Diary extends Model
         return $this->hasMany(DiaryImage::class)->orderBy('number')->orderBy('id');
     }
 
-    /** @return HasMany<DiaryComment, $this> */
+    /** @return HasMany<DiaryImage, $this> */
     public function pictures(): HasMany
     {
         return PostAttachments::pictures($this->images());
