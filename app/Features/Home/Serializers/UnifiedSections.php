@@ -4,6 +4,7 @@ namespace App\Features\Home\Serializers;
 
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Files\PostAttachments;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\Member;
@@ -40,14 +41,14 @@ final class UnifiedSections
                 'at' => $diary->created_at,
                 'id' => $diary->getKey(),
                 'href' => "/diary/{$diary->getKey()}",
-                'images' => $diary->images->map([DiarySerializer::class, 'image'])->all(),
+                'images' => PostAttachments::partition($diary->images)['images']->map([DiarySerializer::class, 'image'])->all(),
             ]),
             ...$posts->map(fn (TimelinePost $post): array => [
                 'source' => 'timeline',
                 'at' => $post->created_at,
                 'id' => $post->getKey(),
                 'href' => "/timeline/{$post->getKey()}",
-                'images' => $post->images->map([TimelinePostSerializer::class, 'image'])->all(),
+                'images' => PostAttachments::partition($post->images)['images']->map([TimelinePostSerializer::class, 'image'])->all(),
             ]),
         ]);
     }

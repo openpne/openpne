@@ -1,6 +1,6 @@
 {{-- Shared diary rows for the OpenPNE 3 diary list gadgets. `withName` appends the author
      (OpenPNE 3 op_diary_link_to_show withName); `withIcon` shows the camera marker for a diary
-     with photos (images_count > 0). --}}
+     with photos (pictures_count > 0). --}}
 @props(['entries' => [], 'withName' => false, 'withIcon' => true])
 <ul class="articleList">
     @foreach ($entries as $entry)

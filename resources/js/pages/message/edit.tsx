@@ -101,7 +101,7 @@ export default function MessageEdit() {
                         />
                     </Field>
 
-                    <CurrentImagesField images={draft.images} removedIds={form.data.remove_images} onToggle={toggleRemove} />
+                    <CurrentImagesField images={draft.images} files={draft.files} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 
                     <ImagesField id="message_images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 

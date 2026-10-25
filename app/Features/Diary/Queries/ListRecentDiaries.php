@@ -39,7 +39,7 @@ class ListRecentDiaries
     /** @return Builder<Diary> */
     private function query(?Member $viewer): Builder
     {
-        $query = Diary::with('member.avatar.file')->withCount(['comments', 'images']);
+        $query = Diary::with('member.avatar.file')->withCount(['comments', 'pictures']);
 
         DiaryVisibilityScope::applyFeed($query, $viewer);
 

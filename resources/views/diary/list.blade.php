@@ -40,7 +40,7 @@
             @foreach ($diaries as $entry)
                 <dl>
                     <dt>{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</dt>
-                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a><x-diary.image-icon :count="$entry->images_count" /></dd>
+                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a><x-diary.image-icon :count="$entry->pictures_count" /></dd>
                 </dl>
             @endforeach
             <x-classic.pager :paginator="$diaries" />

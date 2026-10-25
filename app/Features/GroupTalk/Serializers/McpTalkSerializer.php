@@ -7,6 +7,7 @@ namespace App\Features\GroupTalk\Serializers;
 use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\TalkRoom;
+use App\Files\PostAttachments;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageMention;
 use Carbon\CarbonImmutable;
@@ -26,7 +27,7 @@ class McpTalkSerializer
      */
     public static function message(GroupMessage $message, array $parents): array
     {
-        $images = $message->images->count();
+        $images = PostAttachments::partition($message->images)['images']->count();
 
         return [
             'id' => (int) $message->getKey(),

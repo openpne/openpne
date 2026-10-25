@@ -98,7 +98,7 @@ class DiaryFormParityTest extends TestCase
         $response->assertOk();
         foreach ([1, 2, 3] as $n) {
             $response->assertSeeInOrder([
-                '<label for="diary_photo_'.$n.'_photo">Photo '.$n.'</label>',
+                '<label for="diary_photo_'.$n.'_photo">Attachment '.$n.'</label>',
                 '<ul id="diary_photo_'.$n.'">',
                 '<input type="file" name="images[]" id="diary_photo_'.$n.'_photo"',
             ], false);
@@ -148,8 +148,8 @@ class DiaryFormParityTest extends TestCase
         $this->assertSame(3, substr_count($content, 'name="remove_images[]"'));
         $this->assertSame(2, substr_count($content, 'name="images[]"'));
         $this->assertSame(1, substr_count($content, 'id="diary_photo_1_photo"'));
-        $response->assertSeeInOrder(['<ul id="diary_photo_3">', '<label>Photo 5</label>'], false);
-        $response->assertSeeInOrder(['<ul id="diary_photo_3">', '<label>Photo 1</label>'], false);
+        $response->assertSeeInOrder(['<ul id="diary_photo_3">', '<label>Attachment 5</label>'], false);
+        $response->assertSeeInOrder(['<ul id="diary_photo_3">', '<label>Attachment 1</label>'], false);
     }
 
     public function test_the_comment_form_names_its_box_and_photo_rows_as_openpne3_did(): void

@@ -1,3 +1,4 @@
+import type { AttachmentFile } from '@/types';
 import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
 import type { ReactionChip } from '@/lib/reactions/types';
@@ -39,6 +40,7 @@ export interface DiaryDetail extends DiarySummary {
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     images: GridImage[];
+    files: AttachmentFile[];
     reactions: ReactionChip[];
 }
 
@@ -54,6 +56,7 @@ export interface DiaryComment {
     number: number;
     body: string;
     images: GridImage[];
+    files: AttachmentFile[];
     /** First URL in the body, previewed; null when there is none, or while it is still being fetched. */
     linkCard: LinkCardData | null;
     author: DiaryAvatarAuthor | null; // null once the author has withdrawn

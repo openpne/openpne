@@ -1,10 +1,10 @@
-{{-- Up to MAX_IMAGES file inputs for attaching images to a message. The enclosing <form> must
-     carry enctype="multipart/form-data". --}}
+{{-- Up to MAX_IMAGES file inputs for attaching pictures or files to a message. The enclosing <form>
+     must carry enctype="multipart/form-data". --}}
 <tr>
-    <th>{{ __('Images') }}</th>
+    <th>{{ __('Attachments') }}</th>
     <td>
         @for ($i = 0; $i < \App\Files\PostImages::MAX_IMAGES; $i++)
-            <p><input type="file" name="images[]" accept="{{ image_upload_accept() }}"></p>
+            <p><input type="file" name="images[]"></p>
         @endfor
         @php($imageError = collect($errors->messages())->keys()->first(fn ($key) => str_starts_with($key, 'images')))
         @if ($imageError)<p class="error">{{ $errors->first($imageError) }}</p>@endif

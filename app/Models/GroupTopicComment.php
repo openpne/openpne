@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Files\PostAttachments;
 use App\Models\Concerns\HasLinkCard;
 use App\Models\Concerns\HasReactions;
 use Database\Factories\GroupTopicCommentFactory;
@@ -41,5 +42,11 @@ class GroupTopicComment extends Model
     public function images(): HasMany
     {
         return $this->hasMany(GroupTopicCommentImage::class, 'post_id')->orderBy('number')->orderBy('id');
+    }
+
+    /** @return HasMany<GroupTopicCommentImage, $this> */
+    public function pictures(): HasMany
+    {
+        return PostAttachments::pictures($this->images());
     }
 }

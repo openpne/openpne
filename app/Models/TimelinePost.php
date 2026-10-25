@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Files\PostAttachments;
 use App\Models\Concerns\HasLinkCard;
 use App\Models\Concerns\HasReactions;
 use App\Support\Visibility;
@@ -63,6 +64,12 @@ class TimelinePost extends Model
     public function images(): HasMany
     {
         return $this->hasMany(TimelinePostImage::class)->orderBy('number')->orderBy('id');
+    }
+
+    /** @return HasMany<TimelinePostImage, $this> */
+    public function pictures(): HasMany
+    {
+        return PostAttachments::pictures($this->images());
     }
 
     /**

@@ -86,7 +86,7 @@ export default function GroupTopicEdit() {
                         recordFormat={recordFormat}
                     />
 
-                    <CurrentImagesField images={topic?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
+                    <CurrentImagesField images={topic?.images ?? []} files={topic?.files ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 
                     <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 

@@ -93,7 +93,7 @@ export default function DiaryEdit() {
                         </Select>
                     </Field>
 
-                    <CurrentImagesField images={diary.images} removedIds={data.remove_images} onToggle={toggleRemove} />
+                    <CurrentImagesField images={diary.images} files={diary.files} removedIds={data.remove_images} onToggle={toggleRemove} />
 
                     <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 

@@ -58,7 +58,7 @@
                 <div class="block">
                     <ul class="photo">
                         @foreach ($view->message->files as $image)
-                            @continue($image->file === null)
+                            @continue($image->file === null || ! \App\Files\FileResponse::isRaster($image->file))
                             <li>
                                 <a href="{{ $image->file->url() }}" target="_blank" rel="noopener">
                                     <img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
@@ -66,6 +66,7 @@
                             </li>
                         @endforeach
                     </ul>
+                    @include('group-topic._files', ['images' => $view->message->files])
                 </div>
             @endif
 

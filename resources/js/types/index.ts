@@ -66,6 +66,18 @@ export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'gro
 export interface ImageUploadPolicy {
     accept: string;
     shrink: { maxEdge: number; passthroughBytes: number; maxBytes: number; quality: number; keepsFrames: boolean } | null;
+    /** The per-file cap on an attachment that is not a picture (AttachmentLimit). */
+    attachmentMaxBytes: number;
+}
+
+/** A post's attachment that is not a picture: downloaded, never drawn (docs/internals/attachments.md). */
+export interface AttachmentFile {
+    id: number;
+    url: string;
+    name: string;
+    byteSize: number;
+    sizeLabel: string;
+    type: string;
 }
 
 export interface PageProps {

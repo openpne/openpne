@@ -26,6 +26,7 @@ interface EditEvent {
     applicationDeadline: string | null; // Y-m-d
     capacity: number | null;
     images: GridImage[];
+    files: { id: number; name: string; sizeLabel: string }[];
 }
 
 interface EditProps extends PageProps {
@@ -125,7 +126,7 @@ export default function GroupEventEdit() {
                         recordFormat={recordFormat}
                     />
 
-                    <CurrentImagesField images={event?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
+                    <CurrentImagesField images={event?.images ?? []} files={event?.files ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 
                     <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 

@@ -4,7 +4,9 @@ namespace App\Features\Diary\Serializers;
 
 use App\Features\Diary\DiaryCommentThread;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\AttachmentShape;
 use App\Files\ImageLadder;
+use App\Files\PostAttachments;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -34,10 +36,10 @@ class DiarySerializer
             // List/feed callers eager-load the counts; a single route-bound diary lazy-loads them
             // here so the values are never silently zero.
             'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
-            'hasImages' => ($diary->images_count ?? $diary->loadCount('images')->images_count) > 0,
+            'hasImages' => ($diary->pictures_count ?? $diary->loadCount('pictures')->pictures_count) > 0,
             // An unloaded relation yields [] rather than a query per row, nested file guard included.
             'thumbnails' => $diary->relationLoaded('images')
-                ? $diary->images
+                ? PostAttachments::partition($diary->images)['images']
                     ->map(fn (DiaryImage $image): ?string => $image->relationLoaded('file')
                         ? $image->file?->thumbnailUrl(120, 120, square: true)
                         : null)
@@ -57,7 +59,8 @@ class DiarySerializer
      */
     public static function detail(Diary $diary, ?Member $viewer, array $reactions): array
     {
-        $images = $diary->images->map([self::class, 'image'])->all();
+        $attachments = PostAttachments::partition($diary->images);
+        $images = $attachments['images']->map([self::class, 'image'])->all();
 
         return [
             'id' => $diary->getKey(),
@@ -75,6 +78,7 @@ class DiarySerializer
             // DiaryDetail-extends-DiarySummary TS shape; file-less rows carry an empty url and drop out.
             'thumbnails' => array_values(array_filter(array_column($images, 'thumbnailUrl'))),
             'images' => $images,
+            'files' => $attachments['files']->map([AttachmentShape::class, 'of'])->all(),
             'author' => MemberRefSerializer::ref($diary->member),
             'linkCard' => LinkCardSerializer::card($diary, $viewer),
             'createdAt' => $diary->created_at->toIso8601String(),
@@ -131,7 +135,8 @@ class DiarySerializer
             'id' => $comment->getKey(),
             'number' => $comment->number,
             'body' => $comment->body,
-            'images' => $comment->images->map([self::class, 'image'])->all(),
+            'images' => PostAttachments::partition($comment->images)['images']->map([self::class, 'image'])->all(),
+            'files' => PostAttachments::partition($comment->images)['files']->map([AttachmentShape::class, 'of'])->all(),
             'linkCard' => LinkCardSerializer::card($comment, $viewer),
             'author' => $comment->member ? MemberRefSerializer::ref($comment->member) : null,
             'createdAt' => $comment->created_at->toIso8601String(),

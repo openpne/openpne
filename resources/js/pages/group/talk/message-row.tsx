@@ -5,6 +5,7 @@ import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
 import { EntityText } from '@/components/entity-text';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { Tip } from '@/components/ui/tooltip';
@@ -205,6 +206,7 @@ export function TalkMessageRow({
             )}
             <LinkCard card={message.linkCard} className="mt-2" />
             <ImageGrid images={message.images} variant="boxed" className={hasBody ? 'mt-2' : grouped ? undefined : 'mt-1'} />
+            <FileChips files={message.files} className="mt-2" />
             <ReactionChips
                 chips={reactions.chips}
                 onToggle={reactions.canReact ? reactions.onToggle : undefined}

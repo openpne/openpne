@@ -29,6 +29,7 @@ const comment: DiaryComment = {
     number: 2,
     body: 'Thanks for writing this',
     images: [],
+    files: [],
     linkCard: null,
     author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false },
     createdAt: '2026-09-19T10:00:00+09:00',

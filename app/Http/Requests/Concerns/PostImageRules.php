@@ -5,12 +5,26 @@ namespace App\Http\Requests\Concerns;
 use App\Files\ImageProcessor;
 use App\Files\PostImages;
 use App\Files\UploadLimit;
+use App\Rules\PostUpload;
 
-/** Shared by every form that takes an `images[]` upload, so the cap and the decompression-bomb guard cannot diverge. */
+/** Shared by every form that takes an `images[]` upload, so the caps and the decompression-bomb guard cannot diverge. */
 final class PostImageRules
 {
     /** @return array<string, mixed> */
     public static function rules(): array
+    {
+        return [
+            'images' => ['array', 'max:'.PostImages::MAX_IMAGES],
+            'images.*' => ['file', new PostUpload],
+        ];
+    }
+
+    /**
+     * The picture-only shape of rules(), for a caller whose readers show pictures and nothing else (MCP).
+     *
+     * @return array<string, mixed>
+     */
+    public static function imagesOnly(): array
     {
         return [
             'images' => ['array', 'max:'.PostImages::MAX_IMAGES],
@@ -26,7 +40,7 @@ final class PostImageRules
      */
     public static function attributes(): array
     {
-        return ['images' => __('Images'), 'images.*' => __('Images')];
+        return ['images' => __('Attachments'), 'images.*' => __('Attachments')];
     }
 
     /**

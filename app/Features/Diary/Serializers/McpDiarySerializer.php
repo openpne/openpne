@@ -72,7 +72,7 @@ class McpDiarySerializer
             'id' => (int) $comment->getKey(),
             'number' => (int) $comment->number,
             'body' => $comment->body,
-            'imageCount' => (int) ($comment->images_count ?? $comment->loadCount('images')->images_count),
+            'imageCount' => (int) ($comment->pictures_count ?? $comment->loadCount('pictures')->pictures_count),
             // Null for a withdrawn author (the FK sets it null), which is a fact about the row rather
             // than a gap to paper over — including `authorIsAi`, since there is no account left to be one.
             'authorId' => $author?->getKey(),
@@ -105,7 +105,7 @@ class McpDiarySerializer
     {
         return [
             'commentCount' => (int) ($diary->comments_count ?? $diary->loadCount('comments')->comments_count),
-            'imageCount' => (int) ($diary->images_count ?? $diary->loadCount('images')->images_count),
+            'imageCount' => (int) ($diary->pictures_count ?? $diary->loadCount('pictures')->pictures_count),
         ];
     }
 

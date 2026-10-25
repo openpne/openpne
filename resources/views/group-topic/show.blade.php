@@ -24,6 +24,7 @@
                 </div>
                 <div class="body">
                     @include('group-topic._images', ['images' => $topic->images])
+                    @include('group-topic._files', ['images' => $topic->images])
                     @if ($topic->format === \App\Support\BodyFormat::Markdown)
                         <x-user-text :value="$topic->body" :format="$topic->format" />
                     @else
@@ -88,6 +89,7 @@
                         </div>
                         <div class="body">
                             @include('group-topic._images', ['images' => $comment->images])
+                            @include('group-topic._files', ['images' => $comment->images])
                             <p class="text"><x-user-text :value="$comment->body" /></p>
                             <x-link-card :record="$comment" />
                         </div>

@@ -20,7 +20,7 @@ vi.mock('@inertiajs/react', () => ({
     ),
     Head: () => null,
     router: { visit: () => {}, post: () => {} },
-    useForm: () => ({ data: { body: '', images: [] }, errors: {}, processing: false, setData: () => {}, transform: () => {}, post: () => {}, reset: () => {} }),
+    useForm: () => ({ data: { body: '', images: [], files: [] }, errors: {}, processing: false, setData: () => {}, transform: () => {}, post: () => {}, reset: () => {} }),
 }));
 
 afterEach(() => {
@@ -36,6 +36,7 @@ const event: EventDetail = {
     format: 'plain',
     bodyHtml: null,
     images: [],
+    files: [],
     linkCard: null,
     author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false },
     createdAt: '2026-09-19T10:00:00+09:00',
@@ -49,7 +50,7 @@ const event: EventDetail = {
     reactions: [{ emoji: '\u{1F44D}', count: 2, mine: false }],
 };
 
-const comment = { id: 22, number: 1, body: 'a comment', images: [], linkCard: null, author: { id: 4, name: 'Aoi', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:05:00+09:00', deletable: false, reactions: [{ emoji: '\u{1F44D}', count: 1, mine: false }] };
+const comment = { id: 22, number: 1, body: 'a comment', images: [], files: [], linkCard: null, author: { id: 4, name: 'Aoi', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:05:00+09:00', deletable: false, reactions: [{ emoji: '\u{1F44D}', count: 1, mine: false }] };
 
 const thread: EventThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 

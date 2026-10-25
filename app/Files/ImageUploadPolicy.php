@@ -16,6 +16,7 @@ final class ImageUploadPolicy
         return [
             'accept' => image_upload_accept(),
             'shrink' => self::shrink(),
+            'attachmentMaxBytes' => AttachmentLimit::bytes(),
         ];
     }
 

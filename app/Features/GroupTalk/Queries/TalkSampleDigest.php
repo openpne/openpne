@@ -8,6 +8,7 @@ use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Files\FileOwners;
+use App\Files\PostAttachments;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
@@ -107,7 +108,7 @@ final class TalkSampleDigest
      */
     public function imagesOf(Member $viewer, GroupMessage $message): array
     {
-        return $message->images
+        return PostAttachments::partition($message->images)['images']
             ->take(self::EXCERPT_PICTURES)
             ->filter(fn (GroupMessageImage $image): bool => $this->shows($viewer, $message, $image))
             ->map(fn (GroupMessageImage $image): array => GroupMessageSerializer::image($image))

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Files\PostAttachments;
 use Database\Factories\DirectMessageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,6 +52,12 @@ class DirectMessage extends Model
     public function files(): HasMany
     {
         return $this->hasMany(DirectMessageFile::class)->orderBy('number')->orderBy('id');
+    }
+
+    /** @return HasMany<DirectMessageFile, $this> */
+    public function pictures(): HasMany
+    {
+        return PostAttachments::pictures($this->files());
     }
 
     /** @return BelongsTo<DirectMessage, $this> */

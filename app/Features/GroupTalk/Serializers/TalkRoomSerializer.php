@@ -22,9 +22,9 @@ class TalkRoomSerializer
             'unread' => $room->unread,
             'muted' => $room->muted,
             'latest' => $latest === null ? null : [
-                // The room query's `images_exists` rides along, so a message with nothing but
+                // The room query's `pictures_exists` / `images_exists` ride along, so a message with nothing but
                 // pictures says so rather than leaving the row trailing into nothing.
-                'body' => ChatPreview::lineOrImages([$latest->body], (bool) $latest->images_exists),
+                'body' => ChatPreview::lineOrImages([$latest->body], (bool) $latest->pictures_exists, (bool) $latest->images_exists),
                 // The preview carries no member reference, so the AI fact travels beside the name
                 // rather than inside it.
                 'authorName' => $latest->author?->name,

@@ -5,7 +5,9 @@ namespace App\Features\GroupEvent\Serializers;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\GroupEventCommentThread;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\AttachmentShape;
 use App\Files\ImageLadder;
+use App\Files\PostAttachments;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -60,7 +62,8 @@ class GroupEventSerializer
             // (docs/internals/body-text.md, "Render authority is the server").
             'format' => $event->format->value,
             'bodyHtml' => $event->format === BodyFormat::Plain ? null : BodyRenderer::render($event->body, $event->format)->toHtml(),
-            'images' => $event->images->map([self::class, 'image'])->all(),
+            'images' => PostAttachments::partition($event->images)['images']->map([self::class, 'image'])->all(),
+            'files' => PostAttachments::partition($event->images)['files']->map([AttachmentShape::class, 'of'])->all(),
             'author' => self::author($event->member),
             'linkCard' => LinkCardSerializer::card($event, $viewer),
             'createdAt' => $event->created_at->toIso8601String(),
@@ -85,7 +88,8 @@ class GroupEventSerializer
             'id' => $comment->getKey(),
             'number' => $comment->number,
             'body' => $comment->body,
-            'images' => $comment->images->map([self::class, 'image'])->all(),
+            'images' => PostAttachments::partition($comment->images)['images']->map([self::class, 'image'])->all(),
+            'files' => PostAttachments::partition($comment->images)['files']->map([AttachmentShape::class, 'of'])->all(),
             'linkCard' => LinkCardSerializer::card($comment, $viewer),
             'author' => self::author($comment->member),
             'createdAt' => $comment->created_at->toIso8601String(),

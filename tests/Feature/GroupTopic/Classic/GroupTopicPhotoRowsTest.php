@@ -43,7 +43,7 @@ class GroupTopicPhotoRowsTest extends TestCase
         $response->assertOk();
         foreach ([1, 2, 3] as $n) {
             $response->assertSeeInOrder([
-                '<label for="community_topic_photo_'.$n.'_photo">Photo '.$n.'</label>',
+                '<label for="community_topic_photo_'.$n.'_photo">Attachment '.$n.'</label>',
                 '<ul id="community_topic_photo_'.$n.'">',
                 '<input type="file" name="images[]" id="community_topic_photo_'.$n.'_photo"',
             ], false);
@@ -108,7 +108,7 @@ class GroupTopicPhotoRowsTest extends TestCase
         $response->assertOk();
         $response->assertSeeInOrder([
             '<textarea id="community_topic_comment_body" name="body"',
-            '<label for="community_topic_comment_photo_1_photo">Photo 1</label>',
+            '<label for="community_topic_comment_photo_1_photo">Attachment 1</label>',
             '<ul id="community_topic_comment_photo_1">',
             '<input type="file" name="images[]" id="community_topic_comment_photo_1_photo"',
             '<ul id="community_topic_comment_photo_2">',

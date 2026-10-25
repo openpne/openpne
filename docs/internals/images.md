@@ -228,6 +228,10 @@ base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it i
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.
 
+A file that is not a picture, posted in the same `images[]` slots, has its own cap,
+`OPENPNE_FILE_MAX_UPLOAD_KB` (`AttachmentLimit`, 10240 by default), and the same PHP and proxy
+prerequisites hold for it with that larger number ([attachments](attachments.md), "Limits").
+
 ### Shrinking in the browser
 
 The Modern pickers re-encode a picture on the member's device before it is sent, through a canvas,

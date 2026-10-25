@@ -6,7 +6,9 @@ use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\AttachmentShape;
 use App\Files\ImageLadder;
+use App\Files\PostAttachments;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
@@ -39,7 +41,8 @@ class GroupMessageSerializer
             'cursor' => (string) GroupTalkCursor::of($message),
             'author' => self::author($message->author),
             'mentions' => self::mentions($message),
-            'images' => $message->images->map([self::class, 'image'])->values()->all(),
+            'images' => PostAttachments::partition($message->images)['images']->map([self::class, 'image'])->values()->all(),
+            'files' => PostAttachments::partition($message->images)['files']->map([AttachmentShape::class, 'of'])->values()->all(),
             'linkCard' => LinkCardSerializer::card($message, $permissions->member),
             'reactions' => $reactions,
             'inReplyTo' => self::inReplyTo($message, $parents),
@@ -67,14 +70,15 @@ class GroupMessageSerializer
         if ($parent === null) {
             return ['deleted' => true];
         }
+        $parentPictures = PostAttachments::partition($parent->images)['images'];
 
         return [
             'deleted' => false,
             'id' => $parent->getKey(),
             'cursor' => (string) GroupTalkCursor::of($parent),
             'author' => self::author($parent->author),
-            'excerpt' => ChatPreview::lineOrImages([$parent->body], $parent->images->isNotEmpty()),
-            'thumbnailUrl' => $parent->images->first()?->file?->thumbnailUrl(120, 120, square: true),
+            'excerpt' => ChatPreview::lineOrImages([$parent->body], $parentPictures->isNotEmpty(), $parent->images->isNotEmpty()),
+            'thumbnailUrl' => $parentPictures->first()?->file?->thumbnailUrl(120, 120, square: true),
         ];
     }
 

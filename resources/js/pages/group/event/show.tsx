@@ -1,5 +1,6 @@
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { UserText } from '@/components/user-text';
@@ -146,6 +147,7 @@ export default function GroupEventShow() {
                 <RichBody body={event.body} bodyHtml={event.bodyHtml} />
                 <LinkCard card={event.linkCard} />
                 <ImageGrid images={event.images} variant="post" className="mt-2" />
+                <FileChips files={event.files} className="mt-2" />
                 <DetailReactionChips reactions={bodyReactions} />
 
             </Panel>

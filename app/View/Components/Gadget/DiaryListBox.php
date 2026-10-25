@@ -52,7 +52,7 @@ abstract class DiaryListBox extends Component
             'url' => route('diary.show', $diary),
             'title' => DiaryTitle::withCount($diary),
             'author' => $diary->member->name,
-            'hasImages' => ($diary->images_count ?? 0) > 0,
+            'hasImages' => ($diary->pictures_count ?? 0) > 0,
         ])->all();
     }
 }

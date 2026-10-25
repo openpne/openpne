@@ -4,6 +4,8 @@ namespace App\Features\DirectMessage\Serializers;
 
 use App\Features\DirectMessage\ConversationCursor;
 use App\Features\DirectMessage\ConversationPage;
+use App\Files\AttachmentShape;
+use App\Files\PostAttachments;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Member;
@@ -34,7 +36,8 @@ class ConversationMessageSerializer
             'author' => $message->sender === null ? null : DirectMessageSerializer::memberRef($message->sender),
             'isOwn' => (int) $message->sender_id === $viewerId,
             'read' => self::read($message, $viewerId, $counterpart),
-            'images' => $message->files->map([DirectMessageSerializer::class, 'image'])->values()->all(),
+            'images' => PostAttachments::partition($message->files)['images']->map([DirectMessageSerializer::class, 'image'])->values()->all(),
+            'files' => PostAttachments::partition($message->files)['files']->map([AttachmentShape::class, 'of'])->values()->all(),
         ];
     }
 

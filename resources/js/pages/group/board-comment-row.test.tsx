@@ -29,6 +29,7 @@ const comment: TopicComment = {
     number: 2,
     body: 'count me in',
     images: [],
+    files: [],
     linkCard: null,
     author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false },
     createdAt: '2026-09-20T10:00:00+09:00',

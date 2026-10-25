@@ -20,7 +20,7 @@ class FileFactory extends Factory
     {
         return [
             'name' => Str::random(40),
-            'type' => 'application/octet-stream',
+            'type' => 'image/png',
             'byte_size' => 0,
         ];
     }
