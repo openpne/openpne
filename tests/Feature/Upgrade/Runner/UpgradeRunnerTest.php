@@ -51,6 +51,19 @@ class UpgradeRunnerTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_a_hyphenated_source_database_passes_option_validation(): void
+    {
+        // Shared hosting names databases like `account-openpne_op3`; the driver guard is the next gate.
+        if (DB::connection()->getDriverName() === 'mysql') {
+            $this->markTestSkipped('On MySQL the run continues into the preflight; FileBinMigrationTest covers the hyphenated name there.');
+        }
+
+        $this->artisan('openpne:upgrade-from-3', ['--source-database' => 'account-openpne_op3'])
+            ->doesntExpectOutputToContain('--source-database must match')
+            ->expectsOutputToContain('requires MySQL')
+            ->assertFailed();
+    }
+
     public function test_upgrade_state_round_trips_metadata_and_casts(): void
     {
         $state = UpgradeState::create([

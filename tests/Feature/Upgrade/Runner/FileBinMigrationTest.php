@@ -155,6 +155,24 @@ class FileBinMigrationTest extends TestCase
         $this->assertSame(count($ids), (int) DB::scalar('SELECT COUNT(*) FROM `file_bin`'));
     }
 
+    public function test_preflight_and_move_accept_a_hyphenated_source_database(): void
+    {
+        $db = $this->hyphenatedSourceDb();
+        DB::statement('CREATE DATABASE IF NOT EXISTS `'.$db.'`');
+        $this->createOp3File("`{$db}`.`file`");
+        $this->createOp3FileBin("`{$db}`.`file_bin`", "`{$db}`.`file`", 'hyphen_file_bin_fk');
+        $this->seedFile("`{$db}`.`file`", 1, 'a');
+        $this->seedFileBin("`{$db}`.`file_bin`", 1, self::BLOB);
+        $migration = new FileBinMigration;
+
+        $this->assertNull($migration->preflight('', $db));
+
+        $migration->move('', $db, $this->out($lines));
+
+        $this->assertStringContainsString('DONE file_bin_move', implode("\n", $lines));
+        $this->assertSame(self::BLOB, DB::table('file_bin')->where('file_id', 1)->value('bin'));
+    }
+
     public function test_move_renames_a_prefixed_same_database_file_bin(): void
     {
         // A --source-prefix run: the bytes live in `op_file_bin`, so no-oping on the empty app
@@ -380,6 +398,11 @@ class FileBinMigrationTest extends TestCase
         return 'op3_filebin_src'.($token ? '_'.$token : '');
     }
 
+    private function hyphenatedSourceDb(): string
+    {
+        return str_replace('_', '-', $this->sourceDb()).'-hyphen';
+    }
+
     /** @param  mixed  $lines  populated with the captured output lines */
     private function out(&$lines): \Closure
     {
@@ -400,5 +423,6 @@ class FileBinMigrationTest extends TestCase
         }
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
         DB::statement('DROP DATABASE IF EXISTS `'.$this->sourceDb().'`');
+        DB::statement('DROP DATABASE IF EXISTS `'.$this->hyphenatedSourceDb().'`');
     }
 }

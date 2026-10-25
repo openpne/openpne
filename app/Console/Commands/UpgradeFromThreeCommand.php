@@ -70,8 +70,9 @@ class UpgradeFromThreeCommand extends Command
             return null;
         }
 
-        if ($database !== null && ! preg_match('/^[A-Za-z0-9_]+$/', $database)) {
-            $this->error('--source-database must match [A-Za-z0-9_]+.');
+        // A hyphen is common in hosting-provider database names and is fine inside the backticks.
+        if ($database !== null && ! preg_match('/^[A-Za-z0-9_-]+$/', $database)) {
+            $this->error('--source-database must match [A-Za-z0-9_-]+.');
 
             return null;
         }
