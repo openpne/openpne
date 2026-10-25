@@ -22,6 +22,28 @@ class PictureReadersTest extends TestCase
         $this->assertSame([], $this->filesContaining('/images_count|files_exists|images_exists/', ['resources/views'], ['*.php']));
     }
 
+    /** A slot existence read is allowed only as the "has files" half beside a pictures read on the same or an adjacent line. */
+    public function test_a_slot_existence_read_sits_beside_a_pictures_read(): void
+    {
+        $slotExists = "/(images|files)_exists|->(images|files)\\(\\)->exists\\(\\)|whereHas\\('(images|files)'\\)|withExists\\(\\[[^\\]]*'(images|files)'/";
+
+        $unpaired = [];
+        foreach ($this->filesContaining($slotExists, ['app'], ['*.php']) as $file) {
+            $lines = preg_split('/\R/', (string) file_get_contents(base_path($file))) ?: [];
+            foreach ($lines as $i => $line) {
+                if (preg_match($slotExists, $line) !== 1) {
+                    continue;
+                }
+                $window = implode("\n", array_slice($lines, max(0, $i - 1), 3));
+                if (! str_contains($window, 'pictures')) {
+                    $unpaired[] = "{$file}:".($i + 1);
+                }
+            }
+        }
+
+        $this->assertSame([], $unpaired);
+    }
+
     public function test_every_serializer_that_ships_images_partitions_them(): void
     {
         $shippers = $this->filesContaining("/'images' => .*->map\\(/", ['app'], ['*.php']);
