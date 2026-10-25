@@ -133,7 +133,8 @@ A file is fetched by URL and no page mediates it, so
 resolves the owning entity — otherwise a diary's images would still render while the diary itself
 answers 404 ([feature-modules.md](feature-modules.md#key-invariants) invariant 2). A topic or event
 names its own unit and the parent chain does the rest. Avatars and banner images belong to no unit
-and are never gated.
+and are never gated; a member-owned file that is not the avatar (an OpenPNE 3 upload) is gated by
+login in the policy itself, not by a unit.
 
 The admin file monitor reads through its own route (`AdminFileController`, admin guard, no policy),
 so an operator keeps moderating a unit they switched off.

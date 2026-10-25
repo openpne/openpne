@@ -290,6 +290,9 @@ class UpgradeMatrixAuditTest extends TestCase
             $this->assertArrayHasKey($spec['type'], $morphMap,
                 "FileUpgrade owns {$reference} as morph alias '{$spec['type']}', which is not in the morph map");
         }
+        foreach (array_keys((new FileUpgrade)->namePrefixOwners()) as $alias) {
+            $this->assertArrayHasKey($alias, $morphMap, "FileUpgrade owns name-prefixed files as morph alias '{$alias}', which is not in the morph map");
+        }
     }
 
     public function test_reaction_upgrade_morph_aliases_are_registered(): void

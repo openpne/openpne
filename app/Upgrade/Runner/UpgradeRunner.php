@@ -13,6 +13,7 @@ use App\Support\SurfaceMode;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\FileUpgrade;
 use App\Upgrade\UpgradeStep;
 use Closure;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,9 @@ final class UpgradeRunner
         $termErrors = ! $report->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
             ? (new TermOverridePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : [];
+        $uploadReport = ! $report->hasErrors() && $this->hasStep(FileUpgrade::class)
+            ? (new UploadFileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+            : new PreflightReport([], []);
 
         foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
             $out("ERROR {$error}");
@@ -95,7 +99,7 @@ final class UpgradeRunner
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings) as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings, $uploadReport->warnings) as $warning) {
             $out("WARN {$warning}");
         }
 
@@ -476,6 +480,18 @@ final class UpgradeRunner
     private function steps(): array
     {
         return $this->steps ?? StepRegistry::all();
+    }
+
+    /** @param  class-string<UpgradeStep>  $class */
+    private function hasStep(string $class): bool
+    {
+        foreach ($this->steps() as $step) {
+            if ($step instanceof $class) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function readsSourceTable(string $table): bool

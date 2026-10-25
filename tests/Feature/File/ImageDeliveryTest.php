@@ -12,6 +12,7 @@ use App\Files\ImageTransform;
 use App\Files\ProcessedImage;
 use App\Models\File;
 use App\Models\Member;
+use App\Models\MemberImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -337,11 +338,14 @@ class ImageDeliveryTest extends TestCase
 
     private function avatar(Member $owner, int $width = 240, int $height = 120): File
     {
-        return app(FileUploader::class)->store(
+        $file = app(FileUploader::class)->store(
             UploadedFile::fake()->image('a.png', $width, $height),
             'member',
             (int) $owner->getKey(),
         );
+        MemberImage::query()->create(['member_id' => $owner->getKey(), 'file_id' => $file->getKey()]);
+
+        return $file;
     }
 
     private function webpBytes(): string

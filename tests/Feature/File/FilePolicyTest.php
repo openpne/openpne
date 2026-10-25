@@ -4,6 +4,7 @@ namespace Tests\Feature\File;
 
 use App\Models\File;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
@@ -152,13 +153,30 @@ class FilePolicyTest extends TestCase
         $this->assertTrue(Gate::forUser(null)->allows('view', $this->memberImage(Member::factory()->create())));
     }
 
+    public function test_a_member_owned_file_that_is_not_the_avatar_needs_a_login(): void
+    {
+        // An OpenPNE 3 upload-plugin file: readable by any member the owner does not block, never by a guest.
+        $owner = Member::factory()->create();
+        $upload = File::factory()->create(['type' => 'application/pdf', 'related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
+        $blocked = Member::factory()->create();
+        $owner->blocksMade()->attach($blocked, ['created_at' => now()]);
+
+        $this->assertFalse(Gate::forUser(null)->allows('view', $upload));
+        $this->assertTrue(Gate::forUser(Member::factory()->create())->allows('view', $upload));
+        $this->assertTrue(Gate::forUser($owner)->allows('view', $upload));
+        $this->assertFalse(Gate::forUser($blocked)->allows('view', $upload));
+    }
+
     private function memberImage(Member $owner): File
     {
-        return File::factory()->create([
+        $file = File::factory()->create([
             'type' => 'image/png',
             'related_entity_type' => 'member',
             'related_entity_id' => $owner->getKey(),
         ]);
+        MemberImage::query()->create(['member_id' => $owner->getKey(), 'file_id' => $file->getKey()]);
+
+        return $file;
     }
 
     private function postImage(TimelinePost $post): File

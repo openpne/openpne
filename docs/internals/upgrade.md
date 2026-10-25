@@ -15,7 +15,8 @@ post dates survive; a target column with no OpenPNE 3 source (a surrogate id, ti
 never kept) relies on its default, as each step's `targetDefaults()` records (`gaps()` is the
 reverse: source columns or tables with no target).
 `FileUpgrade::ownedFileReferences()` drives both the owner CASE and the audit, so an owning table
-cannot be wired into one without the other.
+cannot be wired into one without the other; `namePrefixOwners()` adds the arms for files whose only
+owner record is their name ("OpenPNE 3 upload files" below).
 
 `StepRegistry::classes()` is the run order (FK order: `files` first, image join rows last).
 `tests/Feature/Upgrade/UpgradeMatrixAuditTest.php` pins every source table to a step or an
@@ -151,7 +152,9 @@ images is an ERROR, because the step would fail on the row mid-run (a row no ste
 its WARN). `FileOwnerPreflight` counts files that
 more than one owning row points at, across every `FileUpgrade::ownedFileReferences()` arm: OpenPNE 3
 never made the file columns unique, and a file with two owners would be read under one owner's
-audience from the other's page, so it is an ERROR. `TermOverridePreflight` counts the source term rows
+audience from the other's page, so it is an ERROR. `UploadFileOwnerPreflight` counts the upload-plugin
+files whose name names a member or community the upgrade does not carry, a WARN: they migrate
+ownerless, and the operator learns which old links will answer 404. `TermOverridePreflight` counts the source term rows
 that fold onto one `term_overrides` (name, locale) key and a value wider than the column, both an
 ERROR for the same reason. `NicePreflight` counts a member's second like on one carried target as
 an ERROR for the same reason again (opLikePlugin's unique index came after 0.9), and the likes the
@@ -207,6 +210,19 @@ checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_st
 verifies `Hash::check(md5($attempt), $hash)` and rehashes to plain bcrypt on the first success.
 Its checkpoint's `rows_affected` counts the completing run's rows only; verify reads the terminal
 state, not the count. `EmojiTransform` aborts on a non-utf8mb4 connection, which would mangle non-BMP emoji to `?`.
+
+## OpenPNE 3 upload files
+
+opUploadFilePlugin let a member upload any file and paste its `/f/show/{id}.{ext}` link into a body;
+the plugin wrote no owning row, only a name of the form `/m{member_id}/{time}{filename}` (or
+`/c{community_id}/…` through its API). `FileUpgrade::namePrefixOwners()` reads the owner out of that
+name after every referencing-table arm has had its turn: `/m` becomes the member when the upgrade
+carries that member, `/c` the group when the community exists, and anything else (`/m0/`, a skipped
+member, a deleted community, a malformed name) stays ownerless. The visibility follows OpenPNE 3,
+where the download required a login and nothing else: a group-owned file is readable by any signed-in
+member (the group arm), and `FilePolicy` opens a member-owned file to a guest only when it is the
+member's avatar, so an upload is readable by any signed-in member the owner does not block. A member's
+deletion leaves such files ownerless rather than deleting them.
 
 ## file_bin
 
