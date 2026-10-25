@@ -256,8 +256,8 @@ change from a problem when you go through it.
   is left out where OpenPNE 3 itself read its default, and the report names it. The Classic theme is
   not a copied row either: a pass after the walk reads which skin plugins OpenPNE 3 had enabled (from
   its `plugin` table; an activation written in `data/config/plugin.yml` is not seen), and only when the
-  theme plugin was the one enabled skin does `Theme_used` (or, absent, the first theme package) become
-  `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*. A theme of your own, one
+  theme plugin was the one enabled skin does `Theme_used` (or, absent, `bamboo`, the package a stock
+  OpenPNE 3 substituted) become `classic_theme`; change it afterwards on *Appearance (Classic) → Theme*. A theme of your own, one
   not among the vendored packages, is kept by name with a warning and shows the default skin until you
   copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then).
   Six OpenPNE 3 packages are not vendored, because their background photograph has no

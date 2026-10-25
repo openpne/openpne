@@ -25,6 +25,9 @@ final class ClassicThemeSelection
 
     private const BASIC_PLUGIN = 'opSkinBasicPlugin';
 
+    /** The first package of a stock OpenPNE 3 `web/opSkinThemePlugin`, which it wore when `Theme_used` was unset. */
+    private const SUBSTITUTE = 'bamboo';
+
     public static function missingPackageMessage(string $theme): string
     {
         return self::KEY.": Theme_used '{$theme}' is not under public/opSkinThemePlugin, so the default skin shows until the package is copied there (verify-upgrade fails until then); or choose another on Appearance (Classic) > Theme.";
@@ -94,8 +97,7 @@ final class ClassicThemeSelection
     /**
      * OpenPNE 3's rule as far as its tables show it (it also counted its disk): the two bundled skins
      * count as enabled without a `plugin` row, and only the theme plugin as the one enabled `opSkin*`
-     * plugin dressed the site. `Theme_used` is kept as written, even unvendored; without the row the
-     * first package under public/opSkinThemePlugin stands in.
+     * plugin dressed the site. `Theme_used` is kept as written, even unvendored, and SUBSTITUTE stands in without the row.
      */
     public function select(string $sourcePrefix, ?string $sourceDatabase): string
     {
@@ -117,6 +119,6 @@ final class ClassicThemeSelection
             return $used;
         }
 
-        return (string) (array_key_first(ClassicThemes::all()) ?? '');
+        return self::SUBSTITUTE;
     }
 }

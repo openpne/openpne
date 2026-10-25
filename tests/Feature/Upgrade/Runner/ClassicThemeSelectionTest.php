@@ -48,13 +48,14 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->seedPlugin('opSkinBasicPlugin', false);
 
         $this->assertTrue($this->runPass());
-        $this->assertSame('bootstrap', $this->stored());
+        $this->assertSame('bamboo', $this->stored());
+        $this->assertContains('WARN '.ClassicThemeSelection::missingPackageMessage('bamboo'), $this->out);
 
         UpgradeState::query()->delete();
         $this->seedConfig('Theme_used', '');
 
         $this->assertTrue($this->runPass());
-        $this->assertSame('bootstrap', $this->stored());
+        $this->assertSame('bamboo', $this->stored());
     }
 
     public function test_a_theme_used_not_vendored_here_is_kept_and_reported_and_fails_verify_until_copied_in(): void
@@ -108,7 +109,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertTrue($this->runPass());
 
         $this->assertContains('SKIP classic_theme_selection: already completed', $this->out);
-        $this->assertSame('bootstrap', $this->stored());
+        $this->assertSame('bamboo', $this->stored());
     }
 
     public function test_the_verifier_accepts_the_default_skin_or_a_package_on_disk_and_refuses_the_rest(): void
