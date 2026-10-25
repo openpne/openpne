@@ -156,9 +156,10 @@ without one.
 
 `openpne:image-cache warm` makes the canonical of every picture that has none — a row imported from
 OpenPNE 3, or one evicted from the cache disk — and records the size of every row missing one. It is
-optional: a first view makes the same canonical. It walks newest first, `--limit N` stops it after N
-pictures were asked of the processor (rows already warm cost nothing and are not counted) and
-`--since <date>` keeps it to rows stored from that date, so an archive whose canonicals would take
+optional: a first view makes the same canonical and records the same facts. It walks newest (highest
+id) first, `--limit N` stops it once N pictures were made (a row already warm, refused or unreadable
+is passed over without counting, so the next run goes on from where this one stopped) and
+`--since <date>` keeps it, `status` and `rebuild` to rows stored from that date, so an archive whose canonicals would take
 as much disk again as its originals is warmed by the slice still being looked at, or run by run in
 the background. It is idempotent and an interrupted run resumes by being re-run. A picture
 the processor refuses is remembered as refused ([security](security.md), "Decoding an upload"):

@@ -29,8 +29,8 @@ class ImageCacheCommand extends Command
     protected $signature = 'openpne:image-cache
         {action : status, warm or rebuild}
         {--retry-failed : with warm, ask the processor again about the pictures it once refused}
-        {--limit= : with warm or rebuild, stop once this many pictures were asked of the processor}
-        {--since= : with warm or rebuild, only pictures stored on or after this date}';
+        {--limit= : with warm, stop once this many pictures were made}
+        {--since= : only pictures stored on or after this date}';
 
     protected $description = 'Inspect, warm or rebuild the canonical of every stored picture, newest first';
 
@@ -42,7 +42,7 @@ class ImageCacheCommand extends Command
     public function handle(ImageCache $cache, ImageProcessor $processor): int
     {
         return match ($this->argument('action')) {
-            'status' => $this->status($cache),
+            'status' => $this->scoped(fn (Builder $pictures): int => $this->status($pictures, $cache)),
             'warm', 'rebuild' => $this->scoped(fn (Builder $pictures, ?int $limit): int => $this->warm(
                 $pictures, $limit, $cache, $processor->preservesAnimation(), retryFailed: (bool) $this->option('retry-failed'), rebuild: $this->argument('action') === 'rebuild',
             )),
@@ -50,12 +50,12 @@ class ImageCacheCommand extends Command
         };
     }
 
-    private function status(ImageCache $cache): int
+    private function status(Builder $pictures, ImageCache $cache): int
     {
         $total = $warm = $refused = $cold = $unshown = $animated = $unknown = 0;
         $refusedRows = $unshownRows = [];
 
-        $this->images()->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$animated, &$unknown, &$refusedRows, &$unshownRows): void {
+        $pictures->chunkById(200, function (Collection $chunk) use ($cache, &$total, &$warm, &$refused, &$cold, &$unshown, &$animated, &$unknown, &$refusedRows, &$unshownRows): void {
             foreach ($chunk as $file) {
                 $total++;
 
@@ -100,6 +100,12 @@ class ImageCacheCommand extends Command
         $limit = $this->option('limit');
         $since = $this->option('since');
 
+        if ($limit !== null && $this->argument('action') !== 'warm') {
+            $this->error('--limit is for warm; rebuild starts over from the newest picture, so a limit would never pass it.');
+
+            return self::FAILURE;
+        }
+
         if ($limit !== null && (! ctype_digit($limit) || (int) $limit < 1)) {
             $this->error("--limit [{$limit}] is not a positive count.");
 
@@ -108,6 +114,10 @@ class ImageCacheCommand extends Command
 
         if ($since !== null) {
             try {
+                if ($since === '') {
+                    throw new InvalidFormatException('empty');
+                }
+
                 $pictures->where('created_at', '>=', Carbon::parse($since));
             } catch (InvalidFormatException) {
                 $this->error("--since [{$since}] is not a date.");
@@ -119,22 +129,17 @@ class ImageCacheCommand extends Command
         return $run($pictures, $limit === null ? null : (int) $limit);
     }
 
-    /**
-     * Newest first, so a bounded run covers the pictures still being looked at and the archive can
-     * follow run by run; $limit counts the pictures the processor was asked for, warm ones cost no run.
-     */
+    /** $limit counts pictures made: a refusal or a failure is not progress, so counting it could leave a run stuck on the same rows. */
     private function warm(Builder $pictures, ?int $limit, ImageCache $cache, bool $keepsFrames, bool $retryFailed, bool $rebuild): int
     {
         $n = ['done' => 0, 'facts' => 0, 'refused' => 0, 'skipped' => 0, 'unavailable' => 0, 'unreadable' => 0, 'unwritten' => 0, 'unshown' => 0];
         $failedRows = $unshownRows = [];
         $streak = 0;
         $stopped = false;
-        $asked = 0;
         $limited = false;
 
-        $pictures->chunkByIdDesc(200, function (Collection $chunk) use ($cache, $keepsFrames, $retryFailed, $rebuild, $limit, &$n, &$failedRows, &$unshownRows, &$streak, &$stopped, &$asked, &$limited): bool {
+        $pictures->chunkByIdDesc(200, function (Collection $chunk) use ($cache, $keepsFrames, $retryFailed, $rebuild, $limit, &$n, &$failedRows, &$unshownRows, &$streak, &$stopped, &$limited): bool {
             foreach ($chunk as $file) {
-
                 if ($file->imageFormat() === null) {
                     $n['unshown']++;
                     $this->remember($unshownRows, $file, (string) $file->type);
@@ -154,12 +159,11 @@ class ImageCacheCommand extends Command
                     continue;
                 }
 
-                if ($limit !== null && $asked >= $limit) {
+                if ($limit !== null && $n['done'] >= $limit) {
                     $limited = true;
 
                     return false;
                 }
-                $asked++;
 
                 try {
                     $canonical = $rebuild ? $cache->rebuild($file) : $cache->warm($file);
