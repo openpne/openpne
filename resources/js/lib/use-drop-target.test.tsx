@@ -11,9 +11,9 @@ const picture = () => new File([new Uint8Array(4)], 'a.png', { type: 'image/png'
 const withFiles = (files: File[]) => ({ types: ['Files'], files, getData: () => '' });
 const withText = (text: string, files: File[] = []) => ({ types: ['text/plain'], files, getData: (type: string) => (type === 'text/plain' ? text : '') });
 
-function Target({ onFiles, enabled = true, paste = false }: { onFiles: (files: File[]) => void; enabled?: boolean; paste?: boolean }) {
+function Target({ onFiles, enabled = true, paste = false, pictures = false }: { onFiles: (files: File[]) => void; enabled?: boolean; paste?: boolean; pictures?: boolean }) {
     const field = useRef<HTMLDivElement>(null);
-    const dragging = useDropTarget(field, { onFiles, enabled, paste });
+    const dragging = useDropTarget(field, { onFiles, enabled, paste, pictures });
 
     return (
         <form data-testid="form" data-dragging={dragging}>
@@ -40,6 +40,20 @@ test('the form around the field is the target; a drop with pictures hands them o
     fireEvent.drop(getByTestId('child'), { dataTransfer });
     expect(onFiles).toHaveBeenCalledWith([expect.objectContaining({ name: 'a.png' })]);
     expect(form.dataset.dragging).toBe('false');
+});
+
+test('a dropped file that is no picture is handed on, unless pictures alone were asked for', () => {
+    const notes = new File(['x'], 'notes.txt', { type: 'text/plain' });
+    const any = vi.fn();
+    const { getByTestId, unmount } = render(<Target onFiles={any} />);
+    fireEvent.drop(getByTestId('child'), { dataTransfer: withFiles([notes]) });
+    expect(any).toHaveBeenCalledWith([expect.objectContaining({ name: 'notes.txt' })]);
+    unmount();
+
+    const picturesOnly = vi.fn();
+    const only = render(<Target onFiles={picturesOnly} pictures />);
+    fireEvent.drop(only.getByTestId('child'), { dataTransfer: withFiles([notes]) });
+    expect(picturesOnly).not.toHaveBeenCalled();
 });
 
 test('a drag of text is left to the browser and shows no ring', () => {

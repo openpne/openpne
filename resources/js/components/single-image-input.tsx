@@ -32,6 +32,7 @@ export function SingleImageInput({
             }
         },
         paste,
+        pictures: true,
     });
 
     return (

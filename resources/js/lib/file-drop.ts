@@ -14,21 +14,21 @@ export function carriesPick(transfer: DataTransfer | null): boolean {
     return types.includes('Files') && !types.includes('text/html');
 }
 
-/** The pictures among dropped files; what is not a picture is ignored rather than refused. */
-export function droppedImages(transfer: DataTransfer | null): File[] {
-    return Array.from(transfer?.files ?? []).filter((file) => file.type.startsWith('image/'));
+/** The dropped files, or with `pictures` only the pictures among them; what is left out is ignored rather than refused. */
+export function droppedFiles(transfer: DataTransfer | null, pictures = false): File[] {
+    return Array.from(transfer?.files ?? []).filter((file) => !pictures || file.type.startsWith('image/'));
 }
 
 /**
- * The pictures a paste carries, and none when it carries plain text: a copy from a spreadsheet or a
+ * The files a paste carries, and none when it carries plain text: a copy from a spreadsheet or a
  * document puts both on the clipboard, and the text is what was meant.
  */
-export function pastedImages(clipboard: DataTransfer | null): File[] {
+export function pastedFiles(clipboard: DataTransfer | null, pictures = false): File[] {
     if (clipboard === null || clipboard.getData('text/plain') !== '') {
         return [];
     }
 
-    return Array.from(clipboard.files).filter((file) => file.type.startsWith('image/'));
+    return Array.from(clipboard.files).filter((file) => !pictures || file.type.startsWith('image/'));
 }
 
 /**

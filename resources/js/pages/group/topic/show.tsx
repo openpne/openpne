@@ -165,7 +165,7 @@ export default function GroupTopicShow() {
                         <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
                             <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
                         </Field>
-                        <ImagesField id="comment_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
+                        <ImagesField id="comment_images" label={t('Attachments')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
                         <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
                             {t('Post comment')}
                         </Button>

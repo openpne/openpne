@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { assignToInput, carriesFiles, carriesPick, droppedImages, pastedImages, takesText } from './file-drop';
+import { assignToInput, carriesFiles, carriesPick, droppedFiles, pastedFiles, takesText } from './file-drop';
 
 const picture = (name: string) => new File([new Uint8Array(4)], name, { type: 'image/png' });
 
@@ -23,10 +23,11 @@ test('a drag carries files only when the browser says so', () => {
     expect(carriesFiles(null)).toBe(false);
 });
 
-test('only the pictures among dropped files are handed on', () => {
-    const files = droppedImages(transfer([picture('a.png'), new File(['x'], 'notes.txt', { type: 'text/plain' })]));
+test('every dropped file is handed on, or the pictures alone where asked', () => {
+    const dropped = transfer([picture('a.png'), new File(['x'], 'notes.txt', { type: 'text/plain' })]);
 
-    expect(files.map((file) => file.name)).toEqual(['a.png']);
+    expect(droppedFiles(dropped).map((file) => file.name)).toEqual(['a.png', 'notes.txt']);
+    expect(droppedFiles(dropped, true).map((file) => file.name)).toEqual(['a.png']);
 });
 
 test('a pick is files without markup: a picture dragged off a page is none, a desktop file with its URI is one', () => {
@@ -38,10 +39,11 @@ test('a pick is files without markup: a picture dragged off a page is none, a de
     expect(carriesPick(null)).toBe(false);
 });
 
-test('a paste that carries plain text pastes the text and no picture', () => {
-    expect(pastedImages(transfer([picture('cell.png')], 'A1\tB1'))).toEqual([]);
-    expect(pastedImages(transfer([picture('shot.png')])).map((file) => file.name)).toEqual(['shot.png']);
-    expect(pastedImages(null)).toEqual([]);
+test('a paste that carries plain text pastes the text and no file', () => {
+    expect(pastedFiles(transfer([picture('cell.png')], 'A1\tB1'))).toEqual([]);
+    expect(pastedFiles(transfer([picture('shot.png')])).map((file) => file.name)).toEqual(['shot.png']);
+    expect(pastedFiles(transfer([new File(['x'], 'notes.txt', { type: 'text/plain' })]), true)).toEqual([]);
+    expect(pastedFiles(null)).toEqual([]);
 });
 
 test('a drop lands in the input as a pick, the first file alone for a single-file input', () => {

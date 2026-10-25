@@ -1,12 +1,14 @@
 import { type RefObject, useEffect, useRef, useState } from 'react';
-import { carriesPick, droppedImages, pastedImages } from '@/lib/file-drop';
+import { carriesPick, droppedFiles, pastedFiles } from '@/lib/file-drop';
 
 interface DropTargetOptions {
     onFiles: (files: File[]) => void;
     /** While false a drop or paste is ignored, the way a disabled attach button ignores a click. */
     enabled?: boolean;
-    /** Whether an image-only paste inside the target is taken as well. */
+    /** Whether a file-only paste inside the target is taken as well. */
     paste?: boolean;
+    /** Take pictures alone, leaving every other dropped or pasted file to the browser. */
+    pictures?: boolean;
 }
 
 /**
@@ -14,7 +16,7 @@ interface DropTargetOptions {
  * only when it is a pick (`carriesPick`). The drag enter/leave pair is counted, since the browser
  * fires them for every child the pointer crosses.
  */
-export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, enabled = true, paste = false }: DropTargetOptions): boolean {
+export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, enabled = true, paste = false, pictures = false }: DropTargetOptions): boolean {
     const [dragging, setDragging] = useState(false);
     // Read through a ref so a render mid-drag does not re-bind the listeners and lose the count.
     const latest = useRef({ onFiles, enabled });
@@ -59,13 +61,13 @@ export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, ena
             event.preventDefault();
             depth = 0;
             setDragging(false);
-            const files = droppedImages(event.dataTransfer);
+            const files = droppedFiles(event.dataTransfer, pictures);
             if (latest.current.enabled && files.length > 0) {
                 latest.current.onFiles(files);
             }
         };
         const pasted = (event: ClipboardEvent) => {
-            const files = pastedImages(event.clipboardData);
+            const files = pastedFiles(event.clipboardData, pictures);
             if (files.length === 0) {
                 return;
             }
@@ -89,7 +91,7 @@ export function useDropTarget(ref: RefObject<HTMLElement | null>, { onFiles, ena
             target.removeEventListener('drop', drop);
             target.removeEventListener('paste', pasted);
         };
-    }, [ref, paste]);
+    }, [ref, paste, pictures]);
 
     return dragging;
 }

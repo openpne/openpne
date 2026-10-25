@@ -1,4 +1,4 @@
-import { ImagePlus, SendHorizontal } from 'lucide-react';
+import { Paperclip, SendHorizontal } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
 import { BLEED_EDGES } from '@/components/card';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
@@ -10,7 +10,7 @@ import { Tip } from '@/components/ui/tooltip';
 import { useAutoGrow } from '@/lib/auto-grow';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
-import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
+import { acceptPicks, isPicture, MAX_POST_IMAGES, megabytes, withinAttachmentCap } from '@/lib/image-picks';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { cn } from '@/lib/utils';
 
@@ -53,10 +53,11 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
     };
 
     useEffect(() => {
-        const urls = images.map((image) => URL.createObjectURL(image));
+        // A file that is not a picture previews as its name, so it gets no object URL.
+        const urls = images.map((image) => (isPicture(image) ? URL.createObjectURL(image) : ''));
         setPreviews(urls);
 
-        return () => urls.forEach((url) => URL.revokeObjectURL(url));
+        return () => urls.forEach((url) => url !== '' && URL.revokeObjectURL(url));
     }, [images]);
 
     const attach = (event: ChangeEvent<HTMLInputElement>) => {
@@ -70,8 +71,15 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
         if (picked.length === 0) {
             return;
         }
-        const { files: next, refused } = acceptPicks(held.current, picked, MAX_POST_IMAGES);
-        setCapNote(refused ? t('You can attach up to :max images.', { max: MAX_POST_IMAGES }) : null);
+        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload.attachmentMaxBytes);
+        const { files: next, refused } = acceptPicks(held.current, fitting, MAX_POST_IMAGES);
+        setCapNote(
+            oversized
+                ? t('A file can be up to :size.', { size: megabytes(upload.attachmentMaxBytes) })
+                : refused
+                  ? t('You can attach up to :max files.', { max: MAX_POST_IMAGES })
+                  : null,
+        );
         const accepted = next.slice(held.current.length);
         if (accepted.length === 0) {
             return;
@@ -149,7 +157,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                 dragging && 'ring-2 ring-ring ring-inset',
             )}
         >
-            {dragging && <p className="pb-2 text-xs text-muted-foreground">{t('Drop a picture here')}</p>}
+            {dragging && <p className="pb-2 text-xs text-muted-foreground">{t('Drop a file here')}</p>}
             {error !== null && (
                 <p role="alert" className="pb-2 text-sm text-destructive">
                     {error}
@@ -161,11 +169,17 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                         <ul className="flex gap-2">
                             {images.map((image, index) => (
                                 <li key={`${image.name}-${index}`} className="relative w-16">
-                                    {/* Alt-less: the remove button beside it is what names the picture. */}
-                                    {previews[index] !== undefined && (
+                                    {/* Alt-less: the remove button beside it is what names the attachment. */}
+                                    {previews[index] !== undefined && previews[index] !== '' && (
                                         <img src={previews[index]} alt="" className="size-16 rounded-lg border border-border object-cover" />
                                     )}
-                                    <Tip label={t('Remove image :number', { number: index + 1 })}>
+                                    {previews[index] === '' && (
+                                        <span className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-muted px-1 text-3xs text-muted-foreground">
+                                            <Paperclip className="size-4 shrink-0" aria-hidden />
+                                            <span className="w-full truncate text-center">{image.name}</span>
+                                        </span>
+                                    )}
+                                    <Tip label={t('Remove attachment :number', { number: index + 1 })}>
                                         <button
                                             type="button"
                                             onClick={() => remove(index)}
@@ -191,8 +205,8 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
             )}
             <div className="flex items-end gap-2">
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
-                <input ref={fileInput} type="file" accept={upload.accept} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
-                <Tip label={t('Attach an image')}>
+                <input ref={fileInput} type="file" multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
+                <Tip label={t('Attach a file')}>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -201,7 +215,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                         disabled={sending || images.length >= MAX_POST_IMAGES}
                         className="shrink-0"
                     >
-                        <ImagePlus className="size-5" aria-hidden />
+                        <Paperclip className="size-5" aria-hidden />
                     </Button>
                 </Tip>
                 <div className="min-w-0 flex-1">

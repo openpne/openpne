@@ -3,14 +3,14 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Tip } from '@/components/ui/tooltip';
 import { useT } from '@/lib/i18n';
-import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
+import { acceptPicks, isPicture, MAX_POST_IMAGES, megabytes, withinAttachmentCap } from '@/lib/image-picks';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { cn } from '@/lib/utils';
 import type { ImageUploadPolicy, PageProps } from '@/types';
 
 /**
- * What the server shipped the pickers: the `<input accept>` list its processor reads (PostImageRules
- * is the gate) and the shrink thresholds, null while the site has switched the shrink off.
+ * What the server shipped the pickers: the types its processor reads (PostImageRules is the gate),
+ * the shrink thresholds, null while the site has switched the shrink off, and the attachment cap.
  */
 export function useImageUpload(): ImageUploadPolicy {
     return usePage<PageProps>().props.imageUpload;
@@ -42,7 +42,7 @@ async function animatedWebp(file: File): Promise<boolean> {
  */
 export async function shrink(file: File, upload: ImageUploadPolicy): Promise<File> {
     const policy = upload.shrink;
-    if (policy === null) {
+    if (policy === null || !isPicture(file)) {
         return file;
     }
     // A GIF stays as picked: the canvas would flatten its animation, so an oversized one fails visibly.
@@ -144,10 +144,10 @@ interface ImagesFieldProps {
 }
 
 /**
- * Shared picker for an `images[]` upload. Owns the failure modes the bare <input type="file">
- * pattern got wrong: selections render as removable chips and the input's own value is cleared
- * on every pick (nothing stale survives a reset after posting), oversized photos are shrunk
- * client-side before submit, and server errors keyed `images` and `images.N` are both surfaced.
+ * Shared picker for an `images[]` upload, pictures and files alike. Owns the failure modes the bare
+ * <input type="file"> pattern got wrong: selections render as removable chips and the input's own
+ * value is cleared on every pick (nothing stale survives a reset after posting), oversized photos
+ * are shrunk client-side before submit, and server errors keyed `images` and `images.N` are both surfaced.
  */
 export function ImagesField({ id, label, files, onChange, errors, name = 'images', max = MAX_POST_IMAGES }: ImagesFieldProps) {
     const t = useT();
@@ -183,8 +183,11 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
         if (picked.length === 0) {
             return;
         }
-        const { files: next, refused } = acceptPicks(files, picked, max);
-        setClientError(refused ? t('You can attach up to :max images.', { max }) : null);
+        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload.attachmentMaxBytes);
+        const { files: next, refused } = acceptPicks(files, fitting, max);
+        setClientError(
+            oversized ? t('A file can be up to :size.', { size: megabytes(upload.attachmentMaxBytes) }) : refused ? t('You can attach up to :max files.', { max }) : null,
+        );
         const accepted = next.slice(files.length);
         if (accepted.length === 0) {
             return;
@@ -213,7 +216,7 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
     return (
         <div ref={root} className={cn('space-y-2 rounded-md', dragging && 'ring-2 ring-ring ring-offset-2 ring-offset-background')}>
             <Label htmlFor={id}>{label}</Label>
-            {dragging && <p className="text-xs text-muted-foreground">{t('Drop a picture here')}</p>}
+            {dragging && <p className="text-xs text-muted-foreground">{t('Drop a file here')}</p>}
             {files.length > 0 && (
                 <ul className="space-y-1">
                     {files.map((file, index) => (
@@ -240,7 +243,6 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
             <input
                 id={id}
                 type="file"
-                accept={upload.accept}
                 multiple={max > 1}
                 disabled={busy || files.length >= max}
                 aria-invalid={error ? true : undefined}
