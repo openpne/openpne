@@ -27,6 +27,9 @@ route is GET-reachable). This drives URL-compatibility scope — only GET-reacha
 bookmarked / mailed / linked, so only they must be preserved; POST-only form-submit routes
 are still covered for completeness but sit outside the URL-compatibility contract.
 
+The `f` module is opUploadFilePlugin's, transcribed from its `routing.yml` because the dump was
+taken without the plugin installed.
+
 OpenPNE 3 also defines a global deprecated fallback `/:module/:action/*`
 (`opSymfonyDefaultRouteCollection`), so a module's actions are reachable by URL even
 without a named route. A module can disable it — opDiaryPlugin adds `diary_nodefaults`

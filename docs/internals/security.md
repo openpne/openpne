@@ -458,12 +458,13 @@ upload, before the row was saved ([file-storage](file-storage.md), "Writing an
 upload"; [images](images.md), "files.width / files.height"). A re-encode carries no source metadata
 — EXIF with its GPS coordinates, XMP, IPTC, comments — and, since the processor applies EXIF
 Orientation as it draws, none is needed for the picture to stand upright. The inline
-`Content-Disposition` names the file token, never the uploader's file name.
+`Content-Disposition` names the file id, never the uploader's file name.
 
 This holds for rows imported from OpenPNE 3 too: their canonical is produced on first view, or ahead
-of time by `openpne:image-cache warm`, from the same bytes and by the same processor. Only
+of time by `openpne:image-cache warm`, from the same bytes and by the same processor, and the
+OpenPNE 3 upload-plugin link `/f/show/{id}.{ext}` answers by the same two rules. Only
 the admin monitoring route (`/admin/file/{name}/raw`) and a non-raster attachment stream the stored
-bytes as they are.
+bytes as they are, always as `application/octet-stream` with `nosniff`, whatever the name or type says.
 
 What a re-encode does not do is validate the container: a PNG with a wrong CRC or bytes trailing the
 end marker, which the metadata stripper this replaced used to refuse, is stored as uploaded if the

@@ -150,6 +150,14 @@ return [
             'sns_timeline' => ['/sns/timeline', 'ANY'],
         ],
     ],
+    // opUploadFilePlugin (plugins/opUploadFilePlugin/apps/pc_frontend/config/routing.yml), added by hand
+    // since the inventory dump was taken without the plugin.
+    'f' => [
+        'disables_global_fallback' => false,
+        'routes' => [
+            'file_show' => ['/f/show/:filename', 'ANY'],
+        ],
+    ],
     'default' => [
         // A plugin's own `*_nodefaults` catch-all also targets default/error but is recorded as that
         // module's `disables_global_fallback`, not here.

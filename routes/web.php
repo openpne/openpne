@@ -49,6 +49,7 @@ use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\LegacyUploadFileController;
 use App\Http\Controllers\LinkCardImageController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PublicFileController;
@@ -340,6 +341,10 @@ Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->c
 // database-driver sessions outright (see ResetMemberPassword).
 Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+
+    // OpenPNE 3 upload-plugin links (/f/show/{id}.{ext}); the extension is whatever the uploader's name ended in.
+    Route::get('/f/show/{file}', [LegacyUploadFileController::class, 'show'])
+        ->where('file', '[0-9]+(\\.[^/]+)?')->name('file.legacy_upload');
 
     // Shell-wide, not notification-owned, so it carries no unit gate (docs/internals/notifications.md).
     Route::get('/unread-counts', [UnreadCountsController::class, 'show'])->name('unread.counts');

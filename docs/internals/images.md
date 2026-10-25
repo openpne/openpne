@@ -380,7 +380,7 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
 - **Clearing the cache disk no longer reaches browsers**: every inline raster answer — `/cache/img/…`
   variants, the `w_h` original, `/file/{name}`, the banner and public routes — carries the canonical's
   or the variant's key hashed as its `ETag` (`ImageTransform::etag`). A non-raster attachment and the
-  admin raw route carry the file token, whose bytes never change. Each is checked after the route's own gate
+  admin raw route carry the file token hashed (`FileResponse::etag`), whose bytes never change. Each is checked after the route's own gate
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
   is not shortened for it — revalidating every image would cost a PHP request each. Only the
   link-card image route carries no validator (it is `no-store` by design).
