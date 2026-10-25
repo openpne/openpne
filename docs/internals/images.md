@@ -155,8 +155,12 @@ row is saved — so a raster File created by an upload always has a size. Non-ra
 without one.
 
 `openpne:image-cache warm` makes the canonical of every picture that has none — a row imported from
-OpenPNE 3, or one evicted from the cache disk — and records the size of every row missing one. Run it
-after an OpenPNE 3 upgrade; it is idempotent and an interrupted run resumes by being re-run. A picture
+OpenPNE 3, or one evicted from the cache disk — and records the size of every row missing one. It is
+optional: a first view makes the same canonical. It walks newest first, `--limit N` stops it after N
+pictures were asked of the processor (rows already warm cost nothing and are not counted) and
+`--since <date>` keeps it to rows stored from that date, so an archive whose canonicals would take
+as much disk again as its originals is warmed by the slice still being looked at, or run by run in
+the background. It is idempotent and an interrupted run resumes by being re-run. A picture
 the processor refuses is remembered as refused ([security](security.md), "Decoding an upload"):
 `status` lists those with the reason, and `warm --retry-failed` asks the processor again (after a
 limit was raised, say). `rebuild` discards every derived file of every picture — older encoder

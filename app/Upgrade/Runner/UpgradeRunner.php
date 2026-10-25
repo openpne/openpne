@@ -222,7 +222,7 @@ final class UpgradeRunner
                 $this->stampSurfaceMode($out);
 
                 if ($migratesFiles) {
-                    $out('Next: `php artisan openpne:image-cache warm` makes the copy every migrated picture is shown from; until then each is made on its first view.');
+                    $out('Each migrated picture is made on its first view; `php artisan openpne:image-cache warm --limit N` makes the newest ones ahead of time, run as often as wanted.');
                 }
             }
 
