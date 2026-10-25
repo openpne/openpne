@@ -124,7 +124,7 @@ class ImageCacheCommandTest extends TestCase
             ->expectsOutputToContain('--limit [0] is not a positive count.')
             ->assertFailed();
         $this->artisan('openpne:image-cache', ['action' => 'rebuild', '--limit' => '1'])
-            ->expectsOutputToContain('--limit is for warm;')
+            ->expectsOutputToContain('--limit is for warm only:')
             ->assertFailed();
         $this->artisan('openpne:image-cache', ['action' => 'rebuild', '--since' => 'yesterday-ish'])
             ->expectsOutputToContain('--since [yesterday-ish] is not a date.')
@@ -409,9 +409,23 @@ class ImageCacheCommandTest extends TestCase
 
         $this->artisan('openpne:image-cache', ['action' => 'warm'])
             ->expectsOutputToContain('unavailable: 1')
+            ->doesntExpectOutputToContain('the run stopped')
             ->assertFailed();
 
         $this->assertNull(app(ImageCache::class)->refusal($file));
+    }
+
+    public function test_an_outage_ends_the_run_after_three_pictures_in_a_row(): void
+    {
+        foreach (range(1, 5) as $_) {
+            $this->stored('image/png', ImageBytes::png());
+        }
+        $this->processorIsDown();
+
+        $this->artisan('openpne:image-cache', ['action' => 'warm'])
+            ->expectsOutputToContain('unavailable: 3')
+            ->expectsOutputToContain('the run stopped after 3 failures in a row')
+            ->assertFailed();
     }
 
     public function test_a_row_whose_bytes_are_gone_fails_the_run_and_the_run_goes_on(): void
@@ -443,7 +457,8 @@ class ImageCacheCommandTest extends TestCase
         try {
             $this->artisan('openpne:image-cache', ['action' => 'warm'])
                 ->expectsOutputToContain('Warmed 0 picture(s)')
-                ->expectsOutputToContain('unwritten:   3  (the cache disk refused the write; the run stopped after 3 in a row)')
+                ->expectsOutputToContain('unwritten:   3  (the cache disk refused the write)')
+                ->expectsOutputToContain('the run stopped after 3 failures in a row')
                 ->assertFailed();
         } finally {
             chmod($root, 0o755);

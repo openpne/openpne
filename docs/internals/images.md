@@ -159,9 +159,10 @@ OpenPNE 3, or one evicted from the cache disk — and records the size of every 
 optional: a first view makes the same canonical and records the same facts. It walks newest (highest
 id) first, `--limit N` stops it once N pictures were made (a row already warm, refused or unreadable
 is passed over without counting, so the next run goes on from where this one stopped) and
-`--since <date>` keeps it, `status` and `rebuild` to rows stored from that date, so an archive whose canonicals would take
-as much disk again as its originals is warmed by the slice still being looked at, or run by run in
-the background. It is idempotent and an interrupted run resumes by being re-run. A picture
+`--since <date>` keeps it, `status` and `rebuild` to rows stored from that date, so an archive
+whose canonicals would take as much disk again as its originals is warmed by the slice still being
+looked at, or run by run in the background. It is idempotent and an interrupted run resumes by
+being re-run. A picture
 the processor refuses is remembered as refused ([security](security.md), "Decoding an upload"):
 `status` lists those with the reason, and `warm --retry-failed` asks the processor again (after a
 limit was raised, say). `rebuild` discards every derived file of every picture — older encoder
@@ -170,8 +171,9 @@ size again; it is for bytes that changed under an unchanged key (a GD or libvips
 cache disk), a quality or processor change already being a new key. `rebuild` discards a picture's
 files only once its new canonical is in hand, and either run exits non-zero when any picture could
 not be made — the processor unavailable, the stored bytes unreadable, the cache disk refusing the
-write — so a deploy script notices. Three refused writes in a row end the run, since `rebuild` has
-discarded before it writes and a full disk would otherwise empty the cache; a row whose bytes are
+write — so a deploy script notices. Three refused writes or processor outages in a row end the run,
+since `rebuild` has discarded before it writes and a full disk would otherwise empty the cache, and
+a processor that is down would otherwise be asked once per row; a row whose bytes are
 gone keeps the exit non-zero until the row is deleted, there being nothing to show for it anyway. A
 row stored under an image type this version does not show as a picture (`image/bmp`, say, which
 OpenPNE 3's unvalidated API upload could write) is counted as unshown and listed.

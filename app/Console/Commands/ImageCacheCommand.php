@@ -36,8 +36,8 @@ class ImageCacheCommand extends Command
 
     private const ROWS_TO_LIST = 20;
 
-    /** Refusals in a row that end the run: a full or read-only cache disk, not one row's directory. */
-    private const UNWRITTEN_STREAK_TO_STOP = 3;
+    /** Refused writes or outages in a row that end the run: a full disk or a processor down, not one row's own failure. */
+    private const FAILURE_STREAK_TO_STOP = 3;
 
     public function handle(ImageCache $cache, ImageProcessor $processor): int
     {
@@ -101,7 +101,7 @@ class ImageCacheCommand extends Command
         $since = $this->option('since');
 
         if ($limit !== null && $this->argument('action') !== 'warm') {
-            $this->error('--limit is for warm; rebuild starts over from the newest picture, so a limit would never pass it.');
+            $this->error('--limit is for warm only: rebuild starts over from the newest picture, so a limit would never pass it.');
 
             return self::FAILURE;
         }
@@ -174,13 +174,19 @@ class ImageCacheCommand extends Command
                 } catch (ImageProcessorUnavailableException) {
                     $n['unavailable']++;
 
+                    if (++$streak >= self::FAILURE_STREAK_TO_STOP) {
+                        $stopped = true;
+
+                        return false;
+                    }
+
                     continue;
                 } catch (ImageCachePublishException $e) {
                     // Rebuild has discarded before it writes, so a disk refusing everything must not be walked to the end.
                     $n['unwritten']++;
                     $this->remember($failedRows, $file, $e->getMessage());
 
-                    if (++$streak >= self::UNWRITTEN_STREAK_TO_STOP) {
+                    if (++$streak >= self::FAILURE_STREAK_TO_STOP) {
                         $stopped = true;
 
                         return false;
@@ -206,8 +212,11 @@ class ImageCacheCommand extends Command
         $this->line("  refused:     {$n['refused']}  (remembered; `warm --retry-failed` asks again)");
         $this->line("  skipped:     {$n['skipped']}  (refused before; pass --retry-failed)");
         $this->line("  unavailable: {$n['unavailable']}  (processor down; nothing remembered)");
+        if ($stopped) {
+            $this->line('  the run stopped after '.self::FAILURE_STREAK_TO_STOP.' failures in a row');
+        }
         $this->line("  unreadable:  {$n['unreadable']}  (the stored bytes could not be read)");
-        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write".($stopped ? '; the run stopped after '.self::UNWRITTEN_STREAK_TO_STOP.' in a row' : '').')');
+        $this->line("  unwritten:   {$n['unwritten']}  (the cache disk refused the write)");
         $this->listRows($failedRows, $n['unreadable'] + $n['unwritten']);
         $this->line("  unshown:     {$n['unshown']}  (stored under an image type this version does not show as a picture)");
         $this->listRows($unshownRows, $n['unshown']);
