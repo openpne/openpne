@@ -62,14 +62,12 @@ class VerifyUpgradeCommand extends Command
         $database = $this->option('source-database');
         $database = $database === null ? null : (string) $database;
 
-        // A non-empty prefix or database is interpolated into backticked SQL, so restrict it to a
-        // table-name charset.
+        // A non-empty prefix or database is interpolated inside backticks, so restrict it to a charset that cannot close them.
         if ($prefix !== '' && ! preg_match('/^[A-Za-z0-9_]+$/', $prefix)) {
             $this->error('--source-prefix must match [A-Za-z0-9_]+.');
 
             return null;
         }
-        // A hyphen is common in hosting-provider database names and is fine inside the backticks.
         if ($database !== null && ! preg_match('/^[A-Za-z0-9_-]+$/', $database)) {
             $this->error('--source-database must match [A-Za-z0-9_-]+.');
 
