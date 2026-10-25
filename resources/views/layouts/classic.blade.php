@@ -140,7 +140,7 @@
                      stays a per-request override seam. --}}
                 @php($footerHtml = $classicFooterHtml ?? classic_footer_html(($pageClass ?? 'secure_page') !== 'insecure_page'))
                 @if ($classicTheme !== null)
-                    {{-- The theme plugin's _footer.php opens with this span; its themes' stylesheets position it. --}}
+                    {{-- The theme plugin's _footer.php opens with this span, which a theme copied in may style. --}}
                     <span id="license"></span>
                 @endif
                 <p>

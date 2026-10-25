@@ -51,7 +51,7 @@ class ClassicThemeStylesheetTest extends TestCase
         $this->assertStringNotContainsString('opSkinThemePlugin/', $html);
     }
 
-    public function test_the_themed_footer_opens_with_the_empty_license_span_the_theme_stylesheets_position(): void
+    public function test_the_themed_footer_opens_with_the_empty_license_span_of_the_theme_plugin_footer(): void
     {
         $this->assertStringNotContainsString('id="license"', $this->diaryPage());
 

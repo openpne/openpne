@@ -310,7 +310,6 @@ your database outside OpenPNE 3, and dropping it would take its comments and att
 preflight names the table and the row count and stops. Delete or reassign those rows in the source
 and run again.
 
-
 ### Bringing an OpenPNE 3 theme
 
 Only `bootstrap`, `cerulean` and `cerulean-light` ship here. To keep any other `opSkinThemePlugin`

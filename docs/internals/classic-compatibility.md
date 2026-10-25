@@ -229,7 +229,7 @@ and the OpenPNE 3 timeline URLs redirect into the Modern surface even for a Clas
 
 Three of OpenPNE 3's `opSkinThemePlugin` themes are vendored under
 [`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin): `bootstrap`, `cerulean` and
-`cerulean-light`, the ones made of stylesheets alone. Any other package is brought in by copying
+`cerulean-light`. Any other package is brought in by copying
 its directory ([upgrading-from-openpne3.md](../upgrading-from-openpne3.md), "Bringing an OpenPNE 3
 theme"). A theme is a directory whose `css/main.css` opens with the comment
 header the plugin read (`Theme Name:` and `Author:` make it one), found on the filesystem by
