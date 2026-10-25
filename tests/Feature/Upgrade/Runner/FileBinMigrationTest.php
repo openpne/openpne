@@ -248,8 +248,7 @@ class FileBinMigrationTest extends TestCase
 
     public function test_preflight_after_the_move_points_at_the_app_file_bin(): void
     {
-        // A resumed --source-prefix run: op_file_bin was already renamed to file_bin, so the pairing
-        // is checked against the app table and the fix is not "delete from the source file_bin".
+        // A resumed --source-prefix run: op_file_bin was already renamed to file_bin, so the pairing is checked against the app table.
         $this->seedPrefixed();
         (new FileBinMigration)->move('op_', null, $this->out($ignore));
         $this->seedFile('`op_file`', 99, 'late');
@@ -260,6 +259,19 @@ class FileBinMigrationTest extends TestCase
         $this->assertStringContainsString('1 `op_file` row(s) have no `file_bin` row (id 99).', $error);
         $this->assertStringContainsString('already moved into this database', $error);
         $this->assertStringNotContainsString('Restore a complete dump', $error);
+    }
+
+    public function test_preflight_without_any_file_bin_table_says_so(): void
+    {
+        $this->dropAppFileBin();
+        $this->createOp3File('`file`');
+        $this->seedFile('`file`', 1, 'a');
+
+        $error = (new FileBinMigration)->preflight('', null);
+
+        $this->assertStringContainsString('file has 1 rows but file_bin has 0', $error);
+        $this->assertStringContainsString('No file_bin table holds the bytes', $error);
+        $this->assertStringNotContainsString('already moved', $error);
     }
 
     public function test_preflight_aborts_before_the_walk_writing_nothing(): void

@@ -53,9 +53,11 @@ final class FileBinMigration
                     .self::unpaired($binTable, 'file_id', $fileTable, 'id', $bytesRows - $paired);
             }
 
-            return $error.($sourcePresent
-                ? ' Restore a complete dump (one cut short inside file_bin looks like this), or delete the unpaired rows in the source and re-run.'
-                : ' The bytes were already moved into this database\'s file_bin; fix the source file rows and re-run, or --force-restart from a fresh restore.');
+            return $error.match (true) {
+                $binTable === null => ' No file_bin table holds the bytes: restore the dump\'s file_bin and re-run.',
+                $sourcePresent => ' Restore a complete dump (one cut short inside file_bin looks like this), or delete the unpaired rows in the source and re-run.',
+                default => ' The bytes were already moved into this database\'s file_bin; delete the unpaired rows (source file, or file_bin here) and re-run, or --force-restart from a fresh restore.',
+            };
         }
 
         if (! $this->inPlace($sourcePrefix, $sourceDatabase) && $sourcePresent && $this->appFileBinCount() > 0) {
