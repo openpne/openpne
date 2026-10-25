@@ -207,6 +207,7 @@ class SourcePreflightTest extends TestCase
             ['member_id' => 1, 'name' => 'is_send_pc_diaryReplyPost_mail', 'value' => '0'],
             ['member_id' => 1, 'name' => 'op_screen_name', 'value' => 'someone'],
             ['member_id' => 1, 'name' => 'notification_center', 'value' => 'a:0:{}'],
+            ['member_id' => 1, 'name' => 'password_recovery_token', 'value' => 'tok'],
             ['member_id' => 1, 'name' => 'is_send_pc_friendLinkRequest_mail', 'value' => '1'],
         ]);
 
@@ -227,6 +228,7 @@ class SourcePreflightTest extends TestCase
         $this->assertStringNotContainsString('named `is_send_pc_diaryReplyPost_mail`', $output);
         $this->assertStringNotContainsString('named `op_screen_name`', $output);
         $this->assertStringNotContainsString('named `notification_center`', $output);
+        $this->assertStringNotContainsString('named `password_recovery_token`', $output);
         $this->assertStringNotContainsString('named `is_send_pc_friendLinkRequest_mail`', $output);
     }
 

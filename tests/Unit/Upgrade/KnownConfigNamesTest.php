@@ -72,7 +72,7 @@ class KnownConfigNamesTest extends TestCase
             $this->assertStringNotContainsString($kind->value, $sql, "{$kind->value} is a target the upgrade can write");
         }
 
-        // A dropped is_send_ name (an older OpenPNE 3's spelling) is recognised but never a target.
+        // A dropped is_send_ name (one OpenPNE 3 wrote but never read) is recognised but never a target.
         $dropped = array_keys(array_filter(
             StepRegistry::memberConfigDispositions(),
             static fn (string $disposition): bool => str_starts_with($disposition, 'Dropped:'),

@@ -305,7 +305,7 @@ final class StepRegistry
             'mobile_address_token' => 'Dropped: mobile frontend not in scope.',
             'notification_center' => 'Dropped: OpenPNE 3 stored each member\'s notification-center items as one serialized value; OpenPNE 4 notifications are written by OpenPNE 4 events, so the list starts empty.',
             'password_recovery_token' => 'Dropped: opAuthMailAddressPlugin\'s pending password-recovery token, transient; OpenPNE 4 issues its own reset links.',
-            'is_send_pc_friendLinkRequest_mail' => 'Dropped: the opt-in name an older OpenPNE 3 wrote for the friend-request mail (the current `is_send_pc_friendLinkConfirm_mail` migrates as friend_link_confirm); a member with only the old row gets the default.',
+            'is_send_pc_friendLinkRequest_mail' => 'Dropped: OpenPNE 3\'s mail-settings form wrote it for the friendLinkRequest template, but the friend-request mail read `is_send_pc_friendLinkConfirm_mail` (migrated as friend_link_confirm), so it never took effect.',
         ];
     }
 
@@ -370,7 +370,7 @@ final class StepRegistry
             'is_send_pc_joinCommunity_mail' => 'groups.is_join_notification_enabled (KV "0"→false, missing/else→true), GroupUpgrade.',
             // Dropped: the mobile (feature-phone) frontend is out of scope.
             'is_send_mobile_joinCommunity_mail' => 'Dropped: mobile join-notification opt-in — the mobile frontend is out of scope.',
-            self::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX.'*' => 'Dropped: opMessagePlugin\'s record of which members a community admin already invited; pending invitations are not carried.',
+            self::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX.'*' => 'Dropped: opMessagePlugin\'s pass letting an admin-invited member join an approval-required community without approval, deleted on join; a member invited but not yet joined needs approval again.',
         ];
     }
 
