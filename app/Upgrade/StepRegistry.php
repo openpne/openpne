@@ -81,6 +81,12 @@ final class StepRegistry
      */
     public const NOTIFICATION_MAIL_MOBILE_PREFIX = 'mobile_';
 
+    /**
+     * The community_config family opMessagePlugin writes per invited member (`community_admin_invited_<member_id>`);
+     * recognised by prefix since the suffix is a member id.
+     */
+    public const COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX = 'community_admin_invited_';
+
     /** @return list<class-string<UpgradeStep>> */
     public static function classes(): array
     {
@@ -297,6 +303,9 @@ final class StepRegistry
             'pc_address_token' => 'Dropped: pending email-change confirmation token.',
             'mobile_address_pre' => 'Dropped: mobile frontend not in scope.',
             'mobile_address_token' => 'Dropped: mobile frontend not in scope.',
+            'notification_center' => 'Dropped: OpenPNE 3 stored each member\'s notification-center items as one serialized value; OpenPNE 4 notifications are written by OpenPNE 4 events, so the list starts empty.',
+            'password_recovery_token' => 'Dropped: opAuthMailAddressPlugin\'s pending password-recovery token, transient; OpenPNE 4 issues its own reset links.',
+            'is_send_pc_friendLinkRequest_mail' => 'Dropped: the opt-in name an older OpenPNE 3 wrote for the friend-request mail (the current `is_send_pc_friendLinkConfirm_mail` migrates as friend_link_confirm); a member with only the old row gets the default.',
         ];
     }
 
@@ -329,13 +338,17 @@ final class StepRegistry
 
     /**
      * Every literal `community_config` name the upgrade recognises, for the preflight's unknown-name
-     * scan. GroupUpgrade reads them all by subquery, so the disposition map is the only list.
+     * scan. GroupUpgrade reads them all by subquery, so the disposition map is the only list; the
+     * admin-invited family is excluded here and matched by COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX.
      *
      * @return list<string>
      */
     public static function knownCommunityConfigNames(): array
     {
-        return array_keys(self::communityConfigDispositions());
+        return array_values(array_filter(
+            array_keys(self::communityConfigDispositions()),
+            static fn (string $name): bool => $name !== self::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX.'*',
+        ));
     }
 
     /**
@@ -357,6 +370,7 @@ final class StepRegistry
             'is_send_pc_joinCommunity_mail' => 'groups.is_join_notification_enabled (KV "0"→false, missing/else→true), GroupUpgrade.',
             // Dropped: the mobile (feature-phone) frontend is out of scope.
             'is_send_mobile_joinCommunity_mail' => 'Dropped: mobile join-notification opt-in — the mobile frontend is out of scope.',
+            self::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX.'*' => 'Dropped: opMessagePlugin\'s record of which members a community admin already invited; pending invitations are not carried.',
         ];
     }
 

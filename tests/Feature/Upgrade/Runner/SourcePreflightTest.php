@@ -206,6 +206,8 @@ class SourcePreflightTest extends TestCase
             ['member_id' => 1, 'name' => 'diary_public_flag', 'value' => '1'],
             ['member_id' => 1, 'name' => 'is_send_pc_diaryReplyPost_mail', 'value' => '0'],
             ['member_id' => 1, 'name' => 'op_screen_name', 'value' => 'someone'],
+            ['member_id' => 1, 'name' => 'notification_center', 'value' => 'a:0:{}'],
+            ['member_id' => 1, 'name' => 'is_send_pc_friendLinkRequest_mail', 'value' => '1'],
         ]);
 
         [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade], new RunOptions(dryRun: true));
@@ -224,6 +226,8 @@ class SourcePreflightTest extends TestCase
         $this->assertStringNotContainsString('named `diary_public_flag`', $output);
         $this->assertStringNotContainsString('named `is_send_pc_diaryReplyPost_mail`', $output);
         $this->assertStringNotContainsString('named `op_screen_name`', $output);
+        $this->assertStringNotContainsString('named `notification_center`', $output);
+        $this->assertStringNotContainsString('named `is_send_pc_friendLinkRequest_mail`', $output);
     }
 
     public function test_a_source_without_the_name_column_aborts_instead_of_failing_the_scan(): void
@@ -283,6 +287,10 @@ class SourcePreflightTest extends TestCase
                 'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
             ['community_id' => 1, 'name' => 'register_policy', 'value' => 'open',
                 'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
+            ['community_id' => 1, 'name' => 'community_admin_invited_12', 'value' => '1',   // the admin-invited family
+                'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
+            ['community_id' => 1, 'name' => 'community_admin_invitedx_1', 'value' => '1',   // NOT the family
+                'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
         ]);
 
         [$ok, $output] = $this->runSteps([new GroupUpgrade], new RunOptions(dryRun: true));
@@ -292,7 +300,12 @@ class SourcePreflightTest extends TestCase
             SourcePreflight::unknownSourceNameMessage('community_config', 'op_custom_community_flag', 1),
             $output,
         );
+        $this->assertStringContainsString(
+            SourcePreflight::unknownSourceNameMessage('community_config', 'community_admin_invitedx_1', 1),
+            $output,
+        );
         $this->assertStringNotContainsString('named `register_policy`', $output);
+        $this->assertStringNotContainsString('named `community_admin_invited_12`', $output);
     }
 
     public function test_unrecognised_notification_mail_names_are_reported(): void
