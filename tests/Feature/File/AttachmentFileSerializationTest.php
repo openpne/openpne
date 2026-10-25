@@ -36,7 +36,7 @@ class AttachmentFileSerializationTest extends TestCase
             'url' => $pdf->url(),
             'name' => 'report.pdf',
             'byteSize' => 2048,
-            'sizeLabel' => '2.0 KB',
+            'sizeLabel' => '2 KB',
             'type' => 'application/pdf',
         ], AttachmentShape::of($parts['files'][0]));
     }

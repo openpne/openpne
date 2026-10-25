@@ -4,7 +4,7 @@
 @if ($files->isNotEmpty())
     <ul class="files">
         @foreach ($files as $attachment)
-            <li><a href="{{ $attachment->file->url() }}">{{ $attachment->file->original_filename ?? __('File') }}</a> ({{ \Illuminate\Support\Number::fileSize((int) $attachment->file->byte_size, precision: 1) }})</li>
+            <li><a href="{{ $attachment->file->url() }}">{{ $attachment->file->original_filename ?? __('File') }}</a> ({{ \Illuminate\Support\Number::fileSize((int) $attachment->file->byte_size, maxPrecision: 1) }})</li>
         @endforeach
     </ul>
 @endif

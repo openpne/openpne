@@ -18,7 +18,7 @@ final class AttachmentShape
             'url' => $file?->url() ?? '',
             'name' => (string) ($file?->original_filename ?? ''),
             'byteSize' => (int) ($file?->byte_size ?? 0),
-            'sizeLabel' => Number::fileSize((int) ($file?->byte_size ?? 0), precision: 1),
+            'sizeLabel' => Number::fileSize((int) ($file?->byte_size ?? 0), maxPrecision: 1),
             'type' => (string) ($file?->type ?? ''),
         ];
     }

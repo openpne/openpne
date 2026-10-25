@@ -24,7 +24,7 @@ class DiaryAttachmentsClassicTest extends TestCase
 
         $response->assertOk()
             ->assertSee('<ul class="files">', false)
-            ->assertSee('<a href="'.$pdf->url().'">agenda.pdf</a> (3.0 KB)', false)
+            ->assertSee('<a href="'.$pdf->url().'">agenda.pdf</a> (3 KB)', false)
             ->assertDontSee('<ul class="photo">', false)
             ->assertDontSee('/cache/img/', false);
     }
