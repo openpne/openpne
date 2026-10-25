@@ -6,7 +6,8 @@ default backend keys bytes by `file_id` in the frozen `file_bin` table, which a 
 abstraction cannot address without re-deriving the id from `files` on every call, while the entity
 already carries both the id and the `name` token. Each backend then uses its native key —
 [`DbBlobFileStorage`](../../app/Files/DbBlobFileStorage.php) by `file_id`,
-[`DiskFileStorage`](../../app/Files/DiskFileStorage.php) by `name`.
+[`DiskFileStorage`](../../app/Files/DiskFileStorage.php) by `name` when it is a token, else by its
+hash (`ImageTransform::directory`, the image cache's rule for the same OpenPNE 3 names).
 
 The contract is the four byte-level operations only. Delivery is not here: every fetch goes through
 an app route whatever the backend is (`File::url()`, `File::publicUrl()`, the `/cache/img` variants),
