@@ -167,6 +167,17 @@ class FilePolicyTest extends TestCase
         $this->assertFalse(Gate::forUser($blocked)->allows('view', $upload));
     }
 
+    public function test_an_owners_avatar_does_not_open_their_other_files_to_a_guest(): void
+    {
+        // The check is on the file, not on whether the owner has an avatar at all.
+        $owner = Member::factory()->create();
+        $avatar = $this->memberImage($owner);
+        $upload = File::factory()->create(['type' => 'application/pdf', 'related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
+
+        $this->assertTrue(Gate::forUser(null)->allows('view', $avatar));
+        $this->assertFalse(Gate::forUser(null)->allows('view', $upload));
+    }
+
     private function memberImage(Member $owner): File
     {
         $file = File::factory()->create([
