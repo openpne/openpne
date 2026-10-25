@@ -4,6 +4,7 @@ namespace App\Upgrade\Runner;
 
 use App\Upgrade\ActiveMember;
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\SourceNameRegistry;
 use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
@@ -38,16 +39,15 @@ final class SourcePreflight
     private const PASS_READ_TABLES = ['sns_config' => ['plugin']];
 
     /**
-     * The source tables scanned for names the upgrade does not recognise, each with the one name prefix
-     * recognised without enumerating (or null). notification_mail is not a KV table, but its step
-     * carries only the names in a `name IN (…)` filter, so an unrecognised name is just as invisible
-     * per step.
+     * The source tables scanned for names the upgrade does not recognise, each with the name prefixes
+     * recognised without enumerating. notification_mail is not a KV table, but its step carries only
+     * the names in a `name IN (…)` filter, so an unrecognised name is just as invisible per step.
      */
     private const NAME_SCAN_TABLES = [
-        'member_config' => null,
-        'community_config' => StepRegistry::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX,
-        'notification_mail' => StepRegistry::NOTIFICATION_MAIL_MOBILE_PREFIX,
-        'sns_term' => null,
+        'member_config' => [],
+        'community_config' => [StepRegistry::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX],
+        'notification_mail' => [StepRegistry::NOTIFICATION_MAIL_MOBILE_PREFIX],
+        'sns_term' => [],
     ];
 
     /** @param  list<UpgradeStep>  $steps */
@@ -168,15 +168,28 @@ final class SourcePreflight
         return "source `{$reference}` has {$rows} row(s) whose member is missing from the source entirely — an incomplete dump or a broken foreign key. Restore the full OpenPNE 3 dump, or delete those rows, then re-run.";
     }
 
-    /** @return list<string> the names the upgrade recognises in one NAME_SCAN_TABLES table */
+    /** @return list<string> the names the upgrade recognises in one NAME_SCAN_TABLES table, plus the registered ones */
     private static function knownNames(string $table): array
     {
-        return match ($table) {
+        $names = match ($table) {
             'member_config' => StepRegistry::knownMemberConfigNames(),
             'community_config' => StepRegistry::knownCommunityConfigNames(),
             'notification_mail' => StepRegistry::knownNotificationMailNames(),
             'sns_term' => TermOverrideUpgrade::SOURCE_NAMES,
         };
+
+        return array_values(array_unique([...$names, ...self::registry()->names($table)]));
+    }
+
+    /** @return list<string> */
+    private static function knownPrefixes(string $table): array
+    {
+        return [...self::NAME_SCAN_TABLES[$table], ...self::registry()->prefixes($table)];
+    }
+
+    private static function registry(): SourceNameRegistry
+    {
+        return app(SourceNameRegistry::class);
     }
 
     /** @return list<string> */
@@ -307,7 +320,7 @@ final class SourcePreflight
         $readTables = $this->readTables();
 
         $unknown = [];
-        foreach (self::NAME_SCAN_TABLES as $table => $knownPrefix) {
+        foreach (array_keys(self::NAME_SCAN_TABLES) as $table) {
             if (! in_array($table, $readTables, true) || ! $this->tableExists($table, $prefix, $database)) {
                 continue; // not read by this run, or absent — the table checks in inspect() own that case
             }
@@ -318,8 +331,8 @@ final class SourcePreflight
             // LEFT(), not LIKE: the prefix ends in `_`, which LIKE would read as a single-character
             // wildcard and let `mobilex_foo` pass as recognised.
             $prefixCondition = '';
-            if ($knownPrefix !== null) {
-                $prefixCondition = ' and left(`name`, ?) <> ?';
+            foreach (self::knownPrefixes($table) as $knownPrefix) {
+                $prefixCondition .= ' and left(`name`, ?) <> ?';
                 $bindings[] = strlen($knownPrefix);
                 $bindings[] = $knownPrefix;
             }

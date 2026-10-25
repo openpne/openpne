@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\SourceNameRegistry;
 use App\Upgrade\StepRegistry;
 use Illuminate\Console\Command;
 
@@ -83,6 +84,7 @@ class UpgradeMatrixCommand extends Command
         foreach (StepRegistry::memberConfigDispositions() as $name => $disposition) {
             $this->line("- `{$name}` — {$disposition}");
         }
+        $this->registered('member_config');
         $this->line('');
 
         // community_config is the same shape: a KV table read by subquery, so its per-name coverage
@@ -93,6 +95,7 @@ class UpgradeMatrixCommand extends Command
         foreach (StepRegistry::communityConfigDispositions() as $name => $disposition) {
             $this->line("- `{$name}` — {$disposition}");
         }
+        $this->registered('community_config');
         $this->line('');
 
         // notification_mail is stepped, but its name filter only carries the templates OpenPNE 4 sends;
@@ -103,8 +106,16 @@ class UpgradeMatrixCommand extends Command
         foreach (StepRegistry::notificationMailDispositions() as $name => $disposition) {
             $this->line("- `{$name}` — {$disposition}");
         }
+        $this->registered('notification_mail');
         $this->line('');
 
         return self::SUCCESS;
+    }
+
+    private function registered(string $table): void
+    {
+        foreach (app(SourceNameRegistry::class)->dispositions($table) as $name => $disposition) {
+            $this->line("- `{$name}` — Registered by an installed package: {$disposition}");
+        }
     }
 }
