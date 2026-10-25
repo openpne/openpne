@@ -100,11 +100,6 @@ class FilePolicy extends BasePolicy
     }
 
     /** Null (unlinked, unknown morph alias, or deleted) denies unless explicit_visibility is 'public'. */
-    private function isAvatar(File $file): bool
-    {
-        return MemberImage::query()->where('file_id', $file->getKey())->exists();
-    }
-
     private function owner(File $file): ?Model
     {
         if ($file->related_entity_type === null || $file->related_entity_id === null) {
@@ -118,5 +113,10 @@ class FilePolicy extends BasePolicy
         }
 
         return app(FileOwners::class)->find($class, (int) $file->related_entity_id);
+    }
+
+    private function isAvatar(File $file): bool
+    {
+        return MemberImage::query()->where('file_id', $file->getKey())->exists();
     }
 }
