@@ -201,8 +201,9 @@ class FileBinMigrationTest extends TestCase
         $error = (new FileBinMigration)->preflight('', null);
 
         $this->assertStringContainsString('file has 9 rows but file_bin has 2', $error);
-        $this->assertStringContainsString('7 file row(s) have no file_bin row (file.id 1, 3, 4, 6, 7 and 2 more): delete them from the source file and re-run.', $error);
-        $this->assertStringNotContainsString('no file row', $error);
+        $this->assertStringContainsString('7 `file` row(s) have no `file_bin` row (id 1, 3, 4, 6, 7 and 2 more).', $error);
+        $this->assertStringNotContainsString('have no `file` row', $error);
+        $this->assertStringContainsString('Restore a complete dump', $error);
     }
 
     public function test_preflight_names_the_bytes_without_a_file_row_on_a_prefixed_source(): void
@@ -211,7 +212,7 @@ class FileBinMigrationTest extends TestCase
         $this->createOp3FileBin('`op_file_bin`', '`op_file`', 'op_file_bin_fk');
         $this->seedFile('`op_file`', 1, 'a');
         $this->seedFileBin('`op_file_bin`', 1, self::BLOB);
-        // A dump restored without its FK can hold bytes for a deleted file row.
+        // A dump restored with FOREIGN_KEY_CHECKS=0 (mysqldump's default) keeps bytes for a deleted file row.
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         $this->seedFileBin('`op_file_bin`', 7, 'stray');
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -219,8 +220,46 @@ class FileBinMigrationTest extends TestCase
         $error = (new FileBinMigration)->preflight('op_', null);
 
         $this->assertStringContainsString('file has 1 rows but file_bin has 2', $error);
-        $this->assertStringContainsString('1 file_bin row(s) have no file row (file_bin.file_id 7): delete them from the source file_bin and re-run.', $error);
-        $this->assertStringNotContainsString('no file_bin row', $error);
+        $this->assertStringContainsString('1 `op_file_bin` row(s) have no `op_file` row (file_id 7).', $error);
+        $this->assertStringNotContainsString('have no `op_file_bin` row', $error);
+    }
+
+    public function test_preflight_aborts_on_equal_counts_that_do_not_pair_up(): void
+    {
+        // One file without bytes and one stray file_bin row: the counts agree, but rewire() would fail
+        // its FK after the walk had already written files.
+        $this->dropAppFileBin();
+        $this->createOp3File('`file`');
+        $this->createOp3FileBin('`file_bin`', '`file`', 'file_bin_file_id_file_id');
+        $this->seedFile('`file`', 1, 'a');
+        $this->seedFile('`file`', 2, 'b');
+        $this->seedFileBin('`file_bin`', 1, self::BLOB);
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        $this->seedFileBin('`file_bin`', 3, 'stray');
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $error = (new FileBinMigration)->preflight('', null);
+
+        $this->assertNotNull($error);
+        $this->assertStringContainsString('file and file_bin both have 2 rows but they do not pair up', $error);
+        $this->assertStringContainsString('1 `file` row(s) have no `file_bin` row (id 2).', $error);
+        $this->assertStringContainsString('1 `file_bin` row(s) have no `file` row (file_id 3).', $error);
+    }
+
+    public function test_preflight_after_the_move_points_at_the_app_file_bin(): void
+    {
+        // A resumed --source-prefix run: op_file_bin was already renamed to file_bin, so the pairing
+        // is checked against the app table and the fix is not "delete from the source file_bin".
+        $this->seedPrefixed();
+        (new FileBinMigration)->move('op_', null, $this->out($ignore));
+        $this->seedFile('`op_file`', 99, 'late');
+
+        $error = (new FileBinMigration)->preflight('op_', null);
+
+        $this->assertStringContainsString('file has 3 rows but file_bin has 2', $error);
+        $this->assertStringContainsString('1 `op_file` row(s) have no `file_bin` row (id 99).', $error);
+        $this->assertStringContainsString('already moved into this database', $error);
+        $this->assertStringNotContainsString('Restore a complete dump', $error);
     }
 
     public function test_preflight_aborts_before_the_walk_writing_nothing(): void

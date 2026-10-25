@@ -30,23 +30,32 @@ final class FileBinMigration
      */
     public function preflight(string $sourcePrefix, ?string $sourceDatabase): ?string
     {
-        $fileRows = (int) DB::scalar('SELECT COUNT(*) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file'));
+        $fileTable = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file');
+        $fileRows = (int) DB::scalar("SELECT COUNT(*) FROM {$fileTable}");
 
         // The bytes are in the source file_bin on a fresh run, else in the app's own (in-place, or
         // already moved); an app file_bin absent after a crash mid-move counts as 0.
         $sourcePresent = $this->tableExists($this->sourceSchema($sourceDatabase), $sourcePrefix.'file_bin');
-        $bytesRows = $sourcePresent
-            ? (int) DB::scalar('SELECT COUNT(*) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin'))
-            : $this->appFileBinCount();
+        $binTable = $sourcePresent
+            ? InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin')
+            : ($this->appFileBinExists() ? '`file_bin`' : null);
+        $bytesRows = $binTable === null ? 0 : (int) DB::scalar("SELECT COUNT(*) FROM {$binTable}");
+        $paired = $binTable === null ? 0 : (int) DB::scalar("SELECT COUNT(*) FROM {$fileTable} AS `f` JOIN {$binTable} AS `b` ON `b`.`file_id` = `f`.`id`");
 
-        if ($fileRows !== $bytesRows) {
-            $fileTable = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file');
-            $binTable = $sourcePresent
-                ? InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin')
-                : ($this->appFileBinExists() ? '`file_bin`' : null);
+        if ($fileRows !== $paired || $bytesRows !== $paired) {
+            $error = ($fileRows === $bytesRows
+                ? "file and file_bin both have {$fileRows} rows but they do not pair up"
+                : "file has {$fileRows} rows but file_bin has {$bytesRows}")
+                ." — every file's bytes must be a file_bin row (DB-blob storage; a filesystem-storage site is unsupported).";
 
-            return "file has {$fileRows} rows but file_bin has {$bytesRows} — every file's bytes must be a file_bin row (DB-blob storage; a filesystem-storage site is unsupported)."
-                .($binTable === null ? '' : self::mismatchDetail($fileTable, $binTable));
+            if ($binTable !== null) {
+                $error .= self::unpaired($fileTable, 'id', $binTable, 'file_id', $fileRows - $paired)
+                    .self::unpaired($binTable, 'file_id', $fileTable, 'id', $bytesRows - $paired);
+            }
+
+            return $error.($sourcePresent
+                ? ' Restore a complete dump (one cut short inside file_bin looks like this), or delete the unpaired rows in the source and re-run.'
+                : ' The bytes were already moved into this database\'s file_bin; fix the source file rows and re-run, or --force-restart from a fresh restore.');
         }
 
         if (! $this->inPlace($sourcePrefix, $sourceDatabase) && $sourcePresent && $this->appFileBinCount() > 0) {
@@ -54,6 +63,21 @@ final class FileBinMigration
         }
 
         return null;
+    }
+
+    private static function unpaired(string $table, string $key, string $other, string $otherKey, int $total): string
+    {
+        if ($total <= 0) {
+            return '';
+        }
+
+        $ids = array_map(
+            static fn (object $row): int => (int) $row->{$key},
+            DB::select("SELECT `l`.`{$key}` FROM {$table} AS `l` LEFT JOIN {$other} AS `r` ON `r`.`{$otherKey}` = `l`.`{$key}` WHERE `r`.`{$otherKey}` IS NULL ORDER BY `l`.`{$key}` LIMIT ".self::MISMATCH_SAMPLE),
+        );
+        $more = $total - count($ids);
+
+        return " {$total} {$table} row(s) have no {$other} row ({$key} ".implode(', ', $ids).($more > 0 ? " and {$more} more" : '').').';
     }
 
     public function snapshot(string $sourcePrefix, ?string $sourceDatabase, Closure $out): void
@@ -144,33 +168,6 @@ final class FileBinMigration
             $out('PLAN '.self::MOVE_KEY.': would move '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin').' into file_bin');
         }
         $out('PLAN '.self::REWIRE_KEY.': would re-point file_bin.file_id FK onto files');
-    }
-
-    /** The ids on each side of the 1:1 that have no partner — the rows to delete in the source before re-running. */
-    private static function mismatchDetail(string $fileTable, string $binTable): string
-    {
-        $detail = '';
-
-        foreach ([
-            ['file', 'id', $fileTable, $binTable, 'file_id', 'no file_bin row'],
-            ['file_bin', 'file_id', $binTable, $fileTable, 'id', 'no file row'],
-        ] as [$side, $key, $left, $right, $rightKey, $lacks]) {
-            $unmatched = "FROM {$left} AS `l` LEFT JOIN {$right} AS `r` ON `r`.`{$rightKey}` = `l`.`{$key}` WHERE `r`.`{$rightKey}` IS NULL";
-            $total = (int) DB::scalar("SELECT COUNT(*) {$unmatched}");
-            if ($total === 0) {
-                continue;
-            }
-
-            $ids = array_map(
-                static fn (object $row): int => (int) $row->{$key},
-                DB::select("SELECT `l`.`{$key}` {$unmatched} ORDER BY `l`.`{$key}` LIMIT ".self::MISMATCH_SAMPLE),
-            );
-            $more = $total - count($ids);
-
-            $detail .= " {$total} {$side} row(s) have {$lacks} ({$side}.{$key} ".implode(', ', $ids).($more > 0 ? " and {$more} more" : '')."): delete them from the source {$side} and re-run.";
-        }
-
-        return $detail;
     }
 
     private function inPlace(string $sourcePrefix, ?string $sourceDatabase): bool
