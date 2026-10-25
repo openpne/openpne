@@ -20,10 +20,12 @@ use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
+use RuntimeException;
 use Tests\Support\FrameKeepingProcessor;
 use Tests\TestCase;
 
@@ -66,7 +68,7 @@ class ImageCanonicalDeliveryTest extends TestCase
     {
         // Stored bytes written straight to storage with their EXIF intact, as the upgrade leaves them.
         $owner = Member::factory()->create();
-        $file = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
+        $file = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey(), 'updated_at' => '2012-03-04 05:06:07']);
         Storage::disk('image_cache')->assertMissing(ImageTransform::raw()->cacheKey($file->name, 'jpg'));
 
         $response = $this->actingAs($owner)->get($file->url())->assertOk();
@@ -75,6 +77,7 @@ class ImageCanonicalDeliveryTest extends TestCase
         Storage::disk('image_cache')->assertExists(ImageTransform::raw()->cacheKey($file->name, 'jpg'));
         // The row took the rendered size and the still verdict from the same canonical, as warm would record them.
         $this->assertSame(extension_loaded('exif') ? [6, 12, false] : [12, 6, false], [$file->refresh()->width, $file->height, $file->animated]);
+        $this->assertSame('2012-03-04 05:06:07', $file->updated_at->format('Y-m-d H:i:s'));
     }
 
     public function test_a_first_view_that_cannot_record_the_facts_still_serves_the_picture(): void
@@ -82,13 +85,15 @@ class ImageCanonicalDeliveryTest extends TestCase
         $owner = Member::factory()->create();
         $file = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
         File::saving(function (): never {
-            throw new \RuntimeException('row refused');
+            throw new RuntimeException('row refused');
         });
+        Exceptions::fake();
 
         $response = $this->actingAs($owner)->get($file->url())->assertOk();
 
         $this->assertCleanAndUpright($response, $file, 'jpg');
         $this->assertNull($file->refresh()->width);
+        Exceptions::assertReported(RuntimeException::class);
     }
 
     public function test_the_public_and_banner_routes_serve_the_canonical_too(): void

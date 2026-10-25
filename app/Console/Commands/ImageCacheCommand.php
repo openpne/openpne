@@ -82,7 +82,7 @@ class ImageCacheCommand extends Command
         $this->line("  unshown:   {$unshown}".($unshown > 0 ? '  (stored under an image type this version does not show as a picture)' : ''));
         $this->listRows($unshownRows, $unshown);
         $this->line("  animated:  {$animated}  (recorded as animating)");
-        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded; `openpne:image-cache warm` records it where the picture can be read, for a GIF or WebP only under a processor that keeps frames, and never for a GIF over ".(AnimationProbe::maxGifWalkBytes() >> 10).' KB)');
+        $this->line("  unknown:   {$unknown}  (whether it animates is not recorded; a first view or `openpne:image-cache warm` records it where the picture can be read, for a GIF or WebP only under a processor that keeps frames, and never for a GIF over ".(AnimationProbe::maxGifWalkBytes() >> 10).' KB)');
 
         return self::SUCCESS;
     }

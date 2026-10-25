@@ -32,7 +32,14 @@ final class ImageFacts
             return false;
         }
 
-        $file->update($changed);
+        // Facts are derived from the bytes, not an edit: the row keeps the updated_at the upgrade imported.
+        $file->timestamps = false;
+
+        try {
+            $file->update($changed);
+        } finally {
+            $file->timestamps = true;
+        }
 
         return true;
     }
