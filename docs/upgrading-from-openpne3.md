@@ -29,7 +29,8 @@ can run at all, and one decides how to take the dump.
   reads. It refuses to start and names each one rather than failing partway through.
 - **Database file storage** (OpenPNE 3's default), where every uploaded file has its bytes in a
   `file_bin` row. A site converted to filesystem storage is not supported: the upgrade rejects a
-  `file` / `file_bin` count mismatch instead of migrating file metadata without the bytes.
+  `file` / `file_bin` count mismatch instead of migrating file metadata without the bytes, and
+  names the ids on either side that have no partner so you can delete them in the source.
 - **A schema-and-data dump** — `mysqldump` of the OpenPNE 3 database as it writes one by default,
   `DROP TABLE` statements included. A data-only dump (`--no-create-info`) carries nothing to create
   the source tables from, and the target has no OpenPNE 3 tables of its own to receive the rows.

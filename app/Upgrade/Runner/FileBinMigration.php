@@ -22,6 +22,8 @@ final class FileBinMigration
 
     private const REWIRE_KEY = 'file_bin_rewire';
 
+    private const MISMATCH_SAMPLE = 5;
+
     /**
      * Read-only; returns the error that aborts the run before any write, or null. Call only after
      * SourcePreflight has passed, so the source `file` table is present to COUNT.
@@ -38,7 +40,13 @@ final class FileBinMigration
             : $this->appFileBinCount();
 
         if ($fileRows !== $bytesRows) {
-            return "file has {$fileRows} rows but file_bin has {$bytesRows} — the OpenPNE 3 dump is incomplete, or uses filesystem file storage (unsupported); every file's bytes must be a file_bin row (DB-blob storage).";
+            $fileTable = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file');
+            $binTable = $sourcePresent
+                ? InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin')
+                : ($this->appFileBinExists() ? '`file_bin`' : null);
+
+            return "file has {$fileRows} rows but file_bin has {$bytesRows} — every file's bytes must be a file_bin row (DB-blob storage; a filesystem-storage site is unsupported)."
+                .($binTable === null ? '' : self::mismatchDetail($fileTable, $binTable));
         }
 
         if (! $this->inPlace($sourcePrefix, $sourceDatabase) && $sourcePresent && $this->appFileBinCount() > 0) {
@@ -136,6 +144,33 @@ final class FileBinMigration
             $out('PLAN '.self::MOVE_KEY.': would move '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin').' into file_bin');
         }
         $out('PLAN '.self::REWIRE_KEY.': would re-point file_bin.file_id FK onto files');
+    }
+
+    /** The ids on each side of the 1:1 that have no partner — the rows to delete in the source before re-running. */
+    private static function mismatchDetail(string $fileTable, string $binTable): string
+    {
+        $detail = '';
+
+        foreach ([
+            ['file', 'id', $fileTable, $binTable, 'file_id', 'no file_bin row'],
+            ['file_bin', 'file_id', $binTable, $fileTable, 'id', 'no file row'],
+        ] as [$side, $key, $left, $right, $rightKey, $lacks]) {
+            $unmatched = "FROM {$left} AS `l` LEFT JOIN {$right} AS `r` ON `r`.`{$rightKey}` = `l`.`{$key}` WHERE `r`.`{$rightKey}` IS NULL";
+            $total = (int) DB::scalar("SELECT COUNT(*) {$unmatched}");
+            if ($total === 0) {
+                continue;
+            }
+
+            $ids = array_map(
+                static fn (object $row): int => (int) $row->{$key},
+                DB::select("SELECT `l`.`{$key}` {$unmatched} ORDER BY `l`.`{$key}` LIMIT ".self::MISMATCH_SAMPLE),
+            );
+            $more = $total - count($ids);
+
+            $detail .= " {$total} {$side} row(s) have {$lacks} ({$side}.{$key} ".implode(', ', $ids).($more > 0 ? " and {$more} more" : '')."): delete them from the source {$side} and re-run.";
+        }
+
+        return $detail;
     }
 
     private function inPlace(string $sourcePrefix, ?string $sourceDatabase): bool
