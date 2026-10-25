@@ -228,10 +228,11 @@ and the OpenPNE 3 timeline URLs redirect into the Modern surface even for a Clas
 ### Themes
 
 OpenPNE 3's `opSkinThemePlugin` themes are vendored under
-[`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin) (eleven packages; the third-party
-notices sit beside them, and `cat` / `sunflower` ship without the background photograph OpenPNE 3
-bundled, whose terms do not allow redistributing it at that size: the operator drops one in as
-`img/bg.jpg`). A theme is a directory whose `css/main.css` opens with the comment
+[`public/opSkinThemePlugin/`](../../public/opSkinThemePlugin) (five packages; the third-party
+notices sit beside them. The six packages whose background photograph OpenPNE 3 bundled without a
+redistributable licence — `bamboo`, `cat`, `cerulean-ocean`, `cerulean-sakura`, `cerulean-tree`,
+`sunflower` — are not vendored; a deployment that wants one drops the OpenPNE 3 directory in).
+A theme is a directory whose `css/main.css` opens with the comment
 header the plugin read (`Theme Name:` and `Author:` make it one), found on the filesystem by
 [`ClassicThemes`](../../app/Support/ClassicThemes.php) as `opThemeAssetSearcher` found them, so a
 deployment may add a package by dropping a directory in. The `classic_theme` setting (the

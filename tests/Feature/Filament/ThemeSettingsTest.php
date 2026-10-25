@@ -32,19 +32,19 @@ class ThemeSettingsTest extends TestCase
             ->assertOk()
             ->assertSee(__('OpenPNE 3 default skin'))
             ->assertSee('cerulean of Bootswatch')
-            ->assertSee('ocean')
+            ->assertSee('snowscape')
             ->assertSet('data.'.SnsSettingKey::ClassicTheme->value, '');
     }
 
     public function test_saving_stores_the_directory_name_and_clears_the_cache(): void
     {
         Livewire::test(ThemeSettings::class)
-            ->set('data.'.SnsSettingKey::ClassicTheme->value, 'cerulean-sakura')
+            ->set('data.'.SnsSettingKey::ClassicTheme->value, 'cerulean-dark')
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertSame('cerulean-sakura', DB::table('sns_settings')->where('key', SnsSettingKey::ClassicTheme->value)->value('value'));
-        $this->assertSame('cerulean-sakura', app(SnsSettingService::class)->get(SnsSettingKey::ClassicTheme));
+        $this->assertSame('cerulean-dark', DB::table('sns_settings')->where('key', SnsSettingKey::ClassicTheme->value)->value('value'));
+        $this->assertSame('cerulean-dark', app(SnsSettingService::class)->get(SnsSettingKey::ClassicTheme));
 
         Livewire::test(ThemeSettings::class)
             ->set('data.'.SnsSettingKey::ClassicTheme->value, '')

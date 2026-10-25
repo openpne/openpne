@@ -18,11 +18,9 @@ class ClassicThemesTest extends TestCase
         $themes = ClassicThemes::all();
 
         $this->assertSame(
-            ['bamboo', 'bootstrap', 'cat', 'cerulean', 'cerulean-dark', 'cerulean-light', 'cerulean-ocean', 'cerulean-sakura', 'cerulean-tree', 'sunflower', 'winter'],
+            ['bootstrap', 'cerulean', 'cerulean-dark', 'cerulean-light', 'winter'],
             array_keys($themes),
         );
-        // The header, not the directory, names a theme: cerulean-ocean calls itself "ocean".
-        $this->assertSame('ocean', $themes['cerulean-ocean']->name);
         $this->assertSame('cerulean of Bootswatch', $themes['cerulean']->description);
         $this->assertSame('sonobe', $themes['cerulean']->author);
         $this->assertSame(

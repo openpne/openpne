@@ -35,12 +35,12 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
     public function test_the_theme_plugin_as_the_one_enabled_skin_carries_theme_used(): void
     {
         $this->seedPlugin('opSkinBasicPlugin', false);
-        $this->seedConfig('Theme_used', 'cerulean-sakura');
+        $this->seedConfig('Theme_used', 'cerulean-dark');
 
         $this->assertTrue($this->runPass());
 
-        $this->assertSame('cerulean-sakura', $this->stored());
-        $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-sakura'", $this->out);
+        $this->assertSame('cerulean-dark', $this->stored());
+        $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-dark'", $this->out);
     }
 
     public function test_a_missing_theme_used_falls_to_the_first_package_as_openpne3_substituted(): void
@@ -48,13 +48,13 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->seedPlugin('opSkinBasicPlugin', false);
 
         $this->assertTrue($this->runPass());
-        $this->assertSame('bamboo', $this->stored());
+        $this->assertSame('bootstrap', $this->stored());
 
         UpgradeState::query()->delete();
         $this->seedConfig('Theme_used', '');
 
         $this->assertTrue($this->runPass());
-        $this->assertSame('bamboo', $this->stored());
+        $this->assertSame('bootstrap', $this->stored());
     }
 
     public function test_a_theme_used_not_vendored_here_is_kept_and_reported_and_fails_verify_until_copied_in(): void
@@ -108,7 +108,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertTrue($this->runPass());
 
         $this->assertContains('SKIP classic_theme_selection: already completed', $this->out);
-        $this->assertSame('bamboo', $this->stored());
+        $this->assertSame('bootstrap', $this->stored());
     }
 
     public function test_the_verifier_accepts_the_default_skin_or_a_package_on_disk_and_refuses_the_rest(): void

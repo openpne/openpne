@@ -8,9 +8,10 @@ like OpenPNE itself) and carry these third-party works:
 - `winter`: background photograph by Forest Wander (http://www.forestwander.com/), credited in the page footer while the theme is active.
 - `cerulean*` and `bootstrap`: Bootswatch colour schemes.
 
-Not carried: the background photograph OpenPNE 3 shipped with `cat` and `sunflower`, from ぱくたそ
-(https://www.pakutaso.com), whose terms allow redistribution only at a small size; each package's
-`license.txt` says how to add a photograph of your own.
+Not carried: the OpenPNE 3 packages whose background photograph cannot be redistributed here —
+`cat` and `sunflower` (ぱくたそ, https://www.pakutaso.com, redistribution only at a small size),
+`cerulean-ocean` and `cerulean-sakura` (BEIZ images, https://www.beiz.jp, no redistribution of the
+material itself), `bamboo` and `cerulean-tree` (photograph of unknown origin).
 
 The `cerulean*` packages' `bootstrap.css` opens with an `@import` of the Telex family from
 fonts.googleapis.com, so a page wearing one of them fetches that stylesheet from Google, as it did

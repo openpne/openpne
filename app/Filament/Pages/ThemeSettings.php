@@ -133,7 +133,7 @@ class ThemeSettings extends Page
                         static fn (ClassicTheme $theme): string => implode(' — ', array_filter([$theme->description, $theme->author], static fn (string $part): bool => $part !== '')),
                         $themes,
                     ))
-                    ->helperText(__('A theme restyles the Classic pages only; every phone visitor sees the Modern surface. The cerulean themes load a font from Google Fonts in every visitor\'s browser. The cat and sunflower themes come without their background photograph; see the license.txt in each theme directory to add one.')),
+                    ->helperText(__('A theme restyles the Classic pages only; every phone visitor sees the Modern surface. The cerulean themes load a font from Google Fonts in every visitor\'s browser.')),
             ]);
     }
 }
