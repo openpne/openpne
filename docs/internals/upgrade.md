@@ -221,8 +221,9 @@ carries that member, `/c` the group when the community exists, and anything else
 member, a deleted community, a malformed name) stays ownerless. The visibility follows OpenPNE 3,
 where the download required a login and nothing else: a group-owned file is readable by any signed-in
 member (the group arm), and `FilePolicy` opens a member-owned file to a guest only when it is the
-member's avatar, so an upload is readable by any signed-in member the owner does not block. A member's
-deletion leaves such files ownerless rather than deleting them.
+member's avatar, so an upload is readable by any signed-in member the owner does not block; the same
+holds for an OpenPNE 3 `member_image` row that was not the primary, which `MemberImageUpgrade` does not
+carry as an avatar. A member's deletion leaves such files ownerless rather than deleting them.
 
 ## file_bin
 

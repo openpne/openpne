@@ -85,11 +85,6 @@ class FilePolicy extends BasePolicy
      * avatar and a banner image. A topic/event owner names its own unit — Feature::enabled() walks
      * to `community` from there, so switching groups off takes their files too.
      */
-    private function isAvatar(File $file): bool
-    {
-        return MemberImage::query()->where('file_id', $file->getKey())->exists();
-    }
-
     private function owningFeature(?Model $owner): ?Feature
     {
         return match (true) {
@@ -105,6 +100,11 @@ class FilePolicy extends BasePolicy
     }
 
     /** Null (unlinked, unknown morph alias, or deleted) denies unless explicit_visibility is 'public'. */
+    private function isAvatar(File $file): bool
+    {
+        return MemberImage::query()->where('file_id', $file->getKey())->exists();
+    }
+
     private function owner(File $file): ?Model
     {
         if ($file->related_entity_type === null || $file->related_entity_id === null) {

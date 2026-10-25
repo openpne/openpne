@@ -9,6 +9,7 @@ use App\Files\FileUploader;
 use App\Models\BannerImage;
 use App\Models\File;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\RegistrationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -150,6 +151,7 @@ class PreviousUrlTest extends TestCase
         Storage::fake('image_cache');
         $owner = Member::factory()->create();
         $avatar = app(FileUploader::class)->store(UploadedFile::fake()->image('a.png', 40, 40), 'member', (int) $owner->getKey());
+        MemberImage::query()->create(['member_id' => $owner->getKey(), 'file_id' => $avatar->getKey()]);
 
         $urls = [
             'file.public' => $this->brandMarkUrl(),

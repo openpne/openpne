@@ -265,7 +265,7 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
     public function test_a_name_that_only_resembles_an_upload_path_names_no_owner(): void
     {
         $this->seedSourceMember(5, isActive: 1);
-        $names = ['/m/x', '/mabc/x', '/m5x/y', 'm5/y', '/m0/y', '/m05/y', '/M5/y', '/m99999999999/y', '/m5'];
+        $names = ['/mabc/x', '/m5x/y', 'm5/y', '/m0/y', '/m05/y', '/M5/y', '/m99999999999/y', '/m9'.str_repeat('9', 24).'/y', '/m5'];
         foreach ($names as $i => $name) {
             $this->seedFile(40 + $i, ['name' => $name]);
         }
@@ -297,6 +297,8 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
         $this->seedFile(61, ['name' => '/m7/1699000000lost.pdf']);
         $this->seedFile(62, ['name' => '/c10/1699000000lost.pdf']);
         $this->seedFile(63, ['name' => 'tok_63']); // not an upload-plugin name: ownerless but not reported
+        $this->seedFile(64, ['name' => '/m7/1699000000diary.jpg']); // the inactive member's, but a diary owns it
+        DB::table('diary_image')->insert(['id' => 1, 'diary_id' => 88, 'file_id' => 64, 'number' => 1]);
 
         $report = (new UploadFileOwnerPreflight)->inspect('', null, $this->sourceTables());
 

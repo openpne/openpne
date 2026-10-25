@@ -10,8 +10,8 @@ use App\Upgrade\UpgradeStep;
 /**
  * OpenPNE 3 `file` → OpenPNE 4 `files`, id and `name` (the storage/URL token) verbatim so file_bin
  * and every owning row resolve by id. OpenPNE 3 has no owner column, so the owner is resolved by
- * correlated subquery over ownedFileReferences(); a file no owner claims keeps a null owner, which
- * FilePolicy resolves as private.
+ * correlated subquery over ownedFileReferences(), then from the name for namePrefixOwners(); a file
+ * no owner claims keeps a null owner, which FilePolicy resolves as private.
  */
 class FileUpgrade extends UpgradeStep
 {
@@ -102,7 +102,7 @@ class FileUpgrade extends UpgradeStep
 
     /**
      * SQL boolean: `file`.`name` carries this owner's prefix with an id the owner table holds. The digit
-     * run is capped so the CAST stays inside INT, and the match is case-sensitive like the plugin's writes.
+     * run is capped so the CAST cannot overflow, and the match is case-sensitive like the plugin's writes.
      *
      * @param  array{prefix: string, table: string, guard: ?string}  $spec
      */

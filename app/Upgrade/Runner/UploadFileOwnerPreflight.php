@@ -54,6 +54,6 @@ final class UploadFileOwnerPreflight
     public static function ownerlessUploadMessage(int $files, array $fileIds): string
     {
         return "source `file` has {$files} upload-plugin file(s) whose member or community the upgrade does not carry (e.g. file ids ".implode(', ', $fileIds)
-            .') — they arrive with no owner, so their /f/show links answer 404; delete them in the source, or leave them for a later sweep.';
+            .') — they arrive with no owner, so their /f/show links answer 404; delete them in the source, or afterwards in the admin file list.';
     }
 }
