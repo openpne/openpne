@@ -43,7 +43,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-dark'", $this->out);
     }
 
-    public function test_a_missing_theme_used_falls_to_the_first_package_as_openpne3_substituted(): void
+    public function test_a_missing_theme_used_falls_to_bamboo_as_stock_openpne3_substituted(): void
     {
         $this->seedPlugin('opSkinBasicPlugin', false);
 
