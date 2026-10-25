@@ -6,8 +6,8 @@ import { useDropTarget } from '@/lib/use-drop-target';
 import { cn } from '@/lib/utils';
 
 /**
- * The one-file input of a profile, group or timeline form. A drop on its form lands in the input
- * itself, so the browser's own label and `required` see the file; a drop of several takes the first.
+ * A one-file input whose form takes a drop or paste as the pick, so the browser's own label and
+ * `required` see the file; with `pictures` off it carries no accept list and takes any file.
  */
 export function SingleImageInput({
     id,
@@ -22,7 +22,6 @@ export function SingleImageInput({
     required?: boolean;
     /** Whether a file-only paste into the form is taken too; a form with a body to write has one. */
     paste?: boolean;
-    /** Pictures alone (avatar, group image), or any file under the attachment cap (timeline). */
     pictures?: boolean;
     picked: ReturnType<typeof useShrunkPick>;
 }) {
@@ -54,7 +53,12 @@ export function SingleImageInput({
                 )}
             />
             {dragging && <p className="mt-1 text-xs text-muted-foreground">{pictures ? t('Drop a picture here') : t('Drop a file here')}</p>}
-            {picked.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+            {picked.busy && <p className="mt-1 text-xs text-muted-foreground">{pictures ? t('Processing images…') : t('Processing attachments…')}</p>}
+            {picked.note !== null && (
+                <p role="alert" className="mt-1 text-xs text-destructive">
+                    {picked.note}
+                </p>
+            )}
         </>
     );
 }

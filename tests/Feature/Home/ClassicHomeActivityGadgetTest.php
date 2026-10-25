@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Home;
 
+use App\Models\File;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Models\TimelinePostImage;
 use App\Services\GadgetService;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -73,6 +75,20 @@ class ClassicHomeActivityGadgetTest extends TestCase
             ->assertSee('FriendActivityBody')
             ->assertSee('/timeline"', false)           // More → timeline.index (absolute url ends here)
             ->assertSee('/timeline/new', false);       // post link (OP3's always-on home form, ported as a link)
+    }
+
+    public function test_activity_box_draws_no_thumbnail_for_a_file_attachment(): void
+    {
+        $viewer = Member::factory()->create();
+        $post = $this->postFor($viewer, Visibility::Members, 'WithFile');
+        $pdf = File::factory()->create(['type' => 'application/pdf', 'original_filename' => 'minutes.pdf', 'related_entity_type' => 'timelinePost', 'related_entity_id' => $post->getKey()]);
+        TimelinePostImage::factory()->create(['timeline_post_id' => $post->getKey(), 'file_id' => $pdf->getKey(), 'number' => 1]);
+        $this->makeGadget('activityBox');
+
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('WithFile')
+            ->assertDontSee('/cache/img/', false);
     }
 
     public function test_activity_box_excludes_a_strangers_members_post(): void

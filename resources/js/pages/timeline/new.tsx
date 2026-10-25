@@ -87,7 +87,7 @@ export default function TimelineNew({
                         </Select>
                     </Field>
 
-                    <Field label={t('Attachment')} htmlFor="timeline_image" error={errors.image ?? image.note ?? undefined}>
+                    <Field label={t('Attachment')} htmlFor="timeline_image" error={errors.image}>
                         <SingleImageInput id="timeline_image" picked={image} paste pictures={false} />
                     </Field>
 
