@@ -167,6 +167,10 @@ final class UpgradeRunner
 
             $walked = $this->walk($options, $out);
 
+            // Not rescued: a map read during preflight is memoized, and a pass rendering with it
+            // would commit the stock wording, so a clear that fails must fail the run.
+            $this->forgetCachedMaps();
+
             // Wrap after the walk: the steps land the OpenPNE 3 MD5 verbatim (bcrypt is not
             // expressible in an INSERT...SELECT), and this pass converts it before the run can
             // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
@@ -236,8 +240,8 @@ final class UpgradeRunner
 
     /**
      * Every step and every pass commits its own rows, so each map they wrote and the app caches for an
-     * hour is stale when the run ends, however it ends; an app warmed before the cutover would otherwise
-     * serve the stock rows until the TTL.
+     * hour is stale after the walk and when the run ends, however it ends; an app warmed before the
+     * cutover would otherwise serve the stock rows until the TTL.
      */
     private function forgetCachedMaps(): void
     {
