@@ -60,8 +60,11 @@ class LinkTargetProducersTest extends TestCase
     public function test_both_stylesheets_draw_the_new_tab_notice(): void
     {
         foreach (['resources/css/app.css', 'resources/views/layouts/classic.blade.php'] as $file) {
-            $css = (string) preg_replace('/\s+/', '', (string) file_get_contents(base_path($file)));
-            $this->assertStringContainsString("[data-new-tab-notice]::before{content:''attr(data-new-tab-notice)", $css, $file);
+            $this->assertMatchesRegularExpression(
+                "/\\[data-new-tab-notice\\]::before\\s*\\{\\s*content:\\s*' '\\s*attr\\(data-new-tab-notice\\)/",
+                (string) file_get_contents(base_path($file)),
+                $file,
+            );
         }
     }
 }
