@@ -40,8 +40,8 @@
             <link rel="stylesheet" href="{{ $themeCssUrl }}">
         @endforeach
     @endif
-    {{-- The OpenPNE 3 skin has no visually-hidden class, and the body HTML the server renders for
-         both surfaces carries Tailwind's (docs/internals/body-text.md, "Where a link opens"). --}}
+    {{-- The OpenPNE 3 skin has no visually-hidden class or new-tab notice rule, both of which the body
+         HTML the server renders for both surfaces relies on (docs/internals/body-text.md, "Where a link opens"). --}}
     <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[data-new-tab-notice]::before{content:' ' attr(data-new-tab-notice)}</style>
     {{-- Operator HTML insertion in <head>; admin-trusted, output raw. --}}
     {!! classic_html_slot('head') !!}
