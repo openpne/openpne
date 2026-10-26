@@ -245,7 +245,9 @@ change from a problem when you go through it.
   are shown as pictures.
 - **Surface** — the site looks like OpenPNE 3 (the "Classic" surface), matching what its members
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
-  after the cutover: `php artisan openpne:surface-mode modern_only`.
+  after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the
+  Modern surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover
+  below starts with the Modern branding.
 - **Site settings** — an `sns_config` value is copied only where this version has a matching
   setting, and **the security settings are never copied**: CAPTCHA starts on and registration starts
   invite-only whatever the OpenPNE 3 site had, so set them yourself before the cutover
@@ -332,8 +334,11 @@ order; its `js/` is not loaded. What the package carries is yours to check befor
 
 ## 6. Cutover
 
-Rehearse until the dry run holds no surprises and verification passes. Then migrate the data people
-will actually keep using:
+Rehearse until the dry run holds no surprises and verification passes. Set what phone visitors
+will see, since they get the Modern surface and none of the Classic-only customisations (custom CSS
+and HTML, gadgets, navigation, banners, theme): the brand color and logo under *Branding settings*,
+the login message under *Login page settings*. Then migrate the data people will actually keep
+using:
 
 1. Stop writes to OpenPNE 3 — maintenance mode, or however that site takes traffic. From here on,
    nothing new is being written that the dump could miss.
