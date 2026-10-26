@@ -4,7 +4,7 @@
      delete control shows only on the viewer's own posts. --}}
 @php($author = $post->member)
 @php($avatar = $author->avatar?->file)
-@php($images = $post->images->filter(fn ($image) => $image->file !== null)->take(3))
+@php($images = \App\Files\PostAttachments::partition($post->images)['images']->filter(fn ($image) => $image->file !== null)->take(3))
 <li class="activity">
     <div class="box_memberImage">
         <p><a href="{{ route('member.profile.show', $author) }}"><x-classic.image :file="$avatar" :size="48" :alt="$author->name" /></a></p>

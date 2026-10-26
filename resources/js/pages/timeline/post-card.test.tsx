@@ -34,6 +34,7 @@ const post: TimelinePostEntry = {
     hasImages: false,
     replyCount: 0,
     images: [],
+    files: [],
     mentions: [],
     tags: [],
     linkCard: null,
@@ -42,6 +43,19 @@ const post: TimelinePostEntry = {
 };
 
 const vocabulary = ['\u{1F44D}', '\u{2764}\u{FE0F}'];
+
+test('a file attachment is a download row under the body', () => {
+    renderWithProviders(
+        <TimelinePostCard
+            post={{ ...post, files: [{ id: 1, url: 'https://sns.test/file/tok', name: 'minutes.pdf', byteSize: 10, sizeLabel: '10 B', type: 'application/pdf' }] }}
+            viewerId={1}
+            reactions={{ chips: [], vocabulary, onToggle: vi.fn(), onShowReactors: vi.fn() }}
+        />,
+    );
+
+    const link = screen.getByRole('link', { name: /minutes\.pdf/ });
+    expect(link.getAttribute('href')).toBe('https://sns.test/file/tok');
+});
 
 test('a chip is its own toggle and says whether it is held', () => {
     const onToggle = vi.fn();

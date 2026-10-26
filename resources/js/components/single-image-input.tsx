@@ -6,21 +6,23 @@ import { useDropTarget } from '@/lib/use-drop-target';
 import { cn } from '@/lib/utils';
 
 /**
- * The one-picture input of a profile or group form. A drop on its form lands in the input itself,
- * so the browser's own label and `required` see the file; a drop of several takes the first.
+ * A one-file input whose form takes a drop or paste as the pick, so the browser's own label and
+ * `required` see the file; with `pictures` off it carries no accept list and takes any file.
  */
 export function SingleImageInput({
     id,
     name,
     required = false,
     paste = false,
+    pictures = true,
     picked,
 }: {
     id: string;
     name?: string;
     required?: boolean;
-    /** Whether an image-only paste into the form is taken too; a form with a body to write has one. */
+    /** Whether a file-only paste into the form is taken too; a form with a body to write has one. */
     paste?: boolean;
+    pictures?: boolean;
     picked: ReturnType<typeof useShrunkPick>;
 }) {
     const t = useT();
@@ -32,7 +34,7 @@ export function SingleImageInput({
             }
         },
         paste,
-        pictures: true,
+        pictures,
     });
 
     return (
@@ -42,7 +44,7 @@ export function SingleImageInput({
                 id={id}
                 name={name}
                 type="file"
-                accept={picked.accept}
+                accept={pictures ? picked.accept : undefined}
                 onChange={picked.pick}
                 required={required}
                 className={cn(
@@ -50,8 +52,13 @@ export function SingleImageInput({
                     dragging && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
                 )}
             />
-            {dragging && <p className="mt-1 text-xs text-muted-foreground">{t('Drop a picture here')}</p>}
-            {picked.busy && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+            {dragging && <p className="mt-1 text-xs text-muted-foreground">{pictures ? t('Drop a picture here') : t('Drop a file here')}</p>}
+            {picked.busy && <p className="mt-1 text-xs text-muted-foreground">{pictures ? t('Processing images…') : t('Processing attachments…')}</p>}
+            {picked.note !== null && (
+                <p role="alert" className="mt-1 text-xs text-destructive">
+                    {picked.note}
+                </p>
+            )}
         </>
     );
 }

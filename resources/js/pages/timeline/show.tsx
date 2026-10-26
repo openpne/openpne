@@ -3,6 +3,7 @@ import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useId, type FormEvent } from 'react';
 import { Trash2 } from 'lucide-react';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { Avatar } from '@/components/avatar';
@@ -99,6 +100,7 @@ export default function TimelineShow() {
                 </p>
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} variant="post" />
+                <FileChips files={post.files} className="mt-2" />
                 <DetailReactionChips reactions={rootReactions} />
             </Panel>
 

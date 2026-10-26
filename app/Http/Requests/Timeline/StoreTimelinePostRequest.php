@@ -36,7 +36,7 @@ class StoreTimelinePostRequest extends FormRequest
             // OpenPNE 3 activity_data.body is string(140).
             'body' => ['required', 'string', 'max:140'],
             'visibility' => ['required', TimelineVisibility::rule()],
-            'image' => PostImageRules::single(),
+            'image' => PostImageRules::singleUpload(),
             'return_to' => ['nullable', Rule::in(array_keys(self::RETURN_ROUTES))],
             ...MentionRules::rules(),
         ];

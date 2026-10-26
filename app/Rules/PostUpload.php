@@ -34,7 +34,7 @@ class PostUpload implements ValidationRule
 
         $data = [];
         Arr::set($data, $attribute, $value);
-        $inner = Validator::make($data, [$attribute => $rules], [], [$attribute => __('Attachments')]);
+        $inner = Validator::make($data, [$attribute => $rules], [], [$attribute => str_contains($attribute, '.') ? __('Attachments') : __('Attachment')]);
 
         if ($inner->fails()) {
             $fail($inner->errors()->first($attribute));

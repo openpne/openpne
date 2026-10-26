@@ -87,8 +87,8 @@ export default function TimelineNew({
                         </Select>
                     </Field>
 
-                    <Field label={t('Image')} htmlFor="timeline_image" error={errors.image}>
-                        <SingleImageInput id="timeline_image" picked={image} paste />
+                    <Field label={t('Attachment')} htmlFor="timeline_image" error={errors.image}>
+                        <SingleImageInput id="timeline_image" picked={image} paste pictures={false} />
                     </Field>
 
                     {/* The sheet header carries this action below lg (ComposeSheetAction above). */}

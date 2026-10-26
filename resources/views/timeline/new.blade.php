@@ -30,9 +30,9 @@
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="timeline_image">{{ __('Image') }}</label></th>
+                    <th><label for="timeline_image">{{ __('Attachment') }}</label></th>
                     <td>
-                        <input type="file" id="timeline_image" name="image" accept="{{ image_upload_accept() }}">
+                        <input type="file" id="timeline_image" name="image">
                         @error('image')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>

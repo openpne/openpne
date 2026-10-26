@@ -21,7 +21,8 @@ is a picture, anything else a file. Three readers exist for that split and no fo
   `sizeLabel`, `type`). The talk digest excerpt ships pictures only.
 - `FileResponse::isRaster()` on one row, for the Classic partials that walk a slot list.
 
-`images()` itself stays the whole set, read by the editors and the delete actions.
+`images()` itself stays the whole set, read by the editors and the delete actions. The timeline's
+single `image` field is the same slot under another wire (`PostImageRules::singleUpload()`).
 `PictureReadersTest` keeps the string forms of the slot-relation counts and existence checks out
 of `app/`, and `images` serializers partitioning; a reader built another way is reviewed, not caught.
 
