@@ -22,23 +22,42 @@ final class FileBinMigration
 
     private const REWIRE_KEY = 'file_bin_rewire';
 
+    private const MISMATCH_SAMPLE = 5;
+
     /**
      * Read-only; returns the error that aborts the run before any write, or null. Call only after
      * SourcePreflight has passed, so the source `file` table is present to COUNT.
      */
     public function preflight(string $sourcePrefix, ?string $sourceDatabase): ?string
     {
-        $fileRows = (int) DB::scalar('SELECT COUNT(*) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file'));
+        $fileTable = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file');
+        $fileRows = (int) DB::scalar("SELECT COUNT(*) FROM {$fileTable}");
 
         // The bytes are in the source file_bin on a fresh run, else in the app's own (in-place, or
         // already moved); an app file_bin absent after a crash mid-move counts as 0.
         $sourcePresent = $this->tableExists($this->sourceSchema($sourceDatabase), $sourcePrefix.'file_bin');
-        $bytesRows = $sourcePresent
-            ? (int) DB::scalar('SELECT COUNT(*) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin'))
-            : $this->appFileBinCount();
+        $binTable = $sourcePresent
+            ? InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin')
+            : ($this->appFileBinExists() ? '`file_bin`' : null);
+        $bytesRows = $binTable === null ? 0 : (int) DB::scalar("SELECT COUNT(*) FROM {$binTable}");
+        $paired = $binTable === null ? 0 : (int) DB::scalar("SELECT COUNT(*) FROM {$fileTable} AS `f` JOIN {$binTable} AS `b` ON `b`.`file_id` = `f`.`id`");
 
-        if ($fileRows !== $bytesRows) {
-            return "file has {$fileRows} rows but file_bin has {$bytesRows} — the OpenPNE 3 dump is incomplete, or uses filesystem file storage (unsupported); every file's bytes must be a file_bin row (DB-blob storage).";
+        if ($fileRows !== $paired || $bytesRows !== $paired) {
+            $error = ($fileRows === $bytesRows
+                ? "file and file_bin both have {$fileRows} rows but they do not pair up"
+                : "file has {$fileRows} rows but file_bin has {$bytesRows}")
+                ." — every file's bytes must be a file_bin row (DB-blob storage; a filesystem-storage site is unsupported).";
+
+            if ($binTable !== null) {
+                $error .= self::unpaired($fileTable, 'id', $binTable, 'file_id', $fileRows - $paired)
+                    .self::unpaired($binTable, 'file_id', $fileTable, 'id', $bytesRows - $paired);
+            }
+
+            return $error.match (true) {
+                $binTable === null => ' No file_bin table holds the bytes: restore the dump\'s file_bin and re-run.',
+                $sourcePresent => ' Restore a complete dump (one cut short inside file_bin looks like this), or delete the unpaired rows in the source and re-run.',
+                default => ' The bytes were already moved into this database\'s file_bin; delete the unpaired rows (source file, or file_bin here) and re-run, or --force-restart from a fresh restore.',
+            };
         }
 
         if (! $this->inPlace($sourcePrefix, $sourceDatabase) && $sourcePresent && $this->appFileBinCount() > 0) {
@@ -46,6 +65,21 @@ final class FileBinMigration
         }
 
         return null;
+    }
+
+    private static function unpaired(string $table, string $key, string $other, string $otherKey, int $total): string
+    {
+        if ($total <= 0) {
+            return '';
+        }
+
+        $ids = array_map(
+            static fn (object $row): int => (int) $row->{$key},
+            DB::select("SELECT `l`.`{$key}` FROM {$table} AS `l` LEFT JOIN {$other} AS `r` ON `r`.`{$otherKey}` = `l`.`{$key}` WHERE `r`.`{$otherKey}` IS NULL ORDER BY `l`.`{$key}` LIMIT ".self::MISMATCH_SAMPLE),
+        );
+        $more = $total - count($ids);
+
+        return " {$total} {$table} row(s) have no {$other} row ({$key} ".implode(', ', $ids).($more > 0 ? " and {$more} more" : '').').';
     }
 
     public function snapshot(string $sourcePrefix, ?string $sourceDatabase, Closure $out): void
