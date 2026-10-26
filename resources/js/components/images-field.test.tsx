@@ -160,11 +160,36 @@ test('where the server would refuse it whole, an animated WebP takes the canvas 
     expect(out.type).toBe('image/jpeg');
 });
 
-test('the picker offers what the page was shipped', () => {
+test('the picker offers every file, whatever the page was shipped for pictures', () => {
     page.imageUpload.accept = 'image/jpeg,image/png';
-    const { container } = render(<ImagesField id="images" label="Images" files={[]} onChange={() => {}} errors={{}} />);
+    const { container } = render(<ImagesField id="images" label="Attachments" files={[]} onChange={() => {}} errors={{}} />);
 
-    expect(container.querySelector('input[type="file"]')?.getAttribute('accept')).toBe('image/jpeg,image/png');
+    expect(container.querySelector('input[type="file"]')?.hasAttribute('accept')).toBe(false);
+});
+
+test('a file that is not a picture is submitted as picked, without being decoded', async () => {
+    const decode = vi.fn();
+    vi.stubGlobal('createImageBitmap', decode);
+    const file = small('application/pdf', 'minutes.pdf');
+
+    expect(await shrink(file, page.imageUpload)).toBe(file);
+    expect(decode).not.toHaveBeenCalled();
+});
+
+test('a file over the attachment cap is refused with a note; a picture that size is left to the shrink and the server', async () => {
+    decodesEverything();
+    page.imageUpload.attachmentMaxBytes = 1024;
+    const onChange = vi.fn();
+    const { getByLabelText, container } = render(<ImagesField id="images" label="Attachments" files={[]} onChange={onChange} errors={{}} />);
+
+    // A typeless pick (an extension the browser does not know) meets the cap too.
+    fireEvent.change(getByLabelText('Attachments'), { target: { files: [bytes(2048, 'application/pdf', 'big.pdf'), bytes(2048, '', 'plan.xdw'), bytes(16, 'application/pdf', 'small.pdf')] } });
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ name: 'small.pdf' })]);
+    expect(container.textContent).toContain('A file can be up to 1 KB.');
+
+    fireEvent.change(getByLabelText('Attachments'), { target: { files: [bytes(2048, 'image/png', 'big.png')] } });
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ name: 'big.png' })]));
+    expect(container.textContent).not.toContain('A file can be up to');
 });
 
 function SinglePicker() {
@@ -276,7 +301,7 @@ test('a picture dropped on the field\'s form, or pasted into it, is added like a
     // The field shows the ring while a picture is over its form, once nothing is running.
     await waitFor(() => expect(onChange).toHaveBeenCalledTimes(4));
     fireEvent.dragEnter(form, { dataTransfer: drag });
-    expect(container.textContent).toContain('Drop a picture here');
+    expect(container.textContent).toContain('Drop a file here');
 });
 
 test('at the cap a drop is swallowed without a note, as the disabled input takes no pick', () => {

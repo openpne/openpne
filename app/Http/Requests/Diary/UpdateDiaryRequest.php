@@ -53,7 +53,7 @@ class UpdateDiaryRequest extends StoreDiaryRequest
             }
 
             if (ImageEdit::fromRequest($this)->exceedsCap($diary->images()->pluck('id')->all())) {
-                $validator->errors()->add('images', __('A %diary% can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
+                $validator->errors()->add('images', __('A %diary% can have at most :max attachments.', ['max' => PostImages::MAX_IMAGES]));
             }
         });
     }

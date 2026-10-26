@@ -1,4 +1,4 @@
-import { ImagePlus, Reply, SendHorizontal, X } from 'lucide-react';
+import { Paperclip, Reply, SendHorizontal, X } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
 import { BLEED_EDGES } from '@/components/card';
 import { useComposerEngaged } from '@/components/compose/compose-sheet-action';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tip } from '@/components/ui/tooltip';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
-import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
+import { acceptPicks, isPicture, MAX_POST_IMAGES, sizeLabel, withinAttachmentCap } from '@/lib/image-picks';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
 import type { TalkMessage } from './types';
@@ -23,10 +23,10 @@ function imageErrorIn(errors: Record<string, string>): string {
         .join(' ');
 }
 
-function replyPreview(message: TalkMessage, imageLabel: string): string {
+function replyPreview(message: TalkMessage, imageLabel: string, fileLabel: string): string {
     const body = message.body.trim();
 
-    return body !== '' ? body : message.images.length > 0 ? imageLabel : '';
+    return body !== '' ? body : message.images.length > 0 ? imageLabel : message.files.length > 0 ? fileLabel : '';
 }
 
 /**
@@ -70,11 +70,11 @@ export function TalkComposer({
     };
 
     useEffect(() => {
-        const urls = images.map((image) => URL.createObjectURL(image));
+        const urls = images.map((image) => (isPicture(image, upload.accept) ? URL.createObjectURL(image) : ''));
         setPreviews(urls);
 
-        return () => urls.forEach((url) => URL.revokeObjectURL(url));
-    }, [images]);
+        return () => urls.forEach((url) => url !== '' && URL.revokeObjectURL(url));
+    }, [images, upload.accept]);
 
     // MentionTextarea keeps its textarea ref private, so the composer's form is the handle that
     // reaches the caret.
@@ -97,8 +97,15 @@ export function TalkComposer({
         if (picked.length === 0) {
             return;
         }
-        const { files: next, refused } = acceptPicks(held.current, picked, MAX_POST_IMAGES);
-        setCapNote(refused ? t('You can attach up to :max images.', { max: MAX_POST_IMAGES }) : null);
+        const { files: fitting, refused: oversized } = withinAttachmentCap(picked, upload);
+        const { files: next, refused } = acceptPicks(held.current, fitting, MAX_POST_IMAGES);
+        setCapNote(
+            oversized
+                ? t('A file can be up to :size.', { size: sizeLabel(upload.attachmentMaxBytes) })
+                : refused
+                  ? t('You can attach up to :max files.', { max: MAX_POST_IMAGES })
+                  : null,
+        );
         const accepted = next.slice(held.current.length);
         if (accepted.length === 0) {
             return;
@@ -123,7 +130,7 @@ export function TalkComposer({
         select(held.current.filter((_, i) => i !== index));
     };
 
-    // A drop on the bar or an image-only paste into it attaches the way the button does, and is
+    // A drop on the bar or a file-only paste into it attaches the way the button does, and is
     // ignored while the button is: a send in flight would reset what landed during it.
     const dragging = useDropTarget(form, { onFiles: add, enabled: !sending && images.length < MAX_POST_IMAGES, paste: true });
 
@@ -164,7 +171,7 @@ export function TalkComposer({
     const attachmentNote = imageError || capNote;
 
     const replyName = replyTo === null ? '' : (replyTo.author?.name ?? t('Withdrawn member'));
-    const replyLine = replyTo === null ? '' : replyPreview(replyTo, t('Image'));
+    const replyLine = replyTo === null ? '' : replyPreview(replyTo, t('Image'), t('File'));
 
     return (
         <form
@@ -183,7 +190,7 @@ export function TalkComposer({
                 dragging && 'ring-2 ring-ring ring-inset',
             )}
         >
-            {dragging && <p className="pb-2 text-xs text-muted-foreground">{t('Drop a picture here')}</p>}
+            {dragging && <p className="pb-2 text-xs text-muted-foreground">{t('Drop a file here')}</p>}
             {error !== null && (
                 <p role="alert" className="pb-2 text-sm text-destructive">
                     {error}
@@ -211,11 +218,17 @@ export function TalkComposer({
                         <ul className="flex gap-2">
                             {images.map((image, index) => (
                                 <li key={`${image.name}-${index}`} className="relative w-16">
-                                    {/* Alt-less: the remove button beside it is what names the picture. */}
-                                    {previews[index] !== undefined && (
+                                    {/* Alt-less: the remove button beside it is what names the attachment. */}
+                                    {previews[index] !== undefined && previews[index] !== '' && (
                                         <img src={previews[index]} alt="" className="size-16 rounded-lg border border-border object-cover" />
                                     )}
-                                    <Tip label={t('Remove image :number', { number: index + 1 })}>
+                                    {previews[index] === '' && (
+                                        <span className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-muted px-1 text-3xs text-muted-foreground">
+                                            <Paperclip className="size-4 shrink-0" aria-hidden />
+                                            <span className="w-full truncate text-center" title={image.name}>{image.name}</span>
+                                        </span>
+                                    )}
+                                    <Tip label={t('Remove attachment :number', { number: index + 1 })}>
                                         <button
                                             type="button"
                                             onClick={() => remove(index)}
@@ -231,7 +244,7 @@ export function TalkComposer({
                             ))}
                         </ul>
                     )}
-                    {shrinking && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
+                    {shrinking && <p className="mt-1 text-xs text-muted-foreground">{t('Processing attachments…')}</p>}
                     {attachmentNote !== null && (
                         <p role="alert" className="mt-1 text-xs text-destructive">
                             {attachmentNote}
@@ -241,8 +254,8 @@ export function TalkComposer({
             )}
             <div className="flex items-end gap-2">
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
-                <input ref={fileInput} type="file" accept={upload.accept} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
-                <Tip label={t('Attach an image')}>
+                <input ref={fileInput} type="file" multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
+                <Tip label={t('Attach a file')}>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -251,7 +264,7 @@ export function TalkComposer({
                         disabled={sending || images.length >= MAX_POST_IMAGES}
                         className="shrink-0"
                     >
-                        <ImagePlus className="size-5" aria-hidden />
+                        <Paperclip className="size-5" aria-hidden />
                     </Button>
                 </Tip>
                 <div className="min-w-0 flex-1">

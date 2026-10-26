@@ -10,3 +10,47 @@ export function acceptPicks<T>(held: T[], picked: T[], max: number = MAX_POST_IM
 
     return { files: [...held, ...picked.slice(0, room)], refused: picked.length > room };
 }
+
+/** The types in an accept list, exactly; a file's type is matched whole, never as a substring. */
+export function acceptedTypes(accept: string): Set<string> {
+    return new Set(
+        accept
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.startsWith('image/')),
+    );
+}
+
+/**
+ * A picture is what the server's processor reads (the shipped accept list, by type or, for a pick
+ * the browser gave no type, by extension); anything else goes up as a file, which the server also decides by content.
+ */
+export function isPicture(file: File, accept: string): boolean {
+    if (file.type !== '') {
+        return acceptedTypes(accept).has(file.type);
+    }
+    const extension = file.name.replace(/^.*\./, '.').toLowerCase();
+
+    return extension !== file.name.toLowerCase() && accept.split(',').some((entry) => entry.trim().toLowerCase() === extension);
+}
+
+/**
+ * A file that is not a picture goes up as picked, so the server's attachment cap is the only one
+ * it meets; refusing it here spares the member a 413 that loses the draft. A picture is shrunk first
+ * and the server's image rule answers it.
+ */
+export function withinAttachmentCap(picked: File[], upload: { accept: string; attachmentMaxBytes: number }): { files: File[]; refused: boolean } {
+    const files = picked.filter((file) => isPicture(file, upload.accept) || file.size <= upload.attachmentMaxBytes);
+
+    return { files, refused: files.length < picked.length };
+}
+
+/** The cap as the member reads it: whole megabytes, a fraction kept when there is one, kilobytes under one. */
+export function sizeLabel(bytes: number): string {
+    if (bytes < 1024 * 1024) {
+        return `${Math.round(bytes / 1024)} KB`;
+    }
+    const megabytes = bytes / (1024 * 1024);
+
+    return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(1)} MB`;
+}

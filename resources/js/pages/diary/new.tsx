@@ -80,7 +80,7 @@ export default function DiaryNew({
                         </Select>
                     </Field>
 
-                    <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
+                    <ImagesField id="diary_images" label={t('Attachments')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
                     {/* The sheet header carries this action below lg (ComposeSheetAction above). */}
                     <Button type="submit" className="max-lg:hidden" loading={processing} disabled={data.body.trim() === ''}>

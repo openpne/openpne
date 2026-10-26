@@ -88,7 +88,7 @@ export default function GroupTopicEdit() {
 
                     <CurrentImagesField images={topic?.images ?? []} files={topic?.files ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 
-                    <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
+                    <ImagesField id="images" label={t('Add attachments')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
                     {/* The sheet header carries this action below lg (ComposeSheetAction above). */}
                     <Button

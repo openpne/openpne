@@ -62,7 +62,7 @@ class UpdateDraftRequest extends FormRequest
             }
 
             if (ImageEdit::fromRequest($this)->exceedsCap($draft->files()->pluck('id')->all())) {
-                $validator->errors()->add('images', __('A message can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
+                $validator->errors()->add('images', __('A message can have at most :max attachments.', ['max' => PostImages::MAX_IMAGES]));
             }
         });
     }

@@ -103,7 +103,7 @@ export default function MessageEdit() {
 
                     <CurrentImagesField images={draft.images} files={draft.files} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 
-                    <ImagesField id="message_images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
+                    <ImagesField id="message_images" label={t('Add attachments')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
                     <FormActions className="max-lg:hidden">
                         <Button onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>

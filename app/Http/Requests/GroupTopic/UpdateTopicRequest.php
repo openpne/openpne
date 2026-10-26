@@ -46,7 +46,7 @@ class UpdateTopicRequest extends StoreTopicRequest
             }
 
             if (ImageEdit::fromRequest($this)->exceedsCap($topic->images()->pluck('id')->all())) {
-                $validator->errors()->add('images', __('A %topic% can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
+                $validator->errors()->add('images', __('A %topic% can have at most :max attachments.', ['max' => PostImages::MAX_IMAGES]));
             }
         });
     }
