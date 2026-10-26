@@ -7,7 +7,7 @@
          reproduce: the standalone page takes the form kind and keeps its OpenPNE 4 id. --}}
     <x-classic.parts id="timeline_new" name="form" :title="__('%Post_activity%')">
         <form method="POST" action="{{ route('timeline.store') }}" enctype="multipart/form-data"
-              data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+              data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-label="{{ __('Mention candidates') }}">
             @csrf
             @include('timeline._mention-draft')
             <table>

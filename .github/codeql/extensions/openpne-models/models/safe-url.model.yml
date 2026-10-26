@@ -1,0 +1,7 @@
+# safeUrl() admits only the schemes its parameter type allows, none of which runs script.
+extensions:
+  - addsTo:
+      pack: codeql/javascript-all
+      extensible: barrierModel
+    data:
+      - ["file:resources/js/lib/safe-url.ts", "Member[safeUrl].ReturnValue", "html-injection"]

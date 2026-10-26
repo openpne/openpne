@@ -1,3 +1,5 @@
+import { safeUrl } from './safe-url.ts';
+
 /**
  * Mirrors App\Support\LinkTarget for the client: a URL on the page's own host stays in the app, any
  * other opens a new tab. The host is the page's rather than app.url, as that is the one origin the
@@ -22,14 +24,13 @@ export function isBytesHref(path: string): boolean {
 
 /** The path the router visits for $href, or null when it leaves this site. */
 export function inAppHref(href: string, host: string): string | null {
-    let url: URL;
-    try {
-        url = new URL(href);
-    } catch {
+    const safe = safeUrl(href);
+    if (safe === null) {
         return null;
     }
 
-    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.host !== host.toLowerCase()) {
+    const url = new URL(safe);
+    if (url.host !== host.toLowerCase()) {
         return null;
     }
 

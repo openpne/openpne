@@ -32,6 +32,19 @@ test('the page the tests run on is this site', () => {
     expect(window.location.host).toBe('sns.example.test');
 });
 
+test('a script url is left as text, not a link', () => {
+    render(<BodyLink href="javascript:alert(1)">click</BodyLink>);
+
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText('click').tagName).toBe('SPAN');
+});
+
+test('a url the browser cannot parse is left as text, as it could not be followed', () => {
+    render(<BodyLink href="https://example.com:80a/">https://example.com:80a/</BodyLink>);
+
+    expect(screen.queryByRole('link')).toBeNull();
+});
+
 test('a link to another site opens a new tab and says so', () => {
     render(<BodyLink href="https://example.org/x">example.org</BodyLink>);
     const link = screen.getByRole('link');
