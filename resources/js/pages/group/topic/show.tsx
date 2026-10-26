@@ -1,5 +1,6 @@
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
@@ -109,6 +110,7 @@ export default function GroupTopicShow() {
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
                 <LinkCard card={topic.linkCard} />
                 <ImageGrid images={topic.images} variant="post" className="mt-2" />
+                <FileChips files={topic.files} className="mt-2" />
                 <DetailReactionChips reactions={bodyReactions} />
 
             </Panel>

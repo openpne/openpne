@@ -146,18 +146,20 @@ class DiaryImagesTest extends TestCase
         $this->assertDatabaseCount('diaries', 0);
     }
 
-    public function test_a_non_image_attachment_is_rejected(): void
+    public function test_a_non_image_attachment_is_kept_as_a_file_in_a_slot(): void
     {
         $author = Member::factory()->create();
 
         $this->actingAs($author)->post(route('diary.store'), [
-            'title' => 'bad file',
+            'title' => 'with a file',
             'body' => 'b',
             'visibility' => Visibility::Members->value,
             'images' => [UploadedFile::fake()->create('notes.txt', 10, 'text/plain')],
-        ])->assertSessionHasErrors('images.0');
+        ])->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('diaries', 0);
+        $this->assertDatabaseCount('diaries', 1);
+        $this->assertDatabaseCount('diary_images', 1);
+        $this->assertDatabaseHas('files', ['original_filename' => 'notes.txt', 'type' => 'text/plain', 'related_entity_type' => 'diary']);
     }
 
     public function test_the_feed_shows_a_has_images_marker_only_for_entries_with_images(): void

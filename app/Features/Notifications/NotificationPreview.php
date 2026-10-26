@@ -73,7 +73,7 @@ final class NotificationPreview
             return null;
         }
 
-        return self::plain($comment->body, $comment->images()->exists());
+        return self::plain($comment->body, $comment->pictures()->exists(), $comment->images()->exists());
     }
 
     private static function directMessage(?int $id, Member $recipient): ?string
@@ -91,7 +91,7 @@ final class NotificationPreview
             return null;
         }
 
-        return self::plain($message->body, $message->files()->exists(), $message->subject);
+        return self::plain($message->body, $message->pictures()->exists(), $message->files()->exists(), $message->subject);
     }
 
     private static function talkMessage(?int $id, Member $recipient): ?string
@@ -101,7 +101,7 @@ final class NotificationPreview
             return null;
         }
 
-        return self::plain($message->body, $message->images()->exists());
+        return self::plain($message->body, $message->pictures()->exists(), $message->images()->exists());
     }
 
     private static function topic(?int $id, Member $recipient): ?string
@@ -131,7 +131,7 @@ final class NotificationPreview
             return null;
         }
 
-        return self::plain($comment->body, $comment->images()->exists());
+        return self::plain($comment->body, $comment->pictures()->exists(), $comment->images()->exists());
     }
 
     private static function eventComment(?int $id, Member $recipient): ?string
@@ -141,7 +141,7 @@ final class NotificationPreview
             return null;
         }
 
-        return self::plain($comment->body, $comment->images()->exists());
+        return self::plain($comment->body, $comment->pictures()->exists(), $comment->images()->exists());
     }
 
     private static function timelinePost(?int $id, Member $recipient): ?string
@@ -152,7 +152,7 @@ final class NotificationPreview
             return null;
         }
 
-        return self::plain($post->body, $post->images()->exists());
+        return self::plain($post->body, $post->pictures()->exists(), $post->images()->exists());
     }
 
     private static function titled(?string $title, string $excerpt): ?string
@@ -162,9 +162,9 @@ final class NotificationPreview
         return $lines === [] ? null : implode("\n", $lines);
     }
 
-    private static function plain(?string $body, bool $hasImages, ?string $fallback = null): ?string
+    private static function plain(?string $body, bool $hasPictures, bool $hasFiles, ?string $fallback = null): ?string
     {
-        $line = ChatPreview::lineOrImages([BodyText::excerpt($body), (string) $fallback], $hasImages);
+        $line = ChatPreview::lineOrImages([BodyText::excerpt($body), (string) $fallback], $hasPictures, $hasFiles);
 
         return $line === '' ? null : $line;
     }

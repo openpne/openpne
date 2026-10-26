@@ -17,6 +17,7 @@ use App\Features\Home\Data\TalkStretch;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Files\PostAttachments;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupEvent;
@@ -289,7 +290,7 @@ final class HomeIssueSerializer
 
     private static function pictureOf(Diary|TimelinePost|GroupTopic|GroupEvent $source): ?array
     {
-        return self::picture($source->images, match (true) {
+        return self::picture(PostAttachments::partition($source->images)['images'], match (true) {
             $source instanceof Diary => DiarySerializer::image(...),
             $source instanceof TimelinePost => TimelinePostSerializer::image(...),
             $source instanceof GroupTopic => GroupTopicSerializer::image(...),

@@ -4,7 +4,9 @@ namespace App\Features\DirectMessage\Serializers;
 
 use App\Features\DirectMessage\DirectMessageListItem;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Files\AttachmentShape;
 use App\Files\ImageLadder;
+use App\Files\PostAttachments;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageFile;
 use App\Models\Member;
@@ -41,7 +43,8 @@ class DirectMessageSerializer
             'subject' => (string) $draft->subject,
             'body' => (string) $draft->body,
             'recipient' => self::member($draft->draftRecipient),
-            'images' => $draft->files->map([self::class, 'image'])->all(),
+            'images' => PostAttachments::partition($draft->files)['images']->map([self::class, 'image'])->all(),
+            'files' => PostAttachments::partition($draft->files)['files']->map([AttachmentShape::class, 'of'])->all(),
         ];
     }
 

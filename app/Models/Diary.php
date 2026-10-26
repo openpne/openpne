@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Files\PostAttachments;
 use App\Models\Concerns\HasLinkCard;
 use App\Models\Concerns\HasReactions;
 use App\Support\BodyFormat;
@@ -47,5 +48,11 @@ class Diary extends Model
     public function images(): HasMany
     {
         return $this->hasMany(DiaryImage::class)->orderBy('number')->orderBy('id');
+    }
+
+    /** @return HasMany<DiaryImage, $this> */
+    public function pictures(): HasMany
+    {
+        return PostAttachments::pictures($this->images());
     }
 }

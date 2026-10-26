@@ -154,18 +154,19 @@ class GroupTopicImagesTest extends TestCase
         $this->assertDatabaseCount('group_topics', 0);
     }
 
-    public function test_a_non_image_attachment_is_rejected(): void
+    public function test_a_non_image_attachment_is_kept_as_a_file_in_a_slot(): void
     {
         $group = Group::factory()->create();
         $member = $this->joined($group);
 
         $this->actingAs($member)->post(route('group.topics.store', $group), [
-            'name' => 'bad file',
+            'name' => 'with a file',
             'body' => 'b',
             'images' => [UploadedFile::fake()->create('notes.txt', 10, 'text/plain')],
-        ])->assertSessionHasErrors('images.0');
+        ])->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('group_topics', 0);
+        $this->assertDatabaseCount('group_topics', 1);
+        $this->assertDatabaseHas('files', ['original_filename' => 'notes.txt', 'related_entity_type' => 'groupTopic']);
     }
 
     public function test_a_failed_later_image_compensates_the_earlier_images_bytes(): void

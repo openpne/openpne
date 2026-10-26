@@ -18,13 +18,17 @@
                 @include('message._fields', ['subject' => $draft->subject, 'body' => $draft->body])
                 @if ($draft->files->isNotEmpty())
                     <tr>
-                        <th>{{ __('Current images') }}</th>
+                        <th>{{ __('Current attachments') }}</th>
                         <td>
                             <ul class="photo">
                                 @foreach ($draft->files as $image)
                                     @continue($image->file === null)
                                     <li>
-                                        <img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
+                                        @if (\App\Files\FileResponse::isRaster($image->file))
+                                            <img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
+                                        @else
+                                            <a href="{{ $image->file->url() }}">{{ $image->file->original_filename ?? __('File') }}</a>
+                                        @endif
                                         <label><input type="checkbox" name="remove_images[]" value="{{ $image->id }}"> {{ __('Delete') }}</label>
                                     </li>
                                 @endforeach

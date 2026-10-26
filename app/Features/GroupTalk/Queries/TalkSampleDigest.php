@@ -8,6 +8,7 @@ use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Files\FileOwners;
+use App\Files\PostAttachments;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
@@ -107,7 +108,7 @@ final class TalkSampleDigest
      */
     public function imagesOf(Member $viewer, GroupMessage $message): array
     {
-        return $message->images
+        return PostAttachments::partition($message->images)['images']
             ->take(self::EXCERPT_PICTURES)
             ->filter(fn (GroupMessageImage $image): bool => $this->shows($viewer, $message, $image))
             ->map(fn (GroupMessageImage $image): array => GroupMessageSerializer::image($image))
@@ -133,9 +134,11 @@ final class TalkSampleDigest
         // `(group_message_id, number)` is not unique, so a tie on the number is broken by the id.
         $first = GroupMessageImage::query()
             ->whereIn('group_message_images.group_message_id', $parents->keys())
+            ->whereIn('group_message_images.file_id', PostAttachments::pictureFileIds())
             ->whereNotExists(fn (QueryBuilder $earlier) => $earlier
                 ->from('group_message_images as earlier')
                 ->whereColumn('earlier.group_message_id', 'group_message_images.group_message_id')
+                ->whereIn('earlier.file_id', PostAttachments::pictureFileIds())
                 ->where(fn (QueryBuilder $before) => $before
                     ->whereColumn('earlier.number', '<', 'group_message_images.number')
                     ->orWhere(fn (QueryBuilder $tied) => $tied
@@ -223,6 +226,7 @@ final class TalkSampleDigest
         $candidates = GroupMessageImage::query()
             ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
             ->whereIn('group_message_images.group_message_id', $parents->keys())
+            ->whereIn('group_message_images.file_id', PostAttachments::pictureFileIds())
             ->with('file')
             ->orderBy('group_messages.created_at')
             ->orderBy('group_messages.id')

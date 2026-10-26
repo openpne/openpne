@@ -86,7 +86,7 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
             // a legacy subject-only row has no attachment and stays as blank as it has always been.
             'message_body' => (string) $this->message->body !== ''
                 ? $this->message->body
-                : ChatPreview::imagesLine($this->message->files()->exists()),
+                : ChatPreview::imagesLine($this->message->pictures()->exists(), $this->message->files()->exists()),
             'url' => route('message.receive.show', ['message' => $this->message->getKey()]),
         ]);
     }

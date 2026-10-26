@@ -1,3 +1,4 @@
+import type { AttachmentFile } from '@/types';
 import type { GridImage } from '@/components/image-grid';
 import type { ChatFirstUnreadSnapshot, ChatPage, ChatStreamRow } from '@/lib/chat/types';
 import type { MessageMember } from '../types';
@@ -11,6 +12,7 @@ export interface ConversationMessage extends ChatStreamRow {
     /** Whether the counterpart has opened this message. Only ever set on the viewer's own; null otherwise. */
     read: boolean | null;
     images: GridImage[];
+    files: AttachmentFile[];
 }
 
 export type ConversationPage = ChatPage<ConversationMessage>;

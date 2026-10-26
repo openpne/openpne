@@ -36,6 +36,7 @@
                 </div>
                 <div class="body">
                     @include('group-topic._images', ['images' => $diary->images])
+                    @include('group-topic._files', ['images' => $diary->images])
                     <x-user-text :value="$diary->body" :format="$diary->format" />
                     <x-link-card :record="$diary" />
                 </div>
@@ -106,6 +107,7 @@
                         {{-- diaryComment/_list.php puts the photos inside div.body, above the text. --}}
                         <div class="body">
                             @include('group-topic._images', ['images' => $comment->images])
+                            @include('group-topic._files', ['images' => $comment->images])
                             <p class="text"><x-user-text :value="$comment->body" /></p>
                             <x-link-card :record="$comment" />
                         </div>

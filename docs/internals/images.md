@@ -176,7 +176,8 @@ since `rebuild` has discarded before it writes and a full disk would otherwise e
 a processor that is down would otherwise be asked once per row; a row whose bytes are
 gone keeps the exit non-zero until the row is deleted, there being nothing to show for it anyway. A
 row stored under an image type this version does not show as a picture (`image/bmp`, say, which
-OpenPNE 3's unvalidated API upload could write) is counted as unshown and listed.
+OpenPNE 3's unvalidated API upload could write, or an SVG or TIFF attached to a post) is counted as
+unshown and listed.
 
 ## Upload size
 
@@ -227,6 +228,10 @@ base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it i
 
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.
+
+A file that is not a picture, posted in the same `images[]` slots, has its own cap,
+`OPENPNE_FILE_MAX_UPLOAD_KB` (`AttachmentLimit`, 10240 by default), and the same PHP and proxy
+prerequisites hold for it with that larger number ([attachments](attachments.md), "Limits").
 
 ### Shrinking in the browser
 

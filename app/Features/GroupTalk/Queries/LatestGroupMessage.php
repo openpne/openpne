@@ -16,7 +16,7 @@ class LatestGroupMessage
         return GroupMessage::query()
             ->where('group_id', $group->getKey())
             ->with('author')
-            ->withExists('images')
+            ->withExists(['pictures', 'images'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->first();

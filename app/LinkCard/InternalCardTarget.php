@@ -11,6 +11,7 @@ use App\Features\GroupTalk\GroupTalkController;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Profile\ProfileAccess;
 use App\Features\Timeline\TimelineAccess;
+use App\Files\PostAttachments;
 use App\Models\Diary;
 use App\Models\File;
 use App\Models\Group;
@@ -203,7 +204,7 @@ enum InternalCardTarget: string
                 'title' => __('Message from :name', ['name' => $record->author?->name ?? __('Withdrawn member')]),
                 // The same line every list previews a message by, so a card of a message and the
                 // room row above it read alike.
-                'description' => ChatPreview::lineOrImages([$record->body], $record->images->isNotEmpty()),
+                'description' => ChatPreview::lineOrImages([$record->body], self::firstImage($record) !== null, $record->images->isNotEmpty()),
                 'image' => $this->firstImage($record),
             ],
         };
@@ -231,10 +232,10 @@ enum InternalCardTarget: string
         $relations->warmFriends($viewer, $ownerIds);
     }
 
-    /** The picture a body leads with, or null when it has none. */
-    private function firstImage(Model $record): ?File
+    /** The picture a body leads with, or null when it has none; a file attachment is not a picture. */
+    private static function firstImage(Model $record): ?File
     {
-        return $record->images->first()?->file;
+        return PostAttachments::partition($record->images)['images']->first(fn (Model $slot): bool => $slot->file !== null)?->file;
     }
 
     /**

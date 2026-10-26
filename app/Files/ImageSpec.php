@@ -23,6 +23,12 @@ final class ImageSpec
         public readonly bool $animated = false,
     ) {}
 
+    /** @return list<string> the stored types this version draws inline */
+    public static function rasterMimes(): array
+    {
+        return array_keys(self::FORMATS);
+    }
+
     public static function formatFor(string $mime): ?string
     {
         return self::FORMATS[$mime] ?? null;

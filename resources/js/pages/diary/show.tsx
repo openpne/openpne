@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
@@ -98,6 +99,7 @@ export default function DiaryShow() {
                 <LinkCard card={diary.linkCard} />
 
                 <ImageGrid images={diary.images} variant="post" className="mt-1" />
+                <FileChips files={diary.files} className="mt-2" />
 
                 <DetailReactionChips reactions={rowReactions(diary.id, diary.reactions, reactionVocabulary, canReact ? diaryReactions : null)} />
 

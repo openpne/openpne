@@ -1,3 +1,4 @@
+import type { AttachmentFile } from '@/types';
 import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
 import type { ReactionChip } from '@/lib/reactions/types';
@@ -96,6 +97,7 @@ export interface TopicDetail {
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     images: GridImage[];
+    files: AttachmentFile[];
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string;
@@ -108,6 +110,7 @@ export interface TopicComment {
     number: number;
     body: string;
     images: GridImage[];
+    files: AttachmentFile[];
     /** First URL in the body, previewed; null when there is none, or while it is still being fetched. */
     linkCard: LinkCardData | null;
     author: TopicAuthor | null;
@@ -155,6 +158,7 @@ export interface EventDetail {
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     images: GridImage[];
+    files: AttachmentFile[];
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string; // ISO 8601 datetime

@@ -20,7 +20,7 @@ class ListDiaries
     public function __invoke(?Member $viewer, Member $owner, int $perPage = 20, ?ArchivePeriod $period = null, string $keyword = ''): LengthAwarePaginator
     {
         $query = Diary::query()->where('member_id', $owner->getKey())
-            ->with('member.avatar.file')->withCount(['comments', 'images']);
+            ->with('member.avatar.file')->withCount(['comments', 'pictures']);
 
         DiaryVisibilityScope::apply($query, $viewer, $owner);
 

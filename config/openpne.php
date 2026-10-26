@@ -1,5 +1,6 @@
 <?php
 
+use App\Files\AttachmentLimit;
 use App\Files\UploadLimit;
 
 return [
@@ -19,6 +20,9 @@ return [
 
     'files' => [
         'disk' => env('OPENPNE_FILES_DISK', 'blob'),
+        // Per-file cap for a non-picture attachment, in kilobytes; keep PHP's upload_max_filesize at or
+        // above it and post_max_size above three of them (App\Files\AttachmentLimit, docs/internals/images.md).
+        'max_upload_kilobytes' => (int) env('OPENPNE_FILE_MAX_UPLOAD_KB', AttachmentLimit::DEFAULT_KILOBYTES),
     ],
 
     /*

@@ -132,7 +132,7 @@ class GroupController extends Controller
                 $canLeave = $role !== null && $role !== GroupRole::Admin;
                 $preview = $talkPreview === null ? null : [
                     // The room list's own line, so the card and the list read the same.
-                    'body' => ChatPreview::lineOrImages([$talkPreview->body], (bool) $talkPreview->images_exists),
+                    'body' => ChatPreview::lineOrImages([$talkPreview->body], (bool) $talkPreview->pictures_exists, (bool) $talkPreview->images_exists),
                     'authorName' => $talkPreview->author?->name,
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
                 ];

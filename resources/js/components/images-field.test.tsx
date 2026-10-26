@@ -11,6 +11,7 @@ vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 const shipped = () => ({
     accept: 'image/jpeg,image/png,image/gif,image/webp,image/avif,.avif',
     shrink: { maxEdge: 2048, passthroughBytes: 2 * 1024 * 1024, maxBytes: 5 * 1024 * 1024, quality: 0.82, keepsFrames: true },
+    attachmentMaxBytes: 10 * 1024 * 1024,
 });
 const page = { imageUpload: shipped() };
 vi.mock('@inertiajs/react', () => ({ usePage: () => ({ props: page }) }));

@@ -2,10 +2,10 @@
      markup is a theme/customer CSS seam. Each fetch is gated by FilePolicy, so a members-only
      community's event images stay private. $images = the post's images (GroupEventImage /
      GroupEventCommentImage), number-ordered. --}}
-@if ($images->isNotEmpty())
+@if (\App\Files\PostAttachments::partition($images)['images']->isNotEmpty())
     <ul class="photo">
         @foreach ($images as $image)
-            @continue($image->file === null)
+            @continue($image->file === null || ! \App\Files\FileResponse::isRaster($image->file))
             <li><a href="{{ $image->file->url() }}" target="_blank" rel="noopener"><img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt=""></a></li>
         @endforeach
     </ul>

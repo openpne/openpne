@@ -42,7 +42,7 @@ class ListFriendDiaries
     {
         $friendIds = $viewer->friendships()->pluck('members.id');
 
-        $query = Diary::with('member.avatar.file')->withCount(['comments', 'images'])
+        $query = Diary::with('member.avatar.file')->withCount(['comments', 'pictures'])
             ->whereIn('member_id', $friendIds)
             ->where('visibility', '<=', Visibility::Friends->value);
 

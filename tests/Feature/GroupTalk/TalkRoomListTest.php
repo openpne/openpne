@@ -70,6 +70,19 @@ class TalkRoomListTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('rooms.data.0.latest.body', __('Image')));
     }
 
+    public function test_a_file_only_message_previews_as_a_file_not_a_picture(): void
+    {
+        $viewer = Member::factory()->create();
+        $group = $this->joined($viewer);
+
+        $this->actingAs($viewer)
+            ->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->create('minutes.pdf', 12, 'application/pdf')]])
+            ->assertCreated();
+
+        $this->actingAs($viewer)->get('/groups/mine')
+            ->assertInertia(fn ($page) => $page->where('rooms.data.0.latest.body', __('File')));
+    }
+
     /** "0" is a message: the stand-in fallback tests emptiness strictly, not PHP's truthiness. */
     public function test_a_body_of_zero_is_previewed_as_itself(): void
     {

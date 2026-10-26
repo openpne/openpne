@@ -125,17 +125,18 @@ class DiaryCommentImagesTest extends TestCase
         $this->assertDatabaseCount('diary_comments', 0);
     }
 
-    public function test_a_non_image_attachment_is_rejected(): void
+    public function test_a_non_image_attachment_is_kept_as_a_file_in_a_slot(): void
     {
         $owner = Member::factory()->create();
         $diary = $this->diary($owner);
 
         $this->actingAs($owner)->post(route('diary.comment.store', $diary), [
-            'body' => 'bad file',
+            'body' => 'with a file',
             'images' => [UploadedFile::fake()->create('notes.txt', 10, 'text/plain')],
-        ])->assertSessionHasErrors('images.0');
+        ])->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('diary_comments', 0);
+        $this->assertDatabaseCount('diary_comments', 1);
+        $this->assertDatabaseHas('files', ['original_filename' => 'notes.txt', 'related_entity_type' => 'diaryComment']);
     }
 
     public function test_a_failed_later_image_compensates_the_earlier_images_bytes(): void

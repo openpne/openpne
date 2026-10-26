@@ -1,3 +1,4 @@
+import type { AttachmentFile } from '@/types';
 import type { GridImage } from '@/components/image-grid';
 
 interface PaginationMeta {
@@ -49,4 +50,5 @@ export interface MessageDraftForm {
     body: string;
     recipient: MessageMember | null; // fixed when the draft was created; null → withdrawn
     images: GridImage[]; // current attachments, each removable by id
+    files: AttachmentFile[];
 }

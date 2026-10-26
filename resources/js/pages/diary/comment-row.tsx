@@ -2,6 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { useRef } from 'react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
 import { ICON_BUTTON, ReactionAdd, RowReactionChips, type RowReactions } from '@/components/reactions/reaction-bar';
@@ -69,6 +70,7 @@ export function DiaryCommentRow({
             </p>
             <LinkCard card={comment.linkCard} className="mt-1" />
             <ImageGrid images={comment.images} variant="boxed" className="mt-1" />
+            <FileChips files={comment.files} className="mt-1" />
             <RowReactionChips reactions={reactions} />
         </li>
     );

@@ -9,6 +9,7 @@ use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\Home\Serializers\UnifiedSections;
 use App\Files\FileOwners;
+use App\Files\PostAttachments;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMember;
@@ -134,7 +135,7 @@ final class UnifiedGroupSerializer
                     // The talk screen's own deep link, so the tile lands on the message rather than
                     // at the foot of the conversation.
                     'href' => "/groups/{$groupId}/talk?m={$message->getKey()}",
-                    'images' => self::readableImages($viewer, $message, $message->images, GroupMessageSerializer::image(...)),
+                    'images' => self::readableImages($viewer, $message, PostAttachments::partition($message->images)['images'], GroupMessageSerializer::image(...)),
                 ];
             }
         }
@@ -146,7 +147,7 @@ final class UnifiedGroupSerializer
                     'at' => $topic->created_at,
                     'id' => $topic->getKey(),
                     'href' => "/topics/{$topic->getKey()}",
-                    'images' => self::readableImages($viewer, $topic, $topic->images, GroupTopicSerializer::image(...)),
+                    'images' => self::readableImages($viewer, $topic, PostAttachments::partition($topic->images)['images'], GroupTopicSerializer::image(...)),
                 ];
             }
         }
@@ -158,7 +159,7 @@ final class UnifiedGroupSerializer
                     'at' => $event->created_at,
                     'id' => $event->getKey(),
                     'href' => "/events/{$event->getKey()}",
-                    'images' => self::readableImages($viewer, $event, $event->images, GroupEventSerializer::image(...)),
+                    'images' => self::readableImages($viewer, $event, PostAttachments::partition($event->images)['images'], GroupEventSerializer::image(...)),
                 ];
             }
         }
@@ -175,7 +176,7 @@ final class UnifiedGroupSerializer
      */
     private static function photoParents(HasMany $parents): Collection
     {
-        return $parents->whereHas('images')
+        return $parents->whereHas('pictures')
             ->with('images.file')
             ->orderByDesc('created_at')
             ->orderByDesc('id')

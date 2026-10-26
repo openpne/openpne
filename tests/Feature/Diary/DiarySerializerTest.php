@@ -85,7 +85,7 @@ class DiarySerializerTest extends TestCase
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);
 
         // Everything summary() reads except the thumbnail source, exactly as a list query provides it.
-        $loaded = Diary::with('member.avatar.file')->withCount(['comments', 'images'])->findOrFail($diary->getKey());
+        $loaded = Diary::with('member.avatar.file')->withCount(['comments', 'pictures'])->findOrFail($diary->getKey());
 
         DB::enableQueryLog();
         $summary = DiarySerializer::summary($loaded);

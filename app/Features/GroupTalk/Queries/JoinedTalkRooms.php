@@ -128,7 +128,7 @@ class JoinedTalkRooms
         $ids = $groups->pluck('latest_message_id')->filter()->values()->all();
         $messages = $ids === []
             ? new Collection
-            : GroupMessage::query()->whereIn('id', $ids)->with('author')->withExists('images')->get()->keyBy('id');
+            : GroupMessage::query()->whereIn('id', $ids)->with('author')->withExists(['pictures', 'images'])->get()->keyBy('id');
 
         return $groups->map(fn (Group $group): TalkRoom => new TalkRoom(
             group: $group,

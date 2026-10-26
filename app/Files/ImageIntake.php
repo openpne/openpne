@@ -51,6 +51,12 @@ final class ImageIntake
         return $this->writesWebp;
     }
 
+    /** Whether $mime is a picture type only the sidecar reads, wherever this site's processor runs. */
+    public static function isSidecarOnly(string $mime): bool
+    {
+        return isset(self::SIDECAR_ONLY[$mime]);
+    }
+
     /** Whether $mime is read here and only ever out of process, where a header this PHP cannot read is the sidecar's to measure. */
     public function readsOnlyOutOfProcess(string $mime): bool
     {

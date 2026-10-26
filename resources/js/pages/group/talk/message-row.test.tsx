@@ -34,6 +34,7 @@ const message: TalkMessage = {
     author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false },
     mentions: [],
     images: [],
+    files: [],
     reactions: [],
     inReplyTo: null,
     linkCard: null,

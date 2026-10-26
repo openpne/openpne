@@ -569,10 +569,12 @@ class TalkImageTest extends TalkTestCase
         $group = $this->group();
         $author = $this->memberOf($group);
 
+        // A PDF is a file attachment now; a picture only the sidecar reads is what a GD site refuses.
+        $heic = UploadedFile::fake()->createWithContent('IMG_0001.heic', (string) file_get_contents(base_path('tests/Fixtures/images/heic-gps-orientation.heic')));
         $this->actingAs($author)
             ->postJson("/groups/{$group->getKey()}/talk", [
                 'body' => 'look',
-                'images' => [$this->upload(), UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')],
+                'images' => [$this->upload(), $heic],
             ])
             ->assertJsonValidationErrorFor('images.1');
 

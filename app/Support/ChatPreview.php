@@ -16,7 +16,7 @@ final class ChatPreview
      *
      * @param  list<string>  $texts  in the order they should be tried
      */
-    public static function lineOrImages(array $texts, bool $hasImages): string
+    public static function lineOrImages(array $texts, bool $hasImages, bool $hasFiles = false): string
     {
         foreach ($texts as $text) {
             $line = self::line($text);
@@ -25,17 +25,17 @@ final class ChatPreview
             }
         }
 
-        return self::imagesLine($hasImages);
+        return self::imagesLine($hasImages, $hasFiles);
     }
 
     /**
-     * What a message with no words reads as. Takes whether there are pictures rather than how many:
-     * the stand-in never counts them, so a row that lost its attachments falls back to the empty
-     * line the caller started with.
+     * What a message with no words reads as. Takes whether there are pictures (then files) rather than
+     * how many: the stand-in never counts them, so a row that lost its attachments falls back to the
+     * empty line the caller started with.
      */
-    public static function imagesLine(bool $hasImages): string
+    public static function imagesLine(bool $hasImages, bool $hasFiles = false): string
     {
-        return $hasImages ? __('Image') : '';
+        return $hasImages ? __('Image') : ($hasFiles ? __('File') : '');
     }
 
     /** One line: every run of whitespace becomes a single space, so a multi-line body cannot grow the row. */

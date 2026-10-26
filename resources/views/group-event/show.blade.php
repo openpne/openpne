@@ -41,6 +41,7 @@
                 <th>{{ __('Body') }}</th>
                 <td>
                     @include('group-event._images', ['images' => $event->images])
+                    @include('group-topic._files', ['images' => $event->images])
                     <x-user-text :value="$event->body" :format="$event->format" />
                     <x-link-card :record="$event" />
                 </td>
@@ -119,6 +120,7 @@
                         </div>
                         <div class="body">
                             @include('group-event._images', ['images' => $comment->images])
+                            @include('group-topic._files', ['images' => $comment->images])
                             <p class="text"><x-user-text :value="$comment->body" /></p>
                             <x-link-card :record="$comment" />
                         </div>

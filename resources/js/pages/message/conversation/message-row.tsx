@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
+import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
@@ -81,6 +82,7 @@ export function ConversationMessageRow({
                         </p>
                     )}
                     <ImageGrid images={message.images} variant="boxed" className={hasTextAbove ? 'mt-2' : 'mt-1'} />
+                    <FileChips files={message.files} className="mt-2" />
                 </div>
             </div>
         </li>

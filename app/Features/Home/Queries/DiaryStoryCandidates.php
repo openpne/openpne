@@ -54,7 +54,7 @@ final class DiaryStoryCandidates implements StoryCandidates
     {
         return Diary::query()
             ->where('diaries.visibility', '<=', Visibility::Members->value)
-            ->withCount(['comments', 'images']);
+            ->withCount(['comments', 'pictures']);
     }
 
     private function item(Diary $diary): PlannedItem
@@ -65,7 +65,7 @@ final class DiaryStoryCandidates implements StoryCandidates
             $this->alias(),
             (int) $diary->getKey(),
             $comments,
-            ['comments' => $comments, 'images' => (int) $diary->images_count],
+            ['comments' => $comments, 'images' => (int) $diary->pictures_count],
             CarbonImmutable::parse($diary->created_at),
         );
     }

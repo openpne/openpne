@@ -28,7 +28,7 @@ class GroupEventCommentFormTest extends TestCase
         $response->assertSeeInOrder([
             '<label for="community_event_comment_body">Comment <strong>*</strong>',
             '<textarea id="community_event_comment_body" name="body"',
-            '<label for="community_event_comment_photo_1_photo">Photo 1</label>',
+            '<label for="community_event_comment_photo_1_photo">Attachment 1</label>',
             '<ul id="community_event_comment_photo_1">',
             '<input type="file" name="images[]" id="community_event_comment_photo_1_photo"',
             '<ul id="community_event_comment_photo_2">',

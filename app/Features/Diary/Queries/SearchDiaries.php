@@ -21,7 +21,7 @@ class SearchDiaries
     /** @return LengthAwarePaginator<int, Diary> */
     public function __invoke(?Member $viewer, string $keyword, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        $query = Diary::with('member.avatar.file')->withCount(['comments', 'images']);
+        $query = Diary::with('member.avatar.file')->withCount(['comments', 'pictures']);
 
         DiaryVisibilityScope::applyFeed($query, $viewer);
 

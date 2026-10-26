@@ -55,17 +55,21 @@
             </table>
 
             @if ($view->message->files->isNotEmpty())
+                @php($attachments = \App\Files\PostAttachments::partition($view->message->files))
                 <div class="block">
-                    <ul class="photo">
-                        @foreach ($view->message->files as $image)
-                            @continue($image->file === null)
-                            <li>
-                                <a href="{{ $image->file->url() }}" target="_blank" rel="noopener">
-                                    <img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
+                    @if ($attachments['images']->isNotEmpty())
+                        <ul class="photo">
+                            @foreach ($attachments['images'] as $image)
+                                @continue($image->file === null)
+                                <li>
+                                    <a href="{{ $image->file->url() }}" target="_blank" rel="noopener">
+                                        <img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                    @include('group-topic._files', ['images' => $view->message->files])
                 </div>
             @endif
 

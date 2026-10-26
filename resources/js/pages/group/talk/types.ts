@@ -1,3 +1,4 @@
+import type { AttachmentFile } from '@/types';
 import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
 import type { ChatPage, ChatReactionChip, ChatStreamRow, ChatUnreadSnapshot } from '@/lib/chat/types';
@@ -16,6 +17,7 @@ export interface TalkMessage extends ChatStreamRow {
     mentions: MentionEntity[];
     /** Attached images in slot order — up to MAX_POST_IMAGES from the composer, N from migrated content. */
     images: GridImage[];
+    files: AttachmentFile[];
     /** First URL in the body, previewed; null when there is none, or while it is still being fetched. */
     linkCard: LinkCardData | null;
     /** The emoji on this message, in the order they first appeared. Always sent, empty for none. */

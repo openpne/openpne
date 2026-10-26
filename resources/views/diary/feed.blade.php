@@ -43,7 +43,7 @@
                 <dl>
                     <dt>{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</dt>
                     {{-- op_diary_link_to_show with withName: the author trails the link, outside it. --}}
-                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a> ({{ $entry->member->name }})<x-diary.image-icon :count="$entry->images_count" /></dd>
+                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a> ({{ $entry->member->name }})<x-diary.image-icon :count="$entry->pictures_count" /></dd>
                 </dl>
             @endforeach
             @include('diary._feed-pager')
@@ -68,7 +68,7 @@
                         <tr>
                             {{-- OpenPNE 3 prints the title unlinked; the photo cell and the
                                  operation row carry the two links to the diary. --}}
-                            <th>{{ __('Title') }}</th><td>{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}<x-diary.image-icon :count="$entry->images_count" /></td>
+                            <th>{{ __('Title') }}</th><td>{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}<x-diary.image-icon :count="$entry->pictures_count" /></td>
                         </tr>
                         <tr>
                             <th>{{ __('Body') }}</th><td>{{ \App\Support\BodyRenderer::excerpt($entry->body, $entry->format) }}</td>

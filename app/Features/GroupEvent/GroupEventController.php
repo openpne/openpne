@@ -16,7 +16,9 @@ use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
 use App\Features\Reactions\Queries\ReactionAggregates;
 use App\Features\Reactions\ReactionVocabulary;
+use App\Files\AttachmentShape;
 use App\Files\ImageEdit;
+use App\Files\PostAttachments;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GroupEvent\StoreEventRequest;
@@ -177,7 +179,8 @@ class GroupEventController extends Controller
                     'area' => $event->area ?? '',
                     'applicationDeadline' => $event->application_deadline?->format('Y-m-d'),
                     'capacity' => $event->capacity,
-                    'images' => $event->images->map([GroupEventSerializer::class, 'image'])->all(),
+                    'images' => PostAttachments::partition($event->images)['images']->map([GroupEventSerializer::class, 'image'])->all(),
+                    'files' => PostAttachments::partition($event->images)['files']->map([AttachmentShape::class, 'of'])->all(),
                 ],
                 'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),

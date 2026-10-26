@@ -42,7 +42,7 @@ trait DecodesImageUploads
             }
 
             // The compose forms' own rules, run against the decoded bytes.
-            Validator::make(['images' => $uploads], PostImageRules::rules())->validate();
+            Validator::make(['images' => $uploads], PostImageRules::imagesOnly())->validate();
 
             return $write($uploads);
         } finally {
