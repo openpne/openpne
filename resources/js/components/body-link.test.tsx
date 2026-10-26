@@ -39,6 +39,12 @@ test('a script url is left as text, not a link', () => {
     expect(screen.getByText('click').tagName).toBe('SPAN');
 });
 
+test('a url the browser cannot parse is left as text, as it could not be followed', () => {
+    render(<BodyLink href="https://example.com:80a/">https://example.com:80a/</BodyLink>);
+
+    expect(screen.queryByRole('link')).toBeNull();
+});
+
 test('a link to another site opens a new tab and says so', () => {
     render(<BodyLink href="https://example.org/x">example.org</BodyLink>);
     const link = screen.getByRole('link');

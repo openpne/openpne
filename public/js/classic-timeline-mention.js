@@ -351,8 +351,7 @@
         }
 
         // The surface's own thumbnail idiom (x-classic.image): the photo, or OpenPNE 3's
-        // no_image.gif — never Modern's initial badge — cloned from the server's markup so that no
-        // string read off the DOM becomes a src.
+        // no_image.gif — never Modern's initial badge.
         function avatar(candidate) {
             var image = document.importNode(document.getElementById('classic-mention-avatar').content.firstElementChild, false);
             if (candidate.imageUrl) {

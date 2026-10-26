@@ -3,7 +3,7 @@
  * is null. CodeQL takes the return value as XSS-safe (.github/codeql/extensions), so an href or src
  * built from user input goes through here.
  */
-export function safeUrl(value: string, protocols: readonly string[] = ['http:', 'https:']): string | null {
+export function safeUrl(value: string, protocols: readonly ('http:' | 'https:' | 'blob:')[] = ['http:', 'https:']): string | null {
     let url: URL;
     try {
         url = new URL(value);
@@ -11,5 +11,5 @@ export function safeUrl(value: string, protocols: readonly string[] = ['http:', 
         return null;
     }
 
-    return protocols.includes(url.protocol) ? url.href : null;
+    return (protocols as readonly string[]).includes(url.protocol) ? url.href : null;
 }

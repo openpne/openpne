@@ -1,4 +1,4 @@
-# safeUrl() admits only the schemes its caller names; resources/js/lib/safe-url.test.ts pins that.
+# safeUrl() admits only the schemes its parameter type allows, none of which runs script.
 extensions:
   - addsTo:
       pack: codeql/javascript-all

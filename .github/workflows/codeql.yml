@@ -17,6 +17,7 @@ on:
       - package-lock.json
       - tsconfig.json
       - .github/workflows/codeql.yml
+      - '.github/codeql/**'
   push:
     branches: [main]
     paths:
@@ -30,6 +31,7 @@ on:
       - package-lock.json
       - tsconfig.json
       - .github/workflows/codeql.yml
+      - '.github/codeql/**'
   schedule:
     - cron: '45 20 * * 1'
   workflow_dispatch:
