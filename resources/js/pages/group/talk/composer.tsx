@@ -10,6 +10,7 @@ import { Tip } from '@/components/ui/tooltip';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, isPicture, MAX_POST_IMAGES, sizeLabel, withinAttachmentCap } from '@/lib/image-picks';
+import { safeUrl } from '@/lib/safe-url';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
 import type { TalkMessage } from './types';
@@ -70,7 +71,7 @@ export function TalkComposer({
     };
 
     useEffect(() => {
-        const urls = images.map((image) => (isPicture(image, upload.accept) ? URL.createObjectURL(image) : ''));
+        const urls = images.map((image) => (isPicture(image, upload.accept) ? (safeUrl(URL.createObjectURL(image), ['blob:']) ?? '') : ''));
         setPreviews(urls);
 
         return () => urls.forEach((url) => url !== '' && URL.revokeObjectURL(url));

@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { createContext, type MouseEvent, type ReactNode, useContext } from 'react';
 import { useT } from '@/lib/i18n';
 import { inAppHref, isBytesHref, isPlainClick } from '@/lib/link-target';
+import { safeUrl } from '@/lib/safe-url';
 
 export const EXTERNAL_REL = 'noopener noreferrer nofollow';
 
@@ -36,11 +37,17 @@ export function visitInApp(path: string): void {
 export function BodyLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
     const t = useT();
     const mode = useContext(OwnLinksOpen);
-    const path = inAppHref(href, window.location.host);
+    const url = safeUrl(href);
+
+    if (url === null) {
+        return <span className={className}>{children}</span>;
+    }
+
+    const path = inAppHref(url, window.location.host);
 
     if (path === null || mode === 'new-tab') {
         return (
-            <a href={path ?? href} target="_blank" rel={path === null ? EXTERNAL_REL : OWN_TAB_REL} className={className}>
+            <a href={path ?? url} target="_blank" rel={path === null ? EXTERNAL_REL : OWN_TAB_REL} className={className}>
                 {children}
                 <span className="sr-only"> {t('Opens in a new tab')}</span>
             </a>

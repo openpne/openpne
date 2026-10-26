@@ -5,7 +5,7 @@
     @endpush
 @endonce
 <form method="POST" action="{{ route('timeline.store') }}" enctype="multipart/form-data" data-timeline-compose hidden
-      data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+      data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-label="{{ __('Mention candidates') }}">
     @csrf
     @include('timeline._mention-draft')
     <input type="hidden" name="return_to" value="{{ $returnTo }}">

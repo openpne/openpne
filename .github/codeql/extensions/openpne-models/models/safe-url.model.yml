@@ -1,0 +1,7 @@
+# safeUrl() admits only the schemes its caller names; resources/js/lib/safe-url.test.ts pins that.
+extensions:
+  - addsTo:
+      pack: codeql/javascript-all
+      extensible: barrierModel
+    data:
+      - ["file:resources/js/lib/safe-url.ts", "Member[safeUrl].ReturnValue", "html-injection"]

@@ -11,6 +11,7 @@ import { useAutoGrow } from '@/lib/auto-grow';
 import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, isPicture, MAX_POST_IMAGES, sizeLabel, withinAttachmentCap } from '@/lib/image-picks';
+import { safeUrl } from '@/lib/safe-url';
 import { useDropTarget } from '@/lib/use-drop-target';
 import { cn } from '@/lib/utils';
 
@@ -53,7 +54,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
     };
 
     useEffect(() => {
-        const urls = images.map((image) => (isPicture(image, upload.accept) ? URL.createObjectURL(image) : ''));
+        const urls = images.map((image) => (isPicture(image, upload.accept) ? (safeUrl(URL.createObjectURL(image), ['blob:']) ?? '') : ''));
         setPreviews(urls);
 
         return () => urls.forEach((url) => url !== '' && URL.revokeObjectURL(url));

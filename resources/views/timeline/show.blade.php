@@ -28,7 +28,7 @@
 
         @if ($canPost)
             <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
-                  data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+                  data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-label="{{ __('Mention candidates') }}">
                 @csrf
                 @include('timeline._mention-draft')
                 <textarea name="body" required aria-label="{{ __('Post comment') }}">{{ old('body') }}</textarea>

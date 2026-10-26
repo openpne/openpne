@@ -5,5 +5,6 @@
     @push('pluginCss')
         <link rel="stylesheet" href="{{ asset('css/classic-timeline-mention.css') }}">
     @endpush
+    <template id="classic-mention-avatar"><img class="classicMentionAvatar" src="{{ asset('images/no_image.gif') }}" width="24" height="24" alt=""></template>
     <script src="{{ asset('js/classic-timeline-mention.js') }}" defer></script>
 @endonce

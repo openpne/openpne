@@ -66,7 +66,8 @@ class TimelineComposeTest extends TestCase
         foreach ([route('timeline.index'), route('timeline.new'), route('timeline.show', $post)] as $screen) {
             $this->actingAs($member)->get($screen)->assertOk()
                 ->assertSee('data-timeline-mention data-mention-candidates-url="'.$url.'"', false)
-                ->assertSee('js/classic-timeline-mention.js', false);
+                ->assertSee('js/classic-timeline-mention.js', false)
+                ->assertSee('<template id="classic-mention-avatar"><img class="classicMentionAvatar" src="'.asset('images/no_image.gif').'"', false);
         }
     }
 
@@ -105,6 +106,7 @@ class TimelineComposeTest extends TestCase
         $this->assertSame(2, substr_count($html, 'data-timeline-mention '));
         $this->assertSame(1, substr_count($html, 'js/classic-timeline-mention.js'));
         $this->assertSame(1, substr_count($html, 'css/classic-timeline-mention.css'));
+        $this->assertSame(1, substr_count($html, 'id="classic-mention-avatar"'));
     }
 
     public function test_the_member_timeline_and_show_render_no_compose_box(): void
