@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\File;
 
+use App\Files\FileResponse;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
@@ -119,12 +120,12 @@ class ConditionalDeliveryTest extends TestCase
 
         $first = $this->get($url);
         $first->assertOk();
-        $this->assertSame('"'.$file->name.'"', $first->headers->get('ETag'));
+        $this->assertSame(FileResponse::etag($file), $first->headers->get('ETag'));
 
         $storage = $this->mock(FileStorage::class);
         $storage->shouldReceive('exists')->andReturn(true);
         $storage->shouldNotReceive('readStream');
-        $again = $this->withHeader('If-None-Match', '"'.$file->name.'"')->get($url);
+        $again = $this->withHeader('If-None-Match', FileResponse::etag($file))->get($url);
         $again->assertStatus(304);
         $this->assertSame('', $again->getContent());
         $this->assertCacheControl($again, ['private' => true, 'max-age' => '0', 'must-revalidate' => true]);
@@ -143,7 +144,7 @@ class ConditionalDeliveryTest extends TestCase
         $this->actingAs(AdminUser::factory()->create(), 'admin');
         $this->mock(FileStorage::class)->shouldReceive('exists')->andReturn(false);
 
-        $this->withHeader('If-None-Match', '"'.$file->name.'"')
+        $this->withHeader('If-None-Match', FileResponse::etag($file))
             ->get(route('admin.file.raw', ['file' => $file->name]))
             ->assertNotFound();
     }
@@ -154,7 +155,7 @@ class ConditionalDeliveryTest extends TestCase
         // guest with a token could tell an existing file (304) from a missing one (404).
         $file = $this->memberImage(Member::factory()->create(), 'PNGDATA');
 
-        $this->withHeader('If-None-Match', '"'.$file->name.'"')
+        $this->withHeader('If-None-Match', FileResponse::etag($file))
             ->get(route('admin.file.raw', ['file' => $file->name]))
             ->assertNotFound();
     }

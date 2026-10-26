@@ -13,6 +13,7 @@ use App\Compat\Parities\GroupTopicRouteParity;
 use App\Compat\Parities\MemberRouteParity;
 use App\Compat\Parities\PolicyRouteParity;
 use App\Compat\Parities\TimelineRouteParity;
+use App\Compat\Parities\UploadFileRouteParity;
 
 /** The route parities. Adding a feature's Classic adapter = adding its parity here. */
 final class RouteParityRegistry
@@ -32,6 +33,7 @@ final class RouteParityRegistry
             TimelineRouteParity::class,
             AuthRouteParity::class,
             PolicyRouteParity::class,
+            UploadFileRouteParity::class,
         ];
     }
 

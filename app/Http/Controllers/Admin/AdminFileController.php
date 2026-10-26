@@ -29,8 +29,8 @@ class AdminFileController extends Controller
         $cache = [
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=0, must-revalidate',
-            // The token names one immutable byte string, as on FileController.
-            'ETag' => '"'.$file->name.'"',
+            // The same validator as FileController's attachment: one immutable byte string.
+            'ETag' => FileResponse::etag($file),
         ];
 
         $unchanged = response('', 200, $cache);
@@ -51,11 +51,7 @@ class AdminFileController extends Controller
         $headers = $cache + [
             'Content-Type' => $raster ? $sniffed : 'application/octet-stream',
             'Content-Length' => (string) $file->byte_size,
-            'Content-Disposition' => HeaderUtils::makeDisposition(
-                $inline ? HeaderUtils::DISPOSITION_INLINE : HeaderUtils::DISPOSITION_ATTACHMENT,
-                $file->original_filename ?? $file->name,
-                $file->name, // ASCII fallback for the opaque token
-            ),
+            'Content-Disposition' => FileResponse::attachmentDisposition($file, $inline ? HeaderUtils::DISPOSITION_INLINE : HeaderUtils::DISPOSITION_ATTACHMENT),
         ];
 
         return response()->stream(function () use ($head, $stream): void {

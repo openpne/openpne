@@ -150,6 +150,17 @@ class ImageTransformTest extends TestCase
         $this->assertNotSame($before, $raw->cacheKey('abc', 'png'));
     }
 
+    public function test_a_name_that_is_not_a_token_is_keyed_by_its_hash(): void
+    {
+        config(['openpne.images.processor' => 'gd', 'openpne.images.quality' => 85, 'openpne.images.exif' => true]);
+        $traversal = '/m12/1699x\\..\\..\\victim';
+
+        $this->assertSame('legacy/'.sha1($traversal), ImageTransform::directory($traversal));
+        $this->assertSame('legacy/'.sha1($traversal).'/g3/gd-q85/w_h.png', ImageTransform::raw()->cacheKey($traversal, 'png'));
+        $this->assertSame('legacy/'.sha1('/m12/1699a.png'), ImageTransform::directory('/m12/1699a.png'));
+        $this->assertSame('abc_DEF-1', ImageTransform::directory('abc_DEF-1'));
+    }
+
     public function test_cache_key_layout(): void
     {
         config(['openpne.images.processor' => 'gd', 'openpne.images.quality' => 85, 'openpne.images.exif' => true]);

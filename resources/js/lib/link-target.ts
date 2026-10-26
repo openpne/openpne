@@ -8,7 +8,7 @@
  * The first path segments under which this site answers with bytes rather than a page; kept equal
  * to the routes' by BytesRouteSegmentsParityTest.
  */
-export const BYTES_SEGMENTS = ['app-icon', 'banner', 'cache', 'file', 'linkCard'] as const;
+export const BYTES_SEGMENTS = ['app-icon', 'banner', 'cache', 'f', 'file', 'linkCard'] as const;
 
 /**
  * Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find

@@ -9,6 +9,7 @@ use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\LegacyUploadFileController;
 use App\Http\Controllers\LinkCardImageController;
 use App\Http\Controllers\PublicFileController;
 use App\Support\AdminRealm;
@@ -30,6 +31,7 @@ class BytesRouteSegmentsParityTest extends TestCase
         CustomizingCssController::class,
         FileController::class,
         ImageController::class,
+        LegacyUploadFileController::class,
         LinkCardImageController::class,
         PublicFileController::class,
     ];

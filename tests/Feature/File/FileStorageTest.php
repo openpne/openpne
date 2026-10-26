@@ -175,6 +175,27 @@ class FileStorageTest extends TestCase
         Storage::disk('local')->assertMissing($file->name);
     }
 
+    public function test_local_disk_keeps_an_openpne3_name_with_path_tricks_apart_from_its_victim(): void
+    {
+        // The disk folds `\` and `..` in a path; the hashed key keeps the two files' bytes separate.
+        config()->set('openpne.files.disk', 'local');
+        Storage::fake('local');
+        $storage = app(FileStorage::class);
+        $victim = File::factory()->create(['name' => 'victimtoken']);
+        $tricky = File::factory()->create(['name' => '/m12/1699x\\..\\..\\victimtoken']);
+        $storage->writeStream($victim, $this->streamOf('victim bytes'));
+        $storage->writeStream($tricky, $this->streamOf('tricky bytes'));
+
+        $this->assertSame('victim bytes', $this->readAll($storage, $victim));
+        $this->assertSame('tricky bytes', $this->readAll($storage, $tricky));
+        Storage::disk('local')->assertExists('legacy/'.sha1($tricky->name));
+
+        $storage->delete($tricky);
+
+        $this->assertTrue($storage->exists($victim));
+        $this->assertFalse($storage->exists($tricky));
+    }
+
     public function test_local_disk_delete_is_idempotent(): void
     {
         config()->set('openpne.files.disk', 'local');

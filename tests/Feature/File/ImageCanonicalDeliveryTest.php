@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\File;
 
+use App\Files\FileResponse;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\GdImageProcessor;
@@ -154,7 +155,7 @@ class ImageCanonicalDeliveryTest extends TestCase
         $html = $this->stored('image/jpeg', '<html><script>alert(1)</script></html>', ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
 
         $this->actingAs($admin, 'admin')->get(route('admin.file.raw', ['file' => $heic->name]))
-            ->assertOk()->assertHeader('Content-Type', 'image/heic')->assertHeader('Content-Disposition', 'inline; filename='.$heic->name);
+            ->assertOk()->assertHeader('Content-Type', 'image/heic')->assertHeader('Content-Disposition', 'inline; filename=file-'.$heic->id);
 
         $response = $this->actingAs($admin, 'admin')->get(route('admin.file.raw', ['file' => $html->name]))->assertOk()
             ->assertHeader('Content-Type', 'application/octet-stream');
@@ -184,7 +185,7 @@ class ImageCanonicalDeliveryTest extends TestCase
         $this->assertSame('%PDF-1.4 stored as is', $response->streamedContent());
         $this->assertStringContainsString('attachment', (string) $response->headers->get('Content-Disposition'));
         $this->assertStringContainsString('notes.pdf', (string) $response->headers->get('Content-Disposition'));
-        $this->assertSame('"'.$file->name.'"', $response->headers->get('ETag'));
+        $this->assertSame(FileResponse::etag($file), $response->headers->get('ETag'));
     }
 
     public function test_a_refused_row_is_not_found_on_the_original_route(): void
@@ -249,7 +250,7 @@ class ImageCanonicalDeliveryTest extends TestCase
         $this->assertSame((string) strlen($body), $response->headers->get('Content-Length'));
         $this->assertSame('image/jpeg', $response->headers->get('Content-Type'));
         $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
-        $this->assertSame("inline; filename={$file->name}.{$format}", $response->headers->get('Content-Disposition'));
+        $this->assertSame("inline; filename=file-{$file->id}.{$format}", $response->headers->get('Content-Disposition'));
         $this->assertSame(ImageTransform::raw()->etag($file->name, $format), $response->headers->get('ETag'));
     }
 

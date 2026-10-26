@@ -369,7 +369,9 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
   has `w_h` (the canonical keeps its frames where the processor does). An animated variant the
   sidecar refused over budget is cached as a still until `rebuild`. Only a processor that keeps frames
   records whether a GIF or WebP animates.
-- A variant's cache key carries token, geometry (`_sq` / `_a` included), the format answered (the
+- A variant's cache key carries the token (or, for a name that is not one — an OpenPNE 3 upload's
+  `/m…/` path, which may hold `\` or `..` the cache disk would fold onto another file — its hash
+  under `legacy/`, `ImageTransform::directory`), geometry (`_sq` / `_a` included), the format answered (the
   file's own or WebP), generation, and the encoder — the `processor`, `quality`, and whether
   `ext-exif` is present — so any of those changing is a new variant, not a stale one. The canonical is the `w_h` key under the same encoder directory, and a
   refused file leaves a `w_h.failed` marker there instead; every variant is drawn from the canonical,
@@ -380,7 +382,7 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
 - **Clearing the cache disk no longer reaches browsers**: every inline raster answer — `/cache/img/…`
   variants, the `w_h` original, `/file/{name}`, the banner and public routes — carries the canonical's
   or the variant's key hashed as its `ETag` (`ImageTransform::etag`). A non-raster attachment and the
-  admin raw route carry the file token, whose bytes never change. Each is checked after the route's own gate
+  admin raw route carry the file token hashed (`FileResponse::etag`), whose bytes never change. Each is checked after the route's own gate
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
   is not shortened for it — revalidating every image would cost a PHP request each. Only the
   link-card image route carries no validator (it is `no-store` by design).

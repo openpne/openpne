@@ -39,8 +39,8 @@ class FileResponse
         $format = (string) $file->imageFormat();
         $headers += [
             'Content-Type' => $file->type,
-            // The token, never the uploader's file name.
-            'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_INLINE, "{$file->name}.{$format}"),
+            // The id, never the uploader's file name nor the token (an OpenPNE 3 name holds slashes).
+            'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_INLINE, "file-{$file->getKey()}.{$format}"),
             'X-Content-Type-Options' => 'nosniff',
             'ETag' => ImageTransform::raw()->etag($file->name, $format),
         ];
@@ -56,9 +56,9 @@ class FileResponse
     }
 
     /**
-     * The stored bytes as a download; the token is the validator because those bytes never change. The
-     * upload rules admit no non-raster, so one reaches a picture route only through an OpenPNE 3 row,
-     * copied verbatim by the upgrade.
+     * The stored bytes as a download; the token (hashed, as an OpenPNE 3 name may hold non-ASCII) is the
+     * validator because those bytes never change. The upload rules admit no non-raster, so one reaches a
+     * picture route only through an OpenPNE 3 row, copied verbatim by the upgrade.
      *
      * @param  array<string, string>  $headers
      */
@@ -67,13 +67,9 @@ class FileResponse
         $headers += [
             'Content-Type' => 'application/octet-stream',
             'Content-Length' => (string) $file->byte_size,
-            'Content-Disposition' => HeaderUtils::makeDisposition(
-                HeaderUtils::DISPOSITION_ATTACHMENT,
-                $file->original_filename ?? $file->name,
-                $file->name, // ASCII fallback for the opaque token
-            ),
+            'Content-Disposition' => self::attachmentDisposition($file),
             'X-Content-Type-Options' => 'nosniff',
-            'ETag' => '"'.$file->name.'"',
+            'ETag' => self::etag($file),
         ];
 
         $unchanged = response('', 200, $headers);
@@ -87,5 +83,28 @@ class FileResponse
             fpassthru($stream);
             fclose($stream);
         }, 200, $headers);
+    }
+
+    /** The validator for the stored bytes; a hash, since an OpenPNE 3 name may hold characters a header cannot. */
+    public static function etag(File $file): string
+    {
+        return '"'.hash('sha1', $file->name).'"';
+    }
+
+    /**
+     * The uploader's file name with path separators folded (OpenPNE 3 let a backslash through), over an
+     * ASCII fallback built from the id, so a name HeaderUtils refuses never makes a file undeliverable.
+     */
+    public static function attachmentDisposition(File $file, string $disposition = HeaderUtils::DISPOSITION_ATTACHMENT): string
+    {
+        $original = $file->original_filename;
+        $extension = preg_match('/\\.([A-Za-z0-9]{1,10})$/', (string) $original, $m) === 1 ? '.'.$m[1] : '';
+        $fallback = 'file-'.$file->getKey().$extension;
+
+        return HeaderUtils::makeDisposition(
+            $disposition,
+            $original === null || $original === '' ? $fallback : str_replace(['/', '\\'], '-', $original),
+            $fallback,
+        );
     }
 }

@@ -31,6 +31,13 @@ test('a non-http scheme or a relative reference is not one of ours', () => {
     assert.equal(inAppHref('/diary/1', 'sns.example.test'), null);
 });
 
+test('an OpenPNE 3 upload link is bytes, whatever its extension', () => {
+    assert.equal(isBytesHref('/f/show/12.pdf'), true);
+    assert.equal(isBytesHref('/f/show/12.backup_2023'), true);
+    assert.equal(isBytesHref('/file/abc'), true);
+    assert.equal(isBytesHref('/friend/list'), false);
+});
+
 test('a modified or secondary-button click is left to the browser', () => {
     const plain = { defaultPrevented: false, button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false };
 
