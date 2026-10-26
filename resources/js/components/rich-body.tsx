@@ -29,7 +29,7 @@ export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | 
             }
             const notice = document.createElement('span');
             notice.className = 'sr-only';
-            notice.textContent = ` ${t('Opens in a new tab')}`;
+            notice.dataset.newTabNotice = t('Opens in a new tab');
             marked.push({ anchor, rel: anchor.getAttribute('rel'), notice });
             anchor.target = '_blank';
             anchor.rel = OWN_TAB_REL;

@@ -23,7 +23,7 @@ class LinkTargetTest extends TestCase
         $this->assertTrue($target->external);
         $this->assertSame(' target="_blank" rel="noopener noreferrer nofollow"', $target->attributes());
         $this->assertSame(' target="_blank" rel="noopener"', $target->attributes('noopener'));
-        $this->assertSame('<span class="sr-only"> Opens in a new tab</span>', $target->notice());
+        $this->assertSame('<span class="sr-only" data-new-tab-notice="Opens in a new tab"></span>', $target->notice());
     }
 
     public function test_a_link_to_this_site_opens_in_place(): void
@@ -97,6 +97,6 @@ class LinkTargetTest extends TestCase
     {
         app()->setLocale('ja');
 
-        $this->assertSame('<span class="sr-only"> 新しいタブで開く</span>', LinkTarget::of('https://example.org/x')->notice());
+        $this->assertSame('<span class="sr-only" data-new-tab-notice="新しいタブで開く"></span>', LinkTarget::of('https://example.org/x')->notice());
     }
 }

@@ -26,7 +26,8 @@ test('a link to this site inside the preview opens a new tab and says so, keepin
     const link = await waitFor(() => screen.getByText('a diary', { exact: false }), { timeout: 3000 });
 
     expect(link.getAttribute('target')).toBe('_blank');
-    expect(link.textContent).toBe('a diary Opens in a new tab');
+    expect(link.textContent).toBe('a diary');
+    expect(link.querySelector('.sr-only')?.getAttribute('data-new-tab-notice')).toBe('Opens in a new tab');
 
     let left = true;
     const stop = (event: Event) => {

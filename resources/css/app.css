@@ -536,3 +536,9 @@ html body[data-scroll-locked] {
 html.unified:not(.dark) {
     --background: oklch(0.973 0.002 260);
 }
+
+/* The new-tab notice is generated content, which assistive technology reads into the link's name and
+   a copy of the text leaves out (docs/internals/body-text.md, "Where a link opens"). */
+[data-new-tab-notice]::before {
+    content: ' ' attr(data-new-tab-notice);
+}

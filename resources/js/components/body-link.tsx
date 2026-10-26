@@ -49,7 +49,7 @@ export function BodyLink({ href, className, children }: { href: string; classNam
         return (
             <a href={path ?? url} target="_blank" rel={path === null ? EXTERNAL_REL : OWN_TAB_REL} className={className}>
                 {children}
-                <span className="sr-only"> {t('Opens in a new tab')}</span>
+                <span className="sr-only" data-new-tab-notice={t('Opens in a new tab')} />
             </a>
         );
     }

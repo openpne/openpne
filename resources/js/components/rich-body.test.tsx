@@ -15,7 +15,7 @@ afterEach(cleanup);
 // The shape App\Support\MarkdownText emits: a link to this site bare, one to another site hardened.
 const html =
     '<p>see <a href="https://sns.example.test/diary/1">ours</a> and ' +
-    '<a href="https://example.org/x" target="_blank" rel="noopener noreferrer nofollow">theirs<span class="sr-only"> Opens in a new tab</span></a></p>';
+    '<a href="https://example.org/x" target="_blank" rel="noopener noreferrer nofollow">theirs<span class="sr-only" data-new-tab-notice="Opens in a new tab"></span></a></p>';
 
 /** Whether the click was left to the browser, which is then stopped from actually navigating. */
 function clickIsLeftToBrowser(element: Element, init?: MouseEventInit): boolean {
@@ -70,7 +70,8 @@ test('where own links are set to open a new tab, a server-rendered link to this 
 
     expect(ours.getAttribute('target')).toBe('_blank');
     expect(ours.getAttribute('rel')).toBe('noopener');
-    expect(ours.textContent).toBe('ours Opens in a new tab');
+    expect(ours.textContent).toBe('ours');
+    expect(ours.querySelector('.sr-only')?.getAttribute('data-new-tab-notice')).toBe('Opens in a new tab');
     // The link that already opened a new tab is not given a second notice.
     expect(container.querySelectorAll('.sr-only').length).toBe(2);
     expect(clickIsLeftToBrowser(ours)).toBe(true);

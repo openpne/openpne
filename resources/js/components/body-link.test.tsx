@@ -51,8 +51,8 @@ test('a link to another site opens a new tab and says so', () => {
 
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener noreferrer nofollow');
-    expect(link.textContent).toBe('example.org Opens in a new tab');
-    expect(link.querySelector('.sr-only')?.textContent).toBe(' Opens in a new tab');
+    expect(link.textContent).toBe('example.org');
+    expect(link.querySelector('.sr-only')?.getAttribute('data-new-tab-notice')).toBe('Opens in a new tab');
 });
 
 test('a link to this site is a plain anchor to its path that the router takes on a click', () => {
@@ -122,7 +122,8 @@ test('where own links are set to open a new tab, a link to this site is a new-ta
     expect(link.getAttribute('href')).toBe('/diary/1');
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener');
-    expect(link.textContent).toBe('a diary Opens in a new tab');
+    expect(link.textContent).toBe('a diary');
+    expect(link.querySelector('.sr-only')?.getAttribute('data-new-tab-notice')).toBe('Opens in a new tab');
     expect(clickIsLeftToBrowser(link)).toBe(true);
     expect(visit).not.toHaveBeenCalled();
 });
@@ -133,5 +134,5 @@ test('a plain body links each url by the same rule', () => {
 
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/diary/1', 'https://example.org/x']);
     expect(links.map((link) => link.getAttribute('target'))).toEqual([null, '_blank']);
-    expect(links.map((link) => link.textContent)).toEqual(['https://sns.example.test/diary/1', 'https://example.org/x Opens in a new tab']);
+    expect(links.map((link) => link.textContent)).toEqual(['https://sns.example.test/diary/1', 'https://example.org/x']);
 });

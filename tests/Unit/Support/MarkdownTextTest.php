@@ -71,8 +71,8 @@ class MarkdownTextTest extends TestCase
     {
         $html = $this->render('[x](https://example.org/x) and <https://example.org/y?a=1&b=2>');
 
-        $this->assertStringContainsString('>x<span class="sr-only"> 新しいタブで開く</span></a>', $html);
-        $this->assertStringContainsString('b&#61;2<span class="sr-only"> 新しいタブで開く</span></a>', $html);
+        $this->assertStringContainsString('>x<span class="sr-only" data-new-tab-notice="新しいタブで開く"></span></a>', $html);
+        $this->assertStringContainsString('b&#61;2<span class="sr-only" data-new-tab-notice="新しいタブで開く"></span></a>', $html);
     }
 
     public function test_a_link_to_this_site_opens_in_place(): void
