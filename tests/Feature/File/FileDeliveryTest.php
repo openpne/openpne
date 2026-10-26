@@ -5,6 +5,7 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Models\File;
 use App\Models\Member;
+use App\Models\MemberImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\ImageBytes;
@@ -18,7 +19,9 @@ class FileDeliveryTest extends TestCase
     {
         // The route carries no login of its own — FilePolicy is the whole gate — so a guest gets
         // exactly what a web-public page shows.
-        $file = $this->memberImage(Member::factory()->create(), 'image/png', ImageBytes::png(8, 4));
+        $owner = Member::factory()->create();
+        $file = $this->memberImage($owner, 'image/png', ImageBytes::png(8, 4));
+        MemberImage::query()->create(['member_id' => $owner->getKey(), 'file_id' => $file->getKey()]);
 
         $response = $this->get(route('file.show', $file->name));
 

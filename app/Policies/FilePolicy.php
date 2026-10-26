@@ -21,6 +21,7 @@ use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Support\Feature;
 use Illuminate\Database\Eloquent\Model;
@@ -50,9 +51,11 @@ class FilePolicy extends BasePolicy
         return match (true) {
             // Public: a banner shows to guests (the before-login placement).
             $owner instanceof BannerImage => true,
-            // Guest-readable: a web-public profile or diary shows the author's avatar, and OpenPNE 3
-            // put no login in front of image delivery.
-            $owner instanceof Member => $viewer === null || ! $this->ownerBlocksViewer($owner, $viewer),
+            // Guest-readable only as the avatar a web-public profile or diary shows; any other member-owned
+            // file (an OpenPNE 3 upload) sat behind login there too.
+            $owner instanceof Member => $viewer === null
+                ? $this->isAvatar($file)
+                : ! $this->ownerBlocksViewer($owner, $viewer),
             // A diary image inherits the diary's visibility: a web-public (Open) diary's images are
             // public (guest-readable); otherwise the viewer's clearance on the author, blocked → none.
             $owner instanceof Diary => DiaryAccess::canView($viewer, $owner),
@@ -110,5 +113,10 @@ class FilePolicy extends BasePolicy
         }
 
         return app(FileOwners::class)->find($class, (int) $file->related_entity_id);
+    }
+
+    private function isAvatar(File $file): bool
+    {
+        return MemberImage::query()->where('file_id', $file->getKey())->exists();
     }
 }

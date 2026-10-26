@@ -59,6 +59,14 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('- `pc_vendorDigest` — Registered by an installed package: Sent by the vendor package.');
     }
 
+    public function test_renders_the_name_prefix_file_owners(): void
+    {
+        $this->artisan('openpne:upgrade-matrix')
+            ->assertSuccessful()
+            ->expectsOutputToContain('`file` rows owned through their name')
+            ->expectsOutputToContain('- `/m{id}/…` — `member` {id}');
+    }
+
     public function test_renders_notification_mail_coverage(): void
     {
         // notification_mail is stepped, but its name filter only carries the templates OpenPNE 4 sends, so

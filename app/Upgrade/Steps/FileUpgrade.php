@@ -10,8 +10,8 @@ use App\Upgrade\UpgradeStep;
 /**
  * OpenPNE 3 `file` → OpenPNE 4 `files`, id and `name` (the storage/URL token) verbatim so file_bin
  * and every owning row resolve by id. OpenPNE 3 has no owner column, so the owner is resolved by
- * correlated subquery over ownedFileReferences(); a file no owner claims keeps a null owner, which
- * FilePolicy resolves as private.
+ * correlated subquery over ownedFileReferences(), then from the name for namePrefixOwners(); a file
+ * no owner claims keeps a null owner, which FilePolicy resolves as private.
  */
 class FileUpgrade extends UpgradeStep
 {
@@ -27,8 +27,8 @@ class FileUpgrade extends UpgradeStep
             'type' => Column::expr($this->typeExpr(), uses: ['type']),
             'original_filename' => Column::source('original_filename'),
             'byte_size' => Column::source('filesize'),
-            'related_entity_type' => Column::expr($this->ownerTypeExpr(), uses: ['id']),
-            'related_entity_id' => Column::expr($this->ownerIdExpr(), uses: ['id']),
+            'related_entity_type' => Column::expr($this->ownerTypeExpr(), uses: ['id', 'name']),
+            'related_entity_id' => Column::expr($this->ownerIdExpr(), uses: ['id', 'name']),
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
@@ -80,6 +80,44 @@ class FileUpgrade extends UpgradeStep
     }
 
     /**
+     * opUploadFilePlugin recorded a file's owner only in its name, `/m{member_id}/…` or `/c{community_id}/…`
+     * (OpenPNE3/plugins/opUploadFilePlugin, api f/upload), so these arms read the id out of the name and come
+     * after every referencing-table arm (docs/internals/upgrade.md, "OpenPNE 3 upload files").
+     *
+     * @return array<string, array{prefix: string, table: string, guard: ?string}> morph alias => name prefix letter, owner table, extra SQL boolean on `named_owner`
+     */
+    public function namePrefixOwners(): array
+    {
+        return [
+            'member' => ['prefix' => 'm', 'table' => 'member', 'guard' => ActiveMember::predicate('named_owner')],
+            'group' => ['prefix' => 'c', 'table' => 'community', 'guard' => null],
+        ];
+    }
+
+    /** SQL integer: the owner id between the prefix letter and the next slash of `file`.`name`. */
+    public static function nameOwnerIdExpr(): string
+    {
+        return "CAST(SUBSTRING_INDEX(SUBSTRING(`file`.`name`, 3), '/', 1) AS UNSIGNED)";
+    }
+
+    /**
+     * SQL boolean: `file`.`name` carries this owner's prefix with an id the owner table holds. The digit
+     * run is capped so the CAST cannot overflow, and the match is case-sensitive like the plugin's writes.
+     *
+     * @param  array{prefix: string, table: string, guard: ?string}  $spec
+     */
+    public static function nameOwnerExists(array $spec): string
+    {
+        return sprintf(
+            "(REGEXP_LIKE(`file`.`name`, '^/%s[1-9][0-9]{0,9}/', 'c') AND EXISTS (SELECT 1 FROM %s AS `named_owner` WHERE `named_owner`.`id` = %s%s))",
+            $spec['prefix'],
+            SourceRef::table($spec['table']),
+            self::nameOwnerIdExpr(),
+            $spec['guard'] === null ? '' : ' AND '.$spec['guard'],
+        );
+    }
+
+    /**
      * One reference's owner rows as a SELECT of file_id / owner_type / owner_id, for a query over every
      * owner at once (the shared-file preflight).
      *
@@ -108,7 +146,10 @@ class FileUpgrade extends UpgradeStep
     {
         $arms = '';
         foreach ($this->ownedFileReferences() as $reference) {
-            $arms .= sprintf('WHEN %s THEN %s ', $this->ownerExists($reference), "'{$reference['type']}'");
+            $arms .= sprintf('WHEN %s THEN %s ', self::ownerExists($reference), "'{$reference['type']}'");
+        }
+        foreach ($this->namePrefixOwners() as $type => $spec) {
+            $arms .= sprintf('WHEN %s THEN %s ', self::nameOwnerExists($spec), "'{$type}'");
         }
 
         return "CASE {$arms}ELSE NULL END";
@@ -119,14 +160,21 @@ class FileUpgrade extends UpgradeStep
     {
         $arms = '';
         foreach ($this->ownedFileReferences() as $reference) {
-            $arms .= sprintf('WHEN %s THEN %s ', $this->ownerExists($reference), $this->ownerId($reference));
+            $arms .= sprintf('WHEN %s THEN %s ', self::ownerExists($reference), $this->ownerId($reference));
+        }
+        foreach ($this->namePrefixOwners() as $spec) {
+            $arms .= sprintf('WHEN %s THEN %s ', self::nameOwnerExists($spec), self::nameOwnerIdExpr());
         }
 
         return "CASE {$arms}ELSE NULL END";
     }
 
-    /** @param array{table: string, file: string, extra?: string} $reference */
-    private function ownerExists(array $reference): string
+    /**
+     * SQL boolean: a row of the reference's table points at `file`.`id`.
+     *
+     * @param  array{table: string, file: string, extra?: string}  $reference
+     */
+    public static function ownerExists(array $reference): string
     {
         // The owner table goes through SourceRef and is aliased to its original name, so the column
         // qualifiers (and a message extra referencing it) resolve under a source prefix / database.

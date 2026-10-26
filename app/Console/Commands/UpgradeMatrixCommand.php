@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceNameRegistry;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\FileUpgrade;
 use Illuminate\Console\Command;
 
 class UpgradeMatrixCommand extends Command
@@ -75,6 +76,14 @@ class UpgradeMatrixCommand extends Command
             }
             $this->line('');
         }
+
+        $this->line('## `file` rows owned through their name');
+        $this->line('');
+        $this->line('opUploadFilePlugin files carry their owner only in the name; a file no referencing table claims is owned by:');
+        foreach ((new FileUpgrade)->namePrefixOwners() as $alias => $spec) {
+            $this->line("- `/{$spec['prefix']}{id}/…` — `{$alias}` {id}, when `{$spec['table']}` holds that id".($spec['guard'] === null ? '' : ' and the upgrade carries it'));
+        }
+        $this->line('');
 
         // member_config is a KV table; the per-step column audit cannot show which names are
         // migrated vs dropped, so list that per-name coverage explicitly.

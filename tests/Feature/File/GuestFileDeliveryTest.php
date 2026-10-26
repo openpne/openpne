@@ -13,6 +13,7 @@ use App\Models\GroupEventComment;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
@@ -35,6 +36,8 @@ class GuestFileDeliveryTest extends TestCase
         return [
             // Shown on web-public pages, and OpenPNE 3 put no login in front of image delivery.
             'member avatar' => ['member', true],
+            // An OpenPNE 3 upload-plugin file sat behind login there.
+            'member upload (not the avatar)' => ['member:upload', false],
             'web-public diary' => ['diary', true],
             'web-public diary comment' => ['diaryComment', true],
             // Members-only surfaces: a guest never had a page to reach them from.
@@ -110,10 +113,15 @@ class GuestFileDeliveryTest extends TestCase
             'directMessage' => DirectMessage::factory()->create(),
         };
 
-        return $this->file(
+        $file = $this->file(
             $alias === '' ? null : $alias,
             $ownerModel instanceof Model ? (int) $ownerModel->getKey() : ($alias === 'widget' ? 1 : null),
         );
+        if ($alias === 'member' && $variant !== 'upload') {
+            MemberImage::query()->create(['member_id' => $author->getKey(), 'file_id' => $file->getKey()]);
+        }
+
+        return $file;
     }
 
     private function file(?string $type, ?int $id): File

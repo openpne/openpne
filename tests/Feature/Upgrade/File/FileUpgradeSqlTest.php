@@ -3,6 +3,7 @@
 namespace Tests\Feature\Upgrade\File;
 
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\Runner\UploadFileOwnerPreflight;
 use App\Upgrade\Steps\FileUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SeedsSourceMembers;
@@ -227,6 +228,92 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
             'is_pc' => 1, 'is_mobile' => 1, 'source' => null, 'source_uri' => null, 'foreign_table' => $foreignTable, 'foreign_id' => $foreignId,
             'template' => null, 'template_param' => null, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00',
         ]);
+    }
+
+    public function test_an_upload_plugin_file_is_owned_by_the_member_in_its_name(): void
+    {
+        $this->seedSourceMember(5, isActive: 1);
+        $this->seedFile(30, ['name' => '/m5/1699000000report.pdf', 'type' => 'application/pdf']);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 30, 'related_entity_type' => 'member', 'related_entity_id' => 5]);
+    }
+
+    public function test_an_upload_of_an_inactive_member_is_migrated_ownerless(): void
+    {
+        $this->inactiveSourceMember(7);
+        $this->seedFile(32, ['name' => '/m7/1699000000a.pdf']);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 32, 'related_entity_type' => null, 'related_entity_id' => null]);
+    }
+
+    public function test_an_upload_plugin_file_is_owned_by_the_community_in_its_name(): void
+    {
+        DB::table('community')->insert(['id' => 9, 'name' => 'Docs', 'file_id' => null, 'created_at' => '2017-01-01 00:00:00', 'updated_at' => '2017-01-01 00:00:00']);
+        $this->seedFile(33, ['name' => '/c9/1699000000minutes.docx']);
+        $this->seedFile(34, ['name' => '/c10/1699000000gone.docx']); // no such community
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 33, 'related_entity_type' => 'group', 'related_entity_id' => 9]);
+        $this->assertDatabaseHas('files', ['id' => 34, 'related_entity_type' => null, 'related_entity_id' => null]);
+    }
+
+    public function test_a_name_that_only_resembles_an_upload_path_names_no_owner(): void
+    {
+        $this->seedSourceMember(5, isActive: 1);
+        $names = ['/mabc/x', '/m5x/y', 'm5/y', '/m0/y', '/m05/y', '/M5/y', '/m99999999999/y', '/m9'.str_repeat('9', 24).'/y', '/m5'];
+        foreach ($names as $i => $name) {
+            $this->seedFile(40 + $i, ['name' => $name]);
+        }
+
+        $this->runUpgrade();
+
+        foreach ($names as $i => $name) {
+            $this->assertDatabaseHas('files', ['id' => 40 + $i, 'related_entity_type' => null, 'related_entity_id' => null]);
+        }
+    }
+
+    public function test_a_referencing_table_outranks_the_name_prefix(): void
+    {
+        // A hand-made row that is both a diary image and named like an upload keeps the diary owner.
+        $this->seedSourceMember(5, isActive: 1);
+        $this->seedFile(50, ['name' => '/m5/1699000000photo.jpg']);
+        DB::table('diary_image')->insert(['id' => 1, 'diary_id' => 88, 'file_id' => 50, 'number' => 1]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 50, 'related_entity_type' => 'diary', 'related_entity_id' => 88]);
+    }
+
+    public function test_the_preflight_warns_about_uploads_whose_owner_is_not_carried(): void
+    {
+        $this->seedSourceMember(5, isActive: 1);
+        $this->inactiveSourceMember(7);
+        $this->seedFile(60, ['name' => '/m5/1699000000kept.pdf']);
+        $this->seedFile(61, ['name' => '/m7/1699000000lost.pdf']);
+        $this->seedFile(62, ['name' => '/c10/1699000000lost.pdf']);
+        $this->seedFile(63, ['name' => 'tok_63']); // not an upload-plugin name: ownerless but not reported
+        $this->seedFile(64, ['name' => '/m7/1699000000diary.jpg']); // the inactive member's, but a diary owns it
+        DB::table('diary_image')->insert(['id' => 1, 'diary_id' => 88, 'file_id' => 64, 'number' => 1]);
+
+        $report = (new UploadFileOwnerPreflight)->inspect('', null, $this->sourceTables());
+
+        $this->assertSame([], $report->errors);
+        $this->assertSame([UploadFileOwnerPreflight::ownerlessUploadMessage(2, [61, 62])], $report->warnings);
+    }
+
+    public function test_the_preflight_is_silent_when_every_upload_has_an_owner(): void
+    {
+        $this->seedSourceMember(5, isActive: 1);
+        $this->seedFile(60, ['name' => '/m5/1699000000kept.pdf']);
+
+        $report = (new UploadFileOwnerPreflight)->inspect('', null, $this->sourceTables());
+
+        $this->assertSame([], $report->warnings);
     }
 
     private function runUpgrade(): void
