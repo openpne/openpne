@@ -252,7 +252,10 @@ change from a problem when you go through it.
   (*Settings → Registration settings*). The dry-run report lists what the settings step copies. Values with no
   counterpart are dropped; for example the PC / mobile split (`enable_pc`, `enable_mobile`), the
   feature-phone options (`is_check_mobile_ip`, `retrieve_uid`), the OpenID / external-connection /
-  JSON API / Google Maps options, `daily_news_day`, `richtextarea_*` (the rich-text editor is frozen),
+  JSON API options (including the diary API limits `op_diary_plugin_diary_api_limit` and
+  `op_diary_plugin_diary_comment_api_limit`), the Google Maps options, `daily_news_day`, the
+  feature-phone mail-posting option (`op_diary_plugin_use_email_post`) and colour slots
+  (`mobile_frontend_core_color_*`), `richtextarea_*` (the rich-text editor is frozen),
   `pc_home_information` (OpenPNE 3 itself
   rendered the information box from the gadget's own config, never from this row, which the
   gadget upgrade carries). `image_max_filesize` is not a site setting here but an environment

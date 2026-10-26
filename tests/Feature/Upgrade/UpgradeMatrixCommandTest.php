@@ -39,6 +39,8 @@ class UpgradeMatrixCommandTest extends TestCase
             // Stock topic-plugin config names stay accounted-for, not flagged as custom configs.
             ->expectsOutputToContain('`public_flag`')
             ->expectsOutputToContain('`topic_authority`')
+            // The admin-invited family is listed under its prefix, since the matrix is where a dropped name is explained.
+            ->expectsOutputToContain('`community_admin_invited_*` — Dropped:')
             ->expectsOutputToContain('`community_member_position`');
     }
 

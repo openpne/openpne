@@ -45,7 +45,7 @@ final class SourcePreflight
      */
     private const NAME_SCAN_TABLES = [
         'member_config' => null,
-        'community_config' => null,
+        'community_config' => StepRegistry::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX,
         'notification_mail' => StepRegistry::NOTIFICATION_MAIL_MOBILE_PREFIX,
         'sns_term' => null,
     ];

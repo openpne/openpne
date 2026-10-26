@@ -72,9 +72,14 @@ class KnownConfigNamesTest extends TestCase
             $this->assertStringNotContainsString($kind->value, $sql, "{$kind->value} is a target the upgrade can write");
         }
 
+        // A dropped is_send_ name (one OpenPNE 3 wrote but never read) is recognised but never a target.
+        $dropped = array_keys(array_filter(
+            StepRegistry::memberConfigDispositions(),
+            static fn (string $disposition): bool => str_starts_with($disposition, 'Dropped:'),
+        ));
         $sendKeys = array_filter(
             StepRegistry::knownMemberConfigNames(),
-            static fn (string $name): bool => str_starts_with($name, 'is_send_'),
+            static fn (string $name): bool => str_starts_with($name, 'is_send_') && ! in_array($name, $dropped, true),
         );
         $this->assertCount(
             count($importable) * count(NotificationChannel::cases()),
@@ -148,10 +153,13 @@ class KnownConfigNamesTest extends TestCase
         $this->assertNotEmpty(StepRegistry::knownCommunityConfigNames());
     }
 
-    public function test_community_config_names_are_the_documented_dispositions(): void
+    public function test_community_config_names_are_the_documented_dispositions_minus_the_family(): void
     {
+        $family = StepRegistry::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX.'*';
+        $this->assertArrayHasKey($family, StepRegistry::communityConfigDispositions());
+
         $this->assertSame(
-            array_keys(StepRegistry::communityConfigDispositions()),
+            array_values(array_diff(array_keys(StepRegistry::communityConfigDispositions()), [$family])),
             StepRegistry::knownCommunityConfigNames(),
         );
 
