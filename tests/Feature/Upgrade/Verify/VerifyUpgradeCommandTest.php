@@ -34,4 +34,16 @@ class VerifyUpgradeCommandTest extends TestCase
             ->expectsOutputToContain('--source-database must match')
             ->assertFailed();
     }
+
+    public function test_a_hyphenated_source_database_passes_option_validation(): void
+    {
+        if (DB::connection()->getDriverName() === 'mysql') {
+            $this->markTestSkipped('On MySQL the run continues into the preflight.');
+        }
+
+        $this->artisan('openpne:verify-upgrade', ['--source-database' => 'account-openpne_op3'])
+            ->doesntExpectOutputToContain('--source-database must match')
+            ->expectsOutputToContain('requires MySQL')
+            ->assertFailed();
+    }
 }
