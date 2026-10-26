@@ -105,7 +105,11 @@ subquery rather than as a step's FROM, so the per-step column audit cannot show 
 `StepRegistry::memberConfigDispositions()` / `communityConfigDispositions()` /
 `notificationMailDispositions()` are that per-name coverage, and `knownMemberConfigNames()` /
 `knownCommunityConfigNames()` / `knownNotificationMailNames()` are the sets the preflight's
-unknown-name scan subtracts from (a warning, not an abort).
+unknown-name scan subtracts from (a warning, not an abort). A package that handles further names
+itself, outside `openpne:upgrade-from-3`, registers them on the `SourceNameRegistry` singleton from
+its service provider (a literal name, or a family by prefix); the scan then skips them and
+`openpne:upgrade-matrix` lists them with the package's disposition. The registry ships empty and
+refuses a literal name the upgrade already handles.
 
 ## Terms
 

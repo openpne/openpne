@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Upgrade;
 
+use App\Upgrade\SourceNameRegistry;
 use Tests\TestCase;
 
 class UpgradeMatrixCommandTest extends TestCase
@@ -42,6 +43,20 @@ class UpgradeMatrixCommandTest extends TestCase
             // The admin-invited family is listed under its prefix, since the matrix is where a dropped name is explained.
             ->expectsOutputToContain('`community_admin_invited_*` — Dropped:')
             ->expectsOutputToContain('`community_member_position`');
+    }
+
+    public function test_lists_registered_names_with_their_package_disposition(): void
+    {
+        $registry = $this->app->make(SourceNameRegistry::class);
+        $registry->recognise('member_config', 'op_vendor_token', 'Migrated by the vendor package.');
+        $registry->recogniseFamily('community_config', 'op_vendor_flag_', 'Dropped by the vendor package.');
+        $registry->recognise('notification_mail', 'pc_vendorDigest', 'Sent by the vendor package.');
+
+        $this->artisan('openpne:upgrade-matrix')
+            ->assertSuccessful()
+            ->expectsOutputToContain('- `op_vendor_token` — Registered by an installed package: Migrated by the vendor package.')
+            ->expectsOutputToContain('- `op_vendor_flag_*` — Registered by an installed package: Dropped by the vendor package.')
+            ->expectsOutputToContain('- `pc_vendorDigest` — Registered by an installed package: Sent by the vendor package.');
     }
 
     public function test_renders_notification_mail_coverage(): void

@@ -8,6 +8,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
+use App\Upgrade\SourceNameRegistry;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
@@ -230,6 +231,31 @@ class SourcePreflightTest extends TestCase
         $this->assertStringNotContainsString('named `notification_center`', $output);
         $this->assertStringNotContainsString('named `password_recovery_token`', $output);
         $this->assertStringNotContainsString('named `is_send_pc_friendLinkRequest_mail`', $output);
+    }
+
+    public function test_registered_names_and_families_are_not_reported(): void
+    {
+        $registry = $this->app->make(SourceNameRegistry::class);
+        $registry->recognise('member_config', 'op_vendor_token', 'Migrated by the vendor package.');
+        $registry->recogniseFamily('member_config', 'op_vendor_flag_', 'Dropped by the vendor package.');
+
+        $this->createSource('member_config');
+        $this->createSource('member');
+        $this->seedMembers(1);
+        $this->insertConfig([
+            ['member_id' => 1, 'name' => 'op_vendor_token', 'value' => 'x'],
+            ['member_id' => 1, 'name' => 'op_vendor_flag_12', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'op_vendor_flagx_1', 'value' => '1'], // NOT the family
+            ['member_id' => 1, 'name' => 'op_other_vendor', 'value' => '1'],
+        ]);
+
+        [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade], new RunOptions(dryRun: true));
+
+        $this->assertTrue($ok);
+        $this->assertStringNotContainsString('named `op_vendor_token`', $output);
+        $this->assertStringNotContainsString('named `op_vendor_flag_12`', $output);
+        $this->assertStringContainsString(SourcePreflight::unknownSourceNameMessage('member_config', 'op_vendor_flagx_1', 1), $output);
+        $this->assertStringContainsString(SourcePreflight::unknownSourceNameMessage('member_config', 'op_other_vendor', 1), $output);
     }
 
     public function test_a_source_without_the_name_column_aborts_instead_of_failing_the_scan(): void
