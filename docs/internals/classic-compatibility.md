@@ -240,7 +240,8 @@ outside `[A-Za-z0-9_-]` or not on disk reads as the default skin. With a theme c
 skin is not linked and the package's `css/*.css` are linked in name order **after** the module and
 custom CSS, which is where OpenPNE 3 placed them: the theme overrides both (its `customizing.css`
 also preceded the module stylesheet, which is not reproduced). The themes' own JavaScript
-(`bootstrap-dropdown.js`, `license.js`, jQuery-bound) is not loaded; the `#license` span the
+(`bootstrap-dropdown.js`, `license.js`, jQuery-bound) is not loaded, and the vendored packages
+leave it out; the `#license` span the
 themed footer opens with, which a package's script may have filled, stays empty. The theme plugin also
 overrode the shell's templates, and with a theme chosen the shell follows them: `#Header` is a
 `navbar` (`navbar-inverse` on the `friend` nav set) whose `div.container` holds the `a.brand` link in
