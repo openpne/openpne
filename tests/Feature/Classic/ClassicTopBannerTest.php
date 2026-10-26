@@ -39,7 +39,7 @@ class ClassicTopBannerTest extends TestCase
             ->assertSee(route('banner.image', $image->file->name), false)
             ->assertSee('alt="Promo"', false)
             ->assertSee('<a href="https://ad.example.test" target="_blank" rel="noopener">', false)
-            ->assertSee('<span class="sr-only"> Opens in a new tab</span></a>', false);
+            ->assertSee('<span class="sr-only" data-new-tab-notice="Opens in a new tab"></span></a>', false);
     }
 
     public function test_a_banner_linking_to_this_site_opens_in_place(): void

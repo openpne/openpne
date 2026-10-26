@@ -157,7 +157,7 @@ class LinkCardRenderingTest extends TestCase
             ->assertSee('What the page says it is about.')
             ->assertSee('example.com')
             ->assertSee('target="_blank" rel="noopener noreferrer nofollow"', false)
-            ->assertSee('<span class="sr-only"> Opens in a new tab</span>', false);
+            ->assertSee('<span class="sr-only" data-new-tab-notice="Opens in a new tab"></span>', false);
     }
 
     public function test_the_classic_card_reads_host_first_and_puts_a_wide_picture_last(): void

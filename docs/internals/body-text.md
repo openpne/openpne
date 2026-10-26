@@ -40,7 +40,8 @@ data and the client links them, so `RichBody` stays the sole `dangerouslySetInne
 ## Where a link opens
 
 A link to another site opens a new tab — `target="_blank"`, `rel="noopener noreferrer nofollow"`
-— and says so to assistive technology with a visually hidden "Opens in a new tab" inside the link.
+— and says so to assistive technology with a visually hidden "Opens in a new tab" inside the link,
+drawn by CSS from `data-new-tab-notice` so that copying the text does not carry it.
 A link to this site navigates in place: a bare anchor in server-rendered HTML, the Inertia router on
 Modern. [`LinkTarget`](../../app/Support/LinkTarget.php) decides on the server by host and port
 against `app.url`, reading the URL as a browser does (the scheme's default port dropped, an IDN in
@@ -62,7 +63,7 @@ so a click there cannot take the draft with it. The rule covers every body
 format, link cards and operator banners, and
 [`LinkTargetProducersTest`](../../tests/Feature/Architecture/LinkTargetProducersTest.php) names the
 only other files that may open a new tab: a photo's full-size link, the lightbox and the footer.
-Classic carries its own `.sr-only` rule in the layout, since the OpenPNE 3 skin has none.
+Classic carries its own `.sr-only` and notice rules in the layout, since the OpenPNE 3 skin has none.
 
 ## `op3` — migration-only, frozen
 

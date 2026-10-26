@@ -25,7 +25,7 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render('see https://example.com/x here');
 
         $this->assertStringContainsString(
-            '<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only"> 新しいタブで開く</span></a>',
+            '<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only" data-new-tab-notice="新しいタブで開く"></span></a>',
             $html,
         );
     }
@@ -44,7 +44,7 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render('go to www.example.com now');
 
         $this->assertStringContainsString('href="http://www.example.com"', $html);
-        $this->assertStringContainsString('>www.example.com<span class="sr-only">', $html);
+        $this->assertStringContainsString('>www.example.com<span class="sr-only" ', $html);
     }
 
     public function test_trailing_punctuation_stays_outside_the_link(): void
@@ -88,7 +88,7 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render($url);
 
         $this->assertStringContainsString('href="'.$url.'"', $html); // full href
-        $this->assertStringContainsString('...<span class="sr-only">', $html); // truncated visible text
+        $this->assertStringContainsString('...<span class="sr-only" ', $html); // truncated visible text
     }
 
     public function test_null_renders_nothing(): void
@@ -105,7 +105,7 @@ class BodyTextTest extends TestCase
         $html = (string) BodyText::render($url);
 
         $this->assertStringContainsString('href="'.$url.'"', $html); // full href
-        $this->assertStringContainsString('...<span class="sr-only">', $html); // width-based truncation adds an ellipsis
+        $this->assertStringContainsString('...<span class="sr-only" ', $html); // width-based truncation adds an ellipsis
     }
 
     public function test_excerpt_collapses_newlines_to_spaces(): void

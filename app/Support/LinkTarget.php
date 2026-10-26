@@ -28,10 +28,10 @@ final class LinkTarget
         return $this->external ? ' target="_blank" rel="'.e($rel).'"' : '';
     }
 
-    /** The visually hidden notice closing the link's text; empty for a link that stays. */
+    /** The visually hidden notice closing the link's text, drawn by CSS so a copy of the text leaves it out; empty for a link that stays. */
     public function notice(): string
     {
-        return $this->external ? '<span class="sr-only"> '.e(__('Opens in a new tab')).'</span>' : '';
+        return $this->external ? '<span class="sr-only" data-new-tab-notice="'.e(__('Opens in a new tab')).'"></span>' : '';
     }
 
     /**

@@ -55,4 +55,16 @@ class LinkTargetProducersTest extends TestCase
 
         $this->assertSame($allowed, $found, 'The files that open a new tab changed. A new one goes through LinkTarget / <BodyLink>, or is named as a carve-out here and in the docs; one that stopped is dropped from the list.');
     }
+
+    /** The notice span is empty, so without this rule a stylesheet drops it from the link's name unnoticed. */
+    public function test_both_stylesheets_draw_the_new_tab_notice(): void
+    {
+        foreach (['resources/css/app.css', 'resources/views/layouts/classic.blade.php'] as $file) {
+            $this->assertMatchesRegularExpression(
+                "/\\[data-new-tab-notice\\]::before\\s*\\{\\s*content:\\s*' '\\s*attr\\(data-new-tab-notice\\)/",
+                (string) file_get_contents(base_path($file)),
+                $file,
+            );
+        }
+    }
 }

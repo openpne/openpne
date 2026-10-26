@@ -44,7 +44,7 @@ class EntityTextTest extends TestCase
 
         $this->assertSame(
             '<a href="/member/7" class="mention">@Alice</a> '
-                .'<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only"> 新しいタブで開く</span></a>',
+                .'<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x<span class="sr-only" data-new-tab-notice="新しいタブで開く"></span></a>',
             $html,
         );
     }

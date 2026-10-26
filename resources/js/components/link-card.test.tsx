@@ -137,7 +137,7 @@ test('a card of another site opens a new tab and says so, in both shapes', () =>
 
         expect(link.getAttribute('target')).toBe('_blank');
         expect(link.getAttribute('rel')).toBe('noopener noreferrer nofollow');
-        expect(link.querySelector('.sr-only')?.textContent).toBe(' Opens in a new tab');
+        expect(link.querySelector('.sr-only')?.getAttribute('data-new-tab-notice')).toBe('Opens in a new tab');
     }
 });
 
