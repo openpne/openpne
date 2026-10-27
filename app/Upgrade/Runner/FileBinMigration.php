@@ -27,14 +27,14 @@ final class FileBinMigration implements Phase
     private const MISMATCH_SAMPLE = 5;
 
     /** The move is left out: it is written only off in-place, which the source options decide, so a row, if present, must be completed. */
-    public function version(): string
-    {
-        return self::VERSION;
-    }
-
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return in_array('files', $targetTables, true) ? [self::SNAPSHOT_KEY, self::REWIRE_KEY] : [];
+    }
+
+    public function version(): string
+    {
+        return self::VERSION;
     }
 
     public static function optionalKeys(): array

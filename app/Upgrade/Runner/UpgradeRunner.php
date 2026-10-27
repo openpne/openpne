@@ -388,16 +388,19 @@ final class UpgradeRunner
             ));
         }
 
-        $raw = $marker->metadata['manifest'] ?? null;
-        if ($raw === null) {
+        $metadata = (array) $marker->metadata;
+        if (! array_key_exists('manifest', $metadata)) {
             return new ResumeVerdict(self::legacyLooksComplete() ? ResumeVerdict::LEGACY_COMPLETE : ResumeVerdict::LEGACY);
         }
 
-        // Present but unreadable (another format, a garbled row) is refused like a garbled epoch, not read as legacy.
-        $stored = is_array($raw) && ($raw['format'] ?? null) === RunManifest::FORMAT ? RunManifest::fromStored($raw) : null;
+        // Present but unreadable (another format, a garbled row, a null) is refused like a garbled epoch, not read as legacy.
+        $raw = $metadata['manifest'];
+        $format = is_array($raw) ? ($raw['format'] ?? null) : null;
+        $stored = $format === RunManifest::FORMAT ? RunManifest::fromStored($raw) : null;
         if ($stored === null) {
-            return new ResumeVerdict(ResumeVerdict::BLOCKED, 'the upgrade state carries a run manifest this version cannot read (format '
-                .var_export(is_array($raw) ? ($raw['format'] ?? null) : $raw, true).'), so it cannot be resumed — re-run with --force-restart to start over from an empty target.');
+            $why = $format === RunManifest::FORMAT ? 'its phases are not readable' : 'format '.var_export($format, true).' where this version reads '.RunManifest::FORMAT;
+
+            return new ResumeVerdict(ResumeVerdict::BLOCKED, "the upgrade state carries a run manifest this version cannot read ({$why}), so it cannot be resumed — re-run with --force-restart to start over from an empty target.");
         }
 
         $difference = $this->manifest()->firstDifference($stored);
@@ -414,14 +417,16 @@ final class UpgradeRunner
 
     /**
      * Legacy state carries no manifest, so the set it ran under is unknown: it is taken as complete
-     * when nothing is failed or running — a crash between steps leaves no such row and is misread as
-     * complete, which verify then reports as the missing steps, never as copied data.
+     * when nothing is failed or running and the surface_mode row exists, which only a full success
+     * (or an operator's openpne:surface-mode before one) writes.
      */
     public static function legacyLooksComplete(): bool
     {
         $rows = UpgradeState::query()->where('step_key', '!=', self::EPOCH_KEY);
 
-        return (clone $rows)->exists() && ! (clone $rows)->whereIn('status', [UpgradeState::STATUS_RUNNING, UpgradeState::STATUS_FAILED])->exists();
+        return (clone $rows)->exists()
+            && ! (clone $rows)->whereIn('status', [UpgradeState::STATUS_RUNNING, UpgradeState::STATUS_FAILED])->exists()
+            && DB::table('sns_settings')->where('key', SnsSettingKey::SurfaceMode->value)->exists();
     }
 
     /** This run's phases in the order they finish; the PHP phases list themselves out when they have no checkpoint to write. */

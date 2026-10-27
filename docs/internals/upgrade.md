@@ -201,18 +201,20 @@ that started the run), and each completed step checkpoint stores its own definit
 
 `UpgradeRunner::resumeVerdict()` reads the state table alone — before the source preflight, so
 a completed site whose OpenPNE 3 tables are gone still answers — and the runner acts on it once,
-before any write; `--force-restart` is never gated (its dry run previews the restart). In
+before any write; `--force-restart` is never gated, its dry run included (which still shows
+the checkpoints as they are, since a dry run resets nothing). In
 order: the completion marker exists → `completed`, the run prints `Completed: …; nothing to
 do` and walks nothing (a step or pass added by a later build is never run against a completed
 site, and `--force-restart` is never the message on one); the two epoch refusals; a stored
 manifest whose hash differs → `blocked`, naming the first phase that was added, removed,
 changed or reordered; an epoch row without a manifest (state written before manifests, whose
-set of steps is therefore unknown) and nothing failed or running → `legacy_complete`, adopted:
-the unverified completion marker is stamped and nothing walks (a crash between steps leaves no
-failed row and is misread as complete, which verify then reports as the missing steps — never
-as data copied twice); an epoch row without a manifest and a failed or running row → `legacy`,
-resumed as it is — the one blind spot, since a step this build added has no checkpoint and
-runs; else `ok`. The dry run is gated the
+set of steps is therefore unknown), nothing failed or running, and the `surface_mode` row
+present (only a full success writes it, or an operator's `openpne:surface-mode` before one) →
+`legacy_complete`, adopted: the unverified completion marker is stamped and nothing walks
+(status names any phase of this build without a checkpoint; a site adopted wrongly needs a
+restart from a fresh restore, since nothing can be resumed into a completed site); an epoch
+row without a manifest otherwise → `legacy`, resumed as it is — the one blind spot, since a
+step this build added has no checkpoint and runs; else `ok`. The dry run is gated the
 same way and stamps nothing.
 
 **The completion marker** (`upgrade_completed`, no step bears the name) is written by `run()`
@@ -232,8 +234,8 @@ table is missing. From the rows and this build's manifest, first match wins: `no
 rows); `completed` (the marker is verified, its hash is the current manifest's, and every phase
 has its checkpoints completed — a phase with none to write counts; `file_bin_move` is optional
 and must be completed only if present); `completed_unverified` (the marker is unverified, or
-its hash differs, or a current phase lacks a completed checkpoint, or legacy state with
-nothing failed or running and no marker yet — `reason` says which; `upgrade_release` is the build that
+its hash differs, or a current phase lacks a completed checkpoint (named), or legacy state
+that `resumeVerdict()` would adopt and no marker yet — `reason` says which; `upgrade_release` is the build that
 started the run, null when unverified, `upgrade_completed_at` likewise); `blocked`
 (`resumeVerdict()` blocked: `reason`, `blocking_phase`); `in_progress` (`next_phase` = the
 first phase in manifest order without a completed checkpoint, `failed_phase`, `legacy`).

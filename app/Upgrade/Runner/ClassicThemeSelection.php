@@ -46,14 +46,14 @@ final class ClassicThemeSelection implements Phase
     }
 
     /** Gated on a step reading sns_config as well: the skin is read from it, and the preflight requires `plugin` only then. */
-    public function version(): string
-    {
-        return self::VERSION;
-    }
-
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return in_array('sns_settings', $targetTables, true) && in_array('sns_config', $sourceTables, true) ? [self::KEY] : [];
+    }
+
+    public function version(): string
+    {
+        return self::VERSION;
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip unless the run owns sns_settings) */

@@ -393,9 +393,14 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
     {
         $this->seedGraph();
         $this->assertTrue($this->runner([new FriendshipUpgrade, new MemberBlockUpgrade])->run(new RunOptions));
-        // Make it legacy: no manifest on the epoch row, no completion marker.
+        // Make it legacy: no manifest on the epoch row, no completion marker (the surface row stays).
         UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->update(['metadata' => json_encode(['epoch' => UpgradeRunner::NAMING_EPOCH])]);
         UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
+
+        // A stopped run never stamped the surface: it is resumed, not adopted.
+        DB::table('sns_settings')->where('key', 'surface_mode')->delete();
+        $this->assertSame('legacy', $this->runner($this->relationSteps())->resumeVerdict()->verdict);
+        DB::table('sns_settings')->insert(['key' => 'surface_mode', 'value' => 'classic_default']);
 
         $lines = [];
         $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions(dryRun: true), function (string $line) use (&$lines): void {
@@ -416,7 +421,7 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->seedGraph();
         $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions));
 
-        foreach ([['format' => 2, 'phases' => [['id' => 'x']]], 'garbage', ['phases' => 'x']] as $raw) {
+        foreach ([['format' => 2, 'phases' => [['id' => 'x']]], 'garbage', ['phases' => 'x'], null, ['format' => 1, 'phases' => 'x']] as $raw) {
             UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->update(['metadata' => json_encode(['epoch' => UpgradeRunner::NAMING_EPOCH, 'manifest' => $raw])]);
 
             $lines = [];

@@ -50,10 +50,11 @@ final class UpgradeStatus implements JsonSerializable
         $marker = $rows->get(UpgradeRunner::RUN_KEY);
         if ($marker !== null) {
             $meta = (array) $marker->metadata;
+            $missing = self::incompletePhases($phases);
             $reason = match (true) {
+                $missing !== [] => 'a phase of this build has no completed checkpoint: '.implode(', ', $missing),
                 ! ($meta['verified'] ?? false) => 'completed under an unknown set of steps (state written before manifests)',
                 ($meta['manifest_hash'] ?? null) !== $manifest->hash() => 'completed under a different set of steps than this build',
-                ! self::everyPhaseComplete($phases) => 'a phase of this build has no completed checkpoint (added since the completion)',
                 default => null,
             };
 
@@ -67,7 +68,10 @@ final class UpgradeStatus implements JsonSerializable
 
         $verdict = $runner->resumeVerdict();
         if ($verdict->verdict === ResumeVerdict::LEGACY_COMPLETE) {
-            return new self(self::COMPLETED_UNVERIFIED, ['upgrade_completed_at' => null, 'upgrade_release' => null, 'reason' => 'the run finished before this version recorded the set of steps; a re-run records the completion'], $phases, $manifest->hash());
+            $missing = self::incompletePhases($phases);
+
+            return new self(self::COMPLETED_UNVERIFIED, ['upgrade_completed_at' => null, 'upgrade_release' => null, 'reason' => 'the run finished before this version recorded the set of steps; a re-run records the completion'
+                .($missing === [] ? '' : '; phases without a completed checkpoint: '.implode(', ', $missing))], $phases, $manifest->hash());
         }
         if ($verdict->verdict === ResumeVerdict::BLOCKED) {
             return new self(self::BLOCKED, ['reason' => $verdict->reason, 'blocking_phase' => $verdict->blockingPhase], $phases, $manifest->hash());
@@ -132,16 +136,16 @@ final class UpgradeStatus implements JsonSerializable
         return $out;
     }
 
-    /** @param  list<array<string, mixed>>  $phases */
-    private static function everyPhaseComplete(array $phases): bool
+    /**
+     * @param  list<array<string, mixed>>  $phases
+     * @return list<string>
+     */
+    private static function incompletePhases(array $phases): array
     {
-        foreach ($phases as $phase) {
-            if ($phase['status'] !== 'completed') {
-                return false;
-            }
-        }
-
-        return true;
+        return array_values(array_map(
+            static fn (array $p): string => $p['key'],
+            array_filter($phases, static fn (array $p): bool => $p['status'] !== 'completed'),
+        ));
     }
 
     /** @return list<string> */

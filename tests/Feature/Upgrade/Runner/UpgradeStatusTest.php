@@ -15,6 +15,7 @@ use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -75,9 +76,13 @@ class UpgradeStatusTest extends TestCase
         $this->assertTrue($status->fields['legacy']);
         $this->assertNull($status->phases[0]['definition_matches']);
 
-        // Nothing failed or running before manifests: taken as completed, but nothing this build can vouch for.
+        // Nothing failed or running before manifests, and the surface stamped: taken as completed,
+        // but nothing this build can vouch for; the step still missing is named.
         UpgradeState::query()->where('step_key', 'FriendRequestUpgrade')->delete();
         $this->complete('FriendRequestUpgrade', 1, definition: false);
+        $this->assertSame('in_progress', UpgradeStatus::read($this->runner())->status, 'without the surface row a stopped run is not adopted');
+        DB::table('sns_settings')->insert(['key' => 'surface_mode', 'value' => 'classic_default']);
+        $this->assertStringContainsString('phases without a completed checkpoint: MemberBlockUpgrade', UpgradeStatus::read($this->runner())->fields['reason']);
         $status = UpgradeStatus::read($this->runner());
         $this->assertSame('completed_unverified', $status->status);
         $this->assertStringContainsString('a re-run records the completion', $status->fields['reason']);

@@ -208,9 +208,10 @@ that renames the steps or the tables they write.
 Once a site has completed, a re-run changes nothing: it answers `Completed: … nothing to do`,
 whatever has changed in OpenPNE 4 since, and never suggests `--force-restart`. A site that
 completed before this version recorded the set of steps is adopted by its first re-run —
-nothing runs and the completion is recorded as unverified; verify then says whether every step
-is there. Only a site whose older run left a failed step behind resumes, and then a step this
-version added does run. That makes `--force-restart` a rehearsal tool. Once OpenPNE 4 is
+nothing runs and the completion is recorded as unverified. `openpne:upgrade-status` then names
+any step this version expects that has no record; a site in that state cannot be resumed and
+needs `--force-restart` from a fresh restore. Only a site whose older run left a failed step
+behind, or never reached the end, resumes, and then a step this version added does run. That makes `--force-restart` a rehearsal tool. Once OpenPNE 4 is
 taking traffic, those tables are the live site.
 
 ### Where does a site stand?
