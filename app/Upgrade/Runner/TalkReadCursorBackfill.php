@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Upgrade\Runner;
 
 use App\Models\UpgradeState;
-use Closure;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -19,23 +18,25 @@ final class TalkReadCursorBackfill
 {
     private const KEY = 'talk_read_cursor_backfill';
 
-    public function plan(Closure $out): void
+    public function plan(RunReport $report): void
     {
-        $out("PLAN would point every migrated group membership's talk read cursor at the group's latest migrated message.");
+        $report->line("PLAN would point every migrated group membership's talk read cursor at the group's latest migrated message.");
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip unless the run owns both sides) */
-    public function run(array $targetTables, Closure $out): bool
+    public function run(array $targetTables, RunReport $report): bool
     {
         if (! in_array('group_members', $targetTables, true) || ! in_array('group_messages', $targetTables, true)) {
             return true;
         }
 
         if ($this->isCompleted()) {
-            $out('SKIP '.self::KEY.': already completed');
+            $report->skipped(self::KEY, 'already completed');
 
             return true;
         }
+
+        $report->started(self::KEY);
 
         try {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
@@ -58,18 +59,19 @@ final class TalkReadCursorBackfill
                 return $updated;
             });
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => self::KEY], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
-            $out('FAIL '.self::KEY.": {$e->getMessage()}");
+            $report->failed(self::KEY, RunReport::failureMessage($e), $e);
 
             return false;
         }
 
-        $out('DONE '.self::KEY.": {$updated} memberships changed");
+        $report->done(self::KEY, "{$updated} memberships changed", $updated);
 
         return true;
     }

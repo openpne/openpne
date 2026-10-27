@@ -17,7 +17,11 @@ use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\UpgradeStep;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SeedsSourceMembers;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
@@ -162,6 +166,153 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => 'FriendshipUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
     }
 
+    public function test_each_step_prints_a_start_line_and_a_timed_done_line(): void
+    {
+        $this->seedGraph();
+
+        $lines = [];
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $run = array_search('RUN FriendshipUpgrade', $lines, true);
+        $this->assertNotFalse($run);
+        $this->assertMatchesRegularExpression('/^DONE FriendshipUpgrade: 2 rows \(\d+\.\ds\)$/', $lines[$run + 1]);
+        $this->assertMatchesRegularExpression('/^Finished in \d+\.\ds$/', end($lines));
+    }
+
+    public function test_the_json_report_replaces_the_human_lines(): void
+    {
+        $this->seedGraph();
+        $this->app->instance(UpgradeRunner::class, $this->runner($this->relationSteps()));
+
+        $report = $this->jsonReport(['--json' => true]);
+
+        $this->assertStringNotContainsString('DONE FriendshipUpgrade', $this->lastOutput);
+        $this->assertSame('ok', $report['outcome']);
+        $this->assertFalse($report['resumed']);
+        $this->assertSame('FriendshipUpgrade', $report['steps'][0]['key']);
+        $this->assertSame('done', $report['steps'][0]['status']);
+        $this->assertSame(2, $report['steps'][0]['rows']);
+        $this->assertIsInt($report['steps'][0]['elapsed_ms']);
+        $this->assertSame(DB::connection()->getDatabaseName(), $report['site']);
+        $this->assertNull($report['release']);
+
+        $this->assertTrue($this->jsonReport(['--json' => true])['resumed'], 'the second run skipped the completed steps');
+    }
+
+    public function test_a_failed_step_is_one_fail_line_without_the_sql(): void
+    {
+        $this->seedGraph();
+        Exceptions::fake();
+        $this->app->instance(UpgradeRunner::class, $this->runner([new FriendshipUpgrade, $this->brokenStep()]));
+
+        $report = $this->jsonReport(['--json' => true], expectFailure: true);
+
+        Exceptions::assertReported(QueryException::class);
+
+        $this->assertSame('failed_at_step', $report['outcome']);
+        $this->assertSame('BrokenMemberBlockUpgrade', $report['failed_step']);
+        $failed = $report['steps'][1];
+        $this->assertSame('failed', $failed['status']);
+        $this->assertStringStartsWith('SQLSTATE[42S02]', $failed['error']);
+        $this->assertStringNotContainsString('INSERT INTO', $failed['error']);
+        $this->assertIsInt($failed['elapsed_ms']);
+        $this->assertStringNotContainsString('INSERT INTO', (string) UpgradeState::query()->where('step_key', 'BrokenMemberBlockUpgrade')->value('error'));
+
+        $lines = [];
+        $this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+        $fails = array_values(array_filter($lines, fn (string $l): bool => str_starts_with($l, 'FAIL')));
+        $this->assertCount(1, $fails);
+        $this->assertStringNotContainsString("\n", $fails[0]);
+    }
+
+    public function test_verbose_rethrows_the_failure_after_its_line_and_checkpoint(): void
+    {
+        $this->seedGraph();
+        $lines = [];
+
+        try {
+            $this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions(verbose: true), function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            });
+            $this->fail('the step failure should have been rethrown');
+        } catch (QueryException) {
+            $this->assertStringContainsString('FAIL BrokenMemberBlockUpgrade:', implode("\n", $lines));
+            $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => 'BrokenMemberBlockUpgrade', 'status' => UpgradeState::STATUS_FAILED]);
+        }
+    }
+
+    public function test_a_missing_state_table_is_a_precheck_error_in_the_json_too(): void
+    {
+        $this->seedGraph();
+        // The lane's trait re-migrates the targets when this sentinel is missing, so the drop heals.
+        Schema::drop('openpne4_upgrade_state');
+
+        $report = $this->jsonReport(['--json' => true], expectFailure: true);
+
+        $this->assertSame('precheck_error', $report['outcome']);
+        $this->assertStringContainsString('openpne4_upgrade_state', $report['errors'][0]);
+        $this->assertSame([], $report['steps']);
+    }
+
+    public function test_verbose_json_prints_the_report_before_the_rethrow(): void
+    {
+        $this->seedGraph();
+        $this->app->instance(UpgradeRunner::class, $this->runner([new FriendshipUpgrade, $this->brokenStep()]));
+
+        try {
+            Artisan::call('openpne:upgrade-from-3', ['--json' => true, '-v' => true]);
+            $this->fail('the step failure should have been rethrown under -v');
+        } catch (QueryException) {
+            $report = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+            $this->assertSame('failed_at_step', $report['outcome']);
+            $this->assertSame('BrokenMemberBlockUpgrade', $report['failed_step']);
+            $this->assertNotNull($report['finished_at'], 'the command finishes the report before rethrowing');
+        }
+    }
+
+    public function test_a_failure_outside_any_step_is_the_runs_and_still_yields_json(): void
+    {
+        $this->seedGraph();
+        Exceptions::fake();
+        // --force-restart DELETEs every target before any step runs, so the broken step's missing
+        // table makes reset() throw with no step started.
+        $this->app->instance(UpgradeRunner::class, $this->runner([new FriendshipUpgrade, $this->brokenStep()]));
+
+        $report = $this->jsonReport(['--json' => true, '--force-restart' => true], expectFailure: true);
+
+        Exceptions::assertReported(QueryException::class);
+        $this->assertNotNull($report['finished_at']);
+        $this->assertSame('failed_at_step', $report['outcome']);
+        $this->assertSame('run', $report['failed_step']);
+        $this->assertSame(['run'], array_column($report['steps'], 'key'));
+        $this->assertStringStartsWith('SQLSTATE[42S02]', $report['steps'][0]['error']);
+        $this->assertStringNotContainsString('DELETE', $report['steps'][0]['error']);
+    }
+
+    private function brokenStep(): UpgradeStep
+    {
+        return new BrokenMemberBlockUpgrade;
+    }
+
+    private string $lastOutput = '';
+
+    /**
+     * @param  array<string, mixed>  $parameters
+     * @return array<string, mixed>
+     */
+    private function jsonReport(array $parameters, bool $expectFailure = false): array
+    {
+        $exit = Artisan::call('openpne:upgrade-from-3', $parameters);
+        $this->lastOutput = Artisan::output();
+        $this->assertSame($expectFailure ? 1 : 0, $exit, $this->lastOutput);
+
+        return json_decode($this->lastOutput, true, flags: JSON_THROW_ON_ERROR);
+    }
+
     public function test_a_run_forgets_every_cached_map_the_steps_wrote(): void
     {
         $this->seedGraph();
@@ -232,5 +383,14 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
             'created_at' => '2018-01-02 03:04:05',
             'updated_at' => '2018-01-02 03:04:05',
         ], $flags));
+    }
+}
+
+/** Writes to a table that does not exist, so its INSERT fails after the earlier step committed; a named class so its checkpoint key is stable. */
+final class BrokenMemberBlockUpgrade extends MemberBlockUpgrade
+{
+    public function targetTable(): string
+    {
+        return 'no_such_table';
     }
 }

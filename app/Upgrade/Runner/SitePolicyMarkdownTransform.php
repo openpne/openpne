@@ -6,7 +6,6 @@ namespace App\Upgrade\Runner;
 
 use App\Models\UpgradeState;
 use App\Support\SnsSettingKey;
-use Closure;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
@@ -26,26 +25,28 @@ final class SitePolicyMarkdownTransform
     /** @var list<SnsSettingKey> */
     private const SETTINGS = [SnsSettingKey::UserAgreement, SnsSettingKey::PrivacyPolicy];
 
-    public function plan(Closure $out): void
+    public function plan(RunReport $report): void
     {
-        $out('PLAN would rewrite the imported terms of service / privacy policy bodies as Markdown.');
+        $report->line('PLAN would rewrite the imported terms of service / privacy policy bodies as Markdown.');
     }
 
     /** @param list<string> $targetTables this run's step target tables (skip tables the run does not own) */
-    public function run(array $targetTables, Closure $out): bool
+    public function run(array $targetTables, RunReport $report): bool
     {
         if (! in_array(self::TABLE, $targetTables, true)) {
             return true;
         }
 
         if ($this->isCompleted(self::KEY)) {
-            $out('SKIP '.self::KEY.': already completed');
+            $report->skipped(self::KEY, 'already completed');
 
             return true;
         }
 
         // The progress lines stay outside the try: a throwing output closure would otherwise flip a
         // committed COMPLETED to FAILED, and the resume would rewrite the already-converted bodies.
+        $report->started(self::KEY);
+
         try {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_RUNNING,
@@ -69,22 +70,23 @@ final class SitePolicyMarkdownTransform
                 return $converted;
             });
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => self::KEY], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
-            $out('FAIL '.self::KEY.": {$e->getMessage()}");
+            $report->failed(self::KEY, RunReport::failureMessage($e), $e);
 
             return false;
         }
 
-        $out('DONE '.self::KEY.": {$converted} rows");
+        $report->done(self::KEY, "{$converted} rows", $converted);
         if ($converted > 0) {
             // Best-effort: OpenPNE 3 accepted markup this cannot always place (indented blocks,
             // hand-drawn tables), so the operator is told to read the result once.
-            $out('NOTE site policy text was rewritten as Markdown — review it under Settings > Site policy settings.');
+            $report->note('site policy text was rewritten as Markdown — review it under Settings > Site policy settings.');
         }
 
         return true;

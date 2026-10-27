@@ -60,6 +60,7 @@ class OutboundEgressBoundaryTest extends TestCase
         'Mail/Template/MailTemplateDefaults.php',
         'Support/ClassicThemes.php',
         'Support/CommonPasswordList.php',
+        'Support/ReleaseMarker.php',
         'Upgrade/SourceSchema.php',
     ];
 

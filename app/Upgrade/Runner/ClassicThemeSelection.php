@@ -8,7 +8,6 @@ use App\Models\UpgradeState;
 use App\Support\ClassicThemes;
 use App\Support\SnsSettingKey;
 use App\Upgrade\InsertSelectCompiler;
-use Closure;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -35,23 +34,25 @@ final class ClassicThemeSelection
         return self::KEY.": Theme_used '{$theme}' is not under public/opSkinThemePlugin, so the default skin shows until the package is copied there (verify-upgrade fails until then); or choose another on Appearance (Classic) > Theme.";
     }
 
-    public function plan(Closure $out): void
+    public function plan(RunReport $report): void
     {
-        $out('PLAN would set classic_theme from the OpenPNE 3 skin plugins and Theme_used.');
+        $report->line('PLAN would set classic_theme from the OpenPNE 3 skin plugins and Theme_used.');
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip unless the run owns sns_settings) */
-    public function run(array $targetTables, string $sourcePrefix, ?string $sourceDatabase, Closure $out): bool
+    public function run(array $targetTables, string $sourcePrefix, ?string $sourceDatabase, RunReport $report): bool
     {
         if (! in_array('sns_settings', $targetTables, true)) {
             return true;
         }
 
         if (UpgradeState::query()->where('step_key', self::KEY)->where('status', UpgradeState::STATUS_COMPLETED)->exists()) {
-            $out('SKIP '.self::KEY.': already completed');
+            $report->skipped(self::KEY, 'already completed');
 
             return true;
         }
+
+        $report->started(self::KEY);
 
         try {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
@@ -78,22 +79,23 @@ final class ClassicThemeSelection
                 ]);
             });
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => self::KEY], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
-            $out('FAIL '.self::KEY.": {$e->getMessage()}");
+            $report->failed(self::KEY, RunReport::failureMessage($e), $e);
 
             return false;
         }
 
-        $out('DONE '.self::KEY.': classic_theme = '.($theme === '' ? 'the default skin' : "'{$theme}'"));
+        $report->done(self::KEY, 'classic_theme = '.($theme === '' ? 'the default skin' : "'{$theme}'"));
         if ($selected === null) {
-            $out('WARN '.self::unknownPackageMessage());
+            $report->warning(self::unknownPackageMessage());
         } elseif ($theme !== '' && ClassicThemes::find($theme) === null) {
-            $out('WARN '.self::missingPackageMessage($theme));
+            $report->warning(self::missingPackageMessage($theme));
         }
 
         return true;

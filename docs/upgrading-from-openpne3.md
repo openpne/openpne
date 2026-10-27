@@ -112,6 +112,25 @@ $ php artisan openpne:upgrade-from-3 --dry-run
 Writes nothing. It prints the SQL each step would run, and — the part worth reading — what its
 **preflight** found: a read-only inspection of your source that runs before anything is written.
 
+The lines to act on start with one of these words, apart from the two unprefixed instructions a
+first completion ends with (the surface switch, and warming the pictures: §5); the rest is the
+`Site timezone` line to check, the dry run's `PLAN` lines and their SQL, progress, `Reset:` under
+`--force-restart`, and the closing `Finished in …`:
+
+| Line | Meaning |
+|---|---|
+| `ERROR …` | The source cannot be migrated as it is; nothing is written. Exit code 1. |
+| `WARN …` | Migrated anyway; read it and decide whether it matters. Exit code 0 on its own. |
+| `ENV_HINT KEY=value` | A line to put in `.env` to keep an OpenPNE 3 setting the database does not carry. |
+| `Aborted: …` | Why nothing ran: a failed preflight, or upgrade records this version cannot resume. Exit code 1. |
+| `RUN <step>` / `DONE <step>: … (1.2s)` / `SKIP <step>: …` | One step, with how long it took, or why it was skipped (already completed on a re-run). |
+| `FAIL <step>: …` | The step that stopped the run, on one line; the run exits 1 and a re-run resumes here. The whole exception follows under `-v`, and is in the log either way. |
+| `NOTE …` | Something to look at once the upgrade is done. |
+
+`--json` prints the same report as one JSON document instead — on failure too, with the exit
+code unchanged, even under `-q` — for a script that migrates many sites. `-v` prints the exception
+after the document, on the same stream, so a script parsing stdout must not pass `-v`.
+
 **`ERROR` aborts the run**, before anything is written. These are states the upgrade cannot survive:
 a required table or column missing (an older or customised OpenPNE 3), a plugin whose tables are
 only partly present, files whose bytes are missing, two mail translations that would land on the same
@@ -165,7 +184,8 @@ $ php artisan openpne:upgrade-from-3
 ```
 
 Each step is committed as it finishes, so an interrupted run picks up from the first step that did
-not complete; re-running is safe. What it records is *that* a step ran, not the definition it ran
+not complete; re-running is safe. A step that fails says so on one line (`FAIL <step>: …`) and
+the command exits 1; run it again with `-v` to see the whole exception. What it records is *that* a step ran, not the definition it ran
 under — so if you update OpenPNE 4 itself partway through a migration, those records no longer
 describe the current steps. Start over with `--force-restart`, which empties the tables the upgrade
 owns along with its records of what ran.

@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade\Runner;
 
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\ClassicThemeSelection;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Verify\ClassicThemeCheck;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
@@ -29,7 +30,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertTrue($this->runPass());
 
         $this->assertSame('', $this->stored());
-        $this->assertContains('DONE classic_theme_selection: classic_theme = the default skin', $this->out);
+        $this->assertStringContainsString('DONE classic_theme_selection: classic_theme = the default skin (', implode("\n", $this->out));
     }
 
     public function test_the_theme_plugin_as_the_one_enabled_skin_carries_theme_used(): void
@@ -40,7 +41,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertTrue($this->runPass());
 
         $this->assertSame('cerulean-light', $this->stored());
-        $this->assertContains("DONE classic_theme_selection: classic_theme = 'cerulean-light'", $this->out);
+        $this->assertStringContainsString("DONE classic_theme_selection: classic_theme = 'cerulean-light' (", implode("\n", $this->out));
     }
 
     public function test_a_missing_theme_used_sets_the_default_skin_and_reports_that_openpne3_chose_from_its_disk(): void
@@ -136,11 +137,11 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         return (new ClassicThemeSelection)->run(['sns_settings'], '', null, $this->collector());
     }
 
-    private function collector(): \Closure
+    private function collector(): RunReport
     {
-        return function (string $line): void {
+        return new RunReport(function (string $line): void {
             $this->out[] = $line;
-        };
+        });
     }
 
     private function stored(): ?string

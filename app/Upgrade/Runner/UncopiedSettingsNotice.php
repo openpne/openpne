@@ -25,6 +25,21 @@ final class UncopiedSettingsNotice
         return array_merge($this->imageMaxFilesize($table), $this->nullValues($table));
     }
 
+    /** @return array<string, string> the .env lines the notices ask for, as KEY => value */
+    public function envHints(string $sourcePrefix, ?string $sourceDatabase): array
+    {
+        $kilobytes = $this->imageMaxFilesizeKilobytes(InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'sns_config'));
+
+        return $kilobytes === null ? [] : [self::ENV => (string) $kilobytes];
+    }
+
+    private function imageMaxFilesizeKilobytes(string $table): ?int
+    {
+        $rows = DB::select('select `value` from '.$table.' where `name` = ? limit 1', ['image_max_filesize']);
+
+        return $rows === [] || $rows[0]->value === null ? null : self::kilobytes((string) $rows[0]->value);
+    }
+
     /** @return list<string> */
     private function imageMaxFilesize(string $table): array
     {

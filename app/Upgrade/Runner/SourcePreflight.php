@@ -10,7 +10,6 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\TermOverrideUpgrade;
 use App\Upgrade\UpgradeStep;
-use Closure;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -104,7 +103,7 @@ final class SourcePreflight
      * @param  list<string>  $tables
      * @return list<string> the names created, for drop()
      */
-    public function ensureExists(array $tables, string $sourcePrefix, ?string $sourceDatabase, Closure $out): array
+    public function ensureExists(array $tables, string $sourcePrefix, ?string $sourceDatabase, RunReport $report): array
     {
         $created = [];
         foreach ($tables as $table) {
@@ -118,7 +117,7 @@ final class SourcePreflight
             );
             DB::statement($ddl);
             $created[] = $table;
-            $out('WARN '.self::absentPluginMessage($table));
+            $report->warning(self::absentPluginMessage($table));
         }
 
         return $created;

@@ -11,6 +11,7 @@ use App\Upgrade\Runner\ActivityTemplateRenderer;
 use App\Upgrade\Runner\ActivityTemplateTransform;
 use App\Upgrade\Runner\EmojiMap;
 use App\Upgrade\Runner\EmojiTransform;
+use App\Upgrade\Runner\RunReport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Tests\Concerns\SeedsSourceActivities;
@@ -57,10 +58,10 @@ class ActivityTemplateTransformTest extends UpgradeSqlTestCase
         $this->assertSame('kept', TimelinePost::find(3)->body);
         $this->assertSame('kept too', TimelinePost::find(4)->body);
         $this->assertSame("[Group topic] Marathon (Runners)\nhttp://sns.example/topics/7", GroupMessage::find(5)->body);
-        $this->assertContains('DONE activity_template_timeline_posts: 1 rows', $lines);
+        $this->assertStringContainsString('DONE activity_template_timeline_posts: 1 rows (', implode("\n", $lines));
         $this->assertContains('WARN '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::UNKNOWN_TEMPLATE, 1), $lines);
         $this->assertContains('WARN '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::NO_LINK, 1), $lines);
-        $this->assertContains('DONE activity_template_group_messages: 1 rows', $lines);
+        $this->assertStringContainsString('DONE activity_template_group_messages: 1 rows (', implode("\n", $lines));
         $this->assertEquals(['last_id' => 4, 'kept' => [ActivityTemplateRenderer::UNKNOWN_TEMPLATE => 1, ActivityTemplateRenderer::NO_LINK => 1], 'rendered' => 1, 'locale' => 'en', 'root_url' => 'http://sns.example'],
             UpgradeState::query()->where('step_key', 'activity_template_timeline_posts')->value('metadata'));
     }
@@ -77,7 +78,7 @@ class ActivityTemplateTransformTest extends UpgradeSqlTestCase
 
         // The emoji pass finds nothing left to convert, and a restart of the template pass from a
         // cleared checkpoint lands on the same text.
-        $this->assertTrue((new EmojiTransform)->run(['timeline_posts'], static fn (string $l): null => null));
+        $this->assertTrue((new EmojiTransform)->run(['timeline_posts'], new RunReport));
         $this->assertSame($expected, TimelinePost::find(1)->body);
         UpgradeState::query()->where('step_key', 'activity_template_timeline_posts')->delete();
         $this->runPass(['timeline_posts']);
@@ -128,9 +129,9 @@ class ActivityTemplateTransformTest extends UpgradeSqlTestCase
         TimelinePost::factory()->create(['id' => 1, 'member_id' => $member->id, 'body' => 'raw']);
 
         $lines = [];
-        (new ActivityTemplateTransform)->plan(function (string $line) use (&$lines): void {
+        (new ActivityTemplateTransform)->plan(new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
         $this->assertStringStartsWith('PLAN ', $lines[0]);
         $this->runPass(['members']);
 
@@ -145,9 +146,9 @@ class ActivityTemplateTransformTest extends UpgradeSqlTestCase
     private function runPass(array $tables): array
     {
         $lines = [];
-        $ok = (new ActivityTemplateTransform)->run($tables, '', null, function (string $line) use (&$lines): void {
+        $ok = (new ActivityTemplateTransform)->run($tables, '', null, new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
         $this->assertTrue($ok, implode("\n", $lines));
 
         return $lines;

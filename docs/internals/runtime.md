@@ -163,6 +163,13 @@ Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
 operator running many sites on one host gets them together and has no lever here
 to stagger them.
 
+## Release marker
+
+A deployment may place a `RELEASE` file at the app root, `key=value` lines, one per line.
+The app reads only `sha` (`App\Support\ReleaseMarker`): the upgrade's run report carries it as
+`release`, so a fleet operator can tell which build migrated a site. No file, or no `sha`
+line, reports `null`; nothing else in the app depends on it.
+
 ## Failure replies
 
 A reply that is not an Inertia page — the maintenance page, an uncaught 500, an

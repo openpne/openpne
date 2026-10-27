@@ -4,7 +4,6 @@ namespace App\Upgrade\Runner;
 
 use App\Auth\PasswordScheme;
 use App\Models\UpgradeState;
-use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Throwable;
@@ -31,13 +30,13 @@ final class PasswordWrap
      */
     private const WRAP_COST = 10;
 
-    public function plan(Closure $out): void
+    public function plan(RunReport $report): void
     {
-        $out('PLAN would wrap imported bare-MD5 passwords as bcrypt(md5) with password_scheme=md5_bcrypt (members, admin_users).');
+        $report->line('PLAN would wrap imported bare-MD5 passwords as bcrypt(md5) with password_scheme=md5_bcrypt (members, admin_users).');
     }
 
     /** @param list<string> $targetTables this run's step target tables (skip tables the run does not own) */
-    public function run(array $targetTables, Closure $out): bool
+    public function run(array $targetTables, RunReport $report): bool
     {
         foreach (self::KEYS as $table => $key) {
             if (! in_array($table, $targetTables, true)) {
@@ -45,12 +44,12 @@ final class PasswordWrap
             }
 
             if ($this->isCompleted($key)) {
-                $out("SKIP {$key}: already completed");
+                $report->skipped($key, 'already completed');
 
                 continue;
             }
 
-            if (! $this->wrapTable($table, $key, $out)) {
+            if (! $this->wrapTable($table, $key, $report)) {
                 return false;
             }
         }
@@ -58,8 +57,10 @@ final class PasswordWrap
         return true;
     }
 
-    private function wrapTable(string $table, string $key, Closure $out): bool
+    private function wrapTable(string $table, string $key, RunReport $report): bool
     {
+        $report->started($key);
+
         try {
             UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_RUNNING,
@@ -93,7 +94,7 @@ final class PasswordWrap
                 });
 
                 $wrapped += $rows->count();
-                $out("WRAP {$key}: {$wrapped} rows so far");
+                $report->progress($key, "{$wrapped} rows so far");
             }
 
             UpgradeState::updateOrCreate(['step_key' => $key], [
@@ -102,17 +103,18 @@ final class PasswordWrap
                 'finished_at' => now(),
             ]);
 
-            $out("DONE {$key}: {$wrapped} rows");
+            $report->done($key, "{$wrapped} rows", $wrapped);
 
             return true;
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => $key], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
-            $out("FAIL {$key}: {$e->getMessage()}");
+            $report->failed($key, RunReport::failureMessage($e), $e);
 
             return false;
         }

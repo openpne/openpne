@@ -14,5 +14,6 @@ final class RunOptions
         public readonly ?string $sourceDatabase = null,
         public readonly bool $dryRun = false,
         public readonly bool $forceRestart = false,
+        public readonly bool $verbose = false,
     ) {}
 }

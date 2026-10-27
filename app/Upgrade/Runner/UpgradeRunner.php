@@ -47,64 +47,86 @@ final class UpgradeRunner
      * step failure (resumable). A missing required table/column aborts before any write (dry-run too);
      * an absent optional plugin group is created empty so its steps no-op, and dropped afterwards.
      */
-    public function run(RunOptions $options, ?Closure $out = null): bool
+    public function run(RunOptions $options, ?Closure $out = null, ?RunReport $report = null): bool
     {
-        $out ??= static fn (string $line): null => null;
+        $report ??= new RunReport($out, $options->verbose, $options->dryRun);
 
+        try {
+            $ok = $this->execute($options, $report);
+        } catch (Throwable $e) {
+            // A failure a step already recorded (and, under verbose, rethrew) passes through; one nothing owns is the run's.
+            if (! $report->isFailed()) {
+                report($e);
+                $report->failed('run', RunReport::failureMessage($e), $e);
+            } elseif ($options->verbose) {
+                throw $e;
+            } else {
+                report($e);
+            }
+            $ok = false;
+        }
+
+        $report->finish($ok);
+
+        return $ok;
+    }
+
+    private function execute(RunOptions $options, RunReport $report): bool
+    {
         $preflight = new SourcePreflight($this->steps(), SourceSchema::default());
-        $report = $preflight->inspect($options->sourcePrefix, $options->sourceDatabase);
+        $source = $preflight->inspect($options->sourcePrefix, $options->sourceDatabase);
 
         // The file_bin bytes-complete check runs only on a clean structural verdict (it COUNTs the
         // source `file` that verdict guards) and only when this run migrates files.
         $fileBin = new FileBinMigration;
         $migratesFiles = in_array('files', $this->targetTables(), true);
-        $fileBinError = $migratesFiles && ! $report->hasErrors()
+        $fileBinError = $migratesFiles && ! $source->hasErrors()
             ? $fileBin->preflight($options->sourcePrefix, $options->sourceDatabase)
             : null;
 
         // Same shape for the mail templates: it reads the source rows the structural check guards, and
         // its errors are source states the translation step cannot survive, so they join this abort.
-        $mailReport = ! $report->hasErrors() && in_array('mail_template_translations', $this->targetTables(), true)
+        $mailReport = ! $source->hasErrors() && in_array('mail_template_translations', $this->targetTables(), true)
             ? (new MailTemplatePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : new MailTemplatePreflightReport([], []);
 
         // Also only on a clean structural verdict, since it counts rows in the guarded columns; an
         // unresolvable inactive-member reference or a member missing from the source is a state no
         // step can migrate correctly.
-        $memberErrors = ! $report->hasErrors()
-            ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase, $report->absentOptional))
+        $memberErrors = ! $source->hasErrors()
+            ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase, $source->absentOptional))
             : [];
 
         // The activity routing's counts and the one-owner-per-file count, both reading rows the
         // structural verdict guards; their errors are rows a step would fail on mid-run.
-        $activityReport = ! $report->hasErrors() && $this->readsSourceTable('activity_data')
+        $activityReport = ! $source->hasErrors() && $this->readsSourceTable('activity_data')
             ? (new ActivityPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : new PreflightReport([], []);
-        $niceReport = ! $report->hasErrors()
-            ? (new NicePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+        $niceReport = ! $source->hasErrors()
+            ? (new NicePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : new PreflightReport([], []);
-        $sharedFileError = $migratesFiles && ! $report->hasErrors()
-            ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+        $sharedFileError = $migratesFiles && ! $source->hasErrors()
+            ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : null;
-        $termErrors = ! $report->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
+        $termErrors = ! $source->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
             ? (new TermOverridePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : [];
-        $uploadReport = ! $report->hasErrors() && $this->hasStep(FileUpgrade::class)
-            ? (new UploadFileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $report->absentOptional)))
+        $uploadReport = ! $source->hasErrors() && $this->hasStep(FileUpgrade::class)
+            ? (new UploadFileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : new PreflightReport([], []);
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
-            $out("ERROR {$error}");
+        foreach (array_merge($source->tableErrors, $source->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
+            $report->error($error);
         }
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
         foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings, $uploadReport->warnings) as $warning) {
-            $out("WARN {$warning}");
+            $report->warning($warning);
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $niceReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
-            $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
+        if ($source->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $niceReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
+            $report->abort('the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
         }
@@ -113,63 +135,67 @@ final class UpgradeRunner
         // so a dry run shows the unrecognised names too.
         foreach ($preflight->unknownSourceNames($options->sourcePrefix, $options->sourceDatabase) as $table => $counts) {
             foreach ($counts as $name => $rows) {
-                $out('WARN '.SourcePreflight::unknownSourceNameMessage($table, $name, $rows));
+                $report->warning(SourcePreflight::unknownSourceNameMessage($table, $name, $rows));
             }
         }
 
         if ($this->readsSourceTable('sns_config')) {
-            foreach ((new UncopiedSettingsNotice)->inspect($options->sourcePrefix, $options->sourceDatabase) as $notice) {
-                $out("WARN {$notice}");
+            $notice = new UncopiedSettingsNotice;
+            foreach ($notice->inspect($options->sourcePrefix, $options->sourceDatabase) as $line) {
+                $report->warning($line);
+            }
+            foreach ($notice->envHints($options->sourcePrefix, $options->sourceDatabase) as $key => $value) {
+                $report->envHint($key, $value);
             }
         }
 
         if ($options->dryRun) {
             // Same compatibility gate as a real run, but read-only: a plan against legacy or
             // mismatched state must say so instead of PLANning steps that would never be allowed.
-            if (! $this->claimNamingEpoch($out, dryRun: true)) {
+            if (! $this->claimNamingEpoch($report, dryRun: true)) {
                 return false;
             }
 
-            foreach ($report->absentOptional as $table) {
-                $out("PLAN would create empty source table `{$table}` (".SourcePreflight::absentPluginMessage($table).')');
+            foreach ($source->absentOptional as $table) {
+                $report->line("PLAN would create empty source table `{$table}` (".SourcePreflight::absentPluginMessage($table).')');
             }
             if ($migratesFiles) {
-                $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $out);
+                $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $report);
             }
-            (new PasswordWrap)->plan($out);
-            (new ActivityTemplateTransform)->plan($out);
-            (new EmojiTransform)->plan($out);
-            (new SitePolicyMarkdownTransform)->plan($out);
-            (new TalkReadCursorBackfill)->plan($out);
-            (new BoardBumpBackfill)->plan($out);
+            (new PasswordWrap)->plan($report);
+            (new ActivityTemplateTransform)->plan($report);
+            (new EmojiTransform)->plan($report);
+            (new SitePolicyMarkdownTransform)->plan($report);
+            (new TalkReadCursorBackfill)->plan($report);
+            (new BoardBumpBackfill)->plan($report);
             if ($this->readsSourceTable('sns_config')) {
-                (new ClassicThemeSelection)->plan($out);
+                (new ClassicThemeSelection)->plan($report);
             }
-            $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
+            $report->line('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
-            return $this->walk($options, $out);
+            return $this->walk($options, $report);
         }
 
         // Only now that the source is verified do we clear targets for --force-restart — otherwise a
         // bad source would let the restart delete existing data and then abort on the preflight.
         if ($options->forceRestart) {
-            $this->reset($out);
+            $this->reset($report);
         }
 
         // After the restart (which clears the marker with the rest of the state), so --force-restart
         // is exactly the escape hatch the abort message names.
-        if (! $this->claimNamingEpoch($out)) {
+        if (! $this->claimNamingEpoch($report)) {
             return false;
         }
 
-        $created = $preflight->ensureExists($report->absentOptional, $options->sourcePrefix, $options->sourceDatabase, $out);
+        $created = $preflight->ensureExists($source->absentOptional, $options->sourcePrefix, $options->sourceDatabase, $report);
 
         try {
-            if ($migratesFiles) {
-                $fileBin->snapshot($options->sourcePrefix, $options->sourceDatabase, $out);
+            if ($migratesFiles && ! $fileBin->snapshot($options->sourcePrefix, $options->sourceDatabase, $report)) {
+                return false;
             }
 
-            $walked = $this->walk($options, $out);
+            $walked = $this->walk($options, $report);
 
             // Not rescued: a map read during preflight is memoized, and a pass rendering with it
             // would commit the stock wording, so a clear that fails must fail the run.
@@ -179,59 +205,55 @@ final class UpgradeRunner
             // expressible in an INSERT...SELECT), and this pass converts it before the run can
             // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
             if ($walked) {
-                $walked = (new PasswordWrap)->run($this->targetTables(), $out);
+                $walked = (new PasswordWrap)->run($this->targetTables(), $report);
             }
 
             // Render the template activities after the walk: PHP over serialized parameters, and the
             // source is read again for them.
             if ($walked) {
-                $walked = (new ActivityTemplateTransform)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $out);
+                $walked = (new ActivityTemplateTransform)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $report);
             }
 
             // Rewrite carrier-emoji codes to Unicode after the walk: the mapping is per-row PHP, not
             // expressible in an INSERT...SELECT, and only now is every text table populated.
             if ($walked) {
-                $walked = (new EmojiTransform)->run($this->targetTables(), $out);
+                $walked = (new EmojiTransform)->run($this->targetTables(), $report);
             }
 
             // Reformat the policy bodies after the walk: OpenPNE 3 stored them as raw HTML honouring
             // newlines, OpenPNE 4 renders them as Markdown, and no INSERT...SELECT can bridge that.
             if ($walked) {
-                $walked = (new SitePolicyMarkdownTransform)->run($this->targetTables(), $out);
+                $walked = (new SitePolicyMarkdownTransform)->run($this->targetTables(), $report);
             }
 
             // Only after the messages landed: the membership step leaves the read cursor at the
             // schema default, a wall-clock stamp the migrated history must not be measured against.
             if ($walked) {
-                $walked = (new TalkReadCursorBackfill)->run($this->targetTables(), $out);
+                $walked = (new TalkReadCursorBackfill)->run($this->targetTables(), $report);
             }
 
             // Only after the comments landed: the thread steps write created_at as the placeholder.
             if ($walked) {
-                $walked = (new BoardBumpBackfill)->run($this->targetTables(), $out);
+                $walked = (new BoardBumpBackfill)->run($this->targetTables(), $report);
             }
 
             // After the settings step: the skin is decided by two source tables at once, which no
             // INSERT...SELECT over one of them can express; gated on sns_config as the preflight is.
             if ($walked && $this->readsSourceTable('sns_config')) {
-                $walked = (new ClassicThemeSelection)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $out);
+                $walked = (new ClassicThemeSelection)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $report);
             }
 
             // Only after the walk: FileUpgrade has populated `files`, so the FK rewire's existing-row
             // validation resolves, and no step touches file_bin.
             if ($walked && $migratesFiles) {
-                $fileBin->move($options->sourcePrefix, $options->sourceDatabase, $out);
-                $fileBin->rewire($out);
+                $walked = $fileBin->move($options->sourcePrefix, $options->sourceDatabase, $report)
+                    && $fileBin->rewire($report);
             }
 
             // Only after a full success (walk + BLOBs) so a post-walk failure never leaves the mode
             // stamped without the data behind it.
-            if ($walked) {
-                $this->stampSurfaceMode($out);
-
-                if ($migratesFiles) {
-                    $out('Each migrated picture is made on its first view; `php artisan openpne:image-cache warm --limit N` makes the newest ones ahead of time, run as often as wanted.');
-                }
+            if ($walked && $this->stampSurfaceMode($report) && $migratesFiles) {
+                $report->nextStep('Each migrated picture is made on its first view; `php artisan openpne:image-cache warm --limit N` makes the newest ones ahead of time, run as often as wanted.');
             }
 
             return $walked;
@@ -257,11 +279,11 @@ final class UpgradeRunner
     }
 
     /**
-     * Establishes the Classic-default surface for the migrated site; insert-if-absent, so a re-run
-     * never clobbers a later operator switch. surface_mode has no OpenPNE 3 source column, so it is
-     * stamped here rather than copied by a step.
+     * Insert-if-absent, so a re-run never clobbers a later operator switch (surface_mode has no
+     * OpenPNE 3 source column). True only for the run that inserted it, which is the run that first
+     * completed the site and so carries the next steps.
      */
-    private function stampSurfaceMode(Closure $out): void
+    private function stampSurfaceMode(RunReport $report): bool
     {
         $inserted = DB::table('sns_settings')->insertOrIgnore([
             'key' => SnsSettingKey::SurfaceMode->value,
@@ -271,8 +293,10 @@ final class UpgradeRunner
         app(SnsSettingService::class)->clearCache();
 
         if ($inserted > 0) {
-            $out('Surface set to classic_default; switch to modern_only with `php artisan openpne:surface-mode modern_only` once the Modern migration is complete.');
+            $report->nextStep('Surface set to classic_default; switch to modern_only with `php artisan openpne:surface-mode modern_only` once the Modern migration is complete.');
         }
+
+        return $inserted > 0;
     }
 
     /**
@@ -281,9 +305,9 @@ final class UpgradeRunner
      * step alongside the old rows. Public so the guard is exercisable without a MySQL source; with
      * $dryRun the check runs but never writes the marker.
      */
-    public function claimNamingEpoch(?Closure $out = null, bool $dryRun = false): bool
+    public function claimNamingEpoch(?RunReport $report = null, bool $dryRun = false): bool
     {
-        $out ??= static fn (string $line): null => null;
+        $report ??= new RunReport;
 
         $marker = UpgradeState::query()->where('step_key', self::EPOCH_KEY)->first();
 
@@ -292,9 +316,9 @@ final class UpgradeRunner
             // that named steps differently), which is exactly the state this guard exists to refuse —
             // adopting it would leave the renamed steps looking never-run.
             if (UpgradeState::query()->exists()) {
-                $out('Aborted: the upgrade state has checkpoints but no naming-epoch marker, so it was '
+                $report->abort('the upgrade state has checkpoints but no naming-epoch marker, so it was '
                     .'written under earlier step/table names and cannot be resumed — re-run with '
-                    .'--force-restart to start over from an empty target.');
+                    .'--force-restart to start over from an empty target.', RunReport::OUTCOME_BLOCKED);
 
                 return false;
             }
@@ -318,31 +342,31 @@ final class UpgradeRunner
             return true;
         }
 
-        $out(sprintf(
-            'Aborted: the upgrade state was written under naming epoch %s, but this version is epoch %d. '
+        $report->abort(sprintf(
+            'the upgrade state was written under naming epoch %s, but this version is epoch %d. '
             .'Its checkpoints name steps and tables that have since been renamed, so it cannot be resumed — '
             .'re-run with --force-restart to start over from an empty target.',
             var_export($found, true),
             self::NAMING_EPOCH,
-        ));
+        ), RunReport::OUTCOME_BLOCKED);
 
         return false;
     }
 
     /** The per-step loop: skip not-runnable / already-completed, else compile + (plan or run) each. */
-    private function walk(RunOptions $options, Closure $out): bool
+    private function walk(RunOptions $options, RunReport $report): bool
     {
         foreach ($this->steps() as $step) {
             $key = class_basename($step);
 
             if ($step->pendingTargets() !== []) {
-                $out("SKIP {$key}: not runnable (pending: ".implode(', ', array_keys($step->pendingTargets())).')');
+                $report->skipped($key, 'not runnable (pending: '.implode(', ', array_keys($step->pendingTargets())).')');
 
                 continue;
             }
 
             if ($this->isCompleted($key)) {
-                $out("SKIP {$key}: already completed");
+                $report->skipped($key, 'already completed');
 
                 continue;
             }
@@ -350,13 +374,13 @@ final class UpgradeRunner
             $sql = $this->compiler->compile($step, $options->sourcePrefix, '', $options->sourceDatabase, null);
 
             if ($options->dryRun) {
-                $out("PLAN {$key}:");
-                $out($sql);
+                $report->planned($key);
+                $report->line($sql);
 
                 continue;
             }
 
-            if (! $this->runStep($key, $sql, $out)) {
+            if (! $this->runStep($key, $sql, $report)) {
                 return false;
             }
         }
@@ -370,9 +394,9 @@ final class UpgradeRunner
      * checks off (error 1701). The file_bin FK onto `files` is dropped first so the DELETE cannot
      * cascade into the BLOBs, which no step owns; rewire re-adds it.
      */
-    public function reset(?Closure $out = null): void
+    public function reset(?RunReport $report = null): void
     {
-        $out ??= static fn (string $line): null => null;
+        $report ??= new RunReport;
 
         $mysql = DB::connection()->getDriverName() === 'mysql';
 
@@ -395,7 +419,7 @@ final class UpgradeRunner
         }
 
         UpgradeState::query()->delete();
-        $out('Reset: cleared upgrade state and target tables.');
+        $report->line('Reset: cleared upgrade state and target tables.');
     }
 
     /**
@@ -427,8 +451,10 @@ final class UpgradeRunner
         return array_keys($tables);
     }
 
-    private function runStep(string $key, string $sql, Closure $out): bool
+    private function runStep(string $key, string $sql, RunReport $report): bool
     {
+        $report->started($key);
+
         try {
             $affected = DB::transaction(function () use ($key, $sql): int {
                 $state = UpgradeState::updateOrCreate(['step_key' => $key], [
@@ -450,19 +476,22 @@ final class UpgradeRunner
                 return $affected;
             });
 
-            $out("DONE {$key}: {$affected} rows");
+            $report->done($key, "{$affected} rows", $affected);
 
             return true;
         } catch (Throwable $e) {
             // The transaction rolled back the partial copy and the running checkpoint; record the
             // failure outside it so a resume sees this step as failed and the earlier ones as done.
-            UpgradeState::updateOrCreate(['step_key' => $key], [
+            $message = RunReport::failureMessage($e);
+            // rescue: a checkpoint write a dropped connection refuses must not move the FAIL off this step.
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => $message,
                 'finished_at' => now(),
-            ]);
+            ]));
 
-            $out("FAIL {$key}: {$e->getMessage()}");
+            report($e);
+            $report->failed($key, $message, $e);
 
             return false;
         }

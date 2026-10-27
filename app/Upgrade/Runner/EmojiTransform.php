@@ -3,7 +3,6 @@
 namespace App\Upgrade\Runner;
 
 use App\Models\UpgradeState;
-use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -46,15 +45,15 @@ final class EmojiTransform
     // Bounds the per-transaction row count; progress is the id cursor, not a draining predicate.
     private const CHUNK = 500;
 
-    public function plan(Closure $out): void
+    public function plan(RunReport $report): void
     {
-        $out('PLAN would rewrite OpenPNE 3 carrier-emoji codes to Unicode across '.count(self::TABLES).' member-authored text tables.');
+        $report->line('PLAN would rewrite OpenPNE 3 carrier-emoji codes to Unicode across '.count(self::TABLES).' member-authored text tables.');
     }
 
     /** @param list<string> $targetTables this run's step target tables (skip tables the run does not own) */
-    public function run(array $targetTables, Closure $out): bool
+    public function run(array $targetTables, RunReport $report): bool
     {
-        if (! $this->assertUtf8mb4($out)) {
+        if (! $this->assertUtf8mb4($report)) {
             return false;
         }
 
@@ -66,12 +65,12 @@ final class EmojiTransform
             $key = 'emoji_'.$table;
 
             if ($this->isCompleted($key)) {
-                $out("SKIP {$key}: already completed");
+                $report->skipped($key, 'already completed');
 
                 continue;
             }
 
-            if (! $this->transformTable($table, $columns, $key, $out)) {
+            if (! $this->transformTable($table, $columns, $key, $report)) {
                 return false;
             }
         }
@@ -83,12 +82,12 @@ final class EmojiTransform
      * utf8mb4 or abort: on a utf8mb3 connection MySQL mangles every non-BMP emoji to '?' as it writes
      * the converted value, silently corrupting the data this pass exists to repair.
      */
-    private function assertUtf8mb4(Closure $out): bool
+    private function assertUtf8mb4(RunReport $report): bool
     {
         $charset = DB::selectOne('SELECT @@character_set_connection AS charset')->charset ?? '';
 
         if ($charset !== 'utf8mb4') {
-            $out("FAIL emoji: connection charset is '{$charset}', expected utf8mb4 (non-BMP emoji would be lost).");
+            $report->failed('emoji', "connection charset is '{$charset}', expected utf8mb4 (non-BMP emoji would be lost).");
 
             return false;
         }
@@ -97,8 +96,10 @@ final class EmojiTransform
     }
 
     /** @param list<string> $columns */
-    private function transformTable(string $table, array $columns, string $key, Closure $out): bool
+    private function transformTable(string $table, array $columns, string $key, RunReport $report): bool
     {
+        $report->started($key);
+
         try {
             // The RUNNING write below omits metadata, so a prior run's last_id cursor survives it and
             // the resume starts there.
@@ -146,17 +147,18 @@ final class EmojiTransform
                 'finished_at' => now(),
             ]);
 
-            $out("DONE {$key}: {$changed} rows");
+            $report->done($key, "{$changed} rows", $changed);
 
             return true;
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => $key], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
-            $out("FAIL {$key}: {$e->getMessage()}");
+            $report->failed($key, RunReport::failureMessage($e), $e);
 
             return false;
         }
