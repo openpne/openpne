@@ -369,6 +369,19 @@ class FileBinMigrationTest extends TestCase
         $this->assertSame(1, (int) DB::scalar('SELECT @@SESSION.foreign_key_checks'));
     }
 
+    public function test_rewire_restores_the_session_value_it_entered_with(): void
+    {
+        $this->seedInPlace();
+        DB::statement('SET SESSION foreign_key_checks = 0');
+
+        try {
+            $this->assertTrue((new FileBinMigration)->rewire($this->out($lines)));
+            $this->assertSame(0, (int) DB::scalar('SELECT @@SESSION.foreign_key_checks'));
+        } finally {
+            DB::statement('SET SESSION foreign_key_checks = 1');
+        }
+    }
+
     public function test_preflight_refuses_a_zero_date_in_the_bytes_table(): void
     {
         $ids = $this->seedInPlace();

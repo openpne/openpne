@@ -125,11 +125,20 @@ class ZeroDatePreflightTest extends UpgradeSqlTestCase
 
         DB::table('deleted_message')->where('id', 2)->delete();
 
-        // The CASE turns the subquery's zero into NULL with a 1292 warning, which the INSERT turns into an error.
+        // The CASE turns the subquery's zero into NULL with a 1292 warning, which the INSERT turns into an
+        // error; the rows holding the value are then located (pointer 3 holds it too, unread).
         $this->assertSame(
-            [ZeroDatePreflight::zeroDateSubqueryMessage('DirectMessageUpgrade', [self::ZERO], ['message_send_list', 'message_type', 'deleted_message'])],
+            [ZeroDatePreflight::zeroDateReadMessage('DirectMessageUpgrade', 'deleted_message', 'created_at', 2, [1, 3], false)],
             $this->inspect([new DirectMessageUpgrade]),
         );
+
+        // A zero the SELECT carries itself does not hide the one it reads by subquery.
+        $this->withoutStrictMode(fn () => DB::table('message')->where('id', 600)->update(['created_at' => self::ZERO]));
+
+        $this->assertSame([
+            ZeroDatePreflight::zeroDateMessage('DirectMessageUpgrade', 'direct_messages', 'created_at', 'message', ['created_at'], false, 1, [600], false),
+            ZeroDatePreflight::zeroDateReadMessage('DirectMessageUpgrade', 'deleted_message', 'created_at', 2, [1, 3], false),
+        ], $this->inspect([new DirectMessageUpgrade]));
     }
 
     public function test_a_sentinel_the_step_maps_to_null_is_not_an_error_but_a_zero_month_is(): void
@@ -162,13 +171,20 @@ class ZeroDatePreflightTest extends UpgradeSqlTestCase
         $this->assertSame([], $this->inspect([new MemberUpgrade]));
     }
 
-    public function test_an_absent_optional_table_is_stood_in_and_left_absent(): void
+    public function test_an_absent_optional_table_is_stood_in_without_being_created(): void
     {
-        $this->assertSame([], (new ZeroDatePreflight([new DiaryUpgrade], SourceSchema::default()))->inspect('', null, ['diary']));
+        $member = $this->activeMember();
+        $this->seedMessage(600, $member->id, isDeleted: 0);
+        DB::table('message_type')->insert(['id' => 1, 'type_name' => 'message', 'foreign_table' => null, 'is_deleted' => 0, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
+        $this->withoutStrictMode(fn () => DB::table('message')->where('id', 600)->update(['created_at' => self::ZERO]));
+        DB::statement('DROP TABLE `deleted_message`');
 
-        $this->assertNull(DB::selectOne('select 1 from information_schema.tables where table_schema = ? and table_name = ?', [DB::connection()->getDatabaseName(), 'diary']));
-        $this->expectExceptionMessage("doesn't exist");
-        DB::select('SELECT 1 FROM `diary`');
+        // deleted_message is read twice in one SELECT; the stand-in CTE takes both, and the FROM table's zero still counts.
+        $this->assertSame(
+            [ZeroDatePreflight::zeroDateMessage('DirectMessageUpgrade', 'direct_messages', 'created_at', 'message', ['created_at'], false, 1, [600], false)],
+            (new ZeroDatePreflight([new DirectMessageUpgrade, new DiaryUpgrade], SourceSchema::default()))->inspect('', null, ['deleted_message', 'diary']),
+        );
+        $this->assertNull(DB::selectOne('select 1 from information_schema.tables where table_schema = ? and table_name in (?, ?)', [DB::connection()->getDatabaseName(), 'diary', 'deleted_message']));
     }
 
     public function test_the_source_prefix_resolves(): void

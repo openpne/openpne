@@ -98,13 +98,19 @@ final class FileBinMigration implements Phase
     /** @return list<string> */
     private function zeroDates(string $binTable): array
     {
+        // One pass over the (GB-scale) table for both columns; the samples only on a hit.
+        $counts = DB::selectOne('SELECT '.implode(', ', array_map(
+            static fn (string $column): string => 'SUM(CASE WHEN '.ZeroDatePreflight::zeroPredicate("`{$column}`")." THEN 1 ELSE 0 END) AS `{$column}`",
+            ['created_at', 'updated_at'],
+        ))." FROM {$binTable}");
+
         $errors = [];
         foreach (['created_at', 'updated_at'] as $column) {
-            $zero = ZeroDatePreflight::zeroPredicate("`{$column}`");
-            $rows = (int) DB::scalar("SELECT COUNT(*) FROM {$binTable} WHERE {$zero}");
+            $rows = (int) $counts->{$column};
             if ($rows === 0) {
                 continue;
             }
+            $zero = ZeroDatePreflight::zeroPredicate("`{$column}`");
             $ids = array_map(
                 static fn (object $row): int => (int) $row->file_id,
                 DB::select("SELECT `file_id` FROM {$binTable} WHERE {$zero} ORDER BY `file_id` LIMIT ".self::MISMATCH_SAMPLE),
@@ -208,9 +214,7 @@ final class FileBinMigration implements Phase
             if ($fk !== null) {
                 DB::statement("ALTER TABLE `file_bin` DROP FOREIGN KEY `{$fk->constraint_name}`");
             }
-            // With foreign_key_checks off, ADD FOREIGN KEY is a metadata-only INPLACE change: the BLOBs
-            // are not rewritten and the rows are not validated — the pairing preflight and verify's
-            // file_bin:orphans own that; with checks on, MySQL rebuilds the table (COPY).
+            // With foreign_key_checks off, ADD FOREIGN KEY is metadata-only and validates no row; with checks on it rebuilds the table.
             $checks = (int) DB::scalar('SELECT @@SESSION.foreign_key_checks');
             DB::statement('SET SESSION foreign_key_checks = 0');
             try {

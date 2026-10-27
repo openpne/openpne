@@ -43,9 +43,8 @@ final class InsertSelectCompiler
     }
 
     /**
-     * The step's SELECT alone, each expression aliased to its target column, so the preflight can
-     * evaluate what the INSERT would carry (docs/internals/upgrade.md, "Source preflight"). A separate
-     * string: compile()'s output is hashed into the run manifest and must not change.
+     * The step's SELECT alone, each expression aliased to its target column. A separate string:
+     * compile()'s output is hashed into the run manifest and must not change.
      */
     public function compileSelect(UpgradeStep $step, string $sourcePrefix = '', ?string $sourceDatabase = null): string
     {

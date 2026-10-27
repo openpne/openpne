@@ -175,10 +175,12 @@ its subqueries. The test is `MONTH() = 0 OR DAY() = 0` (a year 0000 with a real 
 a value strict mode accepts), never a zero-date literal (strict mode refuses one in a comparison,
 1525). A zero date a CASE or COALESCE meets through a
 subquery comes out of the SELECT as NULL with a 1292 warning that the INSERT turns into an error,
-so the warning list of the scan is read too and reported as the step's subquery tables (the row
-itself cannot be named). Not covered: a date invalid in another way (`2010-02-31`, writable only
+so the warning list of the scan is read too, and the rows holding the warned value are located in
+the date columns of every table the step reads (the count is of rows holding it, at least one of
+which the step read). Not covered: a date invalid in another way (`2010-02-31`, writable only
 under `ALLOW_INVALID_DATES`), which passes the parts test and still fails the INSERT. An absent
-optional table is stood in by a session TEMPORARY table for the scan and dropped again.
+optional table is stood in by an empty CTE of its fixture columns, which a SELECT may name any
+number of times where a TEMPORARY table may not (1137); a step whose own source is absent is skipped.
 `FileBinMigration::preflight()` applies the same test to `file_bin`'s own timestamps — the one
 preflight error for a state the run itself survives (the rewire below rebuilds nothing): the rows
 become the app's table under the app's strict mode, and any later rebuild of it fails on them.

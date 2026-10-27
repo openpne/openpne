@@ -272,8 +272,8 @@ final class UpgradeRunner
                 $walked = (new ClassicThemeSelection)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $report);
             }
 
-            // Only after the walk: the FK target `files` must exist and hold every row the bytes pair
-            // with, since the rewire validates nothing (verify's file_bin:orphans does).
+            // Only after the walk: the FK target `files` must hold every row the bytes pair with, since
+            // the rewire validates nothing, and no step touches file_bin.
             if ($walked && $migratesFiles) {
                 $walked = $fileBin->move($options->sourcePrefix, $options->sourceDatabase, $report)
                     && $fileBin->rewire($report);
