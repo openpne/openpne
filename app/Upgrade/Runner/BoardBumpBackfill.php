@@ -16,8 +16,10 @@ use Throwable;
  * they have landed (docs/internals/upgrade.md, "Post-walk passes"). The step writes created_at as a
  * placeholder because the comment rows do not exist yet when the thread rows are inserted.
  */
-final class BoardBumpBackfill
+final class BoardBumpBackfill implements Phase
 {
+    public const VERSION = '1';
+
     public const KEY = 'board_bump_backfill';
 
     /** @var array<string, array{class-string, string}> thread table => [model, comments table] */
@@ -31,10 +33,29 @@ final class BoardBumpBackfill
         $report->line("PLAN would settle every migrated topic's and event's bumped_at from its comments.");
     }
 
+    public function version(): string
+    {
+        return self::VERSION;
+    }
+
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return self::boards($targetTables) === [] ? [] : [self::KEY];
+    }
+
+    /**
+     * @param  list<string>  $targetTables
+     * @return array<string, array{class-string, string}>
+     */
+    private static function boards(array $targetTables): array
+    {
+        return array_filter(self::BOARDS, fn (array $board, string $table) => in_array($table, $targetTables, true) && in_array($board[1], $targetTables, true), ARRAY_FILTER_USE_BOTH);
+    }
+
     /** @param  list<string>  $targetTables  this run's step target tables (skip unless the run owns a board and its comments) */
     public function run(array $targetTables, RunReport $report): bool
     {
-        $boards = array_filter(self::BOARDS, fn (array $board, string $table) => in_array($table, $targetTables, true) && in_array($board[1], $targetTables, true), ARRAY_FILTER_USE_BOTH);
+        $boards = self::boards($targetTables);
         if ($boards === []) {
             return true;
         }

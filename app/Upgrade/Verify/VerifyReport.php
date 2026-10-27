@@ -13,6 +13,17 @@ final class VerifyReport implements JsonSerializable
     /** @var list<array{name: string, status: string, detail: string}> */
     private array $checks = [];
 
+    /** @var array<string, mixed> */
+    private array $metadata = [];
+
+    /** @param  array<string, mixed>  $metadata  site / build / completion facts the verifier read, emitted before the checks */
+    public function withMetadata(array $metadata): self
+    {
+        $this->metadata = $metadata;
+
+        return $this;
+    }
+
     public function pass(string $name, string $detail = ''): void
     {
         $this->checks[] = ['name' => $name, 'status' => 'pass', 'detail' => $detail];
@@ -45,10 +56,10 @@ final class VerifyReport implements JsonSerializable
         return count(array_filter($this->checks, static fn (array $c): bool => $c['status'] === 'pass'));
     }
 
-    /** @return array{passed: int, total: int, checks: list<array{name: string, status: string, detail: string}>} */
+    /** @return array<string, mixed> */
     public function jsonSerialize(): array
     {
-        return [
+        return $this->metadata + [
             'passed' => $this->passedCount(),
             'total' => count($this->checks),
             'checks' => $this->checks,

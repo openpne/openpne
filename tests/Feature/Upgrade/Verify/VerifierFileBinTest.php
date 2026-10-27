@@ -7,6 +7,7 @@ use App\Models\UpgradeState;
 use App\Upgrade\Column;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\UpgradeStep;
@@ -115,6 +116,11 @@ class VerifierFileBinTest extends TestCase
             'step_key' => class_basename($this->fileStep()),
             'status' => UpgradeState::STATUS_COMPLETED,
             'rows_affected' => count($ids),
+        ]);
+        UpgradeState::create([
+            'step_key' => UpgradeRunner::RUN_KEY,
+            'status' => UpgradeState::STATUS_COMPLETED,
+            'metadata' => ['verified' => true, 'manifest_hash' => (new UpgradeRunner(new InsertSelectCompiler, [$this->fileStep()]))->manifest()->hash(), 'release' => null, 'completed_at' => now()->toIso8601String()],
         ]);
 
         return $ids;

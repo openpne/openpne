@@ -142,7 +142,9 @@ class UpgradeRunnerTest extends TestCase
         $runner = new UpgradeRunner(new InsertSelectCompiler, []);
 
         $this->assertTrue($runner->claimNamingEpoch());
-        $this->assertSame(['epoch' => UpgradeRunner::NAMING_EPOCH], UpgradeState::query()->where('step_key', 'naming_epoch')->value('metadata'));
+        $metadata = UpgradeState::query()->where('step_key', 'naming_epoch')->value('metadata');
+        $this->assertSame(UpgradeRunner::NAMING_EPOCH, $metadata['epoch']);
+        $this->assertSame($runner->manifest()->hash(), $metadata['manifest']['hash']);
 
         // Claiming again on the state this version wrote is the resume case, and passes.
         $this->assertTrue($runner->claimNamingEpoch());

@@ -196,7 +196,7 @@ final class RunReport implements JsonSerializable
 
     public function toJson(): string
     {
-        return json_encode($this, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
+        return JsonOutput::encode($this);
     }
 
     /** @return array<string, mixed> */

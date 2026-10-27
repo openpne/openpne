@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade\Runner;
 
 use App\Models\Group;
 use App\Models\Member;
+use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
@@ -260,6 +261,8 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertTrue($ok, $output);
 
         $this->seedPosition(2, groupId: 100, memberId: 1, name: 'admin_confirm');
+        // The first run completed the site; the preflight is read again only on a site still open.
+        UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
 
         [$ok, $output] = $this->runSteps([new GroupCategoryUpgrade, new GroupUpgrade]);
 

@@ -388,11 +388,13 @@ class FileBinMigrationTest extends TestCase
         $this->assertStringContainsString('RUN file_id_max_snapshot', implode("\n", $lines));
         $this->assertCount(2, $first->jsonSerialize()['next_steps']);
 
+        // A completed site runs nothing: no next steps, nothing resumed.
         $second = $this->out($again);
         $this->assertTrue($runner->run(new RunOptions, null, $second));
         $this->assertStringNotContainsString('Each migrated picture', implode("\n", $again));
+        $this->assertStringContainsString('Completed:', implode("\n", $again));
         $this->assertSame([], $second->jsonSerialize()['next_steps']);
-        $this->assertTrue($second->jsonSerialize()['resumed']);
+        $this->assertFalse($second->jsonSerialize()['resumed']);
     }
 
     public function test_the_create_migration_skips_a_preexisting_file_bin(): void

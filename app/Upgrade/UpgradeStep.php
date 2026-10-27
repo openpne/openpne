@@ -27,6 +27,19 @@ abstract class UpgradeStep
     abstract public function columns(): array;
 
     /**
+     * The step's identity for the run manifest: a hash over the target table and the SQL compiled at
+     * an empty prefix / no database, so the source options do not change it and any textual change
+     * to the SQL does (docs/internals/upgrade.md, "Checkpoints and resume"). Throws for a pending step.
+     */
+    public function definition(): string
+    {
+        return hash('sha256', json_encode(
+            ['target' => $this->targetTable(), 'sql' => (new InsertSelectCompiler)->compile($this)],
+            JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+        ));
+    }
+
+    /**
      * Source columns/tables intentionally not migrated, with the reason.
      *
      * @return array<string, string> source column or table => reason

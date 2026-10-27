@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Upgrade\Runner\JsonOutput;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\UpgradeRunner;
@@ -9,7 +10,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
 /**
@@ -21,7 +21,7 @@ class UpgradeFromThreeCommand extends Command
         {--source-prefix= : OpenPNE 3 table prefix (default empty)}
         {--source-database= : Database the OpenPNE 3 source was restored into (same MySQL instance)}
         {--dry-run : Print the planned SQL without writing anything}
-        {--force-restart : Clear the upgrade state and target tables, then run from scratch — required to resume after a step definition changed, since checkpoints do not record it}
+        {--force-restart : Clear the upgrade state and target tables, then run from scratch — the way out when a resume is refused (another naming epoch, or a different set of steps)}
         {--json : Emit the run report as JSON instead of human-readable lines}';
 
     protected $description = 'Migrate OpenPNE 3 data into the OpenPNE 4 schema (single site)';
@@ -51,7 +51,7 @@ class UpgradeFromThreeCommand extends Command
         }
 
         if ($json) {
-            $this->output->write($report->toJson(), true, OutputInterface::OUTPUT_RAW | OutputInterface::VERBOSITY_QUIET);
+            JsonOutput::write($this, $report);
         }
 
         if ($rethrow !== null) {

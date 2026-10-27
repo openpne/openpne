@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Upgrade\Runner\JsonOutput;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Verify\UpgradeVerifier;
 use Illuminate\Console\Command;
@@ -47,7 +48,7 @@ class VerifyUpgradeCommand extends Command
         $report = app(UpgradeVerifier::class)->verify($options, $json ? null : fn (string $line) => $this->line(OutputFormatter::escape($line)));
 
         if ($json) {
-            $this->line(json_encode($report, JSON_PRETTY_PRINT));
+            JsonOutput::write($this, $report);
         } else {
             $this->line('');
             $this->line("{$report->passedCount()}/".count($report->checks()).' checks passed.');

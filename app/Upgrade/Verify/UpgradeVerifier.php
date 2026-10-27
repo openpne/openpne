@@ -4,9 +4,11 @@ namespace App\Upgrade\Verify;
 
 use App\Auth\PasswordScheme;
 use App\Models\UpgradeState;
+use App\Support\ReleaseMarker;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
+use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
@@ -31,8 +33,19 @@ final class UpgradeVerifier
     public function verify(RunOptions $options, ?Closure $out = null): VerifyReport
     {
         $out ??= static fn (string $line): null => null;
-        $report = new VerifyReport;
         $steps = $this->steps();
+        $runner = new UpgradeRunner($this->compiler, $steps);
+        $marker = UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->first();
+        $meta = (array) ($marker?->metadata ?? []);
+        $report = (new VerifyReport)->withMetadata([
+            'site' => rescue(static fn (): string => DB::connection()->getDatabaseName(), report: false),
+            'release' => rescue(static fn (): ?string => ReleaseMarker::sha(), report: false),
+            'manifest_hash' => $runner->manifest()->hash(),
+            'upgrade_completed_at' => $meta['completed_at'] ?? null,
+            'upgrade_release' => $meta['release'] ?? null,
+            'upgrade_manifest_hash' => $meta['manifest_hash'] ?? null,
+            'upgrade_verified' => $marker === null ? null : (bool) ($meta['verified'] ?? false),
+        ]);
 
         // A fully absent optional plugin group is a legitimate state (the runner ran its steps against
         // an empty table and dropped it), so those tables are excluded from the COUNTs rather than
@@ -71,6 +84,20 @@ final class UpgradeVerifier
         (new ClassicThemeCheck)->verify($this->targetTables(), $record);
 
         $this->verifyPasswords($report, $out);
+
+        // The completion marker against this build's manifest: the step checks above read each step's
+        // own row, so only this check knows whether the run finished at all.
+        if ($marker === null) {
+            $this->record($report, $out, 'manifest', false, 'no completion marker — the upgrade did not finish, or ran before this version recorded completions; run it again on this build');
+        } else {
+            $verified = (bool) ($meta['verified'] ?? false);
+            $matches = ($meta['manifest_hash'] ?? null) === $runner->manifest()->hash();
+            $this->record($report, $out, 'manifest', ! $verified || $matches, match (true) {
+                ! $verified => 'completed under an unknown set of steps (state written before manifests)',
+                $matches => 'completed under this build\'s set of steps',
+                default => 'completed under a different set of steps than this build — re-run the upgrade on this build from a fresh restore',
+            });
+        }
 
         return $report;
     }

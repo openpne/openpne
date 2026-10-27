@@ -167,8 +167,10 @@ to stagger them.
 
 A deployment may place a `RELEASE` file at the app root, `key=value` lines, one per line.
 The app reads only `sha` (`App\Support\ReleaseMarker`): the upgrade's run report carries it as
-`release`, so a fleet operator can tell which build migrated a site. No file, or no `sha`
-line, reports `null`; nothing else in the app depends on it.
+`release`, the run's first write stores it as the build that started the run, and the
+completion marker, `openpne:upgrade-status` and `openpne:verify-upgrade` report it, so a fleet
+operator can tell which build migrated a site. No file, or no `sha` line, reports `null`;
+nothing else in the app depends on it.
 
 ## Failure replies
 
