@@ -57,6 +57,7 @@ class MailTemplatePreflightTest extends TestCase
         [$ok, $output] = $this->preflight();
 
         $this->assertTrue($ok, 'an unrenderable template is a warning, not an abort');
+        $this->assertStringContainsString('WARN '.MailTemplatePreflight::W_BROKEN.': mail template', $output);
         $this->assertStringContainsString('sandbox violation', $output);
         $this->assertStringContainsString('cannot be sent until the template is fixed', $output);
     }
@@ -89,6 +90,8 @@ class MailTemplatePreflightTest extends TestCase
         [$ok, $output] = $this->preflight();
 
         $this->assertTrue($ok);
+        $this->assertStringContainsString('WARN '.MailTemplatePreflight::W_DEGRADED.': mail template', $output);
+        $this->assertStringNotContainsString(MailTemplatePreflight::W_BROKEN, $output);
         $this->assertStringContainsString('missing context', $output);
         $this->assertStringContainsString('rendering that reference as empty text', $output);
     }

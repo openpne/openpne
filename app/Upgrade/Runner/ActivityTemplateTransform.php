@@ -158,11 +158,12 @@ final class ActivityTemplateTransform
 
     public static function keptWarning(string $table, string $reason, int $rows): Warning
     {
+        // No default: a reason the renderer does not declare (a stale key in resumed metadata) must not pass as "unknown template".
         $code = match ($reason) {
+            ActivityTemplateRenderer::UNKNOWN_TEMPLATE => self::W_KEPT_UNKNOWN,
             ActivityTemplateRenderer::BAD_PARAMS => self::W_KEPT_BAD_PARAMS,
             ActivityTemplateRenderer::NO_LINK => self::W_KEPT_NO_LINK,
             ActivityTemplateRenderer::UNFIT => self::W_KEPT_UNFIT,
-            default => self::W_KEPT_UNKNOWN,
         };
 
         return new Warning($code, self::keptMessage($table, $reason, $rows), $rows);

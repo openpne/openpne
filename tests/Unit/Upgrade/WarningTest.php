@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Upgrade;
 
+use App\Upgrade\Runner\ActivityTemplateRenderer;
+use App\Upgrade\Runner\ActivityTemplateTransform;
 use App\Upgrade\Runner\Warning;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -86,5 +88,22 @@ class WarningTest extends TestCase
         }
 
         $this->assertSame([], array_diff(array_keys(Warning::CATEGORY_OF), array_keys($seen)), 'a registered code no origin declares');
+    }
+
+    public function test_every_kept_reason_has_its_own_code(): void
+    {
+        $reasons = [ActivityTemplateRenderer::UNKNOWN_TEMPLATE, ActivityTemplateRenderer::BAD_PARAMS, ActivityTemplateRenderer::NO_LINK, ActivityTemplateRenderer::UNFIT];
+        $codes = array_map(static fn (string $reason): string => ActivityTemplateTransform::keptWarning('timeline_posts', $reason, 1)->code, $reasons);
+
+        $this->assertSame([
+            ActivityTemplateTransform::W_KEPT_UNKNOWN,
+            ActivityTemplateTransform::W_KEPT_BAD_PARAMS,
+            ActivityTemplateTransform::W_KEPT_NO_LINK,
+            ActivityTemplateTransform::W_KEPT_UNFIT,
+        ], $codes);
+        $this->assertSame(1, ActivityTemplateTransform::keptWarning('timeline_posts', ActivityTemplateRenderer::UNFIT, 1)->count);
+
+        $this->expectException(\UnhandledMatchError::class);
+        ActivityTemplateTransform::keptWarning('timeline_posts', 'stale-reason', 1);
     }
 }

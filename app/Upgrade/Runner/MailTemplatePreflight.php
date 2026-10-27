@@ -21,13 +21,13 @@ use Illuminate\Support\Facades\DB;
  */
 final class MailTemplatePreflight
 {
-    /** The `locale` column mail_template_translations declares; a wider folded value cannot be inserted. */
     public const W_INERT_LOCALE = 'W-MAIL-INERT-LOCALE';
 
     public const W_BROKEN = 'W-MAIL-BROKEN';
 
     public const W_DEGRADED = 'W-MAIL-DEGRADED';
 
+    /** The `locale` column mail_template_translations declares; a wider folded value cannot be inserted. */
     private const LOCALE_COLUMN_LENGTH = 5;
 
     /** The locales MailTemplateService resolves a recipient to; a row folded to anything else is never read. */

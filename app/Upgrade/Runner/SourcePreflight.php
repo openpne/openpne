@@ -37,11 +37,6 @@ final class SourcePreflight
     /** Source tables a post-walk pass reads beside a step's table (ClassicThemeSelection reads `plugin` with sns_config). */
     private const PASS_READ_TABLES = ['sns_config' => ['plugin']];
 
-    /**
-     * The source tables scanned for names the upgrade does not recognise, each with the name prefixes
-     * recognised without enumerating. notification_mail is not a KV table, but its step carries only
-     * the names in a `name IN (…)` filter, so an unrecognised name is just as invisible per step.
-     */
     public const W_ABSENT_PLUGIN = 'W-ABSENT-PLUGIN';
 
     public const W_UNKNOWN_NAME = 'W-UNKNOWN-NAME';
@@ -51,6 +46,11 @@ final class SourcePreflight
 
     private const FAMILY_SAMPLE = 3;
 
+    /**
+     * The source tables scanned for names the upgrade does not recognise, each with the name prefixes
+     * recognised without enumerating. notification_mail is not a KV table, but its step carries only
+     * the names in a `name IN (…)` filter, so an unrecognised name is just as invisible per step.
+     */
     private const NAME_SCAN_TABLES = [
         'member_config' => [],
         'community_config' => [StepRegistry::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX],
@@ -157,7 +157,7 @@ final class SourcePreflight
 
     public static function absentPluginMessage(string $table): string
     {
-        return "source table `{$table}` absent — the plugin is not installed; created empty so its step is a no-op (not migrated).";
+        return "source table `{$table}` absent — the plugin is not installed; the run creates it empty so its step is a no-op (not migrated).";
     }
 
     public static function unknownSourceNameMessage(string $table, string $name, int $rows): string
@@ -215,10 +215,11 @@ final class SourcePreflight
         // A family of one is a name, not a pattern: report it by its own name.
         $out = [];
         foreach ($groups as $key => $group) {
-            sort($group['names'], SORT_STRING);
+            sort($group['names'], SORT_NATURAL);
             $out[count($group['names']) === 1 ? $group['names'][0] : $key] = $group;
         }
-        uksort($out, static fn (string $a, string $b): int => [$out[$b]['rows'], $a] <=> [$out[$a]['rows'], $b]);
+        // strcmp, not <=>: a purely numeric name is an int key, and PHP compares numeric strings as numbers.
+        uksort($out, static fn (string|int $a, string|int $b): int => $out[$b]['rows'] <=> $out[$a]['rows'] ?: strcmp((string) $a, (string) $b));
 
         return $out;
     }

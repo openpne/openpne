@@ -23,4 +23,18 @@ class UnknownNameFamiliesTest extends TestCase
 
         $this->assertSame(['k_*', 'm', 'z_*'], array_keys($groups));
     }
+
+    public function test_a_purely_numeric_name_sorts_as_a_string_beside_the_others(): void
+    {
+        $groups = SourcePreflight::families(['12' => 1, 'a' => 1, '3' => 1]);
+
+        $this->assertSame(['12', '3', 'a'], array_map('strval', array_keys($groups)));
+    }
+
+    public function test_the_family_sample_is_in_natural_order(): void
+    {
+        $groups = SourcePreflight::families(['x_10' => 1, 'x_2' => 1, 'x_1' => 1]);
+
+        $this->assertSame(['x_1', 'x_2', 'x_10'], $groups['x_*']['names']);
+    }
 }

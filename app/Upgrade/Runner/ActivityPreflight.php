@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class ActivityPreflight
 {
-    /** Ids shown per finding; the runbook's SQL lists the rest. */
     public const W_DEEP_REPLY = 'W-ACTIVITY-DEEP-REPLY';
 
     public const W_UNRESOLVABLE_REPLY = 'W-ACTIVITY-UNRESOLVABLE-REPLY';
@@ -38,6 +37,7 @@ final class ActivityPreflight
 
     public const W_TEMPLATE_UNKNOWN = 'W-ACTIVITY-TEMPLATE-UNKNOWN';
 
+    /** Ids shown per finding; the runbook's SQL lists the rest. */
     private const SAMPLE = 5;
 
     /** The slot column of both image join tables is unsignedTinyInteger. */

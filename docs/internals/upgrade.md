@@ -228,8 +228,8 @@ contracts:
   decided (`dropped` / `rewritten` / `review` / `env` / `unknown`, defined in the operator
   guide); a factory that branches has one code per branch. `count` is the number the message
   prints, in that code's own unit, never summed across codes (template rows overlap the threads
-  other codes count). The line is `WARN <code>: <message>`. `WarningTest` pins the registry and
-  requires every constant to be registered, unique, well-formed and in the guide's table.
+  other codes count). The line is `WARN <code>: <message>`; every constant is registered, unique,
+  well-formed and listed in the guide's table (an architecture-style test holds the invariant).
 - Unknown `member_config` / `community_config` names that differ only in a trailing number are
   one `W-UNKNOWN-NAME` warning per family (`SourcePreflight::families()`), rows summed; a name
   without a numeric suffix, or a family of one, is reported by name. The other scanned tables

@@ -120,7 +120,7 @@ first completion ends with (the surface switch, and warming the pictures: §5); 
 | Line | Meaning |
 |---|---|
 | `ERROR …` | The source cannot be migrated as it is; nothing is written. Exit code 1. |
-| `WARN …` | Migrated anyway; read it and decide whether it matters. Exit code 0 on its own. |
+| `WARN …` | Never stops the run; the code says what happened to the row (the table below). Exit code 0 on its own. |
 | `ENV_HINT KEY=value` | A line to put in `.env` to keep an OpenPNE 3 setting the database does not carry. |
 | `Aborted: …` | Why nothing ran: a failed preflight, or upgrade records this version cannot resume. Exit code 1. |
 | `RUN <step>` / `DONE <step>: … (1.2s)` / `SKIP <step>: …` | One step, with how long it took, or why it was skipped (already completed on a re-run). |
@@ -144,7 +144,7 @@ diary or comment twice (OpenPNE 4 keeps one 👍 per member). Fix the source and
 **`WARN` never stops the run**; its code says what happened to the row. Each line is
 `WARN <code>: …`, and the JSON entry carries the `code`, its `category` and a `count` in the
 code's own unit (rows, threads, files, likes — never add counts across codes). The categories:
-`dropped` — the source value is not copied; `rewritten` — carried, changed on the way;
+`dropped` — the source value (or a whole absent table) is not copied; `rewritten` — carried, changed on the way;
 `review` — carried, but you may need to act; `env` — a `.env` line keeps it; `unknown` — source
 data the upgrade does not recognise, not carried.
 

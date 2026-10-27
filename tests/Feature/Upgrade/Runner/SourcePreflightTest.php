@@ -56,6 +56,20 @@ class SourcePreflightTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_an_absent_plugin_is_warned_on_the_dry_run_too(): void
+    {
+        $this->createSource('member');
+        $report = new RunReport(function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }, dryRun: true);
+
+        $this->assertTrue((new UpgradeRunner(new InsertSelectCompiler, [new DiaryUpgrade]))->run(new RunOptions(dryRun: true), null, $report));
+
+        $this->assertContains('WARN '.SourcePreflight::W_ABSENT_PLUGIN.': '.SourcePreflight::absentPluginMessage('diary'), $lines);
+        $this->assertSame(['W-ABSENT-PLUGIN', 'dropped'], [$report->jsonSerialize()['warnings'][0]['code'], $report->jsonSerialize()['warnings'][0]['category']]);
+        $this->assertFalse($this->sourceExists('diary'), 'a dry run creates nothing');
+    }
+
     public function test_absent_optional_plugin_group_is_created_empty_and_dropped(): void
     {
         // opDiary not installed (`diary` absent): the step no-ops against the empty ensure-existed
@@ -64,7 +78,7 @@ class SourcePreflightTest extends TestCase
         [$ok, $output] = $this->runSteps([new DiaryUpgrade]);
 
         $this->assertTrue($ok);
-        $this->assertStringContainsString('`diary` absent', $output);
+        $this->assertStringContainsString('WARN '.SourcePreflight::W_ABSENT_PLUGIN.': '.SourcePreflight::absentPluginMessage('diary'), $output);
         $this->assertStringContainsString('DONE DiaryUpgrade: 0 rows', $output);
         $this->assertDatabaseCount('diaries', 0);
         $this->assertFalse($this->sourceExists('diary'), 'the ensure-existed table should be dropped');
