@@ -20,6 +20,8 @@ use App\Upgrade\UpgradeStep;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SeedsSourceMembers;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
@@ -202,9 +204,12 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
     public function test_a_failed_step_is_one_fail_line_without_the_sql(): void
     {
         $this->seedGraph();
+        Exceptions::fake();
         $this->app->instance(UpgradeRunner::class, $this->runner([new FriendshipUpgrade, $this->brokenStep()]));
 
         $report = $this->jsonReport(['--json' => true], expectFailure: true);
+
+        Exceptions::assertReported(QueryException::class);
 
         $this->assertSame('failed_at_step', $report['outcome']);
         $this->assertSame('BrokenMemberBlockUpgrade', $report['failed_step']);
@@ -240,15 +245,46 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         }
     }
 
+    public function test_a_missing_state_table_is_a_precheck_error_in_the_json_too(): void
+    {
+        $this->seedGraph();
+        // The lane's trait re-migrates the targets when this sentinel is missing, so the drop heals.
+        Schema::drop('openpne4_upgrade_state');
+
+        $report = $this->jsonReport(['--json' => true], expectFailure: true);
+
+        $this->assertSame('precheck_error', $report['outcome']);
+        $this->assertStringContainsString('openpne4_upgrade_state', $report['errors'][0]);
+        $this->assertSame([], $report['steps']);
+    }
+
+    public function test_verbose_json_prints_the_report_before_the_rethrow(): void
+    {
+        $this->seedGraph();
+        $this->app->instance(UpgradeRunner::class, $this->runner([new FriendshipUpgrade, $this->brokenStep()]));
+
+        try {
+            Artisan::call('openpne:upgrade-from-3', ['--json' => true, '-v' => true]);
+            $this->fail('the step failure should have been rethrown under -v');
+        } catch (QueryException) {
+            $report = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+            $this->assertSame('failed_at_step', $report['outcome']);
+            $this->assertSame('BrokenMemberBlockUpgrade', $report['failed_step']);
+        }
+    }
+
     public function test_a_failure_outside_any_step_is_the_runs_and_still_yields_json(): void
     {
         $this->seedGraph();
+        Exceptions::fake();
         // --force-restart DELETEs every target before any step runs, so the broken step's missing
         // table makes reset() throw with no step started.
         $this->app->instance(UpgradeRunner::class, $this->runner([new FriendshipUpgrade, $this->brokenStep()]));
 
         $report = $this->jsonReport(['--json' => true, '--force-restart' => true], expectFailure: true);
 
+        Exceptions::assertReported(QueryException::class);
+        $this->assertNotNull($report['finished_at']);
         $this->assertSame('failed_at_step', $report['outcome']);
         $this->assertSame('run', $report['failed_step']);
         $this->assertSame(['run'], array_column($report['steps'], 'key'));

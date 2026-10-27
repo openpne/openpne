@@ -34,12 +34,13 @@ class UpgradeFromThreeCommand extends Command
         $sink = $json ? null : fn (string $line) => $this->line(OutputFormatter::escape($line));
         $report = new RunReport($sink, $this->output->isVerbose(), (bool) $this->option('dry-run'));
 
-        // The report is printed on every exit, the guards and a throwing one included; under -v the
-        // exception follows it.
+        // The report is printed on every exit, the guards and a throwing one included, whatever the
+        // verbosity; under -v the exception follows it on stdout.
         $rethrow = null;
         try {
             $ok = $this->upgrade($report);
         } catch (Throwable $e) {
+            report($e);
             if (! $report->isFailed()) {
                 $report->failed('run', RunReport::failureMessage($e));
             }
@@ -49,7 +50,7 @@ class UpgradeFromThreeCommand extends Command
         }
 
         if ($json) {
-            $this->output->write($report->toJson(), true, OutputInterface::OUTPUT_RAW);
+            $this->output->write($report->toJson(), true, OutputInterface::OUTPUT_RAW | OutputInterface::VERBOSITY_QUIET);
         }
 
         if ($rethrow !== null) {

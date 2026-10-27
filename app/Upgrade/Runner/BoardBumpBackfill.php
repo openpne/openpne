@@ -71,11 +71,12 @@ final class BoardBumpBackfill
                 return $updated;
             });
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => self::KEY], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_FAILED,
                 'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
             $report->failed(self::KEY, RunReport::failureMessage($e), $e);
 

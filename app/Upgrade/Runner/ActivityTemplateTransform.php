@@ -132,11 +132,12 @@ final class ActivityTemplateTransform
 
             return true;
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => $key], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_FAILED,
                 'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
             $report->failed($key, RunReport::failureMessage($e), $e);
 

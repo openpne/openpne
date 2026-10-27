@@ -169,7 +169,10 @@ class EmojiTransformTest extends UpgradeSqlTestCase
 
         $state = UpgradeState::query()->where('step_key', 'emoji_groups')->first();
         $this->assertSame(UpgradeState::STATUS_FAILED, $state->status);
-        $this->assertNotEmpty($state->error);
+        $this->assertStringStartsWith('SQLSTATE[23000]', $state->error);
+        // The PDO message only: the wrapper's bindings would put the member text in the checkpoint.
+        $this->assertStringNotContainsString('update `groups`', $state->error);
+        $this->assertStringNotContainsString("\n", $state->error);
 
         // The failing chunk's transaction rolled back, so the code is still present.
         $this->assertSame('X[i:1]', $colliding->fresh()->name);

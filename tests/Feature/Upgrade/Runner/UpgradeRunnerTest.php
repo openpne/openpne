@@ -80,6 +80,7 @@ class UpgradeRunnerTest extends TestCase
 
             $this->assertSame(1, $exit);
             $this->assertSame('precheck_error', $report['outcome']);
+            $this->assertNotNull($report['finished_at']);
             $this->assertCount(1, $report['errors']);
             $this->assertSame([], $report['steps']);
             $this->assertStringStartsWith('{', trim($output), 'nothing but the JSON document');

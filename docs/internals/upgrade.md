@@ -201,14 +201,19 @@ contracts:
 - `failed()` is one line: control characters collapse to a space, and the message a step or
   pass hands it is `RunReport::failureMessage()` — a `QueryException`'s PDO message, never the
   SQL and bindings the wrapper appends (bindings are member text). The same string is the
-  checkpoint's `error`. The whole exception is printed only under `-v`, after the line and the
-  checkpoint are written: `failed()` rethrows the cause it is given then, and nowhere else does.
-- `file_bin` snapshot, move and rewire fail like a step: one `FAIL`, a `failed` checkpoint, the
-  run stops, and a re-run resumes from them.
-- `UpgradeRunner::run()` catches whatever its body throws: a failure no step owns is recorded
-  as `FAIL run:`; one thrown after a step already recorded its failure (the cleanup `drop`) goes
-  to the log. The command prints the JSON on every exit — the option and driver guards, the
-  state-table check and a throwing one included — then exits 1 on any `ERROR` or `FAIL`.
+  checkpoint's `error`; the whole exception goes to the log (`report()`), and under `-v` is also
+  rethrown — by `failed()` itself, after the line and the checkpoint are written, which is why a
+  step's `catch` hands it the cause.
+- `file_bin` snapshot, move and rewire fail like a step inside `FileBinMigration::attempt()`:
+  one `FAIL`, a `failed` checkpoint, the run stops, and a re-run resumes from them. Their
+  `information_schema` reads before `attempt()` are the run's failure (`FAIL run:`) like any
+  other code outside a step.
+- `UpgradeRunner::run()` turns whatever its body throws into the report: a failure no step owns
+  is recorded as `FAIL run:`; one thrown after a step already recorded its failure (the cleanup
+  `drop`) is logged. Under `-v` the first exception passes through instead, and the command
+  prints the JSON before rethrowing it. The command prints the JSON on every exit — the option
+  and driver guards, the state-table check and a throwing one included — then exits 1 on any
+  `ERROR` or `FAIL`.
 - `next_steps` carries a line only when it applied to this run: the surface-mode and
   picture-warming lines are recorded by the run that first completed the site (the one that
   inserted `surface_mode`), so a re-run has an empty list, and an operator who set the mode
@@ -216,11 +221,21 @@ contracts:
 - `steps[]` lists the walk steps, the passes and the three `file_bin` keys by their checkpoint
   `step_key`; `elapsed_ms` is measured by the report between `started()` and `done()` /
   `failed()`, and is `null` for a failure recorded without a start (the emoji charset refusal).
-  The passes' dry-run `PLAN would …` lines carry no key and are not steps.
+  A dry run lists only the walk steps (`planned`): the passes' and `file_bin`'s `PLAN` lines are
+  not steps.
 - `warnings[]` entries carry `code`, `category` and `count` as `null`, reserved for the coded
   warnings a later version fills in without a breaking change.
 - `release` is the deployment's marker ([runtime.md](runtime.md#release-marker)), `null`
-  without one; `site` is the connection's database name.
+  without one; `site` is the connection's database name; both are `null` rather than thrown
+  when the lookup fails, since the report prints after the failure it describes.
+- The document's keys: `site`, `release`, `dry_run`, `resumed` (a step was skipped as already
+  completed), `started_at` / `finished_at` (ISO 8601) and `elapsed_ms`, `outcome` — `ok`,
+  `precheck_error` (a guard or the preflight refused, nothing ran), `blocked` (checkpoints this
+  version cannot resume), `failed_at_step` — with `failed_step` (`run` for a failure no step
+  owns), `errors[]`, `warnings[]`, `env_hints{}`, `notes[]`, `next_steps[]`, and `steps[]` of
+  `{key, status: planned|running|done|skipped|failed, rows, elapsed_ms, reason, error}`. The exit
+  code is 1 for every outcome but `ok`. Under `-q` the document still prints; under `-v` the
+  exception follows it on stdout.
 
 ## Post-walk passes
 

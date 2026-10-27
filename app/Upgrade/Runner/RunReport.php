@@ -203,8 +203,8 @@ final class RunReport implements JsonSerializable
     public function jsonSerialize(): array
     {
         return [
-            'site' => DB::connection()->getDatabaseName(),
-            'release' => ReleaseMarker::sha(),
+            'site' => rescue(static fn (): string => DB::connection()->getDatabaseName(), report: false),
+            'release' => rescue(static fn (): ?string => ReleaseMarker::sha(), report: false),
             'dry_run' => $this->dryRun,
             'resumed' => $this->resumed,
             'started_at' => $this->startedAtIso,

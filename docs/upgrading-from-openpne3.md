@@ -112,19 +112,22 @@ $ php artisan openpne:upgrade-from-3 --dry-run
 Writes nothing. It prints the SQL each step would run, and — the part worth reading — what its
 **preflight** found: a read-only inspection of your source that runs before anything is written.
 
-Every line the dry run and the real run print starts with one of these words:
+The lines to act on start with one of these words (the rest is the dry run's `PLAN` lines and
+their SQL, progress, and the closing `Finished in …`):
 
 | Line | Meaning |
 |---|---|
 | `ERROR …` | The source cannot be migrated as it is; nothing is written. Exit code 1. |
 | `WARN …` | Migrated anyway; read it and decide whether it matters. Exit code 0 on its own. |
 | `ENV_HINT KEY=value` | A line to put in `.env` to keep an OpenPNE 3 setting the database does not carry. |
+| `Aborted: …` | Why nothing ran: a failed preflight, or upgrade records this version cannot resume. Exit code 1. |
 | `RUN <step>` / `DONE <step>: … (1.2s)` / `SKIP <step>: …` | One step, with how long it took, or why it was skipped (already completed on a re-run). |
-| `FAIL <step>: …` | The step that stopped the run, on one line; the run exits 1 and a re-run resumes here. The whole exception follows under `-v`. |
+| `FAIL <step>: …` | The step that stopped the run, on one line; the run exits 1 and a re-run resumes here. The whole exception follows under `-v`, and is in the log either way. |
 | `NOTE …` | Something to look at once the upgrade is done. |
 
 `--json` prints the same report as one JSON document instead — on failure too, with the exit
-code unchanged — for a script that migrates many sites; `-v --json` prints the exception after it.
+code unchanged, even under `-q` — for a script that migrates many sites. `-v` prints the exception
+after the document, on the same stream, so a script parsing stdout must not pass `-v`.
 
 **`ERROR` aborts the run**, before anything is written. These are states the upgrade cannot survive:
 a required table or column missing (an older or customised OpenPNE 3), a plugin whose tables are

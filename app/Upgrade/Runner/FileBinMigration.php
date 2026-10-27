@@ -170,21 +170,25 @@ final class FileBinMigration
     {
         $report->started($key);
 
+        // done() stays outside the try: a throwing sink must not flip the committed checkpoint to failed.
         try {
-            $report->done($key, $work());
-
-            return true;
+            $detail = $work();
         } catch (Throwable $e) {
             $message = RunReport::failureMessage($e);
-            UpgradeState::updateOrCreate(['step_key' => $key], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_FAILED,
                 'error' => $message,
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
             $report->failed($key, $message, $e);
 
             return false;
         }
+
+        $report->done($key, $detail);
+
+        return true;
     }
 
     /** For reset(): drop the app file_bin's FK so DELETEing `files` cannot cascade into the BLOBs. */

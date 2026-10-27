@@ -54,14 +54,12 @@ final class UpgradeRunner
         try {
             $ok = $this->execute($options, $report);
         } catch (Throwable $e) {
-            // A failure a step already recorded (and, under verbose, rethrew) passes through; one
-            // nothing owns is recorded as the run's, and a second one is logged rather than lost.
+            // A failure a step already recorded (and, under verbose, rethrew) passes through; one nothing owns is the run's.
+            report($e);
             if (! $report->isFailed()) {
                 $report->failed('run', RunReport::failureMessage($e), $e);
             } elseif ($options->verbose) {
                 throw $e;
-            } else {
-                report($e);
             }
             $ok = false;
         }
@@ -483,12 +481,14 @@ final class UpgradeRunner
             // The transaction rolled back the partial copy and the running checkpoint; record the
             // failure outside it so a resume sees this step as failed and the earlier ones as done.
             $message = RunReport::failureMessage($e);
-            UpgradeState::updateOrCreate(['step_key' => $key], [
+            // rescue: a checkpoint write a dropped connection refuses must not move the FAIL off this step.
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_FAILED,
                 'error' => $message,
                 'finished_at' => now(),
-            ]);
+            ]));
 
+            report($e);
             $report->failed($key, $message, $e);
 
             return false;

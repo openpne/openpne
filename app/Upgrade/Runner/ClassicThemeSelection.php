@@ -79,18 +79,19 @@ final class ClassicThemeSelection
                 ]);
             });
         } catch (Throwable $e) {
-            UpgradeState::updateOrCreate(['step_key' => self::KEY], [
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_FAILED,
                 'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
-            ]);
+            ]));
+            report($e);
 
             $report->failed(self::KEY, RunReport::failureMessage($e), $e);
 
             return false;
         }
 
-        $report->done(self::KEY, 'classic_theme = '.($theme === '' ? 'the default skin' : "'{$theme}'"), 1);
+        $report->done(self::KEY, 'classic_theme = '.($theme === '' ? 'the default skin' : "'{$theme}'"));
         if ($selected === null) {
             $report->warning(self::unknownPackageMessage());
         } elseif ($theme !== '' && ClassicThemes::find($theme) === null) {
