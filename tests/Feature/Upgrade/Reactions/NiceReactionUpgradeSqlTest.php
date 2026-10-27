@@ -8,6 +8,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\NicePreflight;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
+use App\Upgrade\Runner\Warning;
 use App\Upgrade\Steps\DiaryCommentReactionUpgrade;
 use App\Upgrade\Steps\DiaryReactionUpgrade;
 use App\Upgrade\Steps\GroupEventCommentReactionUpgrade;
@@ -83,9 +84,9 @@ class NiceReactionUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->assertTrue($ran, implode("\n", $lines));
         $this->assertSame([2], DB::table('reactions')->pluck('id')->map(fn ($id) => (int) $id)->all());
-        $this->assertContains('WARN '.NicePreflight::unmigratedActivityLikeMessage(2, [1, 3]), $lines);
-        $this->assertContains('WARN '.NicePreflight::goneTargetLikeMessage('diaries', 1, [4]), $lines);
-        $this->assertContains('WARN '.NicePreflight::goneTargetLikeMessage('event comments', 1, [5]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_UNMIGRATED_ACTIVITY.': '.NicePreflight::unmigratedActivityLikeMessage(2, [1, 3]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_GONE_TARGET.': '.NicePreflight::goneTargetLikeMessage('diaries', 1, [4]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_GONE_TARGET.': '.NicePreflight::goneTargetLikeMessage('event comments', 1, [5]), $lines);
     }
 
     public function test_two_likes_by_one_member_on_one_activity_abort_before_any_write(): void
@@ -113,7 +114,7 @@ class NiceReactionUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->assertFalse($ran);
         $this->assertContains('ERROR '.NicePreflight::duplicateLikeMessage(2, [2, 7]), $lines);
-        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('x', 1, [5]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_UNKNOWN_TABLE.': '.NicePreflight::unknownTableLikeMessage('x', 1, [5]), $lines);
         $this->assertDatabaseCount('reactions', 0);
     }
 
@@ -156,7 +157,7 @@ class NiceReactionUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertTrue($ran, implode("\n", $lines));
         $this->assertDatabaseCount('reactions', 0);
         foreach ([['diaries', 1], ['diary comments', 2], ['topic comments', 3], ['event comments', 4]] as [$what, $id]) {
-            $this->assertContains('WARN '.NicePreflight::goneTargetLikeMessage($what, 1, [$id]), $lines);
+            $this->assertContains('WARN '.NicePreflight::W_GONE_TARGET.': '.NicePreflight::goneTargetLikeMessage($what, 1, [$id]), $lines);
         }
     }
 
@@ -171,9 +172,9 @@ class NiceReactionUpgradeSqlTest extends UpgradeSqlTestCase
         $report = (new NicePreflight)->inspect('', null, ['nice', 'activity_data', 'community', 'community_topic_comment']);
 
         $this->assertSame([], $report->errors);
-        $this->assertSame([
-            NicePreflight::uninstalledTargetLikeMessage('diaries', 1, [1]),
-            NicePreflight::goneTargetLikeMessage('topic comments', 1, [2]),
+        $this->assertEquals([
+            new Warning(NicePreflight::W_UNINSTALLED_TARGET, NicePreflight::uninstalledTargetLikeMessage('diaries', 1, [1]), 1),
+            new Warning(NicePreflight::W_GONE_TARGET, NicePreflight::goneTargetLikeMessage('topic comments', 1, [2]), 1),
         ], $report->warnings);
     }
 
@@ -196,11 +197,11 @@ class NiceReactionUpgradeSqlTest extends UpgradeSqlTestCase
         });
 
         $this->assertDatabaseCount('reactions', 0);
-        $this->assertContains('WARN '.NicePreflight::goneTargetLikeMessage('diaries', 1, [2]), $lines);
-        $this->assertContains('WARN '.NicePreflight::goneTargetLikeMessage('diary comments', 1, [3]), $lines);
-        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('a', 1, [1]), $lines);
-        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('X', 1, [4]), $lines);
-        $this->assertContains('WARN '.NicePreflight::unknownTableLikeMessage('x', 1, [5]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_GONE_TARGET.': '.NicePreflight::goneTargetLikeMessage('diaries', 1, [2]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_GONE_TARGET.': '.NicePreflight::goneTargetLikeMessage('diary comments', 1, [3]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_UNKNOWN_TABLE.': '.NicePreflight::unknownTableLikeMessage('a', 1, [1]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_UNKNOWN_TABLE.': '.NicePreflight::unknownTableLikeMessage('X', 1, [4]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_UNKNOWN_TABLE.': '.NicePreflight::unknownTableLikeMessage('x', 1, [5]), $lines);
     }
 
     /** A pre-index source with a folding collation: one member's likes on diary 1 and diary comment 1 are two targets, not a doubled like. */

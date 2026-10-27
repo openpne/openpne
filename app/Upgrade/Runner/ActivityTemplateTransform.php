@@ -25,6 +25,14 @@ final class ActivityTemplateTransform
         'group_messages' => TalkBody::MAX,
     ];
 
+    public const W_KEPT_UNKNOWN = 'W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN';
+
+    public const W_KEPT_BAD_PARAMS = 'W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS';
+
+    public const W_KEPT_NO_LINK = 'W-ACTIVITY-TEMPLATE-KEPT-NO-LINK';
+
+    public const W_KEPT_UNFIT = 'W-ACTIVITY-TEMPLATE-KEPT-UNFIT';
+
     private const CHUNK = 500;
 
     public function plan(RunReport $report): void
@@ -127,7 +135,7 @@ final class ActivityTemplateTransform
 
             $report->done($key, "{$rendered} rows", $rendered);
             foreach ($kept as $reason => $count) {
-                $report->warning(self::keptMessage($table, (string) $reason, (int) $count));
+                $report->warning(self::keptWarning($table, (string) $reason, (int) $count));
             }
 
             return true;
@@ -146,6 +154,18 @@ final class ActivityTemplateTransform
             URL::forceRootUrl($liveRootUrl);
             URL::forceScheme(parse_url($liveRootUrl, PHP_URL_SCHEME) ?: null);
         }
+    }
+
+    public static function keptWarning(string $table, string $reason, int $rows): Warning
+    {
+        $code = match ($reason) {
+            ActivityTemplateRenderer::BAD_PARAMS => self::W_KEPT_BAD_PARAMS,
+            ActivityTemplateRenderer::NO_LINK => self::W_KEPT_NO_LINK,
+            ActivityTemplateRenderer::UNFIT => self::W_KEPT_UNFIT,
+            default => self::W_KEPT_UNKNOWN,
+        };
+
+        return new Warning($code, self::keptMessage($table, $reason, $rows), $rows);
     }
 
     public static function keptMessage(string $table, string $reason, int $rows): string

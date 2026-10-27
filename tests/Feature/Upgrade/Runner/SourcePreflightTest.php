@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceNameRegistry;
@@ -193,6 +194,53 @@ class SourcePreflightTest extends TestCase
         // reset() (which clears the targets and the checkpoints) must not run before the preflight abort.
         $this->assertDatabaseCount('friendships', 1);
         $this->assertDatabaseCount('openpne4_upgrade_state', 1);
+    }
+
+    public function test_unrecognised_config_names_that_differ_by_a_trailing_number_fold_into_one_family(): void
+    {
+        $this->createSource('member_config');
+        $this->createSource('member');
+        $this->seedMembers(1, 2);
+        $this->insertConfig([
+            ['member_id' => 1, 'name' => 'community_message_unsubscribe_1', 'value' => '1'],
+            ['member_id' => 2, 'name' => 'community_message_unsubscribe_1', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'community_message_unsubscribe_4', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'community_message_unsubscribe_95', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'foo_bar', 'value' => 'x'],
+            ['member_id' => 1, 'name' => 'foo_bar_7', 'value' => 'x'],
+        ]);
+        $report = new RunReport(function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }, dryRun: true);
+
+        $this->assertTrue((new UpgradeRunner(new InsertSelectCompiler, [new MemberPreferenceUpgrade]))->run(new RunOptions(dryRun: true), null, $report));
+
+        $family = SourcePreflight::unknownSourceFamilyMessage('member_config', 'community_message_unsubscribe_*', ['community_message_unsubscribe_1', 'community_message_unsubscribe_4', 'community_message_unsubscribe_95'], 4);
+        $this->assertContains('WARN W-UNKNOWN-NAME: '.$family, $lines);
+        $this->assertStringContainsString('(e.g. `community_message_unsubscribe_1`, `community_message_unsubscribe_4`, `community_message_unsubscribe_95`)', $family);
+        // A lone numbered name and its unnumbered sibling stay two lines: a family of one is a name.
+        $this->assertContains('WARN W-UNKNOWN-NAME: '.SourcePreflight::unknownSourceNameMessage('member_config', 'foo_bar', 1), $lines);
+        $this->assertContains('WARN W-UNKNOWN-NAME: '.SourcePreflight::unknownSourceNameMessage('member_config', 'foo_bar_7', 1), $lines);
+        $this->assertCount(3, array_filter($lines, fn (string $l): bool => str_starts_with($l, 'WARN W-UNKNOWN-NAME')));
+        $unknown = array_values(array_filter($report->jsonSerialize()['warnings'], fn (array $w): bool => $w['code'] === 'W-UNKNOWN-NAME'));
+        $this->assertSame([4, 1, 1], array_column($unknown, 'count'));
+        $this->assertSame('unknown', $unknown[0]['category']);
+    }
+
+    public function test_numbered_mail_names_are_not_folded(): void
+    {
+        $this->createSource('notification_mail');
+        DB::table('notification_mail')->insert([
+            ['name' => 'op_mail_1', 'renderer' => 'twig', 'is_enabled' => 1],
+            ['name' => 'op_mail_2', 'renderer' => 'twig', 'is_enabled' => 1],
+        ]);
+
+        [$ok, $output] = $this->runSteps([new MailTemplateUpgrade], new RunOptions(dryRun: true));
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString(SourcePreflight::unknownSourceNameMessage('notification_mail', 'op_mail_1', 1), $output);
+        $this->assertStringContainsString(SourcePreflight::unknownSourceNameMessage('notification_mail', 'op_mail_2', 1), $output);
+        $this->assertStringNotContainsString('matching', $output);
     }
 
     public function test_unrecognised_config_names_are_reported_with_row_counts(): void

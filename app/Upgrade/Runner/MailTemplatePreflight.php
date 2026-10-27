@@ -22,6 +22,12 @@ use Illuminate\Support\Facades\DB;
 final class MailTemplatePreflight
 {
     /** The `locale` column mail_template_translations declares; a wider folded value cannot be inserted. */
+    public const W_INERT_LOCALE = 'W-MAIL-INERT-LOCALE';
+
+    public const W_BROKEN = 'W-MAIL-BROKEN';
+
+    public const W_DEGRADED = 'W-MAIL-DEGRADED';
+
     private const LOCALE_COLUMN_LENGTH = 5;
 
     /** The locales MailTemplateService resolves a recipient to; a row folded to anything else is never read. */
@@ -59,7 +65,7 @@ final class MailTemplatePreflight
                 // Never read (OpenPNE 4 folds the recipient locale to ja/en before the lookup) and not
                 // render-tested, since TermService has no terms for it and every `op_term.*` reference
                 // would look like a missing variable.
-                $warnings[] = self::inertLocaleMessage($name, (string) $row->lang, $folded);
+                $warnings[] = new Warning(self::W_INERT_LOCALE, self::inertLocaleMessage($name, (string) $row->lang, $folded));
 
                 continue;
             }
@@ -67,7 +73,7 @@ final class MailTemplatePreflight
             $fault = $this->faultOf($template, $folded, (string) $row->title, (string) $row->template);
 
             if ($fault !== null) {
-                $warnings[] = self::unrenderableMessage($name, $folded, ...$fault);
+                $warnings[] = self::unrenderableWarning($name, $folded, ...$fault);
             }
         }
 
@@ -165,6 +171,11 @@ final class MailTemplatePreflight
     {
         return "mail template `{$name}` has a `{$lang}` translation, which migrates as locale `{$locale}` — OpenPNE 4 only ever"
             .' reads ja and en, so the row is carried but never sent. Re-tag it in the source if it was meant to be one of those.';
+    }
+
+    public static function unrenderableWarning(string $name, string $locale, MailTemplateFault $fault, string $detail): Warning
+    {
+        return new Warning($fault->blocksSending() ? self::W_BROKEN : self::W_DEGRADED, self::unrenderableMessage($name, $locale, $fault, $detail));
     }
 
     public static function unrenderableMessage(string $name, string $locale, MailTemplateFault $fault, string $detail): string

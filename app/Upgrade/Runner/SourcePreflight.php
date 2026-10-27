@@ -42,6 +42,15 @@ final class SourcePreflight
      * recognised without enumerating. notification_mail is not a KV table, but its step carries only
      * the names in a `name IN (…)` filter, so an unrecognised name is just as invisible per step.
      */
+    public const W_ABSENT_PLUGIN = 'W-ABSENT-PLUGIN';
+
+    public const W_UNKNOWN_NAME = 'W-UNKNOWN-NAME';
+
+    /** The scanned tables whose unknown names fold into families (a trailing `_<digits>` is a numbered member). */
+    private const FAMILY_TABLES = ['member_config', 'community_config'];
+
+    private const FAMILY_SAMPLE = 3;
+
     private const NAME_SCAN_TABLES = [
         'member_config' => [],
         'community_config' => [StepRegistry::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX],
@@ -103,7 +112,7 @@ final class SourcePreflight
      * @param  list<string>  $tables
      * @return list<string> the names created, for drop()
      */
-    public function ensureExists(array $tables, string $sourcePrefix, ?string $sourceDatabase, RunReport $report): array
+    public function ensureExists(array $tables, string $sourcePrefix, ?string $sourceDatabase): array
     {
         $created = [];
         foreach ($tables as $table) {
@@ -117,7 +126,6 @@ final class SourcePreflight
             );
             DB::statement($ddl);
             $created[] = $table;
-            $report->warning(self::absentPluginMessage($table));
         }
 
         return $created;
@@ -155,6 +163,64 @@ final class SourcePreflight
     public static function unknownSourceNameMessage(string $table, string $name, int $rows): string
     {
         return "source `{$table}` holds {$rows} row(s) named `{$name}`, which the upgrade does not recognise — a third-party plugin or a source customisation. Not migrated; `openpne:upgrade-matrix` lists the names that are.";
+    }
+
+    /** @param  list<string>  $names  every member, name asc */
+    public static function unknownSourceFamilyMessage(string $table, string $family, array $names, int $rows): string
+    {
+        $sample = implode(', ', array_map(static fn (string $n): string => "`{$n}`", array_slice($names, 0, self::FAMILY_SAMPLE)));
+
+        return "source `{$table}` holds {$rows} row(s) under ".count($names)." name(s) matching `{$family}` (e.g. {$sample}), which the upgrade does not recognise — a third-party plugin or a source customisation. Not migrated; `openpne:upgrade-matrix` lists the names that are.";
+    }
+
+    /**
+     * The unknown-name warnings, one per name, except in the config tables where names differing
+     * only in a trailing number fold into one family warning; rows desc, then name asc.
+     *
+     * @return list<Warning>
+     */
+    public function unknownSourceNameWarnings(string $prefix, ?string $database): array
+    {
+        $warnings = [];
+        foreach ($this->unknownSourceNames($prefix, $database) as $table => $counts) {
+            $groups = in_array($table, self::FAMILY_TABLES, true)
+                ? self::families($counts)
+                : array_map(static fn (string $name, int $rows): array => ['names' => [$name], 'rows' => $rows], array_keys($counts), $counts);
+            foreach ($groups as $family => $group) {
+                $warnings[] = count($group['names']) === 1
+                    ? new Warning(self::W_UNKNOWN_NAME, self::unknownSourceNameMessage($table, $group['names'][0], $group['rows']), $group['rows'])
+                    : new Warning(self::W_UNKNOWN_NAME, self::unknownSourceFamilyMessage($table, (string) $family, $group['names'], $group['rows']), $group['rows']);
+            }
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * Groups names by family: `foo_12` belongs to `foo_*`, a name without a numeric suffix is its own
+     * group (so `foo` never joins `foo_*`). Keys are the family or the single name; rows desc, then key asc.
+     *
+     * @param  array<string, int>  $counts  name => rows
+     * @return array<string, array{names: list<string>, rows: int}>
+     */
+    public static function families(array $counts): array
+    {
+        $groups = [];
+        foreach ($counts as $name => $rows) {
+            $key = preg_match('/^(.+)_[0-9]+$/', $name, $m) === 1 ? $m[1].'_*' : $name;
+            $groups[$key]['names'][] = $name;
+            $groups[$key]['rows'] = ($groups[$key]['rows'] ?? 0) + $rows;
+        }
+
+        // A family of one is a name, not a pattern: report it by its own name.
+        $out = [];
+        foreach ($groups as $key => $group) {
+            sort($group['names'], SORT_STRING);
+            $out[count($group['names']) === 1 ? $group['names'][0] : $key] = $group;
+        }
+        uksort($out, static fn (string $a, string $b): int => [$out[$b]['rows'], $a] <=> [$out[$a]['rows'], $b]);
+
+        return $out;
     }
 
     public static function inactiveMemberReferenceMessage(string $reference, int $rows): string

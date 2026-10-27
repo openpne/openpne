@@ -56,7 +56,7 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
 
         $this->assertTrue($ok);
         $this->assertStringContainsString(
-            'WARN sns_config image_max_filesize = 300K is not copied; to keep it, set OPENPNE_IMAGE_MAX_UPLOAD_KB=300 in .env (per file, kilobytes).',
+            'WARN W-SETTING-IN-ENV: sns_config image_max_filesize = 300K is not copied; to keep it, set OPENPNE_IMAGE_MAX_UPLOAD_KB=300 in .env (per file, kilobytes).',
             $output,
         );
     }
@@ -107,7 +107,7 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
 
         $this->assertTrue($ok);
         $this->assertStringContainsString(
-            "WARN sns_config `is_allow_web_public_flag_age` is NULL and is not copied: OpenPNE 3 read its default there, and `allow_web_public_age` keeps its default here ('0').",
+            "WARN W-SETTING-NULL: sns_config `is_allow_web_public_flag_age` is NULL and is not copied: OpenPNE 3 read its default there, and `allow_web_public_age` keeps its default here ('0').",
             $output,
         );
         $this->assertDatabaseMissing('sns_settings', ['key' => 'allow_web_public_age']);
@@ -181,6 +181,7 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
 
         $this->assertContains('ENV_HINT OPENPNE_IMAGE_MAX_UPLOAD_KB=1024', $lines);
         $this->assertSame(['OPENPNE_IMAGE_MAX_UPLOAD_KB' => '1024'], (array) $report->jsonSerialize()['env_hints']);
+        $this->assertSame(['W-SETTING-IN-ENV', 'env'], [$report->jsonSerialize()['warnings'][0]['code'], $report->jsonSerialize()['warnings'][0]['category']]);
     }
 
     public function test_an_unreadable_size_warns_without_a_hint(): void
@@ -193,6 +194,7 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
         $json = $report->jsonSerialize();
         $this->assertSame([], (array) $json['env_hints']);
         $this->assertStringContainsString('could not be read as a size', $json['warnings'][0]['message']);
+        $this->assertSame(['W-SETTING-UNREADABLE', 'env', null], [$json['warnings'][0]['code'], $json['warnings'][0]['category'], $json['warnings'][0]['count']]);
     }
 
     public function test_the_json_report_carries_a_console_tag_verbatim(): void

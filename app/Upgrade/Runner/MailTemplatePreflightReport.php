@@ -11,7 +11,7 @@ final class MailTemplatePreflightReport
 {
     /**
      * @param  list<string>  $errors  the step would fail on these rows
-     * @param  list<string>  $warnings  migrated as-is, but broken or inert after the cutover
+     * @param  list<Warning>  $warnings  migrated as-is, but broken or inert after the cutover
      */
     public function __construct(
         public readonly array $errors,

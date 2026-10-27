@@ -31,7 +31,7 @@ final class RunReport implements JsonSerializable
     /** @var list<string> */
     private array $errors = [];
 
-    /** @var list<array{message: string, code: null, category: null, count: null}> */
+    /** @var list<array{message: string, code: string, category: string, count: ?int}> */
     private array $warnings = [];
 
     /** @var array<string, string> */
@@ -86,10 +86,10 @@ final class RunReport implements JsonSerializable
         $this->emit("ERROR {$message}");
     }
 
-    public function warning(string $message): void
+    public function warning(Warning $warning): void
     {
-        $this->warnings[] = ['message' => $message, 'code' => null, 'category' => null, 'count' => null];
-        $this->emit("WARN {$message}");
+        $this->warnings[] = ['message' => $warning->message, 'code' => $warning->code, 'category' => $warning->category(), 'count' => $warning->count];
+        $this->emit('WARN '.$warning->line());
     }
 
     public function envHint(string $key, string $value): void

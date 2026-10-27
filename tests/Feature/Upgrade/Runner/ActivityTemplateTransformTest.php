@@ -59,8 +59,8 @@ class ActivityTemplateTransformTest extends UpgradeSqlTestCase
         $this->assertSame('kept too', TimelinePost::find(4)->body);
         $this->assertSame("[Group topic] Marathon (Runners)\nhttp://sns.example/topics/7", GroupMessage::find(5)->body);
         $this->assertStringContainsString('DONE activity_template_timeline_posts: 1 rows (', implode("\n", $lines));
-        $this->assertContains('WARN '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::UNKNOWN_TEMPLATE, 1), $lines);
-        $this->assertContains('WARN '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::NO_LINK, 1), $lines);
+        $this->assertContains('WARN '.ActivityTemplateTransform::W_KEPT_UNKNOWN.': '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::UNKNOWN_TEMPLATE, 1), $lines);
+        $this->assertContains('WARN '.ActivityTemplateTransform::W_KEPT_NO_LINK.': '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::NO_LINK, 1), $lines);
         $this->assertStringContainsString('DONE activity_template_group_messages: 1 rows (', implode("\n", $lines));
         $this->assertEquals(['last_id' => 4, 'kept' => [ActivityTemplateRenderer::UNKNOWN_TEMPLATE => 1, ActivityTemplateRenderer::NO_LINK => 1], 'rendered' => 1, 'locale' => 'en', 'root_url' => 'http://sns.example'],
             UpgradeState::query()->where('step_key', 'activity_template_timeline_posts')->value('metadata'));
@@ -98,7 +98,7 @@ class ActivityTemplateTransformTest extends UpgradeSqlTestCase
 
         $lines = $this->runPass(['timeline_posts']);
 
-        $this->assertContains('WARN '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::UNKNOWN_TEMPLATE, 2), $lines);
+        $this->assertContains('WARN '.ActivityTemplateTransform::W_KEPT_UNKNOWN.': '.ActivityTemplateTransform::keptMessage('timeline_posts', ActivityTemplateRenderer::UNKNOWN_TEMPLATE, 2), $lines);
         $this->assertContains('SKIP activity_template_timeline_posts: already completed', $this->runPass(['timeline_posts']));
     }
 

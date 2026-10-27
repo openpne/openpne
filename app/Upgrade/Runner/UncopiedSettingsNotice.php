@@ -17,7 +17,13 @@ final class UncopiedSettingsNotice
 {
     public const ENV = 'OPENPNE_IMAGE_MAX_UPLOAD_KB';
 
-    /** @return list<string> */
+    public const W_SETTING_IN_ENV = 'W-SETTING-IN-ENV';
+
+    public const W_SETTING_UNREADABLE = 'W-SETTING-UNREADABLE';
+
+    public const W_SETTING_NULL = 'W-SETTING-NULL';
+
+    /** @return list<Warning> */
     public function inspect(string $sourcePrefix, ?string $sourceDatabase): array
     {
         $table = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'sns_config');
@@ -40,7 +46,7 @@ final class UncopiedSettingsNotice
         return $rows === [] || $rows[0]->value === null ? null : self::kilobytes((string) $rows[0]->value);
     }
 
-    /** @return list<string> */
+    /** @return list<Warning> */
     private function imageMaxFilesize(string $table): array
     {
         $rows = DB::select('select `value` from '.$table.' where `name` = ? limit 1', ['image_max_filesize']);
@@ -54,12 +60,12 @@ final class UncopiedSettingsNotice
         $kilobytes = self::kilobytes($value);
 
         return [$kilobytes === null
-            ? "sns_config image_max_filesize = {$value} is not copied and could not be read as a size; set ".self::ENV.' yourself (per file, kilobytes).'
-            : "sns_config image_max_filesize = {$value} is not copied; to keep it, set ".self::ENV."={$kilobytes} in .env (per file, kilobytes).",
+            ? new Warning(self::W_SETTING_UNREADABLE, "sns_config image_max_filesize = {$value} is not copied and could not be read as a size; set ".self::ENV.' yourself (per file, kilobytes).')
+            : new Warning(self::W_SETTING_IN_ENV, "sns_config image_max_filesize = {$value} is not copied; to keep it, set ".self::ENV."={$kilobytes} in .env (per file, kilobytes)."),
         ];
     }
 
-    /** @return list<string> */
+    /** @return list<Warning> */
     private function nullValues(string $table): array
     {
         $keys = (new SnsSettingUpgrade)->leftOutWhenNull();
@@ -82,7 +88,7 @@ final class UncopiedSettingsNotice
             [...$bindings, ...$names],
         );
 
-        return array_map(static fn (object $row): string => self::nullValueMessage($row->name, $keys[$row->canonical]), $rows);
+        return array_map(static fn (object $row): Warning => new Warning(self::W_SETTING_NULL, self::nullValueMessage($row->name, $keys[$row->canonical])), $rows);
     }
 
     private static function nullValueMessage(string $name, SnsSettingKey $key): string

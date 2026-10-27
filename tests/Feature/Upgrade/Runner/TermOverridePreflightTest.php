@@ -139,7 +139,7 @@ class TermOverridePreflightTest extends TestCase
         [$ok, $output] = $this->preflight();
 
         $this->assertTrue($ok, $output);
-        $this->assertStringContainsString('WARN source `sns_term` holds 1 row(s) named `some_plugin_term`', $output);
+        $this->assertStringContainsString('WARN W-UNKNOWN-NAME: source `sns_term` holds 1 row(s) named `some_plugin_term`', $output);
     }
 
     /** @return array{0: bool, 1: string} */

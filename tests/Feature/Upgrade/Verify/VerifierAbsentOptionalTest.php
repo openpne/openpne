@@ -87,7 +87,7 @@ class VerifierAbsentOptionalTest extends UpgradeSqlTestCase
 
         $this->assertTrue($ran, implode("\n", $lines));
         $this->assertStringContainsString('DONE DiaryReactionUpgrade: 0 rows', implode("\n", $lines));
-        $this->assertContains('WARN '.NicePreflight::uninstalledTargetLikeMessage('diaries', 1, [1]), $lines);
+        $this->assertContains('WARN '.NicePreflight::W_UNINSTALLED_TARGET.': '.NicePreflight::uninstalledTargetLikeMessage('diaries', 1, [1]), $lines);
         $this->assertFalse($report->failed(), $out);
         $this->assertStringContainsString('PASS DiaryReactionUpgrade', $out);
     }
