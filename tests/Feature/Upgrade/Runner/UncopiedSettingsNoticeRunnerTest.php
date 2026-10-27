@@ -5,12 +5,14 @@ namespace Tests\Feature\Upgrade\Runner;
 use App\Support\SnsSettingKey;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -166,6 +168,46 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
         $this->artisan('openpne:upgrade-from-3', ['--dry-run' => true])
             ->expectsOutputToContain('image_max_filesize = <fg=bogus>300K is not copied')
             ->assertSuccessful();
+    }
+
+    public function test_the_env_value_is_also_a_machine_readable_hint(): void
+    {
+        $this->seedSize('1M');
+        $report = new RunReport(function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }, dryRun: true);
+
+        $this->assertTrue((new UpgradeRunner(new InsertSelectCompiler, [new SnsSettingUpgrade]))->run(new RunOptions(dryRun: true), null, $report));
+
+        $this->assertContains('ENV_HINT OPENPNE_IMAGE_MAX_UPLOAD_KB=1024', $lines);
+        $this->assertSame(['OPENPNE_IMAGE_MAX_UPLOAD_KB' => '1024'], (array) $report->jsonSerialize()['env_hints']);
+    }
+
+    public function test_an_unreadable_size_warns_without_a_hint(): void
+    {
+        $this->seedSize('1X');
+        $report = new RunReport(dryRun: true);
+
+        $this->assertTrue((new UpgradeRunner(new InsertSelectCompiler, [new SnsSettingUpgrade]))->run(new RunOptions(dryRun: true), null, $report));
+
+        $json = $report->jsonSerialize();
+        $this->assertSame([], (array) $json['env_hints']);
+        $this->assertStringContainsString('could not be read as a size', $json['warnings'][0]['message']);
+    }
+
+    public function test_the_json_report_carries_a_console_tag_verbatim(): void
+    {
+        // Raw output: the formatter would throw on the unknown colour, as the human run's escaping shows.
+        $this->seedSize('<fg=bogus>300K');
+        $this->app->instance(UpgradeRunner::class, new UpgradeRunner(new InsertSelectCompiler, [new SnsSettingUpgrade]));
+
+        $this->assertSame(0, Artisan::call('openpne:upgrade-from-3', ['--dry-run' => true, '--json' => true]));
+        $output = Artisan::output();
+        $report = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertTrue($report['dry_run']);
+        $this->assertStringContainsString('image_max_filesize = <fg=bogus>300K is not copied', $report['warnings'][0]['message']);
+        $this->assertStringNotContainsString('WARN', $output);
     }
 
     public function test_any_step_reading_sns_config_carries_the_notice(): void

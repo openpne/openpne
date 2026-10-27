@@ -7,7 +7,6 @@ use App\Features\Timeline\Announcement;
 use App\Models\UpgradeState;
 use App\Support\SiteLocale;
 use App\Upgrade\InsertSelectCompiler;
-use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Throwable;
@@ -28,13 +27,13 @@ final class ActivityTemplateTransform
 
     private const CHUNK = 500;
 
-    public function plan(Closure $out): void
+    public function plan(RunReport $report): void
     {
-        $out('PLAN would render every migrated OpenPNE 3 template activity (diary / topic / event lines) into the OpenPNE 4 wording with its link.');
+        $report->line('PLAN would render every migrated OpenPNE 3 template activity (diary / topic / event lines) into the OpenPNE 4 wording with its link.');
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip tables the run does not own) */
-    public function run(array $targetTables, string $sourcePrefix, ?string $sourceDatabase, Closure $out): bool
+    public function run(array $targetTables, string $sourcePrefix, ?string $sourceDatabase, RunReport $report): bool
     {
         foreach (self::TABLES as $table => $max) {
             if (! in_array($table, $targetTables, true)) {
@@ -44,12 +43,12 @@ final class ActivityTemplateTransform
             $key = 'activity_template_'.$table;
 
             if ($this->isCompleted($key)) {
-                $out("SKIP {$key}: already completed");
+                $report->skipped($key, 'already completed');
 
                 continue;
             }
 
-            if (! $this->transformTable($table, $max, $key, $sourcePrefix, $sourceDatabase, $out)) {
+            if (! $this->transformTable($table, $max, $key, $sourcePrefix, $sourceDatabase, $report)) {
                 return false;
             }
         }
@@ -57,11 +56,13 @@ final class ActivityTemplateTransform
         return true;
     }
 
-    private function transformTable(string $table, int $max, string $key, string $sourcePrefix, ?string $sourceDatabase, Closure $out): bool
+    private function transformTable(string $table, int $max, string $key, string $sourcePrefix, ?string $sourceDatabase, RunReport $report): bool
     {
         $renderer = app(ActivityTemplateRenderer::class);
         $source = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'activity_data');
         $liveRootUrl = URL::to('/');
+
+        $report->started($key);
 
         try {
             $metadata = UpgradeState::query()->where('step_key', $key)->value('metadata');
@@ -124,20 +125,20 @@ final class ActivityTemplateTransform
                 'finished_at' => now(),
             ]);
 
-            $out("DONE {$key}: {$rendered} rows");
+            $report->done($key, "{$rendered} rows", $rendered);
             foreach ($kept as $reason => $count) {
-                $out('WARN '.self::keptMessage($table, (string) $reason, (int) $count));
+                $report->warning(self::keptMessage($table, (string) $reason, (int) $count));
             }
 
             return true;
         } catch (Throwable $e) {
             UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
             ]);
 
-            $out("FAIL {$key}: {$e->getMessage()}");
+            $report->failed($key, RunReport::failureMessage($e), $e);
 
             return false;
         } finally {

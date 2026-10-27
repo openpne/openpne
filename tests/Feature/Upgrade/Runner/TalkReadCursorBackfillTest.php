@@ -9,6 +9,7 @@ use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Models\UpgradeState;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\TalkReadCursorBackfill;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +42,7 @@ class TalkReadCursorBackfillTest extends TestCase
         $this->assertSame(0, app(UnreadTalkCounts::class)($viewer)[$group->id]['count']);
         $this->assertDatabaseHas('group_members', ['group_id' => $group->id, 'member_id' => $viewer->id, 'talk_read_message_id' => $message->id]);
         $this->assertSame(2, (int) UpgradeState::where('step_key', 'talk_read_cursor_backfill')->value('rows_affected'));
-        $this->assertContains('DONE talk_read_cursor_backfill: 2 memberships changed', $this->out);
+        $this->assertStringContainsString('DONE talk_read_cursor_backfill: 2 memberships changed (', implode("\n", $this->out));
     }
 
     public function test_a_same_second_tie_goes_to_the_higher_id_and_a_silent_group_keeps_the_default(): void
@@ -128,10 +129,10 @@ class TalkReadCursorBackfillTest extends TestCase
         return (new TalkReadCursorBackfill)->run(['group_members', 'group_messages'], $this->collector());
     }
 
-    private function collector(): \Closure
+    private function collector(): RunReport
     {
-        return function (string $line): void {
+        return new RunReport(function (string $line): void {
             $this->out[] = $line;
-        };
+        });
     }
 }

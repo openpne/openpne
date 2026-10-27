@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Upgrade\SnsSetting;
 
 use App\Models\UpgradeState;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\SitePolicyMarkdownTransform;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -85,11 +86,11 @@ class SitePolicyMarkdownTransformTest extends TestCase
         // The output closure throws after the rewrite committed; the checkpoint has to stand, or the
         // resume would rewrite a second time.
         try {
-            (new SitePolicyMarkdownTransform)->run(['sns_settings'], function (string $line): void {
+            (new SitePolicyMarkdownTransform)->run(['sns_settings'], new RunReport(function (string $line): void {
                 if (str_starts_with($line, 'DONE')) {
                     throw new RuntimeException('output failed');
                 }
-            });
+            }));
             $this->fail('the throwing output closure should have propagated');
         } catch (RuntimeException) {
             // expected
@@ -150,11 +151,11 @@ class SitePolicyMarkdownTransformTest extends TestCase
         return (new SitePolicyMarkdownTransform)->run(['sns_settings'], $this->collector());
     }
 
-    private function collector(): callable
+    private function collector(): RunReport
     {
-        return function (string $line): void {
+        return new RunReport(function (string $line): void {
             $this->out[] = $line;
-        };
+        });
     }
 
     private function seedSetting(string $key, string $value): void

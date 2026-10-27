@@ -8,7 +8,6 @@ use App\Features\Group\BoardBumpedAt;
 use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\UpgradeState;
-use Closure;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -27,13 +26,13 @@ final class BoardBumpBackfill
         'group_events' => [GroupEvent::class, 'group_event_comments'],
     ];
 
-    public function plan(Closure $out): void
+    public function plan(RunReport $report): void
     {
-        $out("PLAN would settle every migrated topic's and event's bumped_at from its comments.");
+        $report->line("PLAN would settle every migrated topic's and event's bumped_at from its comments.");
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip unless the run owns a board and its comments) */
-    public function run(array $targetTables, Closure $out): bool
+    public function run(array $targetTables, RunReport $report): bool
     {
         $boards = array_filter(self::BOARDS, fn (array $board, string $table) => in_array($table, $targetTables, true) && in_array($board[1], $targetTables, true), ARRAY_FILTER_USE_BOTH);
         if ($boards === []) {
@@ -41,10 +40,12 @@ final class BoardBumpBackfill
         }
 
         if ($this->isCompleted()) {
-            $out('SKIP '.self::KEY.': already completed');
+            $report->skipped(self::KEY, 'already completed');
 
             return true;
         }
+
+        $report->started(self::KEY);
 
         try {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
@@ -72,16 +73,16 @@ final class BoardBumpBackfill
         } catch (Throwable $e) {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_FAILED,
-                'error' => $e->getMessage(),
+                'error' => RunReport::failureMessage($e),
                 'finished_at' => now(),
             ]);
 
-            $out('FAIL '.self::KEY.": {$e->getMessage()}");
+            $report->failed(self::KEY, RunReport::failureMessage($e), $e);
 
             return false;
         }
 
-        $out('DONE '.self::KEY.": {$updated} threads settled");
+        $report->done(self::KEY, "{$updated} threads settled", $updated);
 
         return true;
     }

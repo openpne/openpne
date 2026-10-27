@@ -63,7 +63,7 @@ class ActivityUpgradeRunnerSqlTest extends UpgradeSqlTestCase
 
         $lines = $this->runUpgrade(new RunOptions);
 
-        $this->assertContains('DONE talk_read_cursor_backfill: 2 memberships changed', $lines);
+        $this->assertStringContainsString('DONE talk_read_cursor_backfill: 2 memberships changed (', implode("\n", $lines));
         $this->assertDatabaseHas('group_messages', ['id' => 1, 'group_id' => 5, 'in_reply_to_id' => null, 'body' => "[Group topic] Marathon (Runners \u{2600}\u{FE0F})\nhttp://sns.example/topics/7"]);
         $this->assertDatabaseHas('group_messages', ['id' => 2, 'group_id' => 5, 'in_reply_to_id' => 1, 'body' => "reply \u{2600}\u{FE0F}"]);
         $this->assertDatabaseHas('timeline_posts', ['id' => 3, 'body' => "hello \u{2600}\u{FE0F}"]);

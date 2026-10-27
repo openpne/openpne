@@ -7,6 +7,7 @@ use App\Models\AdminUser;
 use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\PasswordWrap;
+use App\Upgrade\Runner\RunReport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
@@ -22,9 +23,9 @@ class PasswordWrapTest extends UpgradeSqlTestCase
     private function runWrap(array $tables = ['members', 'admin_users']): array
     {
         $lines = [];
-        $ok = (new PasswordWrap)->run($tables, function (string $line) use (&$lines): void {
+        $ok = (new PasswordWrap)->run($tables, new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
         $this->assertTrue($ok);
 
         return $lines;
@@ -108,9 +109,9 @@ class PasswordWrapTest extends UpgradeSqlTestCase
         $legacy = $this->seedBareMd5Member('secret');
         $lines = [];
 
-        (new PasswordWrap)->plan(function (string $line) use (&$lines): void {
+        (new PasswordWrap)->plan(new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
 
         $this->assertStringContainsString('PLAN', implode("\n", $lines));
         $this->assertSame(md5('secret'), $legacy->fresh()->password);

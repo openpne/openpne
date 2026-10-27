@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade\Runner;
 
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FriendFeatureUpgrade;
@@ -14,6 +15,7 @@ use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -64,6 +66,26 @@ class UpgradeRunnerTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_the_guards_still_print_the_json_report(): void
+    {
+        $cases = [['--source-prefix' => 'bad-prefix!'], ['--source-database' => 'bad db']];
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            $cases[] = [];
+        }
+
+        foreach ($cases as $parameters) {
+            $exit = Artisan::call('openpne:upgrade-from-3', $parameters + ['--json' => true]);
+            $output = Artisan::output();
+            $report = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
+
+            $this->assertSame(1, $exit);
+            $this->assertSame('precheck_error', $report['outcome']);
+            $this->assertCount(1, $report['errors']);
+            $this->assertSame([], $report['steps']);
+            $this->assertStringStartsWith('{', trim($output), 'nothing but the JSON document');
+        }
+    }
+
     public function test_upgrade_state_round_trips_metadata_and_casts(): void
     {
         $state = UpgradeState::create([
@@ -100,9 +122,9 @@ class UpgradeRunnerTest extends TestCase
         ]);
 
         $lines = [];
-        $ok = (new UpgradeRunner(new InsertSelectCompiler, []))->claimNamingEpoch(function (string $line) use (&$lines): void {
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, []))->claimNamingEpoch(new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString('--force-restart', implode("\n", $lines));
@@ -137,9 +159,9 @@ class UpgradeRunnerTest extends TestCase
         UpgradeState::create(['step_key' => 'MessageUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
 
         $lines = [];
-        $ok = (new UpgradeRunner(new InsertSelectCompiler, []))->claimNamingEpoch(function (string $line) use (&$lines): void {
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, []))->claimNamingEpoch(new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString('--force-restart', implode("\n", $lines));

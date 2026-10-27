@@ -10,6 +10,7 @@ use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\BoardBumpBackfill;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Verify\BoardBumpCheck;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +43,7 @@ class BoardBumpBackfillTest extends TestCase
         $this->assertTrue($silent->fresh()->bumped_at->equalTo('2018-01-05 09:00:00'));
         $this->assertTrue($event->fresh()->bumped_at->equalTo('2018-04-01 09:00:00'));
         $this->assertSame(3, (int) UpgradeState::where('step_key', BoardBumpBackfill::KEY)->value('rows_affected'));
-        $this->assertContains('DONE board_bump_backfill: 3 threads settled', $this->out);
+        $this->assertStringContainsString('DONE board_bump_backfill: 3 threads settled (', implode("\n", $this->out));
     }
 
     public function test_skips_unless_the_run_owns_a_board_and_its_comments_and_after_a_completed_checkpoint(): void
@@ -95,11 +96,11 @@ class BoardBumpBackfillTest extends TestCase
         return (new BoardBumpBackfill)->run(self::TABLES, $this->collector());
     }
 
-    private function collector(): \Closure
+    private function collector(): RunReport
     {
-        return function (string $line): void {
+        return new RunReport(function (string $line): void {
             $this->out[] = $line;
-        };
+        });
     }
 
     /** The migration cannot import app code, so the two spellings of the definition are pinned equal here. */

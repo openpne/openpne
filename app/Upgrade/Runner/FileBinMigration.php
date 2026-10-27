@@ -4,9 +4,9 @@ namespace App\Upgrade\Runner;
 
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
-use Closure;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use Throwable;
 
 /**
  * Migrates the OpenPNE 3 `file_bin` BLOBs without rewriting a byte: snapshot, move (RENAME of a
@@ -82,15 +82,15 @@ final class FileBinMigration
         return " {$total} {$table} row(s) have no {$other} row ({$key} ".implode(', ', $ids).($more > 0 ? " and {$more} more" : '').').';
     }
 
-    public function snapshot(string $sourcePrefix, ?string $sourceDatabase, Closure $out): void
+    public function snapshot(string $sourcePrefix, ?string $sourceDatabase, RunReport $report): bool
     {
-        $max = DB::scalar('SELECT MAX(`id`) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file'));
+        return $this->attempt(self::SNAPSHOT_KEY, $report, function () use ($sourcePrefix, $sourceDatabase): string {
+            $max = DB::scalar('SELECT MAX(`id`) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file'));
 
-        UpgradeState::updateOrCreate(
-            ['step_key' => self::SNAPSHOT_KEY],
-            ['status' => UpgradeState::STATUS_COMPLETED, 'metadata' => ['max_file_id' => $max === null ? null : (int) $max]],
-        );
-        $out('SNAPSHOT '.self::SNAPSHOT_KEY.': max file.id = '.($max ?? 'none'));
+            $this->checkpoint(self::SNAPSHOT_KEY, ['max_file_id' => $max === null ? null : (int) $max]);
+
+            return 'max file.id = '.($max ?? 'none');
+        });
     }
 
     /**
@@ -98,10 +98,10 @@ final class FileBinMigration
      * Idempotent across a mid-move crash: an already-moved source (absent) skips; the app drop is
      * skipped when the app file_bin is absent (a prior run dropped it) so the rename still heals.
      */
-    public function move(string $sourcePrefix, ?string $sourceDatabase, Closure $out): void
+    public function move(string $sourcePrefix, ?string $sourceDatabase, RunReport $report): bool
     {
         if ($this->inPlace($sourcePrefix, $sourceDatabase)) {
-            return;
+            return true;
         }
 
         $sourceSchema = $this->sourceSchema($sourceDatabase);
@@ -109,49 +109,82 @@ final class FileBinMigration
         $sourcePhysical = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin');
 
         if (! $this->tableExists($sourceSchema, $sourceTable)) {
-            $out('SKIP '.self::MOVE_KEY.': source file_bin already moved');
+            $report->skipped(self::MOVE_KEY, 'source file_bin already moved');
             $this->checkpoint(self::MOVE_KEY);
 
-            return;
+            return true;
         }
 
-        // Drop the source's own FK first (it references the source `file` — `op_file` under a prefix)
-        // so the rename carries no cross-table constraint; rewire() adds the OpenPNE 4 FK afterwards.
-        $sourceFk = $this->foreignKey($sourceSchema, $sourceTable);
-        if ($sourceFk !== null) {
-            DB::statement("ALTER TABLE {$sourcePhysical} DROP FOREIGN KEY `{$sourceFk->constraint_name}`");
-        }
-
-        if ($this->appFileBinExists()) {
-            if ($this->appFileBinCount() > 0) {
-                throw new RuntimeException('refusing to drop a non-empty app file_bin'); // preflight already rejects this
+        return $this->attempt(self::MOVE_KEY, $report, function () use ($sourceSchema, $sourceTable, $sourcePhysical): string {
+            // Drop the source's own FK first (it references the source `file` — `op_file` under a prefix)
+            // so the rename carries no cross-table constraint; rewire() adds the OpenPNE 4 FK afterwards.
+            $sourceFk = $this->foreignKey($sourceSchema, $sourceTable);
+            if ($sourceFk !== null) {
+                DB::statement("ALTER TABLE {$sourcePhysical} DROP FOREIGN KEY `{$sourceFk->constraint_name}`");
             }
-            DB::statement('DROP TABLE `file_bin`');
-        }
 
-        DB::statement("RENAME TABLE {$sourcePhysical} TO `file_bin`");
-        $this->checkpoint(self::MOVE_KEY);
-        $out('DONE '.self::MOVE_KEY.": moved {$sourcePhysical} into file_bin");
+            if ($this->appFileBinExists()) {
+                if ($this->appFileBinCount() > 0) {
+                    throw new RuntimeException('refusing to drop a non-empty app file_bin'); // preflight already rejects this
+                }
+                DB::statement('DROP TABLE `file_bin`');
+            }
+
+            DB::statement("RENAME TABLE {$sourcePhysical} TO `file_bin`");
+            $this->checkpoint(self::MOVE_KEY);
+
+            return "moved {$sourcePhysical} into file_bin";
+        });
     }
 
     /** Re-point the app file_bin's file_id FK onto `files`. 3-way idempotent by the referenced table. */
-    public function rewire(Closure $out): void
+    public function rewire(RunReport $report): bool
     {
         $fk = $this->foreignKey($this->database(), 'file_bin');
 
         if ($fk !== null && $fk->referenced_table === 'files') {
-            $out('SKIP '.self::REWIRE_KEY.': file_id already references files');
+            $report->skipped(self::REWIRE_KEY, 'file_id already references files');
             $this->checkpoint(self::REWIRE_KEY);
 
-            return;
+            return true;
         }
 
-        if ($fk !== null) {
-            DB::statement("ALTER TABLE `file_bin` DROP FOREIGN KEY `{$fk->constraint_name}`");
+        return $this->attempt(self::REWIRE_KEY, $report, function () use ($fk): string {
+            if ($fk !== null) {
+                DB::statement("ALTER TABLE `file_bin` DROP FOREIGN KEY `{$fk->constraint_name}`");
+            }
+            DB::statement('ALTER TABLE `file_bin` ADD CONSTRAINT `file_bin_file_id_foreign` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`) ON DELETE CASCADE');
+            $this->checkpoint(self::REWIRE_KEY);
+
+            return 'file_id now references files';
+        });
+    }
+
+    /**
+     * The step failure model for the three DDL phases: one line and a failed checkpoint on a throw,
+     * so the runner stops and a re-run resumes here.
+     *
+     * @param  \Closure(): string  $work  returns the DONE detail
+     */
+    private function attempt(string $key, RunReport $report, \Closure $work): bool
+    {
+        $report->started($key);
+
+        try {
+            $report->done($key, $work());
+
+            return true;
+        } catch (Throwable $e) {
+            $message = RunReport::failureMessage($e);
+            UpgradeState::updateOrCreate(['step_key' => $key], [
+                'status' => UpgradeState::STATUS_FAILED,
+                'error' => $message,
+                'finished_at' => now(),
+            ]);
+            $report->failed($key, $message, $e);
+
+            return false;
         }
-        DB::statement('ALTER TABLE `file_bin` ADD CONSTRAINT `file_bin_file_id_foreign` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`) ON DELETE CASCADE');
-        $this->checkpoint(self::REWIRE_KEY);
-        $out('DONE '.self::REWIRE_KEY.': file_id now references files');
     }
 
     /** For reset(): drop the app file_bin's FK so DELETEing `files` cannot cascade into the BLOBs. */
@@ -163,13 +196,13 @@ final class FileBinMigration
         }
     }
 
-    public function plan(string $sourcePrefix, ?string $sourceDatabase, Closure $out): void
+    public function plan(string $sourcePrefix, ?string $sourceDatabase, RunReport $report): void
     {
-        $out('PLAN '.self::SNAPSHOT_KEY.': would record MAX(`id`) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file'));
+        $report->line('PLAN '.self::SNAPSHOT_KEY.': would record MAX(`id`) FROM '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file'));
         if (! $this->inPlace($sourcePrefix, $sourceDatabase)) {
-            $out('PLAN '.self::MOVE_KEY.': would move '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin').' into file_bin');
+            $report->line('PLAN '.self::MOVE_KEY.': would move '.InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file_bin').' into file_bin');
         }
-        $out('PLAN '.self::REWIRE_KEY.': would re-point file_bin.file_id FK onto files');
+        $report->line('PLAN '.self::REWIRE_KEY.': would re-point file_bin.file_id FK onto files');
     }
 
     private function inPlace(string $sourcePrefix, ?string $sourceDatabase): bool
@@ -218,8 +251,14 @@ final class FileBinMigration
         return DB::connection()->getDatabaseName();
     }
 
-    private function checkpoint(string $key): void
+    /** @param  array<string, mixed>|null  $metadata */
+    private function checkpoint(string $key, ?array $metadata = null): void
     {
-        UpgradeState::updateOrCreate(['step_key' => $key], ['status' => UpgradeState::STATUS_COMPLETED]);
+        $values = ['status' => UpgradeState::STATUS_COMPLETED, 'error' => null, 'finished_at' => now()];
+        if ($metadata !== null) {
+            $values['metadata'] = $metadata;
+        }
+
+        UpgradeState::updateOrCreate(['step_key' => $key], $values);
     }
 }

@@ -12,6 +12,7 @@ use App\Models\TimelinePost;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\EmojiMap;
 use App\Upgrade\Runner\EmojiTransform;
+use App\Upgrade\Runner\RunReport;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 /**
@@ -24,9 +25,9 @@ class EmojiTransformTest extends UpgradeSqlTestCase
     private function runTransform(array $tables): array
     {
         $lines = [];
-        $ok = (new EmojiTransform)->run($tables, function (string $line) use (&$lines): void {
+        $ok = (new EmojiTransform)->run($tables, new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
         $this->assertTrue($ok);
 
         return $lines;
@@ -159,9 +160,9 @@ class EmojiTransformTest extends UpgradeSqlTestCase
         $colliding = Group::factory()->create(['name' => 'X[i:1]']);
 
         $lines = [];
-        $ok = (new EmojiTransform)->run(['groups'], function (string $line) use (&$lines): void {
+        $ok = (new EmojiTransform)->run(['groups'], new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString('FAIL emoji_groups', implode("\n", $lines));
@@ -179,9 +180,9 @@ class EmojiTransformTest extends UpgradeSqlTestCase
         $diary = Diary::factory()->create(['body' => 'x[i:1]y']);
         $lines = [];
 
-        (new EmojiTransform)->plan(function (string $line) use (&$lines): void {
+        (new EmojiTransform)->plan(new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        });
+        }));
 
         $this->assertStringContainsString('PLAN', implode("\n", $lines));
         $this->assertSame('x[i:1]y', $diary->fresh()->body);

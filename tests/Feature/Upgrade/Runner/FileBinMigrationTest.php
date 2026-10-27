@@ -8,6 +8,7 @@ use App\Upgrade\Column;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\FileBinMigration;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -123,11 +124,11 @@ class FileBinMigrationTest extends TestCase
 
         $runner = new UpgradeRunner(new InsertSelectCompiler, [$this->fileStep()]);
 
-        $this->assertTrue($runner->run(new RunOptions, $this->out($ignore)));
+        $this->assertTrue($runner->run(new RunOptions, null, $this->out($ignore)));
         $this->assertDatabaseCount('files', 2);
         $this->assertSame('files', $this->fkReferencedTable('file_bin'));
 
-        $this->assertTrue($runner->run(new RunOptions(forceRestart: true), $this->out($ignore)));
+        $this->assertTrue($runner->run(new RunOptions(forceRestart: true), null, $this->out($ignore)));
         $this->assertDatabaseCount('files', 2);
         $this->assertSame('files', $this->fkReferencedTable('file_bin'));
         $this->assertSame(self::BLOB, DB::table('file_bin')->where('file_id', 1)->value('bin'));
@@ -301,7 +302,7 @@ class FileBinMigrationTest extends TestCase
         $this->seedFile('`file`', 2, 'b');
         $this->seedFileBin('`file_bin`', 1, self::BLOB);
 
-        $ok = (new UpgradeRunner(new InsertSelectCompiler, [$this->fileStep()]))->run(new RunOptions, $this->out($lines));
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, [$this->fileStep()]))->run(new RunOptions, null, $this->out($lines));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString('file has 2 rows but file_bin has 1', implode("\n", $lines));
@@ -320,6 +321,78 @@ class FileBinMigrationTest extends TestCase
         $this->assertNotNull($error);
         $this->assertStringContainsString('app file_bin already has rows', $error);
         $this->assertSame(1, (int) DB::scalar('SELECT COUNT(*) FROM `file_bin`'), 'the app file_bin is untouched');
+    }
+
+    public function test_a_failing_rewire_is_one_fail_line_with_a_failed_checkpoint(): void
+    {
+        // Called directly because run()'s preflight refuses bytes with no file row before the FK add.
+        $this->seedInPlace();
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        $this->seedFileBin('`file_bin`', 999, 'orphan');
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $ok = (new FileBinMigration)->rewire($this->out($lines));
+
+        $this->assertFalse($ok);
+        $fails = array_values(array_filter($lines, fn (string $l): bool => str_starts_with($l, 'FAIL')));
+        $this->assertCount(1, $fails);
+        $this->assertStringStartsWith('FAIL file_bin_rewire: SQLSTATE[23000]', $fails[0]);
+        $this->assertStringNotContainsString("\n", $fails[0]);
+        $this->assertStringNotContainsString('ALTER TABLE', $fails[0]);
+        $state = UpgradeState::query()->where('step_key', 'file_bin_rewire')->first();
+        $this->assertSame(UpgradeState::STATUS_FAILED, $state->status);
+        $this->assertStringStartsWith('SQLSTATE[23000]', $state->error);
+
+        DB::table('file_bin')->where('file_id', 999)->delete();
+
+        $this->assertTrue((new FileBinMigration)->rewire($this->out($again)));
+        $this->assertStringContainsString('DONE file_bin_rewire', implode("\n", $again));
+        $this->assertNull(UpgradeState::query()->where('step_key', 'file_bin_rewire')->value('error'));
+    }
+
+    public function test_a_failing_move_is_one_fail_line_and_resumes_after_the_cause_is_removed(): void
+    {
+        $ids = $this->seedSeparateDatabase();
+        // The refusal the preflight normally stops; called directly it surfaces as the step failure.
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        $this->seedFileBin('`file_bin`', $ids[0], 'unexpected');
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        $migration = new FileBinMigration;
+
+        $ok = $migration->move('', $this->sourceDb(), $this->out($lines));
+
+        $this->assertFalse($ok);
+        $this->assertContains('FAIL file_bin_move: refusing to drop a non-empty app file_bin', $lines);
+        $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => 'file_bin_move', 'status' => UpgradeState::STATUS_FAILED]);
+        $this->assertTrue($this->tableExists($this->sourceDb(), 'file_bin'), 'the source bytes are still where they were');
+
+        DB::table('file_bin')->delete();
+
+        $this->assertTrue($migration->move('', $this->sourceDb(), $this->out($again)));
+        $this->assertStringContainsString('DONE file_bin_move', implode("\n", $again));
+        $this->assertSame(count($ids), (int) DB::scalar('SELECT COUNT(*) FROM `file_bin`'));
+    }
+
+    public function test_the_next_steps_belong_to_the_run_that_first_completed_the_site(): void
+    {
+        $this->dropAppFileBin();
+        $this->createOp3File('`file`');
+        $this->createOp3FileBin('`file_bin`', '`file`', 'file_bin_file_id_file_id');
+        $this->seedFile('`file`', 1, 'a');
+        $this->seedFileBin('`file_bin`', 1, self::BLOB);
+        $runner = new UpgradeRunner(new InsertSelectCompiler, [$this->fileStep()]);
+
+        $first = $this->out($lines);
+        $this->assertTrue($runner->run(new RunOptions, null, $first));
+        $this->assertStringContainsString('Each migrated picture', implode("\n", $lines));
+        $this->assertStringContainsString('RUN file_id_max_snapshot', implode("\n", $lines));
+        $this->assertCount(2, $first->jsonSerialize()['next_steps']);
+
+        $second = $this->out($again);
+        $this->assertTrue($runner->run(new RunOptions, null, $second));
+        $this->assertStringNotContainsString('Each migrated picture', implode("\n", $again));
+        $this->assertSame([], $second->jsonSerialize()['next_steps']);
+        $this->assertTrue($second->jsonSerialize()['resumed']);
     }
 
     public function test_the_create_migration_skips_a_preexisting_file_bin(): void
@@ -491,13 +564,13 @@ class FileBinMigrationTest extends TestCase
     }
 
     /** @param  mixed  $lines  populated with the captured output lines */
-    private function out(&$lines): \Closure
+    private function out(&$lines): RunReport
     {
         $lines = [];
 
-        return function (string $line) use (&$lines): void {
+        return new RunReport(function (string $line) use (&$lines): void {
             $lines[] = $line;
-        };
+        });
     }
 
     private function cleanup(): void

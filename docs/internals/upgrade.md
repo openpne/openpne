@@ -189,6 +189,39 @@ on the first run, so a resume under another epoch aborts instead of re-copying u
 `reset()` (`--force-restart`) DELETEs the upgrade-owned targets (TRUNCATE fails on an FK-referenced
 table, error 1701) after dropping the `file_bin` FK so the BLOBs cannot cascade.
 
+## Run report
+
+Every line the runner, the passes and `FileBinMigration` print goes through one
+`RunReport` (`app/Upgrade/Runner/RunReport.php`), which records the event the `--json` report
+serialises as it prints the human line — a message written any other way is invisible to
+`--json`. The line vocabulary is the operator guide's
+([upgrading-from-openpne3.md](../upgrading-from-openpne3.md#3-dry-run-and-read-the-report)); its
+contracts:
+
+- `failed()` is one line: control characters collapse to a space, and the message a step or
+  pass hands it is `RunReport::failureMessage()` — a `QueryException`'s PDO message, never the
+  SQL and bindings the wrapper appends (bindings are member text). The same string is the
+  checkpoint's `error`. The whole exception is printed only under `-v`, after the line and the
+  checkpoint are written: `failed()` rethrows the cause it is given then, and nowhere else does.
+- `file_bin` snapshot, move and rewire fail like a step: one `FAIL`, a `failed` checkpoint, the
+  run stops, and a re-run resumes from them.
+- `UpgradeRunner::run()` catches whatever its body throws: a failure no step owns is recorded
+  as `FAIL run:`; one thrown after a step already recorded its failure (the cleanup `drop`) goes
+  to the log. The command prints the JSON on every exit — the option and driver guards, the
+  state-table check and a throwing one included — then exits 1 on any `ERROR` or `FAIL`.
+- `next_steps` carries a line only when it applied to this run: the surface-mode and
+  picture-warming lines are recorded by the run that first completed the site (the one that
+  inserted `surface_mode`), so a re-run has an empty list, and an operator who set the mode
+  before the first completion never sees the picture line (the guide's §5 says the same).
+- `steps[]` lists the walk steps, the passes and the three `file_bin` keys by their checkpoint
+  `step_key`; `elapsed_ms` is measured by the report between `started()` and `done()` /
+  `failed()`, and is `null` for a failure recorded without a start (the emoji charset refusal).
+  The passes' dry-run `PLAN would …` lines carry no key and are not steps.
+- `warnings[]` entries carry `code`, `category` and `count` as `null`, reserved for the coded
+  warnings a later version fills in without a breaking change.
+- `release` is the deployment's marker ([runtime.md](runtime.md#release-marker)), `null`
+  without one; `site` is the connection's database name.
+
 ## Post-walk passes
 
 Work an `INSERT ... SELECT` cannot express runs after the walk, in this order, each under its own
