@@ -12,7 +12,9 @@ use App\Services\TermService;
 use App\Upgrade\Column;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\UpgradeRunner;
+use App\Upgrade\Runner\ZeroDatePreflight;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
@@ -86,6 +88,41 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertStringContainsString('INSERT INTO `friendships`', implode("\n", $lines));
         $this->assertDatabaseCount('friendships', 0);
         $this->assertDatabaseCount('openpne4_upgrade_state', 0);
+    }
+
+    public function test_a_zero_date_aborts_before_anything_is_written_on_both_runs(): void
+    {
+        $member = $this->activeMember();
+        $mode = DB::selectOne('SELECT @@SESSION.sql_mode AS mode')->mode;
+        DB::statement("SET SESSION sql_mode = ''");
+        DB::table('member')->where('id', $member->id)->update(['created_at' => '0000-00-00 00:00:00']);
+        DB::statement("SET SESSION sql_mode = '{$mode}'");
+        $step = new class extends UpgradeStep
+        {
+            protected string $source = 'member';
+
+            protected string $target = 'members';
+
+            public function columns(): array
+            {
+                return ['id' => Column::source('id'), 'name' => Column::source('name'), 'created_at' => Column::source('created_at'), 'updated_at' => Column::source('updated_at')];
+            }
+        };
+        Member::query()->delete();
+
+        foreach ([true, false] as $dryRun) {
+            $lines = [];
+            $report = new RunReport(function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            }, false, $dryRun);
+
+            $this->assertFalse($this->runner([$step])->run(new RunOptions(dryRun: $dryRun), null, $report));
+
+            $this->assertContains('ERROR '.ZeroDatePreflight::zeroDateMessage(class_basename($step), 'members', 'created_at', 'member', ['created_at'], false, 1, [$member->id], false), $lines);
+            $this->assertSame(RunReport::OUTCOME_PRECHECK_ERROR, $report->jsonSerialize()['outcome']);
+            $this->assertDatabaseCount('members', 0);
+            $this->assertDatabaseCount('openpne4_upgrade_state', 0);
+        }
     }
 
     public function test_force_restart_clears_targets_and_reruns(): void

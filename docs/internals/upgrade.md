@@ -165,6 +165,24 @@ writes — as WARNs; it runs only when `nice` is present, since the plugin is op
 the source has: the letter names another plugin's table, which the run materialises empty only
 after this check.
 
+`ZeroDatePreflight` evaluates each step's own SELECT (`InsertSelectCompiler::compileSelect()`,
+each expression aliased to its target column) and counts, per date-typed target column, the
+values MySQL's strict sql_mode — `NO_ZERO_DATE` / `NO_ZERO_IN_DATE`, which the app connection
+runs under — would refuse on the INSERT: an ERROR naming the source column, the step and the
+first ids. Running the SELECT rather than modelling it is what makes the scope exact: the step's
+filter, its CASE arms (`MemberProfileUpgrade` maps the `0000-00-00` sentinel to NULL itself) and
+its subqueries. The test is `MONTH() = 0 OR DAY() = 0` (a year 0000 with a real month and day is
+a value strict mode accepts), never a zero-date literal (strict mode refuses one in a comparison,
+1525). A zero date a CASE or COALESCE meets through a
+subquery comes out of the SELECT as NULL with a 1292 warning that the INSERT turns into an error,
+so the warning list of the scan is read too and reported as the step's subquery tables (the row
+itself cannot be named). Not covered: a date invalid in another way (`2010-02-31`, writable only
+under `ALLOW_INVALID_DATES`), which passes the parts test and still fails the INSERT. An absent
+optional table is stood in by a session TEMPORARY table for the scan and dropped again.
+`FileBinMigration::preflight()` applies the same test to `file_bin`'s own timestamps — the one
+preflight error for a state the run itself survives (the rewire below rebuilds nothing): the rows
+become the app's table under the app's strict mode, and any later rebuild of it fails on them.
+
 `MailTemplatePreflight` render-tests every template the translation step will carry, because the
 step copies bodies without parsing them. A translation whose template is empty is neither carried
 nor tested: OpenPNE 3 never sends such a body and falls back to its built-in sample, which is what
@@ -346,6 +364,13 @@ keeps `file.id`, so the migration re-points the `file_bin.file_id` FK from `file
 `.ibd` move) after dropping the source FK. `snapshot()` records `MAX(file.id)` as the bound for a
 post-switchover rollback.
 
+The FK is added with `foreign_key_checks` off and `ALGORITHM=INPLACE`: MySQL then changes metadata
+only, where with checks on it rebuilds the whole table (COPY — every BLOB rewritten once, and a
+zero date in a row fails it under strict mode). The price is that no existing row is validated by
+the ALTER: the pairing preflight is what guarantees every `file_bin` row has its `files` row, and
+verify's `file_bin:orphans` re-checks it. The explicit algorithm makes a server that cannot do it
+fail the step instead of rebuilding silently. The session variable is restored whatever happens.
+
 The table's four columns are frozen because the fresh-install schema must equal the upgrade
 target: neither upgrade path keeps the table the app's `CREATE TABLE` makes (a same-database dump
 keeps its own `file_bin`, a source-database run drops the empty app table and RENAMEs the source in),
@@ -385,7 +410,8 @@ reads status, not verify.
   on its rows alone.
 - **`ClassicThemeCheck`** requires the stored `classic_theme` to be empty or to name a package under
   `public/opSkinThemePlugin`; it consults no checkpoint.
-- **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, and the FK is
+- **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, no `file_bin`
+  row is without its `files` row (`file_bin:orphans` — the rewire validates none), and the FK is
   rewired.
 - **Check C**: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and no unknown
   scheme exists.

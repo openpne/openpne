@@ -138,8 +138,11 @@ template and locale, a diary, message, topic, event or timeline post belonging t
 finished registering (see [Members who never finished registering](#members-who-never-finished-registering)),
 a timeline post whose audience flag is not one OpenPNE 3 could write, an activity with more than 255
 attached files, a file that two records point at (OpenPNE 4 gives a file one owner, so one
-record's readers would see it from the other's page), or a member who liked one post, talk message,
-diary or comment twice (OpenPNE 4 keeps one 👍 per member). Fix the source and dry-run again.
+record's readers would see it from the other's page), a member who liked one post, talk message,
+diary or comment twice (OpenPNE 4 keeps one 👍 per member), or a date column holding `0000-00-00`
+(or a zero month or day) on a row the upgrade copies — MySQL's strict mode, which OpenPNE 4 runs
+under, refuses the value, so the line names the table, the column, the count and the first ids;
+set a real time there (or NULL where the column allows it). Fix the source and dry-run again.
 
 **`WARN` never stops the run**; its code says what happened to the row. Each line is
 `WARN <code>: …`, and the JSON entry carries the `code`, its `category` and a `count` in the
@@ -238,7 +241,8 @@ $ php artisan openpne:verify-upgrade
 Read-only, and takes the same option you upgraded with. It does not trust what the upgrade reported:
 it re-counts the source and the target independently, and fails if any check fails. It checks that
 each step's source rows, the number it recorded, and the rows it owns in the target all agree; that
-every file has its bytes at the right length and pointing at the right place; that every migrated
+every file has its bytes at the right length and pointing at the right place, and no stored bytes
+belong to a file that is not there; that every migrated
 template activity holds the line the upgrade renders for it; that every group membership is read up to
 its group's migrated talk (a message read since counts, the untouched default does not); and that no OpenPNE 3 password hash is left behind. The template
 lines are compared against a fresh render, so leave the site's terms as they were until verification

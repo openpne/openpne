@@ -70,6 +70,15 @@ final class SourceSchema
         return $nullable;
     }
 
+    /** @return list<string> columns of a source table whose type token is datetime / timestamp / date, in definition order */
+    public function dateColumns(string $table): array
+    {
+        // The token right after the name: a COMMENT mentioning a timestamp must not match.
+        preg_match_all('/^\s+`([a-z0-9_]+)`\s+(?:datetime|timestamp|date)\b/im', $this->createStatement($table), $matches);
+
+        return $matches[1];
+    }
+
     /**
      * Every `table.column` that is a foreign key onto `file.id`, in fixture order. Coverage is per
      * column, not per table: a file owner can be a join table or a plain column on another table.

@@ -112,9 +112,9 @@ final class UpgradeRunner
         // source `file` that verdict guards) and only when this run migrates files.
         $fileBin = new FileBinMigration;
         $migratesFiles = in_array('files', $this->targetTables(), true);
-        $fileBinError = $migratesFiles && ! $source->hasErrors()
+        $fileBinErrors = $migratesFiles && ! $source->hasErrors()
             ? $fileBin->preflight($options->sourcePrefix, $options->sourceDatabase)
-            : null;
+            : [];
 
         // Same shape for the mail templates: it reads the source rows the structural check guards, and
         // its errors are source states the translation step cannot survive, so they join this abort.
@@ -146,8 +146,12 @@ final class UpgradeRunner
         $uploadReport = ! $source->hasErrors() && $this->hasStep(FileUpgrade::class)
             ? (new UploadFileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : new PreflightReport([], []);
+        // Evaluates every step's SELECT, so it needs the structural verdict the SELECTs assume.
+        $zeroDateErrors = ! $source->hasErrors()
+            ? (new ZeroDatePreflight($this->steps(), SourceSchema::default(), $this->compiler))->inspect($options->sourcePrefix, $options->sourceDatabase, $source->absentOptional)
+            : [];
 
-        foreach (array_merge($source->tableErrors, $source->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors) as $error) {
+        foreach (array_merge($source->tableErrors, $source->columnErrors, $fileBinErrors, $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors, $zeroDateErrors) as $error) {
             $report->error($error);
         }
 
@@ -157,7 +161,7 @@ final class UpgradeRunner
             $report->warning($warning);
         }
 
-        if ($source->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $niceReport->hasErrors() || $sharedFileError !== null || $termErrors !== []) {
+        if ($source->hasErrors() || $fileBinErrors !== [] || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $niceReport->hasErrors() || $sharedFileError !== null || $termErrors !== [] || $zeroDateErrors !== []) {
             $report->abort('the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
@@ -268,8 +272,8 @@ final class UpgradeRunner
                 $walked = (new ClassicThemeSelection)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $report);
             }
 
-            // Only after the walk: FileUpgrade has populated `files`, so the FK rewire's existing-row
-            // validation resolves, and no step touches file_bin.
+            // Only after the walk: the FK target `files` must exist and hold every row the bytes pair
+            // with, since the rewire validates nothing (verify's file_bin:orphans does).
             if ($walked && $migratesFiles) {
                 $walked = $fileBin->move($options->sourcePrefix, $options->sourceDatabase, $report)
                     && $fileBin->rewire($report);
