@@ -13,6 +13,7 @@ use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SeedsSourceMembers;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
@@ -92,6 +93,74 @@ class UpgradeVerifierSqlTest extends UpgradeSqlTestCase
     }
 
     /** @return array{0: VerifyReport, 1: string} */
+    public function test_the_json_leads_with_the_site_the_build_and_the_completion_and_checks_the_manifest(): void
+    {
+        $runner = new UpgradeRunner(new InsertSelectCompiler, $this->relationSteps());
+        $this->app->instance(UpgradeVerifier::class, new UpgradeVerifier(new InsertSelectCompiler, $this->relationSteps()));
+
+        $this->assertSame(0, Artisan::call('openpne:verify-upgrade', ['--json' => true, '-q' => true]));
+        $json = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame(['site', 'release', 'manifest_hash', 'upgrade_completed_at', 'upgrade_release', 'upgrade_manifest_hash', 'upgrade_verified', 'passed', 'total', 'checks'], array_keys($json));
+        $this->assertSame(DB::connection()->getDatabaseName(), $json['site']);
+        $this->assertSame($runner->manifest()->hash(), $json['manifest_hash']);
+        $this->assertSame($json['manifest_hash'], $json['upgrade_manifest_hash']);
+        $this->assertTrue($json['upgrade_verified']);
+        $this->assertNotNull($json['upgrade_completed_at']);
+        $this->assertSame(['manifest', 'pass'], [end($json['checks'])['name'], end($json['checks'])['status']]);
+    }
+
+    public function test_a_marker_from_another_set_of_steps_fails_the_manifest_check(): void
+    {
+        $marker = UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->first();
+        $marker->update(['metadata' => ['manifest_hash' => '0000'] + $marker->metadata]);
+
+        [$report, $out] = $this->verify();
+
+        $this->assertTrue($report->failed());
+        $this->assertStringContainsString('FAIL manifest: completed under a different set of steps', $out);
+    }
+
+    public function test_an_unverified_marker_passes_the_manifest_check_with_the_fact(): void
+    {
+        $marker = UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->first();
+        $marker->update(['metadata' => ['verified' => false, 'manifest_hash' => null, 'release' => null] + $marker->metadata]);
+
+        [$report, $out] = $this->verify();
+
+        $this->assertFalse($report->failed(), $out);
+        $this->assertStringContainsString('PASS manifest: completed under an unknown set of steps', $out);
+        $this->assertFalse(json_decode(json_encode($report), true)['upgrade_verified']);
+    }
+
+    public function test_without_a_marker_the_metadata_is_null_and_no_manifest_check_runs(): void
+    {
+        UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
+
+        [$report, $out] = $this->verify();
+
+        $this->assertStringNotContainsString('manifest', $out);
+        $this->assertNull(json_decode(json_encode($report), true)['upgrade_verified']);
+    }
+
+    public function test_the_json_write_is_raw(): void
+    {
+        // A missing source table is reported, not thrown, and its name lands in the check detail.
+        $this->app->instance(UpgradeVerifier::class, new UpgradeVerifier(new InsertSelectCompiler, [new FriendshipUpgrade, new class extends MemberBlockUpgrade
+        {
+            public function sourceTable(): string
+            {
+                return 'member_<fg=bogus>';
+            }
+        }]));
+
+        $exit = Artisan::call('openpne:verify-upgrade', ['--json' => true]);
+        $json = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame(1, $exit);
+        $this->assertStringContainsString('<fg=bogus>', json_encode($json['checks']));
+    }
+
     private function verify(): array
     {
         $lines = [];

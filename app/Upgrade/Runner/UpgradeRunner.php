@@ -8,6 +8,7 @@ use App\Services\GadgetService;
 use App\Services\NavigationService;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
+use App\Support\ReleaseMarker;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
 use App\Upgrade\InsertSelectCompiler;
@@ -34,7 +35,10 @@ final class UpgradeRunner
     public const NAMING_EPOCH = 5;
 
     /** The `step_key` the epoch marker occupies. Not a step: no registry entry ever bears this name. */
-    private const EPOCH_KEY = 'naming_epoch';
+    public const EPOCH_KEY = 'naming_epoch';
+
+    /** The `step_key` of the completion marker, written once on the first full success; not a step either. */
+    public const RUN_KEY = 'upgrade_completed';
 
     /** @param list<UpgradeStep>|null $steps */
     public function __construct(
@@ -53,6 +57,12 @@ final class UpgradeRunner
 
         try {
             $ok = $this->execute($options, $report);
+
+            // After execute()'s finally dropped the created tables, inside this try so a failing
+            // write is the run's failure and the next run stamps it; never on a dry run.
+            if ($ok && ! $options->dryRun) {
+                $this->stampCompletion();
+            }
         } catch (Throwable $e) {
             // A failure a step already recorded (and, under verbose, rethrew) passes through; one nothing owns is the run's.
             if (! $report->isFailed()) {
@@ -73,6 +83,19 @@ final class UpgradeRunner
 
     private function execute(RunOptions $options, RunReport $report): bool
     {
+        // Before the preflight (it reads only the state table, so a completed site whose OpenPNE 3 tables are gone still answers); --force-restart is the escape hatch, so it is not gated.
+        $verdict = $options->forceRestart && ! $options->dryRun ? new ResumeVerdict(ResumeVerdict::FRESH) : $this->resumeVerdict();
+        if ($verdict->verdict === ResumeVerdict::COMPLETED) {
+            $report->line('Completed: '.$verdict->reason.'; nothing to do (openpne:upgrade-status reports what has changed since).');
+
+            return true;
+        }
+        if ($verdict->verdict === ResumeVerdict::BLOCKED) {
+            $report->abort((string) $verdict->reason, RunReport::OUTCOME_BLOCKED);
+
+            return false;
+        }
+
         $preflight = new SourcePreflight($this->steps(), SourceSchema::default());
         $source = $preflight->inspect($options->sourcePrefix, $options->sourceDatabase);
 
@@ -151,12 +174,6 @@ final class UpgradeRunner
         }
 
         if ($options->dryRun) {
-            // Same compatibility gate as a real run, but read-only: a plan against legacy or
-            // mismatched state must say so instead of PLANning steps that would never be allowed.
-            if (! $this->claimNamingEpoch($report, dryRun: true)) {
-                return false;
-            }
-
             foreach ($source->absentOptional as $table) {
                 $report->line("PLAN would create empty source table `{$table}` (".SourcePreflight::absentPluginMessage($table).')');
             }
@@ -169,7 +186,7 @@ final class UpgradeRunner
             (new SitePolicyMarkdownTransform)->plan($report);
             (new TalkReadCursorBackfill)->plan($report);
             (new BoardBumpBackfill)->plan($report);
-            if ($this->readsSourceTable('sns_config')) {
+            if ((new ClassicThemeSelection)->checkpointKeys($this->targetTables(), $this->sourceTables()) !== []) {
                 (new ClassicThemeSelection)->plan($report);
             }
             $report->line('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
@@ -183,11 +200,9 @@ final class UpgradeRunner
             $this->reset($report);
         }
 
-        // After the restart (which clears the marker with the rest of the state), so --force-restart
-        // is exactly the escape hatch the abort message names.
-        if (! $this->claimNamingEpoch($report)) {
-            return false;
-        }
+        // After the restart (which clears the epoch row with the rest of the state): the restart
+        // is exactly the escape hatch the refusal names, and a fresh state is stamped here.
+        $this->stampRun();
 
         $created = $preflight->ensureExists($source->absentOptional, $options->sourcePrefix, $options->sourceDatabase);
 
@@ -240,7 +255,7 @@ final class UpgradeRunner
 
             // After the settings step: the skin is decided by two source tables at once, which no
             // INSERT...SELECT over one of them can express; gated on sns_config as the preflight is.
-            if ($walked && $this->readsSourceTable('sns_config')) {
+            if ($walked && (new ClassicThemeSelection)->checkpointKeys($this->targetTables(), $this->sourceTables()) !== []) {
                 $walked = (new ClassicThemeSelection)->run($this->targetTables(), $options->sourcePrefix, $options->sourceDatabase, $report);
             }
 
@@ -301,14 +316,41 @@ final class UpgradeRunner
     }
 
     /**
-     * Stamps this run's naming epoch, or refuses to resume state written under another one: after a
-     * rename the old checkpoint keys match no current step, so a resume would re-copy every renamed
-     * step alongside the old rows. Public so the guard is exercisable without a MySQL source; with
-     * $dryRun the check runs but never writes the marker.
+     * The resume gate as one method: refuses (abort) what resumeVerdict() blocks, and stamps the epoch
+     * row with this run's manifest on a fresh state unless $dryRun. Public so the guard is exercisable
+     * without a MySQL source.
      */
     public function claimNamingEpoch(?RunReport $report = null, bool $dryRun = false): bool
     {
         $report ??= new RunReport;
+        $verdict = $this->resumeVerdict();
+
+        if ($verdict->verdict === ResumeVerdict::BLOCKED) {
+            $report->abort((string) $verdict->reason, RunReport::OUTCOME_BLOCKED);
+
+            return false;
+        }
+
+        if (! $dryRun) {
+            $this->stampRun();
+        }
+
+        return true;
+    }
+
+    /**
+     * Reads the state table only (no source), so it is safe before the preflight and for the status
+     * command. The completion marker is checked first: a rename or a changed step after completion
+     * must never answer with --force-restart, which on a live site is the site's data.
+     */
+    public function resumeVerdict(): ResumeVerdict
+    {
+        $completed = UpgradeState::query()->where('step_key', self::RUN_KEY)->first();
+        if ($completed !== null) {
+            $at = $completed->metadata['completed_at'] ?? $completed->finished_at?->toIso8601String() ?? 'an earlier run';
+
+            return new ResumeVerdict(ResumeVerdict::COMPLETED, "the upgrade of this site finished at {$at}");
+        }
 
         $marker = UpgradeState::query()->where('step_key', self::EPOCH_KEY)->first();
 
@@ -317,41 +359,116 @@ final class UpgradeRunner
             // that named steps differently), which is exactly the state this guard exists to refuse —
             // adopting it would leave the renamed steps looking never-run.
             if (UpgradeState::query()->exists()) {
-                $report->abort('the upgrade state has checkpoints but no naming-epoch marker, so it was '
+                return new ResumeVerdict(ResumeVerdict::BLOCKED, 'the upgrade state has checkpoints but no naming-epoch marker, so it was '
                     .'written under earlier step/table names and cannot be resumed — re-run with '
-                    .'--force-restart to start over from an empty target.', RunReport::OUTCOME_BLOCKED);
-
-                return false;
+                    .'--force-restart to start over from an empty target.');
             }
 
-            if (! $dryRun) {
-                UpgradeState::create([
-                    'step_key' => self::EPOCH_KEY,
-                    'status' => UpgradeState::STATUS_COMPLETED,
-                    'metadata' => ['epoch' => self::NAMING_EPOCH],
-                    'finished_at' => now(),
-                ]);
-            }
-
-            return true;
+            return new ResumeVerdict(ResumeVerdict::FRESH);
         }
 
         // An absent/garbled epoch is a marker this version cannot vouch for: treat it as a mismatch
         // rather than adopt the run.
         $found = $marker->metadata['epoch'] ?? null;
-        if ($found === self::NAMING_EPOCH) {
-            return true;
+        if ($found !== self::NAMING_EPOCH) {
+            return new ResumeVerdict(ResumeVerdict::BLOCKED, sprintf(
+                'the upgrade state was written under naming epoch %s, but this version is epoch %d. '
+                .'Its checkpoints name steps and tables that have since been renamed, so it cannot be resumed — '
+                .'re-run with --force-restart to start over from an empty target.',
+                var_export($found, true),
+                self::NAMING_EPOCH,
+            ));
         }
 
-        $report->abort(sprintf(
-            'the upgrade state was written under naming epoch %s, but this version is epoch %d. '
-            .'Its checkpoints name steps and tables that have since been renamed, so it cannot be resumed — '
-            .'re-run with --force-restart to start over from an empty target.',
-            var_export($found, true),
-            self::NAMING_EPOCH,
-        ), RunReport::OUTCOME_BLOCKED);
+        $stored = RunManifest::fromStored((array) ($marker->metadata['manifest'] ?? []));
+        if ($stored === null) {
+            return new ResumeVerdict(ResumeVerdict::LEGACY);
+        }
 
-        return false;
+        $difference = $this->manifest()->firstDifference($stored);
+        if ($difference !== null) {
+            return new ResumeVerdict(
+                ResumeVerdict::BLOCKED,
+                "the upgrade state was written under a different set of steps: {$difference}, so it cannot be resumed — re-run with --force-restart to start over from an empty target.",
+                trim(explode(' ', $difference)[0], '`'),
+            );
+        }
+
+        return new ResumeVerdict(ResumeVerdict::OK);
+    }
+
+    /** This run's phases in execution order; the PHP phases list themselves out when they have no checkpoint to write. */
+    public function manifest(): RunManifest
+    {
+        return RunManifest::build($this->steps(), self::phases(), $this->targetTables(), $this->sourceTables());
+    }
+
+    /**
+     * Every phase of this run in manifest order with the checkpoint keys it writes: a step's own key,
+     * a pass's keys for these targets, and the keys a pass may or may not write (file_bin's move).
+     *
+     * @return array<string, array{kind: string, version: string, keys: list<string>, optional: list<string>}>
+     */
+    public function phaseCheckpoints(): array
+    {
+        $out = [];
+        foreach ($this->steps() as $step) {
+            if ($step->pendingTargets() === []) {
+                $out[class_basename($step)] = ['kind' => 'step', 'version' => $step->definition(), 'keys' => [class_basename($step)], 'optional' => []];
+            }
+        }
+        foreach (self::phases() as $phase) {
+            $keys = $phase->checkpointKeys($this->targetTables(), $this->sourceTables());
+            if ($keys !== []) {
+                $out[class_basename($phase)] = ['kind' => 'pass', 'version' => (string) $phase::VERSION, 'keys' => $keys, 'optional' => $phase instanceof FileBinMigration ? FileBinMigration::optionalKeys() : []];
+            }
+        }
+
+        return $out;
+    }
+
+    /** @return list<Phase> the post-walk passes in run order, then the file_bin migration */
+    public static function phases(): array
+    {
+        return [new PasswordWrap, new ActivityTemplateTransform, new EmojiTransform, new SitePolicyMarkdownTransform, new TalkReadCursorBackfill, new BoardBumpBackfill, new ClassicThemeSelection, new FileBinMigration];
+    }
+
+    /** Creates the epoch row with this run's manifest when the state is fresh; an existing row is this build's (the verdict said so). */
+    private function stampRun(): void
+    {
+        if (UpgradeState::query()->where('step_key', self::EPOCH_KEY)->exists()) {
+            return;
+        }
+
+        UpgradeState::create([
+            'step_key' => self::EPOCH_KEY,
+            'status' => UpgradeState::STATUS_COMPLETED,
+            'metadata' => ['epoch' => self::NAMING_EPOCH, 'manifest' => $this->manifest(), 'release' => ReleaseMarker::sha(), 'stamped_at' => now()->toIso8601String()],
+            'finished_at' => now(),
+        ]);
+    }
+
+    /**
+     * The first full success wins. Vouches for the manifest only when this state's first write stamped
+     * one and it is still the current one; legacy state is marked unverified rather than vouched for
+     * with the current build.
+     */
+    private function stampCompletion(): void
+    {
+        $marker = UpgradeState::query()->where('step_key', self::EPOCH_KEY)->first();
+        $stored = $marker === null ? null : RunManifest::fromStored((array) ($marker->metadata['manifest'] ?? []));
+        $verified = $stored !== null && $stored->hash() === $this->manifest()->hash();
+
+        UpgradeState::firstOrCreate(['step_key' => self::RUN_KEY], [
+            'status' => UpgradeState::STATUS_COMPLETED,
+            'finished_at' => now(),
+            'metadata' => [
+                'verified' => $verified,
+                'manifest_hash' => $verified ? $stored->hash() : null,
+                'release' => $verified ? ($marker->metadata['release'] ?? null) : null,
+                'completed_at' => now()->toIso8601String(),
+            ],
+        ]);
     }
 
     /** The per-step loop: skip not-runnable / already-completed, else compile + (plan or run) each. */
@@ -381,7 +498,7 @@ final class UpgradeRunner
                 continue;
             }
 
-            if (! $this->runStep($key, $sql, $report)) {
+            if (! $this->runStep($key, $sql, $step->definition(), $report)) {
                 return false;
             }
         }
@@ -452,12 +569,12 @@ final class UpgradeRunner
         return array_keys($tables);
     }
 
-    private function runStep(string $key, string $sql, RunReport $report): bool
+    private function runStep(string $key, string $sql, string $definition, RunReport $report): bool
     {
         $report->started($key);
 
         try {
-            $affected = DB::transaction(function () use ($key, $sql): int {
+            $affected = DB::transaction(function () use ($key, $sql, $definition): int {
                 $state = UpgradeState::updateOrCreate(['step_key' => $key], [
                     'status' => UpgradeState::STATUS_RUNNING,
                     'started_at' => now(),
@@ -472,6 +589,7 @@ final class UpgradeRunner
                     'status' => UpgradeState::STATUS_COMPLETED,
                     'rows_affected' => $affected,
                     'finished_at' => now(),
+                    'metadata' => ['definition' => $definition],
                 ]);
 
                 return $affected;
@@ -522,6 +640,12 @@ final class UpgradeRunner
         }
 
         return false;
+    }
+
+    /** @return list<string> distinct step source (FROM) tables in run order */
+    public function sourceTables(): array
+    {
+        return array_values(array_unique(array_map(static fn (UpgradeStep $s): string => $s->sourceTable(), $this->steps())));
     }
 
     private function readsSourceTable(string $table): bool

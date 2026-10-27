@@ -17,8 +17,10 @@ use Throwable;
  * A chunk's rewrites commit with its checkpoint (cursor and reason counts), so a crash re-renders a
  * chunk without counting it twice.
  */
-final class ActivityTemplateTransform
+final class ActivityTemplateTransform implements Phase
 {
+    public const VERSION = '1';
+
     /** Target table => the body length its authoring path allows. */
     private const TABLES = [
         'timeline_posts' => Announcement::MAX,
@@ -38,6 +40,11 @@ final class ActivityTemplateTransform
     public function plan(RunReport $report): void
     {
         $report->line('PLAN would render every migrated OpenPNE 3 template activity (diary / topic / event lines) into the OpenPNE 4 wording with its link.');
+    }
+
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return array_map(static fn (string $table): string => 'activity_template_'.$table, array_values(array_intersect(array_keys(self::TABLES), $targetTables)));
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip tables the run does not own) */

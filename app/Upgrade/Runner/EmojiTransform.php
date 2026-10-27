@@ -13,8 +13,10 @@ use Throwable;
  * is an id cursor, not a draining predicate: unmapped codes stay literal, so the cursor advances past
  * every fetched chunk whether or not a row changed, and restarting from 0 is still idempotent.
  */
-final class EmojiTransform
+final class EmojiTransform implements Phase
 {
+    public const VERSION = '1';
+
     /**
      * Member-authored free-text columns only. Operator-authored configuration text (community
      * category names, mail templates, navigation labels, profile definitions / options /
@@ -48,6 +50,11 @@ final class EmojiTransform
     public function plan(RunReport $report): void
     {
         $report->line('PLAN would rewrite OpenPNE 3 carrier-emoji codes to Unicode across '.count(self::TABLES).' member-authored text tables.');
+    }
+
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return array_map(static fn (string $table): string => 'emoji_'.$table, array_values(array_intersect(array_keys(self::TABLES), $targetTables)));
     }
 
     /** @param list<string> $targetTables this run's step target tables (skip tables the run does not own) */

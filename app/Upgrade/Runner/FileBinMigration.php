@@ -14,8 +14,10 @@ use Throwable;
  * (docs/internals/upgrade.md, "file_bin"). Idempotent from information_schema state (FK target,
  * source table presence) so a resume or --force-restart re-runs cleanly; MySQL only.
  */
-final class FileBinMigration
+final class FileBinMigration implements Phase
 {
+    public const VERSION = '1';
+
     private const SNAPSHOT_KEY = 'file_id_max_snapshot';
 
     private const MOVE_KEY = 'file_bin_move';
@@ -23,6 +25,17 @@ final class FileBinMigration
     private const REWIRE_KEY = 'file_bin_rewire';
 
     private const MISMATCH_SAMPLE = 5;
+
+    /** The move is left out: it is written only off in-place, which the source options decide, so a row, if present, must be completed. */
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return in_array('files', $targetTables, true) ? [self::SNAPSHOT_KEY, self::REWIRE_KEY] : [];
+    }
+
+    public static function optionalKeys(): array
+    {
+        return [self::MOVE_KEY];
+    }
 
     /**
      * Read-only; returns the error that aborts the run before any write, or null. Call only after

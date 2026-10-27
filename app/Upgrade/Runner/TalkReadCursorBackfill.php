@@ -14,13 +14,20 @@ use Throwable;
  * have landed (docs/internals/upgrade.md, "Post-walk passes"). A bulk initialization before any
  * native write, not a forward-only advance(): the tuple is a function of the migrated rows.
  */
-final class TalkReadCursorBackfill
+final class TalkReadCursorBackfill implements Phase
 {
+    public const VERSION = '1';
+
     private const KEY = 'talk_read_cursor_backfill';
 
     public function plan(RunReport $report): void
     {
         $report->line("PLAN would point every migrated group membership's talk read cursor at the group's latest migrated message.");
+    }
+
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return in_array('group_members', $targetTables, true) && in_array('group_messages', $targetTables, true) ? [self::KEY] : [];
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip unless the run owns both sides) */

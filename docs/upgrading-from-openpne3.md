@@ -196,17 +196,32 @@ $ php artisan openpne:upgrade-from-3
 
 Each step is committed as it finishes, so an interrupted run picks up from the first step that did
 not complete; re-running is safe. A step that fails says so on one line (`FAIL <step>: …`) and
-the command exits 1; run it again with `-v` to see the whole exception. What it records is *that* a step ran, not the definition it ran
-under — so if you update OpenPNE 4 itself partway through a migration, those records no longer
-describe the current steps. Start over with `--force-restart`, which empties the tables the upgrade
-owns along with its records of what ran.
+the command exits 1; run it again with `-v` to see the whole exception.
 
-One case of that is caught for you: when an update renames the steps or the tables they write, the
-records name things that no longer exist, and the run refuses to resume rather than copy everything
-a second time. It says so and points at `--force-restart`.
+The run also records the set of steps it was started under. If you update OpenPNE 4 partway
+through a migration and the update changed that set — a step added, removed or reordered, the
+SQL of a step changed, or one of the later passes revised — the run refuses to resume rather
+than mix two versions, names what changed, and points at `--force-restart`, which empties the
+tables the upgrade owns along with its records of what ran. The same refusal covers an update
+that renames the steps or the tables they write.
 
-That makes `--force-restart` a rehearsal tool. Once OpenPNE 4 is taking traffic, those tables are
-the live site.
+Once a site has completed, a re-run changes nothing: it answers `Completed: … nothing to do`,
+whatever has changed in OpenPNE 4 since, and never suggests `--force-restart`. That makes
+`--force-restart` a rehearsal tool. Once OpenPNE 4 is taking traffic, those tables are the live
+site.
+
+### Where does a site stand?
+
+```console
+$ php artisan openpne:upgrade-status
+```
+
+Read-only. `Status:` is one of `not_started`, `in_progress` (with the next phase and any
+failed one), `blocked` (a resume this version refuses, and why), `completed`, or
+`completed_unverified` — the site finished, but under a set of steps this version cannot vouch
+for: it was migrated before this version recorded the set, or OpenPNE 4 has changed a step
+since. Then one line per phase. `--json` gives the same with the site, the current build, and
+every phase's checkpoint; it exits 0 whatever the status.
 
 ## 5. Verify before switching over
 
@@ -232,7 +247,12 @@ that migrated correctly. List those steps and account for each:
 $ php artisan openpne:verify-upgrade | grep ': 0 rows'
 ```
 
-(`--json` emits the same report as JSON if you would rather consume it from a script.)
+(`--json` emits the same report as JSON if you would rather consume it from a script, led by the
+site, the build, and what the completion marker recorded.) Verify is the gate for the build you
+are about to serve: when the site was migrated by a different set of steps than this version
+has, the `manifest` check fails and the answer is to run the upgrade again on this version from
+a fresh restore. A site migrated before this version recorded the set passes that check with a
+note.
 
 Some are expected: a step carries an OpenPNE 3 plugin your site never installed, or a setting whose
 absence already means what you want. The rest are the ones to look into. That judgement is yours —

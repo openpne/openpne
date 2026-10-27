@@ -183,11 +183,57 @@ set than the INSERT.
 
 Each step runs in one transaction wrapping its `INSERT ... SELECT` and its
 `openpne4_upgrade_state` checkpoint, so completed ⟺ committed and a re-run resumes from the first
-incomplete step. A checkpoint records that a step ran, not its definition;
-`UpgradeRunner::NAMING_EPOCH` is bumped when step classes or target tables are renamed and stamped
-on the first run, so a resume under another epoch aborts instead of re-copying under new keys.
-`reset()` (`--force-restart`) DELETEs the upgrade-owned targets (TRUNCATE fails on an FK-referenced
-table, error 1701) after dropping the `file_bin` FK so the BLOBs cannot cascade.
+incomplete step. `UpgradeRunner::NAMING_EPOCH` is bumped when step classes or target tables are
+renamed and stamped on the first run, so a resume under another epoch aborts instead of
+re-copying under new keys. `reset()` (`--force-restart`) DELETEs the upgrade-owned targets
+(TRUNCATE fails on an FK-referenced table, error 1701) after dropping the `file_bin` FK so the
+BLOBs cannot cascade.
+
+**The run manifest** (`RunManifest`) is what a resume is compared against: the run's phases in
+execution order, each with a version — every runnable step by `UpgradeStep::definition()` (a
+sha256 over its target table and the SQL compiled at an empty prefix and no database, so the
+source options do not change it and any textual change to the SQL does), then every `Phase`
+(the post-walk passes and `FileBinMigration`) that has a checkpoint to write for the run's
+tables, by its class `VERSION`, which is bumped whenever the phase's behaviour changes. The
+hash covers `{key, kind, version}` in that order. The runner's first write stores it on the
+`naming_epoch` row (`metadata = {epoch, manifest, release, stamped_at}`; `release` is the build
+that started the run), and each completed step checkpoint stores its own definition.
+
+`UpgradeRunner::resumeVerdict()` reads the state table alone — before the source preflight, so
+a completed site whose OpenPNE 3 tables are gone still answers — and the runner acts on it once,
+before any write. In order: the completion marker exists → `completed`, the run prints
+`Completed: …; nothing to do` and walks nothing (a step or pass added by a later build is never
+run against a completed site, and `--force-restart` is never the message on one); the two
+epoch refusals; a stored manifest whose hash differs → `blocked`, naming the first phase that
+was added, removed, changed or reordered; an epoch row without a manifest → `legacy`, resumed
+as it is (state written before manifests is the one blind spot); else `ok`. The dry run is
+gated the same way and stamps nothing.
+
+**The completion marker** (`upgrade_completed`, no step bears the name) is written by `run()`
+after `execute()` returned true — after its `finally` dropped the created tables, inside the
+outer `try` so a failing write is the run's failure and the next run stamps it — and never on a
+dry run; `firstOrCreate`, so the first completion wins until `reset()`. Its metadata says what
+it vouches for: `{verified: true, manifest_hash, release, completed_at}` when this state's first
+write stamped a manifest that is still the current one, else `{verified: false, manifest_hash:
+null, release: null, completed_at}` — a site completed under legacy state is not vouched for
+with the current build. A site completed before this build gets its unverified marker from its
+next re-run.
+
+## Status
+
+`openpne:upgrade-status` (`UpgradeStatus`) is a report, not a gate: exit 1 only when the state
+table is missing. From the rows and this build's manifest, first match wins: `not_started` (no
+rows); `completed` (the marker is verified, its hash is the current manifest's, and every phase
+has its checkpoints completed — a phase with none to write counts; `file_bin_move` is optional
+and must be completed only if present); `completed_unverified` (the marker is unverified, or
+its hash differs, or a current phase lacks a completed checkpoint — `reason` says which;
+`release` is the build that started the run, null when unverified); `blocked`
+(`resumeVerdict()` blocked: `reason`, `blocking_phase`); `in_progress` (`next_phase` = the
+first phase in manifest order without a completed checkpoint, `failed_phase`, `legacy`).
+Always: `site`, `release` (current build), `manifest_hash` (current) and `phases[]` in manifest
+order with `status` (`not_run` / `completed` / `failed` / `running` / `partial`, a pass
+aggregating its rows), `rows`, `finished_at` and `definition_matches` (steps with a stored
+definition only). `naming_epoch` and `upgrade_completed` are not phases.
 
 ## Run report
 
@@ -299,7 +345,18 @@ the app's utf8mb4 default against OpenPNE 3's utf8mb3 forces no rewrite either.
 
 ## Verify
 
-`openpne:verify-upgrade` re-counts source and target without trusting the runner's report.
+`openpne:verify-upgrade` re-counts source and target without trusting the runner's report. Its
+JSON leads with `site`, `release` (current build), `manifest_hash` (current), and the marker's
+`upgrade_completed_at` / `upgrade_release` / `upgrade_manifest_hash` / `upgrade_verified` (null
+without a marker); the document is written raw, whatever the verbosity, like the run report.
+It is the pre-cutover gate on the build being deployed: a post-release sweep over live sites
+reads status, not verify.
+
+- **`manifest`**: with a marker, FAIL when its hash differs from this build's manifest (the
+  site was migrated by another set of steps; re-run the upgrade on this build from a fresh
+  restore); PASS when equal, and PASS with the fact in the detail when the marker is
+  unverified (legacy state), so tenants rehearsed before manifests are not red for ever.
+  Without a marker every step's own "not completed" already fails.
 
 - **Check A**, per step: source rows under `effectiveFilter()` == recorded `rows_affected` == target
   rows under `targetFilter()`; a FROM or filter-subquery table that is an absent optional plugin

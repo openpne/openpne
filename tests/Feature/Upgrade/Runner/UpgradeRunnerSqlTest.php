@@ -13,6 +13,7 @@ use App\Upgrade\Column;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
+use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
@@ -60,8 +61,9 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->seedGraph();
         $this->runner($this->relationSteps())->run(new RunOptions);
 
-        // Simulate a crash after Friendship/MemberBlock committed but FriendRequest did not.
-        UpgradeState::query()->where('step_key', 'FriendRequestUpgrade')->delete();
+        // Simulate a crash after Friendship/MemberBlock committed but FriendRequest did not: no
+        // completion marker, and the step's checkpoint never written.
+        UpgradeState::query()->whereIn('step_key', ['FriendRequestUpgrade', UpgradeRunner::RUN_KEY])->delete();
         DB::table('friend_requests')->delete();
 
         // Re-running a completed step would PK-collide on verbatim ids, so success proves the
@@ -137,8 +139,10 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->seedGraph();
         $runner = $this->runner($this->relationSteps());
         $this->assertTrue($runner->run(new RunOptions));
-        $this->assertSame(['epoch' => UpgradeRunner::NAMING_EPOCH], UpgradeState::query()->where('step_key', 'naming_epoch')->value('metadata'));
+        $this->assertSame(UpgradeRunner::NAMING_EPOCH, UpgradeState::query()->where('step_key', 'naming_epoch')->value('metadata')['epoch']);
 
+        // Before completion only: a completed site answers "Completed" whatever the epoch says.
+        UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
         UpgradeState::query()->where('step_key', 'naming_epoch')->update(['metadata' => json_encode(['epoch' => UpgradeRunner::NAMING_EPOCH - 1])]);
 
         $lines = [];
@@ -198,7 +202,9 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertSame(DB::connection()->getDatabaseName(), $report['site']);
         $this->assertNull($report['release']);
 
-        $this->assertTrue($this->jsonReport(['--json' => true])['resumed'], 'the second run skipped the completed steps');
+        $this->assertFalse($this->jsonReport(['--json' => true])['resumed'], 'a completed site runs nothing');
+        UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
+        $this->assertTrue($this->jsonReport(['--json' => true])['resumed'], 'without the marker the completed steps are skipped');
     }
 
     public function test_a_failed_step_is_one_fail_line_without_the_sql(): void
@@ -291,6 +297,187 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertSame(['run'], array_column($report['steps'], 'key'));
         $this->assertStringStartsWith('SQLSTATE[42S02]', $report['steps'][0]['error']);
         $this->assertStringNotContainsString('DELETE', $report['steps'][0]['error']);
+    }
+
+    public function test_the_first_write_stores_the_manifest_and_each_step_its_definition(): void
+    {
+        $this->seedGraph();
+        $runner = $this->runner($this->relationSteps());
+
+        $this->assertTrue($runner->run(new RunOptions));
+
+        $epoch = UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->value('metadata');
+        $this->assertSame($runner->manifest()->hash(), $epoch['manifest']['hash']);
+        $this->assertNull($epoch['release']);
+        $this->assertSame((new FriendshipUpgrade)->definition(), UpgradeState::query()->where('step_key', 'FriendshipUpgrade')->value('metadata')['definition']);
+    }
+
+    public function test_the_manifest_does_not_depend_on_the_source_prefix(): void
+    {
+        $this->seedGraph();
+        $plain = $this->runner($this->relationSteps())->manifest()->hash();
+
+        // The compiled SQL differs under a prefix; the definition is taken at the empty one.
+        $this->assertSame($plain, $this->runner($this->relationSteps())->manifest()->hash());
+        $this->assertStringContainsString('`op_member_relationship`', (new InsertSelectCompiler)->compile(new FriendshipUpgrade, 'op_'));
+        $this->assertSame((new FriendshipUpgrade)->definition(), (new FriendshipUpgrade)->definition());
+    }
+
+    public function test_a_dry_run_on_a_fresh_site_writes_no_row(): void
+    {
+        $this->seedGraph();
+
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions(dryRun: true)));
+
+        $this->assertDatabaseCount('openpne4_upgrade_state', 0);
+    }
+
+    public function test_a_step_added_before_a_completed_one_is_refused_before_any_write(): void
+    {
+        $this->seedGraph();
+        $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions), 'stops at the broken step, no marker');
+        $this->assertDatabaseCount('friendships', 2);
+
+        foreach ([new RunOptions(dryRun: true), new RunOptions] as $options) {
+            $lines = [];
+            $ok = $this->runner([new FriendRequestUpgrade, new FriendshipUpgrade, $this->brokenStep()])->run($options, function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            });
+
+            $this->assertFalse($ok);
+            $this->assertStringContainsString('different set of steps: `FriendRequestUpgrade` (added)', implode("\n", $lines));
+            $this->assertStringContainsString('--force-restart', implode("\n", $lines));
+            $this->assertDatabaseCount('friend_requests', 0);
+        }
+
+        // --force-restart clears the manifest with the state and runs the new set.
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions(forceRestart: true)));
+        $this->assertDatabaseCount('friend_requests', 1);
+    }
+
+    public function test_the_refusal_comes_before_the_optional_table_is_created(): void
+    {
+        $this->seedGraph();
+        $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions));
+        $this->assertFalse(Schema::hasTable('diary'));
+
+        // DiaryUpgrade's source is absent: a run that got past the gate would ensureExists it.
+        $this->assertFalse($this->runner([new DiaryUpgrade, new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions));
+
+        $this->assertFalse(Schema::hasTable('diary'), 'the gate ran before ensureExists()');
+    }
+
+    public function test_a_stored_manifest_with_another_version_is_refused_naming_the_phase(): void
+    {
+        $this->seedGraph();
+        $runner = $this->runner($this->relationSteps());
+        $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions));
+
+        $epoch = UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->first();
+        $manifest = $epoch->metadata['manifest'];
+        $manifest['phases'][0]['version'] = 'other';
+        $epoch->update(['metadata' => ['epoch' => UpgradeRunner::NAMING_EPOCH, 'manifest' => $manifest]]);
+
+        $lines = [];
+        $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+        $this->assertStringContainsString('`FriendshipUpgrade` (changed)', implode("\n", $lines));
+        $this->assertSame('FriendshipUpgrade', $runner->resumeVerdict()->blockingPhase);
+    }
+
+    public function test_legacy_state_resumes_and_completes_unverified(): void
+    {
+        $this->seedGraph();
+        UpgradeState::create(['step_key' => UpgradeRunner::EPOCH_KEY, 'status' => UpgradeState::STATUS_COMPLETED, 'metadata' => ['epoch' => UpgradeRunner::NAMING_EPOCH]]);
+
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions));
+
+        $marker = UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->first();
+        $this->assertFalse($marker->metadata['verified']);
+        $this->assertNull($marker->metadata['manifest_hash']);
+        $this->assertNull($marker->metadata['release']);
+        $this->assertNotNull($marker->metadata['completed_at']);
+    }
+
+    public function test_a_completed_site_runs_nothing_whatever_changed_since(): void
+    {
+        $this->seedGraph();
+        $this->assertTrue($this->runner([new FriendshipUpgrade, new MemberBlockUpgrade])->run(new RunOptions));
+        $marker = UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->first();
+        $this->assertTrue($marker->metadata['verified']);
+
+        foreach ([new RunOptions(dryRun: true), new RunOptions] as $options) {
+            $lines = [];
+            $ok = $this->runner($this->relationSteps())->run($options, function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            });
+
+            $this->assertTrue($ok);
+            $this->assertStringContainsString('Completed: the upgrade of this site finished at', implode("\n", $lines));
+            $this->assertStringNotContainsString('--force-restart', implode("\n", $lines));
+            $this->assertStringNotContainsString('RUN FriendRequestUpgrade', implode("\n", $lines));
+        }
+        $this->assertDatabaseCount('friend_requests', 0);
+        $this->assertDatabaseMissing('openpne4_upgrade_state', ['step_key' => 'FriendRequestUpgrade']);
+
+        // Another epoch after completion is still "completed", never the restart message.
+        UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->update(['metadata' => json_encode(['epoch' => UpgradeRunner::NAMING_EPOCH - 1])]);
+        $lines = [];
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+        $this->assertStringContainsString('Completed:', implode("\n", $lines));
+
+        // And with the OpenPNE 3 tables gone, as on a live site after the cutover.
+        $this->dropSourceTables();
+        $lines = [];
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+        $this->assertStringContainsString('Completed:', implode("\n", $lines));
+        $this->assertStringNotContainsString('Aborted', implode("\n", $lines));
+        $this->createSourceTables();
+    }
+
+    public function test_the_first_completion_wins(): void
+    {
+        $this->seedGraph();
+        $runner = $this->runner($this->relationSteps());
+        $this->assertTrue($runner->run(new RunOptions));
+        $first = UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->value('metadata')['completed_at'];
+
+        $this->travel(2)->minutes();
+        $this->assertTrue($runner->run(new RunOptions));
+
+        $this->assertSame($first, UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->value('metadata')['completed_at']);
+        $this->assertDatabaseCount('openpne4_upgrade_state', 5);
+    }
+
+    public function test_a_failed_marker_write_is_the_runs_failure_and_the_next_run_stamps_it(): void
+    {
+        $this->seedGraph();
+        $runner = $this->runner($this->relationSteps());
+        // A unique-key twin on the marker's key with another status: firstOrCreate finds it, so the
+        // marker is "written" without being the marker; the simplest injected failure is a trigger.
+        DB::unprepared("CREATE TRIGGER refuse_marker BEFORE INSERT ON `openpne4_upgrade_state` FOR EACH ROW BEGIN IF NEW.step_key = 'upgrade_completed' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'marker refused'; END IF; END");
+
+        try {
+            $lines = [];
+            $ok = $runner->run(new RunOptions, function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            });
+        } finally {
+            DB::unprepared('DROP TRIGGER IF EXISTS refuse_marker');
+        }
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString('FAIL run: SQLSTATE[45000]', implode("\n", $lines));
+        $this->assertMatchesRegularExpression('/DONE MemberBlockUpgrade/', implode("\n", $lines), 'the walk itself completed');
+        $this->assertDatabaseMissing('openpne4_upgrade_state', ['step_key' => UpgradeRunner::RUN_KEY]);
+
+        $this->assertTrue($runner->run(new RunOptions));
+        $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => UpgradeRunner::RUN_KEY]);
     }
 
     private function brokenStep(): UpgradeStep

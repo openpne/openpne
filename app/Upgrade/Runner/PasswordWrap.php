@@ -14,8 +14,10 @@ use Throwable;
  * bare-MD5 predicate never matches a wrapped row, so the pass is idempotent and a failed run resumes
  * by rescanning.
  */
-final class PasswordWrap
+final class PasswordWrap implements Phase
 {
+    public const VERSION = '1';
+
     private const KEYS = ['members' => 'password_wrap_members', 'admin_users' => 'password_wrap_admin_users'];
 
     private const BARE_MD5 = '^[0-9a-f]{32}$';
@@ -33,6 +35,11 @@ final class PasswordWrap
     public function plan(RunReport $report): void
     {
         $report->line('PLAN would wrap imported bare-MD5 passwords as bcrypt(md5) with password_scheme=md5_bcrypt (members, admin_users).');
+    }
+
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return array_values(array_intersect_key(self::KEYS, array_flip($targetTables)));
     }
 
     /** @param list<string> $targetTables this run's step target tables (skip tables the run does not own) */

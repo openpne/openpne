@@ -16,8 +16,10 @@ use Throwable;
  * "Post-walk passes"): OpenPNE 3 chose the skin by plugin activation, which `Theme_used` alone does
  * not record, and a site with no `Theme_used` row still wore the first theme package.
  */
-final class ClassicThemeSelection
+final class ClassicThemeSelection implements Phase
 {
+    public const VERSION = '1';
+
     public const KEY = 'classic_theme_selection';
 
     public const W_UNKNOWN_PACKAGE = 'W-THEME-UNKNOWN-PACKAGE';
@@ -41,6 +43,12 @@ final class ClassicThemeSelection
     public function plan(RunReport $report): void
     {
         $report->line('PLAN would set classic_theme from the OpenPNE 3 skin plugins and Theme_used.');
+    }
+
+    /** Gated on a step reading sns_config as well: the skin is read from it, and the preflight requires `plugin` only then. */
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return in_array('sns_settings', $targetTables, true) && in_array('sns_config', $sourceTables, true) ? [self::KEY] : [];
     }
 
     /** @param  list<string>  $targetTables  this run's step target tables (skip unless the run owns sns_settings) */

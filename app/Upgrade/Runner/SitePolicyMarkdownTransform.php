@@ -16,8 +16,10 @@ use Throwable;
  * idempotent — escaping an escaped body doubles its backslashes — so the completed checkpoint is
  * what makes a resume safe, and both rows are rewritten under one checkpoint in one transaction.
  */
-final class SitePolicyMarkdownTransform
+final class SitePolicyMarkdownTransform implements Phase
 {
+    public const VERSION = '1';
+
     private const KEY = 'site_policy_markdown';
 
     private const TABLE = 'sns_settings';
@@ -28,6 +30,11 @@ final class SitePolicyMarkdownTransform
     public function plan(RunReport $report): void
     {
         $report->line('PLAN would rewrite the imported terms of service / privacy policy bodies as Markdown.');
+    }
+
+    public function checkpointKeys(array $targetTables, array $sourceTables): array
+    {
+        return in_array(self::TABLE, $targetTables, true) ? [self::KEY] : [];
     }
 
     /** @param list<string> $targetTables this run's step target tables (skip tables the run does not own) */
