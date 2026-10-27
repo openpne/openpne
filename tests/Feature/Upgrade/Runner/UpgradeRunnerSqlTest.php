@@ -270,6 +270,7 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
             $report = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
             $this->assertSame('failed_at_step', $report['outcome']);
             $this->assertSame('BrokenMemberBlockUpgrade', $report['failed_step']);
+            $this->assertNotNull($report['finished_at'], 'the command finishes the report before rethrowing');
         }
     }
 

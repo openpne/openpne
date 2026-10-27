@@ -40,8 +40,9 @@ class UpgradeFromThreeCommand extends Command
         try {
             $ok = $this->upgrade($report);
         } catch (Throwable $e) {
-            report($e);
+            // Reported once: a failure a step recorded is already in the log, and the Kernel logs a rethrow.
             if (! $report->isFailed()) {
+                report($e);
                 $report->failed('run', RunReport::failureMessage($e));
             }
             $report->finish(false);

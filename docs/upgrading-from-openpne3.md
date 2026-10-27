@@ -112,8 +112,10 @@ $ php artisan openpne:upgrade-from-3 --dry-run
 Writes nothing. It prints the SQL each step would run, and — the part worth reading — what its
 **preflight** found: a read-only inspection of your source that runs before anything is written.
 
-The lines to act on start with one of these words (the rest is the dry run's `PLAN` lines and
-their SQL, progress, and the closing `Finished in …`):
+The lines to act on start with one of these words, apart from the two unprefixed instructions a
+first completion ends with (the surface switch, and warming the pictures: §5); the rest is the
+`Site timezone` line to check, the dry run's `PLAN` lines and their SQL, progress, `Reset:` under
+`--force-restart`, and the closing `Finished in …`:
 
 | Line | Meaning |
 |---|---|

@@ -8,7 +8,9 @@ use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\PasswordWrap;
 use App\Upgrade\Runner\RunReport;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Hash;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
@@ -29,6 +31,31 @@ class PasswordWrapTest extends UpgradeSqlTestCase
         $this->assertTrue($ok);
 
         return $lines;
+    }
+
+    public function test_a_failed_wrap_records_the_pdo_message_only_and_reports_the_exception(): void
+    {
+        $this->seedBareMd5Member('secret');
+        Exceptions::fake();
+        // A trigger, not an ALTER: this lane shares its migrated app tables across tests.
+        DB::unprepared("CREATE TRIGGER refuse_wrap BEFORE UPDATE ON `members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'trigger refused'");
+
+        try {
+            $ok = (new PasswordWrap)->run(['members'], new RunReport(function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            }));
+        } finally {
+            DB::unprepared('DROP TRIGGER IF EXISTS refuse_wrap');
+        }
+
+        $this->assertFalse($ok);
+        Exceptions::assertReported(QueryException::class);
+        $error = (string) UpgradeState::query()->where('step_key', 'password_wrap_members')->value('error');
+        $this->assertStringStartsWith('SQLSTATE[45000]', $error);
+        // The bindings of the failed UPDATE are the bcrypt hashes; neither they nor the SQL may land in the checkpoint.
+        $this->assertStringNotContainsString('$2y$', $error);
+        $this->assertStringNotContainsString('update', $error);
+        $this->assertStringStartsWith('FAIL password_wrap_members: SQLSTATE[45000]', end($lines));
     }
 
     private function seedBareMd5Member(string $plaintext): Member

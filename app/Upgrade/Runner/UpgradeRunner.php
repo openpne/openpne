@@ -55,11 +55,13 @@ final class UpgradeRunner
             $ok = $this->execute($options, $report);
         } catch (Throwable $e) {
             // A failure a step already recorded (and, under verbose, rethrew) passes through; one nothing owns is the run's.
-            report($e);
             if (! $report->isFailed()) {
+                report($e);
                 $report->failed('run', RunReport::failureMessage($e), $e);
             } elseif ($options->verbose) {
                 throw $e;
+            } else {
+                report($e);
             }
             $ok = false;
         }

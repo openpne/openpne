@@ -17,6 +17,8 @@ use App\Upgrade\Steps\SnsSettingUpgrade;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 /**
@@ -85,6 +87,38 @@ class UpgradeRunnerTest extends TestCase
             $this->assertSame([], $report['steps']);
             $this->assertStringStartsWith('{', trim($output), 'nothing but the JSON document');
         }
+    }
+
+    public function test_quiet_mode_still_prints_the_json_report(): void
+    {
+        $exit = Artisan::call('openpne:upgrade-from-3', ['--source-prefix' => 'bad-prefix!', '--json' => true, '-q' => true]);
+        $report = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame(1, $exit);
+        $this->assertSame('precheck_error', $report['outcome']);
+    }
+
+    public function test_a_misconfigured_connection_is_reported_and_still_yields_json(): void
+    {
+        Exceptions::fake();
+        $default = config('database.default');
+        config(['database.default' => 'bogus']);
+
+        try {
+            $exit = Artisan::call('openpne:upgrade-from-3', ['--json' => true]);
+            $output = Artisan::output();
+        } finally {
+            config(['database.default' => $default]);
+        }
+
+        $report = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
+        $this->assertSame(1, $exit);
+        Exceptions::assertReported(InvalidArgumentException::class);
+        $this->assertSame('failed_at_step', $report['outcome']);
+        $this->assertSame('run', $report['failed_step']);
+        $this->assertNull($report['site']);
+        $this->assertNotNull($report['finished_at']);
+        $this->assertStringContainsString('[bogus]', $report['steps'][0]['error']);
     }
 
     public function test_upgrade_state_round_trips_metadata_and_casts(): void
