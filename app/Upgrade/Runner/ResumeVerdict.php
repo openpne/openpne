@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Upgrade\Runner;
 
 /**
- * What the state table allows this build to do, read before any write: `fresh` (no rows),
- * `completed` (the marker exists; nothing is run), `blocked` (another epoch or manifest; reason names
- * it), `legacy` (an epoch row from before manifests, resumed as is) or `ok`.
+ * What the state table allows this build to do, read before any write. `legacy_complete` is legacy
+ * state with every phase checkpointed: adopted as a completion, never walked.
  */
 final class ResumeVerdict
 {
@@ -19,6 +18,8 @@ final class ResumeVerdict
 
     public const LEGACY = 'legacy';
 
+    public const LEGACY_COMPLETE = 'legacy_complete';
+
     public const OK = 'ok';
 
     public function __construct(
@@ -26,9 +27,4 @@ final class ResumeVerdict
         public readonly ?string $reason = null,
         public readonly ?string $blockingPhase = null,
     ) {}
-
-    public function allowsRun(): bool
-    {
-        return in_array($this->verdict, [self::FRESH, self::LEGACY, self::OK], true);
-    }
 }

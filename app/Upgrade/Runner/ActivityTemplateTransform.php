@@ -42,6 +42,11 @@ final class ActivityTemplateTransform implements Phase
         $report->line('PLAN would render every migrated OpenPNE 3 template activity (diary / topic / event lines) into the OpenPNE 4 wording with its link.');
     }
 
+    public function version(): string
+    {
+        return self::VERSION;
+    }
+
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return array_map(static fn (string $table): string => 'activity_template_'.$table, array_values(array_intersect(array_keys(self::TABLES), $targetTables)));

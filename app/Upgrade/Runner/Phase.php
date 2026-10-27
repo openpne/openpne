@@ -20,4 +20,7 @@ interface Phase
      * @return list<string>
      */
     public function checkpointKeys(array $targetTables, array $sourceTables): array;
+
+    /** The phase's VERSION constant, as the manifest records it. */
+    public function version(): string;
 }

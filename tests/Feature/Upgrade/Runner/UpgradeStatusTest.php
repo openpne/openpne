@@ -7,6 +7,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Runner\UpgradeStatus;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\FileUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
@@ -66,12 +67,37 @@ class UpgradeStatusTest extends TestCase
     {
         UpgradeState::create(['step_key' => UpgradeRunner::EPOCH_KEY, 'status' => UpgradeState::STATUS_COMPLETED, 'metadata' => ['epoch' => UpgradeRunner::NAMING_EPOCH]]);
         $this->complete('FriendshipUpgrade', 2, definition: false);
+        UpgradeState::create(['step_key' => 'FriendRequestUpgrade', 'status' => UpgradeState::STATUS_FAILED, 'error' => 'boom']);
 
         $status = UpgradeStatus::read($this->runner());
 
         $this->assertSame('in_progress', $status->status);
         $this->assertTrue($status->fields['legacy']);
         $this->assertNull($status->phases[0]['definition_matches']);
+
+        // Nothing failed or running before manifests: taken as completed, but nothing this build can vouch for.
+        UpgradeState::query()->where('step_key', 'FriendRequestUpgrade')->delete();
+        $this->complete('FriendRequestUpgrade', 1, definition: false);
+        $status = UpgradeStatus::read($this->runner());
+        $this->assertSame('completed_unverified', $status->status);
+        $this->assertStringContainsString('a re-run records the completion', $status->fields['reason']);
+    }
+
+    public function test_the_optional_file_bin_move_row_counts_only_when_present(): void
+    {
+        $runner = $this->runner([new FileUpgrade]);
+        $this->stamp($runner);
+        $this->complete('FileUpgrade', 3);
+        UpgradeState::create(['step_key' => 'file_id_max_snapshot', 'status' => UpgradeState::STATUS_COMPLETED]);
+        UpgradeState::create(['step_key' => 'file_bin_rewire', 'status' => UpgradeState::STATUS_COMPLETED]);
+        $this->marker($runner->manifest()->hash(), verified: true, release: null);
+
+        $this->assertSame('completed', UpgradeStatus::read($runner)->status, 'an in-place run never writes file_bin_move');
+
+        UpgradeState::create(['step_key' => 'file_bin_move', 'status' => UpgradeState::STATUS_FAILED, 'error' => 'boom']);
+        $status = UpgradeStatus::read($runner);
+        $this->assertSame('completed_unverified', $status->status);
+        $this->assertSame('failed', collect($status->phases)->firstWhere('key', 'FileBinMigration')['status']);
     }
 
     public function test_another_epoch_or_another_manifest_is_blocked(): void
@@ -102,7 +128,10 @@ class UpgradeStatusTest extends TestCase
         $status = UpgradeStatus::read($runner);
 
         $this->assertSame('completed', $status->status);
-        $this->assertSame(['completed_at' => '2026-10-27T00:00:00+00:00', 'release' => 'abc1234'], $status->fields);
+        $this->assertSame(['upgrade_completed_at' => '2026-10-27T00:00:00+00:00', 'upgrade_release' => 'abc1234'], $status->fields);
+        $json = json_decode(json_encode($status), true);
+        $this->assertSame('abc1234', $json['upgrade_release']);
+        $this->assertNull($json['release'], 'the current build is a separate key');
     }
 
     public function test_a_marker_the_build_cannot_vouch_for_is_completed_unverified(): void
@@ -117,7 +146,7 @@ class UpgradeStatusTest extends TestCase
         $status = UpgradeStatus::read($runner);
         $this->assertSame('completed_unverified', $status->status);
         $this->assertStringContainsString('unknown set of steps', $status->fields['reason']);
-        $this->assertNull($status->fields['release']);
+        $this->assertNull($status->fields['upgrade_release']);
 
         UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
         $this->marker('0000', verified: true, release: 'abc1234');

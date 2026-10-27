@@ -57,7 +57,7 @@ final class UpgradeStatus implements JsonSerializable
                 default => null,
             };
 
-            $fields = ['completed_at' => $meta['completed_at'] ?? null, 'release' => $meta['release'] ?? null];
+            $fields = ['upgrade_completed_at' => $meta['completed_at'] ?? null, 'upgrade_release' => $meta['release'] ?? null];
             if ($reason !== null) {
                 $fields['reason'] = $reason;
             }
@@ -66,6 +66,9 @@ final class UpgradeStatus implements JsonSerializable
         }
 
         $verdict = $runner->resumeVerdict();
+        if ($verdict->verdict === ResumeVerdict::LEGACY_COMPLETE) {
+            return new self(self::COMPLETED_UNVERIFIED, ['upgrade_completed_at' => null, 'upgrade_release' => null, 'reason' => 'the run finished before this version recorded the set of steps; a re-run records the completion'], $phases, $manifest->hash());
+        }
         if ($verdict->verdict === ResumeVerdict::BLOCKED) {
             return new self(self::BLOCKED, ['reason' => $verdict->reason, 'blocking_phase' => $verdict->blockingPhase], $phases, $manifest->hash());
         }

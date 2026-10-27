@@ -37,6 +37,11 @@ final class PasswordWrap implements Phase
         $report->line('PLAN would wrap imported bare-MD5 passwords as bcrypt(md5) with password_scheme=md5_bcrypt (members, admin_users).');
     }
 
+    public function version(): string
+    {
+        return self::VERSION;
+    }
+
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return array_values(array_intersect_key(self::KEYS, array_flip($targetTables)));

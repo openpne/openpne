@@ -85,9 +85,11 @@ final class UpgradeVerifier
 
         $this->verifyPasswords($report, $out);
 
-        // The completion marker against this build's manifest; a missing marker is already every
-        // step's "not completed", and a legacy (unverified) marker passes with the fact in the detail.
-        if ($marker !== null) {
+        // The completion marker against this build's manifest: the step checks above read each step's
+        // own row, so only this check knows whether the run finished at all.
+        if ($marker === null) {
+            $this->record($report, $out, 'manifest', false, 'no completion marker — the upgrade did not finish, or ran before this version recorded completions; run it again on this build');
+        } else {
             $verified = (bool) ($meta['verified'] ?? false);
             $matches = ($meta['manifest_hash'] ?? null) === $runner->manifest()->hash();
             $this->record($report, $out, 'manifest', ! $verified || $matches, match (true) {

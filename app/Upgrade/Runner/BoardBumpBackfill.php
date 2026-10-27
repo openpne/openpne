@@ -33,6 +33,11 @@ final class BoardBumpBackfill implements Phase
         $report->line("PLAN would settle every migrated topic's and event's bumped_at from its comments.");
     }
 
+    public function version(): string
+    {
+        return self::VERSION;
+    }
+
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return self::boards($targetTables) === [] ? [] : [self::KEY];

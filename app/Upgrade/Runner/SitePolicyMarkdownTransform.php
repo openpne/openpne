@@ -32,6 +32,11 @@ final class SitePolicyMarkdownTransform implements Phase
         $report->line('PLAN would rewrite the imported terms of service / privacy policy bodies as Markdown.');
     }
 
+    public function version(): string
+    {
+        return self::VERSION;
+    }
+
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return in_array(self::TABLE, $targetTables, true) ? [self::KEY] : [];

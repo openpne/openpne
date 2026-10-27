@@ -25,6 +25,11 @@ final class TalkReadCursorBackfill implements Phase
         $report->line("PLAN would point every migrated group membership's talk read cursor at the group's latest migrated message.");
     }
 
+    public function version(): string
+    {
+        return self::VERSION;
+    }
+
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return in_array('group_members', $targetTables, true) && in_array('group_messages', $targetTables, true) ? [self::KEY] : [];

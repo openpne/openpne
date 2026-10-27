@@ -133,13 +133,15 @@ class UpgradeVerifierSqlTest extends UpgradeSqlTestCase
         $this->assertFalse(json_decode(json_encode($report), true)['upgrade_verified']);
     }
 
-    public function test_without_a_marker_the_metadata_is_null_and_no_manifest_check_runs(): void
+    public function test_without_a_marker_the_manifest_check_fails_and_the_metadata_is_null(): void
     {
         UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
 
         [$report, $out] = $this->verify();
 
-        $this->assertStringNotContainsString('manifest', $out);
+        $this->assertTrue($report->failed());
+        $this->assertStringContainsString('FAIL manifest: no completion marker', $out);
+        $this->assertStringContainsString('PASS FriendshipUpgrade', $out, 'the step checks read their own rows');
         $this->assertNull(json_decode(json_encode($report), true)['upgrade_verified']);
     }
 

@@ -40,7 +40,7 @@ final class RunManifest implements JsonSerializable
             if ($phase->checkpointKeys($targetTables, $sourceTables) === []) {
                 continue;
             }
-            $entries[] = ['key' => class_basename($phase), 'kind' => 'pass', 'version' => (string) $phase::VERSION];
+            $entries[] = ['key' => class_basename($phase), 'kind' => 'pass', 'version' => $phase->version()];
         }
 
         return new self($entries);
@@ -100,6 +100,13 @@ final class RunManifest implements JsonSerializable
         foreach ($stored->phases as $phase) {
             if (! isset($mine[$phase['key']])) {
                 return "`{$phase['key']}` (removed)";
+            }
+        }
+
+        $storedKeys = $stored->keys();
+        foreach ($this->keys() as $i => $key) {
+            if (($storedKeys[$i] ?? null) !== $key) {
+                return "`{$key}` (reordered)";
             }
         }
 

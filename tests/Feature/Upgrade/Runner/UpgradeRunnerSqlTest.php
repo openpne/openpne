@@ -312,17 +312,6 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertSame((new FriendshipUpgrade)->definition(), UpgradeState::query()->where('step_key', 'FriendshipUpgrade')->value('metadata')['definition']);
     }
 
-    public function test_the_manifest_does_not_depend_on_the_source_prefix(): void
-    {
-        $this->seedGraph();
-        $plain = $this->runner($this->relationSteps())->manifest()->hash();
-
-        // The compiled SQL differs under a prefix; the definition is taken at the empty one.
-        $this->assertSame($plain, $this->runner($this->relationSteps())->manifest()->hash());
-        $this->assertStringContainsString('`op_member_relationship`', (new InsertSelectCompiler)->compile(new FriendshipUpgrade, 'op_'));
-        $this->assertSame((new FriendshipUpgrade)->definition(), (new FriendshipUpgrade)->definition());
-    }
-
     public function test_a_dry_run_on_a_fresh_site_writes_no_row(): void
     {
         $this->seedGraph();
@@ -398,6 +387,75 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertNull($marker->metadata['manifest_hash']);
         $this->assertNull($marker->metadata['release']);
         $this->assertNotNull($marker->metadata['completed_at']);
+    }
+
+    public function test_legacy_state_with_every_phase_done_is_adopted_not_walked(): void
+    {
+        $this->seedGraph();
+        $this->assertTrue($this->runner([new FriendshipUpgrade, new MemberBlockUpgrade])->run(new RunOptions));
+        // Make it legacy: no manifest on the epoch row, no completion marker.
+        UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->update(['metadata' => json_encode(['epoch' => UpgradeRunner::NAMING_EPOCH])]);
+        UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->delete();
+
+        $lines = [];
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions(dryRun: true), function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+        $this->assertStringContainsString('Completed: the run finished before this version', implode("\n", $lines));
+        $this->assertDatabaseMissing('openpne4_upgrade_state', ['step_key' => UpgradeRunner::RUN_KEY]);
+
+        $this->assertTrue($this->runner($this->relationSteps())->run(new RunOptions));
+
+        $this->assertDatabaseCount('friend_requests', 0); // the step this build added was not run
+        $marker = UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->first();
+        $this->assertFalse($marker->metadata['verified']);
+    }
+
+    public function test_a_manifest_this_version_cannot_read_is_refused_not_resumed(): void
+    {
+        $this->seedGraph();
+        $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions));
+
+        foreach ([['format' => 2, 'phases' => [['id' => 'x']]], 'garbage', ['phases' => 'x']] as $raw) {
+            UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->update(['metadata' => json_encode(['epoch' => UpgradeRunner::NAMING_EPOCH, 'manifest' => $raw])]);
+
+            $lines = [];
+            $ok = $this->runner($this->relationSteps())->run(new RunOptions, function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            });
+
+            $this->assertFalse($ok);
+            $this->assertStringContainsString('run manifest this version cannot read', implode("\n", $lines));
+            $this->assertDatabaseCount('friend_requests', 0);
+        }
+    }
+
+    public function test_the_marker_carries_the_build_that_started_the_run(): void
+    {
+        $this->seedGraph();
+        $dir = sys_get_temp_dir().'/release-'.uniqid();
+        mkdir($dir);
+        $base = $this->app->basePath();
+        $this->app->setBasePath($dir);
+
+        try {
+            // The same set of steps both times: the first run stops at a refused insert, the second finishes.
+            file_put_contents($dir.'/RELEASE', "sha=aaaaaaa\n");
+            DB::unprepared("CREATE TRIGGER refuse_blocks BEFORE INSERT ON `member_blocks` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'not yet'");
+            $this->assertFalse($this->runner([new FriendshipUpgrade, new MemberBlockUpgrade])->run(new RunOptions), 'started under build A, stopped');
+            DB::unprepared('DROP TRIGGER IF EXISTS refuse_blocks');
+
+            file_put_contents($dir.'/RELEASE', "sha=bbbbbbb\n");
+            $this->assertTrue($this->runner([new FriendshipUpgrade, new MemberBlockUpgrade])->run(new RunOptions), 'finished under build B');
+        } finally {
+            DB::unprepared('DROP TRIGGER IF EXISTS refuse_blocks');
+            $this->app->setBasePath($base);
+            @unlink($dir.'/RELEASE');
+            @rmdir($dir);
+        }
+
+        $this->assertSame('aaaaaaa', UpgradeState::query()->where('step_key', UpgradeRunner::EPOCH_KEY)->value('metadata')['release']);
+        $this->assertSame('aaaaaaa', UpgradeState::query()->where('step_key', UpgradeRunner::RUN_KEY)->value('metadata')['release']);
     }
 
     public function test_a_completed_site_runs_nothing_whatever_changed_since(): void

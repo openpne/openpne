@@ -52,6 +52,11 @@ final class EmojiTransform implements Phase
         $report->line('PLAN would rewrite OpenPNE 3 carrier-emoji codes to Unicode across '.count(self::TABLES).' member-authored text tables.');
     }
 
+    public function version(): string
+    {
+        return self::VERSION;
+    }
+
     public function checkpointKeys(array $targetTables, array $sourceTables): array
     {
         return array_map(static fn (string $table): string => 'emoji_'.$table, array_values(array_intersect(array_keys(self::TABLES), $targetTables)));
@@ -60,7 +65,7 @@ final class EmojiTransform implements Phase
     /** @param list<string> $targetTables this run's step target tables (skip tables the run does not own) */
     public function run(array $targetTables, RunReport $report): bool
     {
-        if (! $this->assertUtf8mb4($report)) {
+        if (! $this->assertUtf8mb4($report, $this->checkpointKeys($targetTables, [])[0] ?? 'emoji')) {
             return false;
         }
 
@@ -89,12 +94,15 @@ final class EmojiTransform implements Phase
      * utf8mb4 or abort: on a utf8mb3 connection MySQL mangles every non-BMP emoji to '?' as it writes
      * the converted value, silently corrupting the data this pass exists to repair.
      */
-    private function assertUtf8mb4(RunReport $report): bool
+    private function assertUtf8mb4(RunReport $report, string $key): bool
     {
         $charset = DB::selectOne('SELECT @@character_set_connection AS charset')->charset ?? '';
 
         if ($charset !== 'utf8mb4') {
-            $report->failed('emoji', "connection charset is '{$charset}', expected utf8mb4 (non-BMP emoji would be lost).");
+            // Recorded on the first table's key so the status command sees the pass as failed.
+            $message = "connection charset is '{$charset}', expected utf8mb4 (non-BMP emoji would be lost).";
+            rescue(static fn () => UpgradeState::updateOrCreate(['step_key' => $key], ['status' => UpgradeState::STATUS_FAILED, 'error' => $message, 'finished_at' => now()]));
+            $report->failed($key, $message);
 
             return false;
         }

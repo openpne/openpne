@@ -83,10 +83,19 @@ final class UpgradeRunner
 
     private function execute(RunOptions $options, RunReport $report): bool
     {
-        // Before the preflight (it reads only the state table, so a completed site whose OpenPNE 3 tables are gone still answers); --force-restart is the escape hatch, so it is not gated.
-        $verdict = $options->forceRestart && ! $options->dryRun ? new ResumeVerdict(ResumeVerdict::FRESH) : $this->resumeVerdict();
+        // Read before the preflight (state table only, so a completed site whose OpenPNE 3 tables are gone still answers), never for --force-restart, the escape hatch every refusal names, its dry run included.
+        $verdict = $options->forceRestart ? new ResumeVerdict(ResumeVerdict::FRESH) : $this->resumeVerdict();
         if ($verdict->verdict === ResumeVerdict::COMPLETED) {
             $report->line('Completed: '.$verdict->reason.'; nothing to do (openpne:upgrade-status reports what has changed since).');
+
+            return true;
+        }
+        if ($verdict->verdict === ResumeVerdict::LEGACY_COMPLETE) {
+            // Adopted rather than walked: a walk would run a step this build added against a site in service.
+            if (! $options->dryRun) {
+                $this->stampCompletion();
+            }
+            $report->line('Completed: the run finished before this version recorded the set of steps; nothing to do (the completion is recorded as unverified, and openpne:verify-upgrade tells whether every step is there).');
 
             return true;
         }
@@ -316,9 +325,8 @@ final class UpgradeRunner
     }
 
     /**
-     * The resume gate as one method: refuses (abort) what resumeVerdict() blocks, and stamps the epoch
-     * row with this run's manifest on a fresh state unless $dryRun. Public so the guard is exercisable
-     * without a MySQL source.
+     * The verdict and the stamp as one call, for a test without a MySQL source: refuses (abort) what
+     * resumeVerdict() blocks, else stamps the epoch row unless $dryRun (a completed site needs no stamp).
      */
     public function claimNamingEpoch(?RunReport $report = null, bool $dryRun = false): bool
     {
@@ -331,7 +339,7 @@ final class UpgradeRunner
             return false;
         }
 
-        if (! $dryRun) {
+        if (! $dryRun && $verdict->verdict !== ResumeVerdict::COMPLETED) {
             $this->stampRun();
         }
 
@@ -380,9 +388,16 @@ final class UpgradeRunner
             ));
         }
 
-        $stored = RunManifest::fromStored((array) ($marker->metadata['manifest'] ?? []));
+        $raw = $marker->metadata['manifest'] ?? null;
+        if ($raw === null) {
+            return new ResumeVerdict(self::legacyLooksComplete() ? ResumeVerdict::LEGACY_COMPLETE : ResumeVerdict::LEGACY);
+        }
+
+        // Present but unreadable (another format, a garbled row) is refused like a garbled epoch, not read as legacy.
+        $stored = is_array($raw) && ($raw['format'] ?? null) === RunManifest::FORMAT ? RunManifest::fromStored($raw) : null;
         if ($stored === null) {
-            return new ResumeVerdict(ResumeVerdict::LEGACY);
+            return new ResumeVerdict(ResumeVerdict::BLOCKED, 'the upgrade state carries a run manifest this version cannot read (format '
+                .var_export(is_array($raw) ? ($raw['format'] ?? null) : $raw, true).'), so it cannot be resumed — re-run with --force-restart to start over from an empty target.');
         }
 
         $difference = $this->manifest()->firstDifference($stored);
@@ -397,7 +412,19 @@ final class UpgradeRunner
         return new ResumeVerdict(ResumeVerdict::OK);
     }
 
-    /** This run's phases in execution order; the PHP phases list themselves out when they have no checkpoint to write. */
+    /**
+     * Legacy state carries no manifest, so the set it ran under is unknown: it is taken as complete
+     * when nothing is failed or running — a crash between steps leaves no such row and is misread as
+     * complete, which verify then reports as the missing steps, never as copied data.
+     */
+    public static function legacyLooksComplete(): bool
+    {
+        $rows = UpgradeState::query()->where('step_key', '!=', self::EPOCH_KEY);
+
+        return (clone $rows)->exists() && ! (clone $rows)->whereIn('status', [UpgradeState::STATUS_RUNNING, UpgradeState::STATUS_FAILED])->exists();
+    }
+
+    /** This run's phases in the order they finish; the PHP phases list themselves out when they have no checkpoint to write. */
     public function manifest(): RunManifest
     {
         return RunManifest::build($this->steps(), self::phases(), $this->targetTables(), $this->sourceTables());
@@ -420,7 +447,7 @@ final class UpgradeRunner
         foreach (self::phases() as $phase) {
             $keys = $phase->checkpointKeys($this->targetTables(), $this->sourceTables());
             if ($keys !== []) {
-                $out[class_basename($phase)] = ['kind' => 'pass', 'version' => (string) $phase::VERSION, 'keys' => $keys, 'optional' => $phase instanceof FileBinMigration ? FileBinMigration::optionalKeys() : []];
+                $out[class_basename($phase)] = ['kind' => 'pass', 'version' => $phase->version(), 'keys' => $keys, 'optional' => $phase instanceof FileBinMigration ? FileBinMigration::optionalKeys() : []];
             }
         }
 
