@@ -66,7 +66,8 @@ class SourcePreflightTest extends TestCase
         $this->assertTrue((new UpgradeRunner(new InsertSelectCompiler, [new DiaryUpgrade]))->run(new RunOptions(dryRun: true), null, $report));
 
         $this->assertContains('WARN '.SourcePreflight::W_ABSENT_PLUGIN.': '.SourcePreflight::absentPluginMessage('diary'), $lines);
-        $this->assertSame(['W-ABSENT-PLUGIN', 'dropped'], [$report->jsonSerialize()['warnings'][0]['code'], $report->jsonSerialize()['warnings'][0]['category']]);
+        $absent = array_values(array_filter($report->jsonSerialize()['warnings'], fn (array $w): bool => $w['code'] === 'W-ABSENT-PLUGIN'));
+        $this->assertSame(['dropped'], array_column($absent, 'category'));
         $this->assertFalse($this->sourceExists('diary'), 'a dry run creates nothing');
     }
 

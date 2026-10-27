@@ -127,6 +127,13 @@ final class ActivityTemplateTransform
                 });
             }
 
+            // Built before the COMPLETED write: a reason the renderer does not declare fails the step
+            // while it is still resumable, not after it is marked done.
+            $warnings = [];
+            foreach ($kept as $reason => $count) {
+                $warnings[] = self::keptWarning($table, (string) $reason, (int) $count);
+            }
+
             UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_COMPLETED,
                 'rows_affected' => $rendered,
@@ -134,8 +141,8 @@ final class ActivityTemplateTransform
             ]);
 
             $report->done($key, "{$rendered} rows", $rendered);
-            foreach ($kept as $reason => $count) {
-                $report->warning(self::keptWarning($table, (string) $reason, (int) $count));
+            foreach ($warnings as $warning) {
+                $report->warning($warning);
             }
 
             return true;
@@ -158,7 +165,7 @@ final class ActivityTemplateTransform
 
     public static function keptWarning(string $table, string $reason, int $rows): Warning
     {
-        // No default: a reason the renderer does not declare (a stale key in resumed metadata) must not pass as "unknown template".
+        // No default: a reason the renderer does not declare must not pass as "unknown template".
         $code = match ($reason) {
             ActivityTemplateRenderer::UNKNOWN_TEMPLATE => self::W_KEPT_UNKNOWN,
             ActivityTemplateRenderer::BAD_PARAMS => self::W_KEPT_BAD_PARAMS,

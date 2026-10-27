@@ -218,7 +218,7 @@ final class SourcePreflight
             sort($group['names'], SORT_NATURAL);
             $out[count($group['names']) === 1 ? $group['names'][0] : $key] = $group;
         }
-        // strcmp, not <=>: a purely numeric name is an int key, and PHP compares numeric strings as numbers.
+        // strcmp, not <=>: a purely numeric name is already an int key (array_combine), and <=> would juggle it against the strings.
         uksort($out, static fn (string|int $a, string|int $b): int => $out[$b]['rows'] <=> $out[$a]['rows'] ?: strcmp((string) $a, (string) $b));
 
         return $out;
