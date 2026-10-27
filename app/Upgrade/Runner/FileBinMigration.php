@@ -98,7 +98,6 @@ final class FileBinMigration implements Phase
     /** @return list<string> */
     private function zeroDates(string $binTable): array
     {
-        // One pass over the (GB-scale) table for both columns; the samples only on a hit.
         $counts = DB::selectOne('SELECT '.implode(', ', array_map(
             static fn (string $column): string => 'SUM(CASE WHEN '.ZeroDatePreflight::zeroPredicate("`{$column}`")." THEN 1 ELSE 0 END) AS `{$column}`",
             ['created_at', 'updated_at'],

@@ -113,6 +113,7 @@ final class ZeroDatePreflight
 
         if ($warned !== []) {
             $located = $this->locate($step, $warned, $sourcePrefix, $sourceDatabase, $reported, $absentOptional);
+            // A zero the SELECT carries itself warns too, so the fallback is for a step with nothing else to say.
             array_push($errors, ...($located === [] && $errors === [] ? [self::zeroDateSubqueryMessage(class_basename($step), $warned, array_values(array_diff($step->readSourceTables(), [$step->sourceTable()])))] : $located));
         }
 
@@ -121,8 +122,8 @@ final class ZeroDatePreflight
 
     /**
      * The rows holding the warned values, per date column of every table the step reads; a column
-     * already reported from the SELECT's own output is left out. The count is of rows holding the
-     * value, which the step read at least one of.
+     * already reported from the SELECT's own output is left out. A column the step never reads is
+     * listed too when it holds the value: the warning names the value, not the column.
      *
      * @param  list<string>  $values
      * @param  array<string, true>  $reported  `table.column` keys
@@ -177,7 +178,7 @@ final class ZeroDatePreflight
         $values = [];
         foreach ($warnings as $warning) {
             // 1292 also covers a truncated number; only a date conversion is the INSERT's failure here.
-            if ((int) $warning->Code === self::INCORRECT_DATETIME && preg_match("/^Incorrect (?:datetime|date|time) value: '([^']*)'/", $warning->Message, $m) === 1) {
+            if ((int) $warning->Code === self::INCORRECT_DATETIME && preg_match("/^(?:Truncated i|I)ncorrect (?:datetime|date|time) value: '([^']*)'/", $warning->Message, $m) === 1) {
                 $values[$m[1]] = true;
             }
         }
@@ -216,7 +217,7 @@ final class ZeroDatePreflight
     {
         $sample = $ids === [] ? '' : ' (e.g. id '.implode(', ', $ids).')';
 
-        return "source `{$table}`.`{$column}` holds a zero date such as 0000-00-00 on {$rows} row(s){$sample}, and {$step} reads it through a subquery"
+        return "source `{$table}`.`{$column}` holds a zero date such as 0000-00-00 on {$rows} row(s){$sample}, and {$step} reads that table through a subquery"
             .' — MySQL\'s strict mode, which OpenPNE 4 runs under, refuses it, so the step would fail mid-run. Set a real time there'
             .($nullable ? ' (or NULL)' : '').', then re-run.';
     }
