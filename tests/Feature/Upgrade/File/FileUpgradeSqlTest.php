@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade\File;
 
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\UploadFileOwnerPreflight;
+use App\Upgrade\Runner\Warning;
 use App\Upgrade\Steps\FileUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SeedsSourceMembers;
@@ -303,7 +304,7 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
         $report = (new UploadFileOwnerPreflight)->inspect('', null, $this->sourceTables());
 
         $this->assertSame([], $report->errors);
-        $this->assertSame([UploadFileOwnerPreflight::ownerlessUploadMessage(2, [61, 62])], $report->warnings);
+        $this->assertEquals([new Warning(UploadFileOwnerPreflight::W_OWNERLESS, UploadFileOwnerPreflight::ownerlessUploadMessage(2, [61, 62]), 2)], $report->warnings);
     }
 
     public function test_the_preflight_is_silent_when_every_upload_has_an_owner(): void

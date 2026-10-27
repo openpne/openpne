@@ -3,6 +3,8 @@
 namespace Tests\Unit\Upgrade;
 
 use App\Upgrade\Runner\RunReport;
+use App\Upgrade\Runner\SourcePreflight;
+use App\Upgrade\Runner\Warning;
 use Illuminate\Database\QueryException;
 use PDOException;
 use RuntimeException;
@@ -15,7 +17,7 @@ class RunReportTest extends TestCase
         $report = $this->capture($lines);
 
         $report->error('missing table');
-        $report->warning('odd row');
+        $report->warning(new Warning(SourcePreflight::W_ABSENT_PLUGIN, 'odd row'));
         $report->envHint('OPENPNE_IMAGE_MAX_UPLOAD_KB', '1024');
         $report->note('review the policy');
         $report->nextStep('Surface set to classic_default');
@@ -27,7 +29,7 @@ class RunReportTest extends TestCase
 
         $this->assertSame([
             'ERROR missing table',
-            'WARN odd row',
+            'WARN W-ABSENT-PLUGIN: odd row',
             'ENV_HINT OPENPNE_IMAGE_MAX_UPLOAD_KB=1024',
             'NOTE review the policy',
             'Surface set to classic_default',
@@ -40,7 +42,7 @@ class RunReportTest extends TestCase
 
         $json = $report->jsonSerialize();
         $this->assertSame(['missing table'], $json['errors']);
-        $this->assertSame([['message' => 'odd row', 'code' => null, 'category' => null, 'count' => null]], $json['warnings']);
+        $this->assertSame([['message' => 'odd row', 'code' => 'W-ABSENT-PLUGIN', 'category' => 'dropped', 'count' => null]], $json['warnings']);
         $this->assertSame(['OPENPNE_IMAGE_MAX_UPLOAD_KB' => '1024'], (array) $json['env_hints']);
         $this->assertSame(['review the policy'], $json['notes']);
         $this->assertSame(['Surface set to classic_default'], $json['next_steps']);
@@ -164,7 +166,7 @@ class RunReportTest extends TestCase
     public function test_a_null_sink_records_without_printing_and_the_json_has_every_key(): void
     {
         $report = new RunReport(dryRun: true);
-        $report->warning("bad \xB1 byte");
+        $report->warning(new Warning(SourcePreflight::W_UNKNOWN_NAME, "bad \xB1 byte", 2));
         $report->finish(true);
 
         $decoded = json_decode($report->toJson(), true, flags: JSON_THROW_ON_ERROR);

@@ -120,7 +120,7 @@ first completion ends with (the surface switch, and warming the pictures: §5); 
 | Line | Meaning |
 |---|---|
 | `ERROR …` | The source cannot be migrated as it is; nothing is written. Exit code 1. |
-| `WARN …` | Migrated anyway; read it and decide whether it matters. Exit code 0 on its own. |
+| `WARN …` | Never stops the run; the code says what happened to the row (the table below). Exit code 0 on its own. |
 | `ENV_HINT KEY=value` | A line to put in `.env` to keep an OpenPNE 3 setting the database does not carry. |
 | `Aborted: …` | Why nothing ran: a failed preflight, or upgrade records this version cannot resume. Exit code 1. |
 | `RUN <step>` / `DONE <step>: … (1.2s)` / `SKIP <step>: …` | One step, with how long it took, or why it was skipped (already completed on a re-run). |
@@ -141,23 +141,34 @@ attached files, a file that two records point at (OpenPNE 4 gives a file one own
 record's readers would see it from the other's page), or a member who liked one post, talk message,
 diary or comment twice (OpenPNE 4 keeps one 👍 per member). Fix the source and dry-run again.
 
-**`WARN` migrates anyway** — the row is carried, and you decide whether what it reports matters:
+**`WARN` never stops the run**; its code says what happened to the row. Each line is
+`WARN <code>: …`, and the JSON entry carries the `code`, its `category` and a `count` in the
+code's own unit (rows, threads, files, likes — never add counts across codes). The categories:
+`dropped` — the source value (or a whole absent table) is not copied; `rewritten` — carried, changed on the way;
+`review` — carried, but you may need to act; `env` — a `.env` line keeps it; `unknown` — source
+data the upgrade does not recognise, not carried.
 
-| Warning | What it means |
+| Code | What it means |
 |---|---|
-| A `name` the upgrade does not recognise, with a row count | A third-party plugin or a local customisation put it there. OpenPNE 4 has no home for it, so those rows are not migrated. |
-| A mail template that does not render | An admin customised it into something OpenPNE 4 cannot render, or it links through an OpenPNE 3 address that no longer exists. |
-| A mail translation in a locale OpenPNE 4 never reads | It migrates but is never sent: OpenPNE 4 sends each recipient `ja` or `en`. |
-| Timeline replies answering another reply, or nested deeper than 4 | OpenPNE 4 threads are one level deep. A reply to a reply is attached to the thread's first post (where OpenPNE 3 showed it too); one nested deeper than 4 is not migrated — point its `in_reply_to_activity_id` at the first post in the source to carry it. |
-| Timeline replies whose parent row is missing | An incomplete dump (OpenPNE 3 deletes a reply with its parent). Each is migrated as a post of its own. |
-| Community timeline threads whose community is gone, or that were not posted to every member | Not migrated: a group's talk belongs to a group, and holds no per-message audience. The friends-only and private community posts OpenPNE 3 allowed have nowhere to land. |
-| Timeline threads scoped to something other than a community, or replies scoped differently from their thread | A thread lands where its first post does; any other scope is not migrated. |
-| Activity images held only as a URL | OpenPNE 4 keeps an image as a file, so these are not migrated. |
-| Likes (`opLikePlugin`) on activities that are not migrated | A like lands where its activity does; one on an activity left behind is left behind with it. |
-| Likes on a diary, diary comment, topic comment or event comment that no longer exists, counted per kind | Nothing to land on. |
-| Likes on a kind of record whose plugin this source does not have, counted per kind | Nothing to land on. |
-| Likes under a `foreign_table` letter opLikePlugin never writes | A third-party plugin or a local customisation put them there; not migrated. |
-| Template activities (`diary` / `community_topic` / `community_event`), with where they land | The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; a template OpenPNE 4 does not know keeps its stored text. |
+| `W-UNKNOWN-NAME` | A `name` the upgrade does not recognise, with a row count; names in `member_config` / `community_config` that differ only in a trailing number are reported once as a family. A third-party plugin or a local customisation put it there. OpenPNE 4 has no home for it, so those rows are not migrated. |
+| `W-ABSENT-PLUGIN` | A plugin's tables are not in the source at all: its step migrates nothing. |
+| `W-SETTING-IN-ENV` / `W-SETTING-UNREADABLE` | `image_max_filesize` lives in `.env` here; the `ENV_HINT` line gives the value, or the size could not be read and you set it yourself. |
+| `W-SETTING-NULL` | An `sns_config` row with a NULL value: OpenPNE 3 read its default there, and OpenPNE 4 keeps its own. |
+| `W-MAIL-BROKEN` / `W-MAIL-DEGRADED` | A mail template that does not render: broken means the mail cannot be sent until the template is fixed; degraded means it sends with the failing reference as empty text. An admin customised it into something OpenPNE 4 cannot render, or it links through an OpenPNE 3 address that no longer exists. |
+| `W-MAIL-INERT-LOCALE` | A mail translation in a locale OpenPNE 4 never reads. It migrates but is never sent: OpenPNE 4 sends each recipient `ja` or `en`. |
+| `W-ACTIVITY-DEEP-REPLY` / `W-ACTIVITY-UNRESOLVABLE-REPLY` | Timeline replies answering another reply, or nested deeper than 4. OpenPNE 4 threads are one level deep. A reply to a reply is attached to the thread's first post (where OpenPNE 3 showed it too); one nested deeper than 4 is not migrated — point its `in_reply_to_activity_id` at the first post in the source to carry it. |
+| `W-ACTIVITY-DANGLING-REPLY` | Timeline replies whose parent row is missing: an incomplete dump (OpenPNE 3 deletes a reply with its parent). Each is migrated as a post of its own. |
+| `W-ACTIVITY-ORPHAN-GROUP-THREAD` / `W-ACTIVITY-NON-MEMBERS-GROUP-THREAD` | Community timeline threads whose community is gone, or that were not posted to every member. Not migrated: a group's talk belongs to a group, and holds no per-message audience. The friends-only and private community posts OpenPNE 3 allowed have nowhere to land. |
+| `W-ACTIVITY-OTHER-SCOPE` / `W-ACTIVITY-CROSS-SCOPE-REPLY` | Timeline threads scoped to something other than a community (not migrated), or replies scoped differently from their thread (a thread lands where its first post does). |
+| `W-ACTIVITY-URI-ONLY-IMAGE` | Activity images held only as a URL. OpenPNE 4 keeps an image as a file, so these are not migrated. |
+| `W-LIKE-UNMIGRATED-ACTIVITY` | Likes (`opLikePlugin`) on activities that are not migrated. A like lands where its activity does; one on an activity left behind is left behind with it. |
+| `W-LIKE-GONE-TARGET` | Likes on a diary, diary comment, topic comment or event comment that no longer exists, counted per kind. Nothing to land on. |
+| `W-LIKE-UNINSTALLED-TARGET` | Likes on a kind of record whose plugin this source does not have, counted per kind. Nothing to land on. |
+| `W-LIKE-UNKNOWN-TABLE` | Likes under a `foreign_table` letter opLikePlugin never writes. A third-party plugin or a local customisation put them there; not migrated. |
+| `W-ACTIVITY-TEMPLATE-RENDERED` / `W-ACTIVITY-TEMPLATE-DROPPED` / `W-ACTIVITY-TEMPLATE-UNKNOWN` | Template activities (`diary` / `community_topic` / `community_event`), with where they land. The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; one in a thread that is not migrated goes with it; a template OpenPNE 4 does not know keeps its stored text. |
+| `W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN` / `W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS` / `W-ACTIVITY-TEMPLATE-KEPT-NO-LINK` / `W-ACTIVITY-TEMPLATE-KEPT-UNFIT` | After the copy, template rows whose line could not be rendered keep their stored text, counted by reason: a template OpenPNE 4 does not know, parameters that are not what OpenPNE 3 wrote, a link that names no OpenPNE 4 page, or a link alone longer than the body allows. |
+| `W-UPLOAD-OWNERLESS` | Upload-plugin files whose member or community the upgrade does not carry. They arrive with no owner, so their `/f/show` links answer 404; delete them in the source, or afterwards in the admin file list. |
+| `W-THEME-UNKNOWN-PACKAGE` / `W-THEME-MISSING-PACKAGE` | The skin OpenPNE 3 showed cannot be reproduced yet: the site wore the first package on its disk (which the run cannot see), or `Theme_used` names a package not under `public/opSkinThemePlugin`. The default skin shows until the package is copied in and chosen (see [Bringing an OpenPNE 3 theme](#bringing-an-openpne-3-theme)). |
 
 The mail-template warnings say which kind each one is, because it changes what happens after the
 cutover. A template OpenPNE 4 cannot parse, one using something it does not allow, or one linking to

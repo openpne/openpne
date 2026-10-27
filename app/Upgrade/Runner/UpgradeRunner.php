@@ -132,11 +132,12 @@ final class UpgradeRunner
         }
 
         // After the structural verdict (the scan reads guarded columns) and before the plan/run split,
-        // so a dry run shows the unrecognised names too.
-        foreach ($preflight->unknownSourceNames($options->sourcePrefix, $options->sourceDatabase) as $table => $counts) {
-            foreach ($counts as $name => $rows) {
-                $report->warning(SourcePreflight::unknownSourceNameMessage($table, $name, $rows));
-            }
+        // so a dry run shows the unrecognised names and the absent plugins too.
+        foreach ($source->absentOptional as $table) {
+            $report->warning(new Warning(SourcePreflight::W_ABSENT_PLUGIN, SourcePreflight::absentPluginMessage($table)));
+        }
+        foreach ($preflight->unknownSourceNameWarnings($options->sourcePrefix, $options->sourceDatabase) as $warning) {
+            $report->warning($warning);
         }
 
         if ($this->readsSourceTable('sns_config')) {
@@ -188,7 +189,7 @@ final class UpgradeRunner
             return false;
         }
 
-        $created = $preflight->ensureExists($source->absentOptional, $options->sourcePrefix, $options->sourceDatabase, $report);
+        $created = $preflight->ensureExists($source->absentOptional, $options->sourcePrefix, $options->sourceDatabase);
 
         try {
             if ($migratesFiles && ! $fileBin->snapshot($options->sourcePrefix, $options->sourceDatabase, $report)) {

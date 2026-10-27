@@ -18,6 +18,14 @@ final class NicePreflight
 
     private const RECORD_NAMES = ['D' => 'diaries', 'd' => 'diary comments', 't' => 'topic comments', 'e' => 'event comments'];
 
+    public const W_UNMIGRATED_ACTIVITY = 'W-LIKE-UNMIGRATED-ACTIVITY';
+
+    public const W_GONE_TARGET = 'W-LIKE-GONE-TARGET';
+
+    public const W_UNINSTALLED_TARGET = 'W-LIKE-UNINSTALLED-TARGET';
+
+    public const W_UNKNOWN_TABLE = 'W-LIKE-UNKNOWN-TABLE';
+
     private string $prefix = '';
 
     private ?string $database = null;
@@ -45,7 +53,7 @@ final class NicePreflight
             if ($table !== null && ! in_array($table, $readTables, true)) {
                 [$rows, $ids] = $this->rows(NiceReactionUpgrade::onTable($letter));
                 if ($rows > 0) {
-                    $warnings[] = self::uninstalledTargetLikeMessage(self::RECORD_NAMES[$letter], $rows, $ids);
+                    $warnings[] = new Warning(self::W_UNINSTALLED_TARGET, self::uninstalledTargetLikeMessage(self::RECORD_NAMES[$letter], $rows, $ids), $rows);
                 }
 
                 continue;
@@ -55,8 +63,8 @@ final class NicePreflight
             [$rows, $ids] = $this->rows(NiceReactionUpgrade::onTable($letter).' AND NOT ('.$branch.')');
             if ($rows > 0) {
                 $warnings[] = $letter === 'A'
-                    ? self::unmigratedActivityLikeMessage($rows, $ids)
-                    : self::goneTargetLikeMessage(self::RECORD_NAMES[$letter], $rows, $ids);
+                    ? new Warning(self::W_UNMIGRATED_ACTIVITY, self::unmigratedActivityLikeMessage($rows, $ids), $rows)
+                    : new Warning(self::W_GONE_TARGET, self::goneTargetLikeMessage(self::RECORD_NAMES[$letter], $rows, $ids), $rows);
             }
         }
 
@@ -71,7 +79,7 @@ final class NicePreflight
         }
 
         foreach ($this->grouped('NOT ('.implode(') AND NOT (', $known).')') as [$letter, $rows, $ids]) {
-            $warnings[] = self::unknownTableLikeMessage($letter, $rows, $ids);
+            $warnings[] = new Warning(self::W_UNKNOWN_TABLE, self::unknownTableLikeMessage($letter, $rows, $ids), $rows);
         }
 
         return new PreflightReport($errors, $warnings);

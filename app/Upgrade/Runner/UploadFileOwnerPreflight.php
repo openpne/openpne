@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class UploadFileOwnerPreflight
 {
+    public const W_OWNERLESS = 'W-UPLOAD-OWNERLESS';
+
     private const SAMPLE = 5;
 
     /** @param  list<string>  $readTables  source tables this run reads; an owner arm needing any other table is left out (its rows are not claimable here either) */
@@ -47,7 +49,7 @@ final class UploadFileOwnerPreflight
             DB::select($resolve("SELECT `file`.`id` AS `id` {$from} ORDER BY `file`.`id` LIMIT ".self::SAMPLE)),
         );
 
-        return new PreflightReport([], [self::ownerlessUploadMessage($count, $ids)]);
+        return new PreflightReport([], [new Warning(self::W_OWNERLESS, self::ownerlessUploadMessage($count, $ids), $count)]);
     }
 
     /** @param  list<int>  $fileIds */

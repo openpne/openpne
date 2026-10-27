@@ -25,6 +25,14 @@ final class ActivityTemplateTransform
         'group_messages' => TalkBody::MAX,
     ];
 
+    public const W_KEPT_UNKNOWN = 'W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN';
+
+    public const W_KEPT_BAD_PARAMS = 'W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS';
+
+    public const W_KEPT_NO_LINK = 'W-ACTIVITY-TEMPLATE-KEPT-NO-LINK';
+
+    public const W_KEPT_UNFIT = 'W-ACTIVITY-TEMPLATE-KEPT-UNFIT';
+
     private const CHUNK = 500;
 
     public function plan(RunReport $report): void
@@ -119,6 +127,13 @@ final class ActivityTemplateTransform
                 });
             }
 
+            // Built before the COMPLETED write: a reason the renderer does not declare fails the step
+            // instead of leaving it marked done with a FAIL after it (--force-restart clears the key).
+            $warnings = [];
+            foreach ($kept as $reason => $count) {
+                $warnings[] = self::keptWarning($table, (string) $reason, (int) $count);
+            }
+
             UpgradeState::updateOrCreate(['step_key' => $key], [
                 'status' => UpgradeState::STATUS_COMPLETED,
                 'rows_affected' => $rendered,
@@ -126,8 +141,8 @@ final class ActivityTemplateTransform
             ]);
 
             $report->done($key, "{$rendered} rows", $rendered);
-            foreach ($kept as $reason => $count) {
-                $report->warning(self::keptMessage($table, (string) $reason, (int) $count));
+            foreach ($warnings as $warning) {
+                $report->warning($warning);
             }
 
             return true;
@@ -146,6 +161,19 @@ final class ActivityTemplateTransform
             URL::forceRootUrl($liveRootUrl);
             URL::forceScheme(parse_url($liveRootUrl, PHP_URL_SCHEME) ?: null);
         }
+    }
+
+    public static function keptWarning(string $table, string $reason, int $rows): Warning
+    {
+        // No default: a reason the renderer does not declare must not pass as "unknown template".
+        $code = match ($reason) {
+            ActivityTemplateRenderer::UNKNOWN_TEMPLATE => self::W_KEPT_UNKNOWN,
+            ActivityTemplateRenderer::BAD_PARAMS => self::W_KEPT_BAD_PARAMS,
+            ActivityTemplateRenderer::NO_LINK => self::W_KEPT_NO_LINK,
+            ActivityTemplateRenderer::UNFIT => self::W_KEPT_UNFIT,
+        };
+
+        return new Warning($code, self::keptMessage($table, $reason, $rows), $rows);
     }
 
     public static function keptMessage(string $table, string $reason, int $rows): string

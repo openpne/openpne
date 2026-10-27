@@ -223,8 +223,17 @@ contracts:
   `failed()`, and is `null` for a failure recorded without a start (the emoji charset refusal).
   A dry run lists only the walk steps (`planned`): the passes' and `file_bin`'s `PLAN` lines are
   not steps.
-- `warnings[]` entries carry `code`, `category` and `count` as `null`, reserved for the coded
-  warnings a later version fills in without a breaking change.
+- Every warning is a `Warning` (`app/Upgrade/Runner/Warning.php`): its code is a `W_*` constant
+  on the origin that emits it and a key of `Warning::CATEGORY_OF`, the one place a category is
+  decided (`dropped` / `rewritten` / `review` / `env` / `unknown`, defined in the operator
+  guide); a factory that branches has one code per branch. `count` is the number the message
+  prints, in that code's own unit, never summed across codes (template rows overlap the threads
+  other codes count). The line is `WARN <code>: <message>`; every constant is registered, unique,
+  well-formed and listed in the guide's table (an architecture-style test holds the invariant).
+- Unknown `member_config` / `community_config` names that differ only in a trailing number are
+  one `W-UNKNOWN-NAME` warning per family (`SourcePreflight::families()`), rows summed; a name
+  without a numeric suffix, or a family of one, is reported by name. The other scanned tables
+  keep one line per name. `W-ABSENT-PLUGIN` is reported on the dry run too.
 - `release` is the deployment's marker ([runtime.md](runtime.md#release-marker)), `null`
   without one; `site` is the connection's database name; both are `null` rather than thrown
   when the lookup fails, since the report prints after the failure it describes.

@@ -20,18 +20,22 @@ final class ClassicThemeSelection
 {
     public const KEY = 'classic_theme_selection';
 
+    public const W_UNKNOWN_PACKAGE = 'W-THEME-UNKNOWN-PACKAGE';
+
+    public const W_MISSING_PACKAGE = 'W-THEME-MISSING-PACKAGE';
+
     private const THEME_PLUGIN = 'opSkinThemePlugin';
 
     private const BASIC_PLUGIN = 'opSkinBasicPlugin';
 
     public static function unknownPackageMessage(): string
     {
-        return self::KEY.': OpenPNE 3 dressed this site in the first theme package on its disk, which this run cannot see; the default skin is set until you copy that package under public/opSkinThemePlugin and choose it on Appearance (Classic) > Theme.';
+        return 'OpenPNE 3 dressed this site in the first theme package on its disk, which this run cannot see; the default skin is set until you copy that package under public/opSkinThemePlugin and choose it on Appearance (Classic) > Theme.';
     }
 
     public static function missingPackageMessage(string $theme): string
     {
-        return self::KEY.": Theme_used '{$theme}' is not under public/opSkinThemePlugin, so the default skin shows until the package is copied there (verify-upgrade fails until then); or choose another on Appearance (Classic) > Theme.";
+        return "Theme_used '{$theme}' is not under public/opSkinThemePlugin, so the default skin shows until the package is copied there (verify-upgrade fails until then); or choose another on Appearance (Classic) > Theme.";
     }
 
     public function plan(RunReport $report): void
@@ -93,9 +97,9 @@ final class ClassicThemeSelection
 
         $report->done(self::KEY, 'classic_theme = '.($theme === '' ? 'the default skin' : "'{$theme}'"));
         if ($selected === null) {
-            $report->warning(self::unknownPackageMessage());
+            $report->warning(new Warning(self::W_UNKNOWN_PACKAGE, self::unknownPackageMessage()));
         } elseif ($theme !== '' && ClassicThemes::find($theme) === null) {
-            $report->warning(self::missingPackageMessage($theme));
+            $report->warning(new Warning(self::W_MISSING_PACKAGE, self::missingPackageMessage($theme)));
         }
 
         return true;

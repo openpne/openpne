@@ -10,7 +10,7 @@ final class PreflightReport
 {
     /**
      * @param  list<string>  $errors
-     * @param  list<string>  $warnings
+     * @param  list<Warning>  $warnings
      */
     public function __construct(
         public readonly array $errors,

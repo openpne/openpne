@@ -15,6 +15,28 @@ use Illuminate\Support\Facades\DB;
  */
 final class ActivityPreflight
 {
+    public const W_DEEP_REPLY = 'W-ACTIVITY-DEEP-REPLY';
+
+    public const W_UNRESOLVABLE_REPLY = 'W-ACTIVITY-UNRESOLVABLE-REPLY';
+
+    public const W_DANGLING_REPLY = 'W-ACTIVITY-DANGLING-REPLY';
+
+    public const W_OTHER_SCOPE = 'W-ACTIVITY-OTHER-SCOPE';
+
+    public const W_ORPHAN_GROUP_THREAD = 'W-ACTIVITY-ORPHAN-GROUP-THREAD';
+
+    public const W_NON_MEMBERS_GROUP_THREAD = 'W-ACTIVITY-NON-MEMBERS-GROUP-THREAD';
+
+    public const W_CROSS_SCOPE_REPLY = 'W-ACTIVITY-CROSS-SCOPE-REPLY';
+
+    public const W_URI_ONLY_IMAGE = 'W-ACTIVITY-URI-ONLY-IMAGE';
+
+    public const W_TEMPLATE_RENDERED = 'W-ACTIVITY-TEMPLATE-RENDERED';
+
+    public const W_TEMPLATE_DROPPED = 'W-ACTIVITY-TEMPLATE-DROPPED';
+
+    public const W_TEMPLATE_UNKNOWN = 'W-ACTIVITY-TEMPLATE-UNKNOWN';
+
     /** Ids shown per finding; the runbook's SQL lists the rest. */
     private const SAMPLE = 5;
 
@@ -57,21 +79,21 @@ final class ActivityPreflight
 
         [$rows, $ids] = $this->rows("{$isReply} AND {$parentIsReply} AND ".ActivityThread::migrated($a));
         if ($rows > 0) {
-            $warnings[] = self::deepReplyMessage($rows, $ids);
+            $warnings[] = new Warning(self::W_DEEP_REPLY, self::deepReplyMessage($rows, $ids), $rows);
         }
 
         [$rows, $ids] = $this->rows("{$isReply} AND {$rootId} IS NULL");
         if ($rows > 0) {
-            $warnings[] = self::unresolvableReplyMessage($rows, $ids);
+            $warnings[] = new Warning(self::W_UNRESOLVABLE_REPLY, self::unresolvableReplyMessage($rows, $ids), $rows);
         }
 
         [$rows, $ids] = $this->rows(ActivityThread::isDangling($a));
         if ($rows > 0) {
-            $warnings[] = self::danglingReplyMessage($rows, $ids);
+            $warnings[] = new Warning(self::W_DANGLING_REPLY, self::danglingReplyMessage($rows, $ids), $rows);
         }
 
         foreach ($this->grouped("`{$a}`.`foreign_table`", ActivityThread::startsThread($a)." AND `{$a}`.`foreign_table` IS NOT NULL AND `{$a}`.`foreign_table` <> 'community'") as $value => [$rows, $ids]) {
-            $warnings[] = self::otherScopeMessage((string) $value, $rows, $ids);
+            $warnings[] = new Warning(self::W_OTHER_SCOPE, self::otherScopeMessage((string) $value, $rows, $ids), $rows);
         }
 
         $communityRoot = ActivityThread::startsThread($a)." AND `{$a}`.`foreign_table` = 'community'";
@@ -79,23 +101,23 @@ final class ActivityPreflight
 
         [$rows, $ids] = $this->rows("{$communityRoot} AND NOT {$groupExists}");
         if ($rows > 0) {
-            $warnings[] = self::orphanGroupThreadMessage($rows, $ids);
+            $warnings[] = new Warning(self::W_ORPHAN_GROUP_THREAD, self::orphanGroupThreadMessage($rows, $ids), $rows);
         }
 
         foreach ($this->grouped("`{$a}`.`public_flag`", "{$communityRoot} AND {$groupExists} AND NOT (`{$a}`.`public_flag` <=> ".ActivityThread::MEMBERS_FLAG.')') as $flag => [$rows, $ids]) {
-            $warnings[] = self::nonMembersGroupThreadMessage((int) $flag, $rows, $ids);
+            $warnings[] = new Warning(self::W_NON_MEMBERS_GROUP_THREAD, self::nonMembersGroupThreadMessage((int) $flag, $rows, $ids), $rows);
         }
 
         // NULL-safe on both columns: the fleet's shape is a community root with a scope-less reply.
         [$rows, $ids] = $this->rows("{$isReply} AND {$rootId} IS NOT NULL AND NOT (`{$a}`.`foreign_table` <=> "
             .ActivityThread::rootColumn($a, 'foreign_table')." AND `{$a}`.`foreign_id` <=> ".ActivityThread::rootColumn($a, 'foreign_id').')');
         if ($rows > 0) {
-            $warnings[] = self::crossScopeReplyMessage($rows, $ids);
+            $warnings[] = new Warning(self::W_CROSS_SCOPE_REPLY, self::crossScopeReplyMessage($rows, $ids), $rows);
         }
 
         $uriOnly = DB::select($this->resolve('SELECT `id` FROM '.SourceRef::table('activity_image').' AS `activity_image`'." WHERE `file_id` IS NULL AND {$ofMigrated} ORDER BY `id`"));
         if ($uriOnly !== []) {
-            $warnings[] = self::uriOnlyImageMessage(count($uriOnly), array_slice(array_map(static fn (object $r): int => (int) $r->id, $uriOnly), 0, self::SAMPLE));
+            $warnings[] = new Warning(self::W_URI_ONLY_IMAGE, self::uriOnlyImageMessage(count($uriOnly), array_slice(array_map(static fn (object $r): int => (int) $r->id, $uriOnly), 0, self::SAMPLE)), count($uriOnly));
         }
 
         $landing = 'CASE WHEN '.ActivityThread::landsOnTimeline($a)." THEN 'timeline' WHEN ".ActivityThread::landsInGroup($a)." THEN 'group' ELSE 'none' END";
@@ -103,7 +125,7 @@ final class ActivityPreflight
             "SELECT `{$a}`.`template` AS `template`, {$landing} AS `landing`, COUNT(*) AS `rows` FROM ".SourceRef::table('activity_data')." AS `{$a}`"
             ." WHERE `{$a}`.`template` IS NOT NULL GROUP BY `template`, `landing` ORDER BY `template`, `landing`",
         )) as $row) {
-            $warnings[] = self::templateMessage((string) $row->template, (string) $row->landing, (int) $row->rows);
+            $warnings[] = self::templateWarning((string) $row->template, (string) $row->landing, (int) $row->rows);
         }
 
         return new PreflightReport($errors, $warnings);
@@ -167,6 +189,17 @@ final class ActivityPreflight
     public static function uriOnlyImageMessage(int $rows, array $ids): string
     {
         return "source `activity_image` has {$rows} row(s) holding only a URL, no file (e.g. ids ".self::list($ids).') — OpenPNE 4 keeps an image as a file, so these are not migrated.';
+    }
+
+    public static function templateWarning(string $template, string $landing, int $rows): Warning
+    {
+        $code = match (true) {
+            $landing === 'none' => self::W_TEMPLATE_DROPPED,
+            isset(ActivityTemplateRenderer::TEMPLATES[$template]) => self::W_TEMPLATE_RENDERED,
+            default => self::W_TEMPLATE_UNKNOWN,
+        };
+
+        return new Warning($code, self::templateMessage($template, $landing, $rows), $rows);
     }
 
     public static function templateMessage(string $template, string $landing, int $rows): string

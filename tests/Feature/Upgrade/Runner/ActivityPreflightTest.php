@@ -7,6 +7,7 @@ use App\Upgrade\Runner\ActivityPreflight;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
+use App\Upgrade\Runner\Warning;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +61,7 @@ class ActivityPreflightTest extends UpgradeSqlTestCase
             ActivityPreflight::unknownPublicFlagMessage(1, [1]),
             ActivityPreflight::tooManyImagesMessage(1, [3]),
         ], $report->errors);
-        $this->assertContains(ActivityPreflight::nonMembersGroupThreadMessage(7, 1, [5]), $report->warnings);
+        $this->assertContainsEquals(new Warning(ActivityPreflight::W_NON_MEMBERS_GROUP_THREAD, ActivityPreflight::nonMembersGroupThreadMessage(7, 1, [5]), 1), $report->warnings);
     }
 
     public function test_every_disposition_is_a_warning_with_its_first_ids(): void
@@ -93,20 +94,20 @@ class ActivityPreflightTest extends UpgradeSqlTestCase
         $report = (new ActivityPreflight)->inspect('', null);
 
         $this->assertSame([], $report->errors);
-        $this->assertSame([
-            ActivityPreflight::deepReplyMessage(3, [3, 4, 5]),
-            ActivityPreflight::unresolvableReplyMessage(1, [6]),
-            ActivityPreflight::danglingReplyMessage(1, [7]),
-            ActivityPreflight::otherScopeMessage('diary', 2, [8, 18]),
-            ActivityPreflight::orphanGroupThreadMessage(1, [9]),
-            ActivityPreflight::nonMembersGroupThreadMessage(0, 1, [10]),
-            ActivityPreflight::nonMembersGroupThreadMessage(2, 1, [11]),
-            ActivityPreflight::crossScopeReplyMessage(3, [13, 14, 15]),
-            ActivityPreflight::uriOnlyImageMessage(1, [1]),
-            ActivityPreflight::templateMessage('community_topic', 'group', 1),
-            ActivityPreflight::templateMessage('diary', 'none', 1),
-            ActivityPreflight::templateMessage('diary', 'timeline', 1),
-            ActivityPreflight::templateMessage('friend_link', 'timeline', 1),
+        $this->assertEquals([
+            new Warning(ActivityPreflight::W_DEEP_REPLY, ActivityPreflight::deepReplyMessage(3, [3, 4, 5]), 3),
+            new Warning(ActivityPreflight::W_UNRESOLVABLE_REPLY, ActivityPreflight::unresolvableReplyMessage(1, [6]), 1),
+            new Warning(ActivityPreflight::W_DANGLING_REPLY, ActivityPreflight::danglingReplyMessage(1, [7]), 1),
+            new Warning(ActivityPreflight::W_OTHER_SCOPE, ActivityPreflight::otherScopeMessage('diary', 2, [8, 18]), 2),
+            new Warning(ActivityPreflight::W_ORPHAN_GROUP_THREAD, ActivityPreflight::orphanGroupThreadMessage(1, [9]), 1),
+            new Warning(ActivityPreflight::W_NON_MEMBERS_GROUP_THREAD, ActivityPreflight::nonMembersGroupThreadMessage(0, 1, [10]), 1),
+            new Warning(ActivityPreflight::W_NON_MEMBERS_GROUP_THREAD, ActivityPreflight::nonMembersGroupThreadMessage(2, 1, [11]), 1),
+            new Warning(ActivityPreflight::W_CROSS_SCOPE_REPLY, ActivityPreflight::crossScopeReplyMessage(3, [13, 14, 15]), 3),
+            new Warning(ActivityPreflight::W_URI_ONLY_IMAGE, ActivityPreflight::uriOnlyImageMessage(1, [1]), 1),
+            new Warning(ActivityPreflight::W_TEMPLATE_RENDERED, ActivityPreflight::templateMessage('community_topic', 'group', 1), 1),
+            new Warning(ActivityPreflight::W_TEMPLATE_DROPPED, ActivityPreflight::templateMessage('diary', 'none', 1), 1),
+            new Warning(ActivityPreflight::W_TEMPLATE_RENDERED, ActivityPreflight::templateMessage('diary', 'timeline', 1), 1),
+            new Warning(ActivityPreflight::W_TEMPLATE_UNKNOWN, ActivityPreflight::templateMessage('friend_link', 'timeline', 1), 1),
         ], $report->warnings);
     }
 
@@ -120,7 +121,7 @@ class ActivityPreflightTest extends UpgradeSqlTestCase
 
         $this->assertFalse($ok);
         $this->assertStringContainsString('ERROR '.ActivityPreflight::unknownPublicFlagMessage(1, [1]), $output);
-        $this->assertStringContainsString('WARN '.ActivityPreflight::danglingReplyMessage(1, [2]), $output);
+        $this->assertStringContainsString('WARN '.ActivityPreflight::W_DANGLING_REPLY.': '.ActivityPreflight::danglingReplyMessage(1, [2]), $output);
         $this->assertDatabaseCount('timeline_posts', 0);
 
         DB::table('activity_data')->where('id', 1)->update(['public_flag' => 1]);

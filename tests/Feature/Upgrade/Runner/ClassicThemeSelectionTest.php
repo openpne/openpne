@@ -50,7 +50,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
 
         $this->assertTrue($this->runPass());
         $this->assertSame('', $this->stored());
-        $this->assertContains('WARN '.ClassicThemeSelection::unknownPackageMessage(), $this->out);
+        $this->assertContains('WARN '.ClassicThemeSelection::W_UNKNOWN_PACKAGE.': '.ClassicThemeSelection::unknownPackageMessage(), $this->out);
 
         UpgradeState::query()->delete();
         $this->out = [];
@@ -58,7 +58,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
 
         $this->assertTrue($this->runPass());
         $this->assertSame('', $this->stored());
-        $this->assertContains('WARN '.ClassicThemeSelection::unknownPackageMessage(), $this->out);
+        $this->assertContains('WARN '.ClassicThemeSelection::W_UNKNOWN_PACKAGE.': '.ClassicThemeSelection::unknownPackageMessage(), $this->out);
     }
 
     public function test_a_theme_used_not_vendored_here_is_kept_and_reported_and_fails_verify_until_copied_in(): void
@@ -69,7 +69,7 @@ class ClassicThemeSelectionTest extends UpgradeSqlTestCase
         $this->assertTrue($this->runPass());
 
         $this->assertSame('mysite', $this->stored());
-        $this->assertContains('WARN '.ClassicThemeSelection::missingPackageMessage('mysite'), $this->out);
+        $this->assertContains('WARN '.ClassicThemeSelection::W_MISSING_PACKAGE.': '.ClassicThemeSelection::missingPackageMessage('mysite'), $this->out);
 
         $verdicts = [];
         (new ClassicThemeCheck)->verify(['sns_settings'], function (string $name, bool $pass) use (&$verdicts): void {
