@@ -143,6 +143,26 @@ class ActivityTemplateTransformTest extends UpgradeSqlTestCase
      * @param  list<string>  $tables
      * @return list<string>
      */
+    public function test_a_kept_reason_the_renderer_does_not_declare_fails_the_step_before_it_is_marked_complete(): void
+    {
+        $member = Member::factory()->create();
+        $this->seedActivity(1, $member->id, ['body' => 'kept'] + $this->templateRow('friend_link', ['%1%' => 'x'], '@diary_show?id=1'));
+        TimelinePost::factory()->create(['id' => 1, 'member_id' => $member->id, 'body' => 'kept']);
+        // Resumed metadata written by a version with another reason vocabulary.
+        UpgradeState::create(['step_key' => 'activity_template_timeline_posts', 'status' => UpgradeState::STATUS_FAILED,
+            'metadata' => ['last_id' => 1, 'kept' => ['stale-reason' => 1], 'rendered' => 0]]);
+
+        $lines = [];
+        $ok = (new ActivityTemplateTransform)->run(['timeline_posts'], '', null, new RunReport(function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $this->assertFalse($ok);
+        $this->assertSame(UpgradeState::STATUS_FAILED, UpgradeState::query()->where('step_key', 'activity_template_timeline_posts')->value('status'));
+        $this->assertStringNotContainsString('DONE activity_template_timeline_posts', implode("\n", $lines));
+        $this->assertStringContainsString('FAIL activity_template_timeline_posts: Unhandled match case', implode("\n", $lines));
+    }
+
     private function runPass(array $tables): array
     {
         $lines = [];

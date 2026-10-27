@@ -128,7 +128,7 @@ final class ActivityTemplateTransform
             }
 
             // Built before the COMPLETED write: a reason the renderer does not declare fails the step
-            // while it is still resumable, not after it is marked done.
+            // instead of leaving it marked done with a FAIL after it (--force-restart clears the key).
             $warnings = [];
             foreach ($kept as $reason => $count) {
                 $warnings[] = self::keptWarning($table, (string) $reason, (int) $count);
