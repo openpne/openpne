@@ -43,10 +43,12 @@ final class FileBinMigration implements Phase
     }
 
     /**
-     * Read-only; returns the error that aborts the run before any write, or null. Call only after
+     * Read-only; returns the errors that abort the run before any write. Call only after
      * SourcePreflight has passed, so the source `file` table is present to COUNT.
+     *
+     * @return list<string>
      */
-    public function preflight(string $sourcePrefix, ?string $sourceDatabase): ?string
+    public function preflight(string $sourcePrefix, ?string $sourceDatabase): array
     {
         $fileTable = InsertSelectCompiler::qualify($sourceDatabase, $sourcePrefix, 'file');
         $fileRows = (int) DB::scalar("SELECT COUNT(*) FROM {$fileTable}");
@@ -60,6 +62,8 @@ final class FileBinMigration implements Phase
         $bytesRows = $binTable === null ? 0 : (int) DB::scalar("SELECT COUNT(*) FROM {$binTable}");
         $paired = $binTable === null ? 0 : (int) DB::scalar("SELECT COUNT(*) FROM {$fileTable} AS `f` JOIN {$binTable} AS `b` ON `b`.`file_id` = `f`.`id`");
 
+        $errors = [];
+
         if ($fileRows !== $paired || $bytesRows !== $paired) {
             $error = ($fileRows === $bytesRows
                 ? "file and file_bin both have {$fileRows} rows but they do not pair up"
@@ -71,7 +75,7 @@ final class FileBinMigration implements Phase
                     .self::unpaired($binTable, 'file_id', $fileTable, 'id', $bytesRows - $paired);
             }
 
-            return $error.match (true) {
+            $errors[] = $error.match (true) {
                 $binTable === null => ' No file_bin table holds the bytes: restore the dump\'s file_bin and re-run.',
                 $sourcePresent => ' Restore a complete dump (one cut short inside file_bin looks like this), or delete the unpaired rows in the source and re-run.',
                 default => ' The bytes were already moved into this database\'s file_bin; delete the unpaired rows (source file, or file_bin here) and re-run, or --force-restart from a fresh restore.',
@@ -79,10 +83,48 @@ final class FileBinMigration implements Phase
         }
 
         if (! $this->inPlace($sourcePrefix, $sourceDatabase) && $sourcePresent && $this->appFileBinCount() > 0) {
-            return 'the app file_bin already has rows — refusing to drop it to move the source file_bin in; --force-restart from a clean state instead.';
+            $errors[] = 'the app file_bin already has rows — refusing to drop it to move the source file_bin in; --force-restart from a clean state instead.';
         }
 
-        return null;
+        // The bytes table becomes the app's own under the app's strict mode, so a zero date in it is
+        // refused here although the metadata-only rewire below would not trip on it.
+        if ($binTable !== null) {
+            array_push($errors, ...$this->zeroDates($binTable));
+        }
+
+        return $errors;
+    }
+
+    /** @return list<string> */
+    private function zeroDates(string $binTable): array
+    {
+        $counts = DB::selectOne('SELECT '.implode(', ', array_map(
+            static fn (string $column): string => 'SUM(CASE WHEN '.ZeroDatePreflight::zeroPredicate("`{$column}`")." THEN 1 ELSE 0 END) AS `{$column}`",
+            ['created_at', 'updated_at'],
+        ))." FROM {$binTable}");
+
+        $errors = [];
+        foreach (['created_at', 'updated_at'] as $column) {
+            $rows = (int) $counts->{$column};
+            if ($rows === 0) {
+                continue;
+            }
+            $zero = ZeroDatePreflight::zeroPredicate("`{$column}`");
+            $ids = array_map(
+                static fn (object $row): int => (int) $row->file_id,
+                DB::select("SELECT `file_id` FROM {$binTable} WHERE {$zero} ORDER BY `file_id` LIMIT ".self::MISMATCH_SAMPLE),
+            );
+            $errors[] = self::zeroDateMessage($binTable, $column, $rows, $ids);
+        }
+
+        return $errors;
+    }
+
+    /** @param  list<int>  $fileIds */
+    public static function zeroDateMessage(string $binTable, string $column, int $rows, array $fileIds): string
+    {
+        return "{$binTable}.`{$column}` holds a zero date such as 0000-00-00 on {$rows} row(s) (e.g. file_id ".implode(', ', $fileIds).')'
+            .' — the table is kept as it is, and MySQL\'s strict mode, which OpenPNE 4 runs under, refuses the value. Copy the time from the file row (UPDATE file_bin JOIN file …), then re-run.';
     }
 
     private static function unpaired(string $table, string $key, string $other, string $otherKey, int $total): string
@@ -171,7 +213,14 @@ final class FileBinMigration implements Phase
             if ($fk !== null) {
                 DB::statement("ALTER TABLE `file_bin` DROP FOREIGN KEY `{$fk->constraint_name}`");
             }
-            DB::statement('ALTER TABLE `file_bin` ADD CONSTRAINT `file_bin_file_id_foreign` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`) ON DELETE CASCADE');
+            // With foreign_key_checks off, ADD FOREIGN KEY is metadata-only and validates no row; with checks on it rebuilds the table.
+            $checks = (int) DB::scalar('SELECT @@SESSION.foreign_key_checks');
+            DB::statement('SET SESSION foreign_key_checks = 0');
+            try {
+                DB::statement('ALTER TABLE `file_bin` ADD CONSTRAINT `file_bin_file_id_foreign` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`) ON DELETE CASCADE, ALGORITHM=INPLACE');
+            } finally {
+                DB::statement("SET SESSION foreign_key_checks = {$checks}");
+            }
             $this->checkpoint(self::REWIRE_KEY);
 
             return 'file_id now references files';

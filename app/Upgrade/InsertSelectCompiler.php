@@ -37,17 +37,40 @@ final class InsertSelectCompiler
             array_values($columns),
         ));
 
-        // The FROM table is aliased to its bare name so a step's correlated subqueries reference the
-        // outer row by that name under a prefix or another database.
-        $source = self::qualify($sourceDatabase, $sourcePrefix, $step->sourceTable())." AS `{$step->sourceTable()}`";
         $target = self::qualify($targetDatabase, $targetPrefix, $step->targetTable());
 
-        $sql = "INSERT INTO {$target} ({$targetColumns})\nSELECT {$selectList}\nFROM {$source}";
+        return $this->resolve("INSERT INTO {$target} ({$targetColumns})\nSELECT {$selectList}\n".$this->fromClause($step, $sourcePrefix, $sourceDatabase), $step, $sourcePrefix, $sourceDatabase);
+    }
+
+    /**
+     * The step's SELECT alone, each expression aliased to its target column. A separate string:
+     * compile()'s output is hashed into the run manifest and must not change.
+     */
+    public function compileSelect(UpgradeStep $step, string $sourcePrefix = '', ?string $sourceDatabase = null): string
+    {
+        $selectList = [];
+        foreach ($step->columns() as $name => $column) {
+            $selectList[] = $column->selectSql()." AS `{$name}`";
+        }
+
+        return $this->resolve('SELECT '.implode(', ', $selectList)."\n".$this->fromClause($step, $sourcePrefix, $sourceDatabase), $step, $sourcePrefix, $sourceDatabase);
+    }
+
+    private function fromClause(UpgradeStep $step, string $sourcePrefix, ?string $sourceDatabase): string
+    {
+        // The FROM table is aliased to its bare name so a step's correlated subqueries reference the
+        // outer row by that name under a prefix or another database.
+        $sql = 'FROM '.self::qualify($sourceDatabase, $sourcePrefix, $step->sourceTable())." AS `{$step->sourceTable()}`";
 
         if ($step->effectiveFilter() !== null) {
             $sql .= "\nWHERE {$step->effectiveFilter()}";
         }
 
+        return $sql;
+    }
+
+    private function resolve(string $sql, UpgradeStep $step, string $sourcePrefix, ?string $sourceDatabase): string
+    {
         $sql = $this->resolveSourceRefs($sql, $sourcePrefix, $sourceDatabase);
 
         if (str_contains($sql, '{{src:')) {

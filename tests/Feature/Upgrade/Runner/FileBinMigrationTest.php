@@ -166,7 +166,7 @@ class FileBinMigrationTest extends TestCase
         $this->seedFileBin("`{$db}`.`file_bin`", 1, self::BLOB);
         $migration = new FileBinMigration;
 
-        $this->assertNull($migration->preflight('', $db));
+        $this->assertSame([], $migration->preflight('', $db));
 
         $migration->move('', $db, $this->out($lines));
 
@@ -200,7 +200,7 @@ class FileBinMigrationTest extends TestCase
         $this->seedFile('`file`', 2, 'b');
         $this->seedFileBin('`file_bin`', 1, self::BLOB);
 
-        $error = (new FileBinMigration)->preflight('', null);
+        $error = (new FileBinMigration)->preflight('', null)[0] ?? null;
 
         $this->assertNotNull($error);
         $this->assertStringContainsString('file has 2 rows but file_bin has 1', $error);
@@ -217,7 +217,7 @@ class FileBinMigrationTest extends TestCase
         $this->seedFileBin('`file_bin`', 2, self::BLOB);
         $this->seedFileBin('`file_bin`', 5, self::BLOB);
 
-        $error = (new FileBinMigration)->preflight('', null);
+        $error = (new FileBinMigration)->preflight('', null)[0] ?? null;
 
         $this->assertStringContainsString('file has 9 rows but file_bin has 2', $error);
         $this->assertStringContainsString('7 `file` row(s) have no `file_bin` row (id 1, 3, 4, 6, 7 and 2 more).', $error);
@@ -236,7 +236,7 @@ class FileBinMigrationTest extends TestCase
         $this->seedFileBin('`op_file_bin`', 7, 'stray');
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
-        $error = (new FileBinMigration)->preflight('op_', null);
+        $error = (new FileBinMigration)->preflight('op_', null)[0] ?? null;
 
         $this->assertStringContainsString('file has 1 rows but file_bin has 2', $error);
         $this->assertStringContainsString('1 `op_file_bin` row(s) have no `op_file` row (file_id 7).', $error);
@@ -257,7 +257,7 @@ class FileBinMigrationTest extends TestCase
         $this->seedFileBin('`file_bin`', 3, 'stray');
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
-        $error = (new FileBinMigration)->preflight('', null);
+        $error = (new FileBinMigration)->preflight('', null)[0] ?? null;
 
         $this->assertNotNull($error);
         $this->assertStringContainsString('file and file_bin both have 2 rows but they do not pair up', $error);
@@ -272,7 +272,7 @@ class FileBinMigrationTest extends TestCase
         (new FileBinMigration)->move('op_', null, $this->out($ignore));
         $this->seedFile('`op_file`', 99, 'late');
 
-        $error = (new FileBinMigration)->preflight('op_', null);
+        $error = (new FileBinMigration)->preflight('op_', null)[0] ?? null;
 
         $this->assertStringContainsString('file has 3 rows but file_bin has 2', $error);
         $this->assertStringContainsString('1 `op_file` row(s) have no `file_bin` row (id 99).', $error);
@@ -286,7 +286,7 @@ class FileBinMigrationTest extends TestCase
         $this->createOp3File('`file`');
         $this->seedFile('`file`', 1, 'a');
 
-        $error = (new FileBinMigration)->preflight('', null);
+        $error = (new FileBinMigration)->preflight('', null)[0] ?? null;
 
         $this->assertStringContainsString('file has 1 rows but file_bin has 0', $error);
         $this->assertStringContainsString('No file_bin table holds the bytes', $error);
@@ -316,7 +316,7 @@ class FileBinMigrationTest extends TestCase
         // An unexpected row in the app file_bin (which move would DROP): the preflight must refuse.
         $this->seedFileBin('`file_bin`', $ids[0], 'unexpected');
 
-        $error = (new FileBinMigration)->preflight('op_', null);
+        $error = (new FileBinMigration)->preflight('op_', null)[0] ?? null;
 
         $this->assertNotNull($error);
         $this->assertStringContainsString('app file_bin already has rows', $error);
@@ -325,29 +325,88 @@ class FileBinMigrationTest extends TestCase
 
     public function test_a_failing_rewire_is_one_fail_line_with_a_failed_checkpoint(): void
     {
-        // Called directly because run()'s preflight refuses bytes with no file row before the FK add.
+        // An incompatible referencing column (3780) is what still fails the FK add without row validation.
         $this->seedInPlace();
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        $this->seedFileBin('`file_bin`', 999, 'orphan');
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        DB::statement('ALTER TABLE `file_bin` DROP FOREIGN KEY `file_bin_file_id_file_id`');
+        DB::statement('ALTER TABLE `file_bin` MODIFY `file_id` BIGINT NOT NULL');
 
         $ok = (new FileBinMigration)->rewire($this->out($lines));
 
         $this->assertFalse($ok);
         $fails = array_values(array_filter($lines, fn (string $l): bool => str_starts_with($l, 'FAIL')));
         $this->assertCount(1, $fails);
-        $this->assertStringStartsWith('FAIL file_bin_rewire: SQLSTATE[23000]', $fails[0]);
+        $this->assertStringStartsWith('FAIL file_bin_rewire: SQLSTATE[HY000]', $fails[0]);
         $this->assertStringNotContainsString("\n", $fails[0]);
         $this->assertStringNotContainsString('ALTER TABLE', $fails[0]);
         $state = UpgradeState::query()->where('step_key', 'file_bin_rewire')->first();
         $this->assertSame(UpgradeState::STATUS_FAILED, $state->status);
-        $this->assertStringStartsWith('SQLSTATE[23000]', $state->error);
+        $this->assertStringStartsWith('SQLSTATE[HY000]', $state->error);
+        $this->assertSame(1, (int) DB::scalar('SELECT @@SESSION.foreign_key_checks'), 'the session variable is restored on failure too');
 
-        DB::table('file_bin')->where('file_id', 999)->delete();
+        DB::statement('ALTER TABLE `file_bin` MODIFY `file_id` INT NOT NULL');
 
         $this->assertTrue((new FileBinMigration)->rewire($this->out($again)));
         $this->assertStringContainsString('DONE file_bin_rewire', implode("\n", $again));
         $this->assertNull(UpgradeState::query()->where('step_key', 'file_bin_rewire')->value('error'));
+    }
+
+    public function test_rewire_is_metadata_only_and_validates_no_row(): void
+    {
+        $this->seedInPlace();
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        $this->seedFileBin('`file_bin`', 999, 'orphan');
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        $this->withoutStrictMode(fn () => DB::table('file_bin')->where('file_id', 999)->update(['created_at' => '0000-00-00 00:00:00']));
+        $tableId = $this->innodbTableId('file_bin');
+
+        $this->assertTrue((new FileBinMigration)->rewire($this->out($lines)));
+
+        // No rebuild: the InnoDB table id survives, the orphan and its zero date are untouched, the FK is on.
+        $this->assertStringContainsString('DONE file_bin_rewire', implode("\n", $lines));
+        $this->assertSame($tableId, $this->innodbTableId('file_bin'));
+        $this->assertSame('files', $this->fkReferencedTable('file_bin'));
+        $this->assertSame(1, (int) DB::scalar('SELECT COUNT(*) FROM `file_bin` WHERE `file_id` = 999 AND YEAR(`created_at`) = 0'));
+        $this->assertSame(1, (int) DB::scalar('SELECT @@SESSION.foreign_key_checks'));
+    }
+
+    public function test_rewire_restores_the_session_value_it_entered_with(): void
+    {
+        $this->seedInPlace();
+        DB::statement('SET SESSION foreign_key_checks = 0');
+
+        try {
+            $this->assertTrue((new FileBinMigration)->rewire($this->out($lines)));
+            $this->assertSame(0, (int) DB::scalar('SELECT @@SESSION.foreign_key_checks'));
+        } finally {
+            DB::statement('SET SESSION foreign_key_checks = 1');
+        }
+    }
+
+    public function test_preflight_refuses_a_zero_date_in_the_bytes_table(): void
+    {
+        $ids = $this->seedInPlace();
+        $this->withoutStrictMode(fn () => DB::table('file_bin')->whereIn('file_id', $ids)->update(['updated_at' => '0000-00-00 00:00:00']));
+
+        $this->assertSame(
+            [FileBinMigration::zeroDateMessage('`file_bin`', 'updated_at', 2, $ids)],
+            (new FileBinMigration)->preflight('', null),
+        );
+
+        // Reported beside a pairing error, not instead of it.
+        DB::table('file_bin')->where('file_id', $ids[1])->delete();
+
+        $errors = (new FileBinMigration)->preflight('', null);
+        $this->assertCount(2, $errors);
+        $this->assertStringContainsString('file has 2 rows but file_bin has 1', $errors[0]);
+        $this->assertSame(FileBinMigration::zeroDateMessage('`file_bin`', 'updated_at', 1, [$ids[0]]), $errors[1]);
+    }
+
+    public function test_preflight_reads_the_zero_date_from_a_prefixed_bytes_table(): void
+    {
+        $ids = $this->seedPrefixed();
+        $this->withoutStrictMode(fn () => DB::table('op_file_bin')->where('file_id', $ids[0])->update(['created_at' => '2010-00-00 00:00:00']));
+
+        $this->assertSame([FileBinMigration::zeroDateMessage('`op_file_bin`', 'created_at', 1, [$ids[0]])], (new FileBinMigration)->preflight('op_', null));
     }
 
     public function test_a_failing_move_is_one_fail_line_and_resumes_after_the_cause_is_removed(): void
@@ -411,6 +470,22 @@ class FileBinMigrationTest extends TestCase
         // The guard returned early: the OpenPNE 3 file_bin (FK → file, bytes intact) is untouched.
         $this->assertSame('file', $this->fkReferencedTable('file_bin'));
         $this->assertSame(self::BLOB, DB::table('file_bin')->where('file_id', 1)->value('bin'));
+    }
+
+    private function withoutStrictMode(\Closure $seed): void
+    {
+        $mode = DB::selectOne('SELECT @@SESSION.sql_mode AS mode')->mode;
+        DB::statement("SET SESSION sql_mode = ''");
+        try {
+            $seed();
+        } finally {
+            DB::statement("SET SESSION sql_mode = '{$mode}'");
+        }
+    }
+
+    private function innodbTableId(string $table): int
+    {
+        return (int) DB::scalar('SELECT TABLE_ID FROM information_schema.INNODB_TABLES WHERE NAME = ?', [$this->database().'/'.$table]);
     }
 
     private function fileStep(): UpgradeStep

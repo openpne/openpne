@@ -218,6 +218,11 @@ final class UpgradeVerifier
         $this->record($report, $out, 'file_bin:byte_size', $mismatch === 0,
             $mismatch === 0 ? 'byte_size matches LENGTH(bin)' : "{$mismatch} files where byte_size <> LENGTH(bin)");
 
+        // The rewire adds the FK without validating rows, so a bytes row no file owns is caught here.
+        $orphans = (int) DB::scalar('SELECT COUNT(*) FROM file_bin b LEFT JOIN files f ON f.id = b.file_id WHERE f.id IS NULL');
+        $this->record($report, $out, 'file_bin:orphans', $orphans === 0,
+            $orphans === 0 ? 'every file_bin row belongs to a file' : "{$orphans} file_bin rows belong to no file");
+
         $ref = DB::selectOne(
             'select kcu.referenced_table_name as referenced_table
                from information_schema.referential_constraints rc

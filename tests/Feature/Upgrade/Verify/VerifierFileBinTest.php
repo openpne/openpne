@@ -58,7 +58,24 @@ class VerifierFileBinTest extends TestCase
         $this->assertFalse($report->failed(), $out);
         $this->assertStringContainsString('PASS file_bin:count', $out);
         $this->assertStringContainsString('PASS file_bin:byte_size', $out);
+        $this->assertStringContainsString('PASS file_bin:orphans', $out);
         $this->assertStringContainsString('PASS file_bin:fk', $out);
+    }
+
+    public function test_a_bytes_row_without_a_file_fails_even_when_the_counts_agree(): void
+    {
+        $ids = $this->seedConsistent();
+        // The rewire validates no row, so an orphan offset by a file without bytes passes the count.
+        DB::table('file_bin')->where('file_id', $ids[0])->delete();
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('file_bin')->insert(['file_id' => 999, 'bin' => self::BLOB, 'created_at' => '2018-01-02 03:04:05', 'updated_at' => '2018-01-02 03:04:05']);
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        [$report, $out] = $this->verify();
+
+        $this->assertTrue($report->failed());
+        $this->assertStringContainsString('PASS file_bin:count', $out);
+        $this->assertStringContainsString('FAIL file_bin:orphans', $out);
     }
 
     public function test_a_byte_size_mismatch_fails(): void
