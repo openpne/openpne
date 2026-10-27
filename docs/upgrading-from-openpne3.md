@@ -211,8 +211,9 @@ completed before this version recorded the set of steps is adopted by its first 
 nothing runs and the completion is recorded as unverified. `openpne:upgrade-status` then names
 any step this version expects that has no record; a site in that state cannot be resumed and
 needs `--force-restart` from a fresh restore. Only a site whose older run left a failed step
-behind, or never reached the end, resumes, and then a step this version added does run. That makes `--force-restart` a rehearsal tool. Once OpenPNE 4 is
-taking traffic, those tables are the live site.
+behind, or never reached the end, resumes, and then a step this version added does run. That
+makes `--force-restart` a rehearsal tool. Once OpenPNE 4 is taking traffic, those tables are
+the live site.
 
 ### Where does a site stand?
 
