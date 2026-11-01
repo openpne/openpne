@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp\OAuth;
 
+use App\Features\AiAccount\Actions\BindConsentActor;
 use App\Features\Member\Actions\RejectMemberLogin;
 use App\Mcp\McpAbilities;
 use App\Models\Member;
@@ -155,6 +156,32 @@ class FlowTest extends OAuthTestCase
         $query = $this->redirectQuery($this->post('/oauth/authorize', ['auth_token' => $authToken, 'actor' => 'self']));
         $this->assertArrayHasKey('code', $query);
         $this->assertSame('st4te', $query['state']);
+    }
+
+    public function test_a_consent_that_passed_the_door_before_a_password_change_persists_nothing(): void
+    {
+        $viewer = Member::factory()->create();
+        $aiAccount = Member::factory()->aiAccount($viewer)->create();
+        $client = $this->registerClient();
+        [, $challenge] = $this->pkce();
+        $screen = $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge));
+        $authToken = $screen->inertiaPage()['props']['authToken'];
+
+        // The password changes after auth.session let the request in and before the rows are locked.
+        $this->app->bind(BindConsentActor::class, fn () => new class extends BindConsentActor
+        {
+            public function __invoke(Member $viewer, string|int $actor): Member
+            {
+                Member::whereKey($viewer->getKey())->update(['password' => bcrypt('changed-elsewhere')]);
+
+                return parent::__invoke($viewer, $actor);
+            }
+        });
+
+        $this->post('/oauth/authorize', ['auth_token' => $authToken, 'actor' => 'ai:'.$aiAccount->getKey()])
+            ->assertRedirect(route('login'));
+
+        $this->assertSame(0, Passport::authCode()->newQuery()->count());
     }
 
     public function test_a_stale_auth_token_is_refused(): void

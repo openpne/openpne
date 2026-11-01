@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\OAuth;
 
+use App\Auth\SessionCredential;
 use App\Features\AiAccount\Actions\BindConsentActor;
 use App\Features\AiAccount\Actions\CreateAiAccount;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
@@ -12,6 +13,7 @@ use App\Mcp\McpAbilities;
 use App\Models\Member;
 use App\Support\SecurityLog;
 use Exception;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Server\Registrar;
@@ -58,8 +60,13 @@ class ApproveController
                 $actor = (int) ($this->create)($viewer, (string) $request->validated('name'))->getKey();
             }
 
-            [$response, $member] = DB::transaction(function () use ($authRequest, $psrResponse, $viewer, $actor, $readOnly): array {
+            [$response, $member] = DB::transaction(function () use ($request, $authRequest, $psrResponse, $viewer, $actor, $readOnly): array {
                 $member = ($this->bind)($viewer, $actor);
+
+                // The person behind the grant, on the row this transaction locked.
+                if (! SessionCredential::stillHolds($request->session(), $member->owner ?? $member)) {
+                    throw new AuthenticationException;
+                }
 
                 $authRequest->setUser(new User((string) $member->getKey()));
                 $authRequest->setScopes(array_map(

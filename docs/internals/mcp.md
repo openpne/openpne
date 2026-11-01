@@ -100,7 +100,10 @@ client the person connected before: each connection is a choice.
 **A grant is persisted under the same lock as a personal mint.** The authorization code is written
 inside the transaction that locked the owner's row and then the actor's and re-asked
 [`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorEligibility.php)
-([`BindConsentActor`](../../app/Features/AiAccount/Actions/BindConsentActor.php)); the access token,
+([`BindConsentActor`](../../app/Features/AiAccount/Actions/BindConsentActor.php)) — and, on that
+locked row, whether the session's password is still the person's
+([`SessionCredential`](../../app/Auth/SessionCredential.php)), so a consent that passed the door
+just before a password change persists nothing after it; the access token,
 at exchange and at every refresh, is written by [`LockedAccessTokenRepository`](../../app/Mcp/OAuth/LockedAccessTokenRepository.php)
 under the same lock, so a grant racing a ban is refused rather than outliving the sweep. A refresh
 token is consumed exactly once: [`SingleUseRefreshTokenRepository`](../../app/Mcp/OAuth/SingleUseRefreshTokenRepository.php)
