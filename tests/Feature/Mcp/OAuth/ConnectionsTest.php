@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp\OAuth;
 
+use App\Mcp\OAuth\ConnectionReauth;
 use App\Mcp\OAuth\ConsentReauth;
 use App\Models\Member;
 use App\Support\PruneOAuth;
@@ -53,11 +54,13 @@ class ConnectionsTest extends OAuthTestCase
             ->assertInertia(fn ($page) => $page
                 ->has('form.connections.items', 2)
                 ->where('form.connections.requiresPassword', true)
-                ->where('form.connections.items.0.id', $theirs->getKey())
+                ->where('form.connections.items.0.client', $theirs->client_id)
+                ->where('form.connections.items.0.subject', $aiAccount->getKey())
                 ->where('form.connections.items.0.actor.name', 'Scout')
                 ->where('form.connections.items.0.host', 'claude.ai')
                 ->where('form.connections.items.0.readOnly', false)
-                ->where('form.connections.items.1.id', $mine->getKey())
+                ->where('form.connections.items.1.client', $mine->client_id)
+                ->where('form.connections.items.1.subject', $viewer->getKey())
                 ->where('form.connections.items.1.actor', null)
                 ->where('form.connections.items.1.readOnly', true));
     }
@@ -77,22 +80,39 @@ class ConnectionsTest extends OAuthTestCase
             ->assertInertia(fn ($page) => $page->has('form.connections.items', 1));
     }
 
-    public function test_ending_a_connection_takes_the_password_and_both_rows(): void
+    public function test_ending_a_connection_takes_the_password_and_every_row_of_the_pair(): void
     {
         $viewer = Member::factory()->create();
         $access = $this->grant($viewer);
+        // A rotation that happened after the page was rendered: the pair, not the row, is what ends.
+        $rotated = $this->grant($viewer, client: $access->client);
+        $access->forceFill(['revoked' => true])->save();
+        $url = "/member/config/connections/{$access->client_id}/{$viewer->getKey()}/delete";
 
-        $this->actingAs($viewer, 'member')->post("/member/config/connections/{$access->getKey()}/delete")
-            ->assertSessionHasErrors('current_password');
-        $this->assertDatabaseHas('oauth_access_tokens', ['id' => $access->getKey()]);
+        $this->actingAs($viewer, 'member')->post($url)->assertSessionHasErrors('current_password');
+        $this->assertDatabaseHas('oauth_access_tokens', ['id' => $rotated->getKey()]);
 
-        $this->post("/member/config/connections/{$access->getKey()}/delete", ['current_password' => 'password'])
+        $this->post($url, ['current_password' => 'password'])
             ->assertRedirect(route('member.config'))
             ->assertSessionHas('status');
 
-        $this->assertDatabaseMissing('oauth_access_tokens', ['id' => $access->getKey()]);
-        $this->assertDatabaseMissing('oauth_refresh_tokens', ['access_token_id' => $access->getKey()]);
-        $this->assertTrue(ConsentReauth::isFresh($this->app->make('session.store')));
+        $this->assertDatabaseMissing('oauth_access_tokens', ['client_id' => $access->client_id]);
+        $this->assertDatabaseMissing('oauth_refresh_tokens', ['access_token_id' => $rotated->getKey()]);
+        $this->assertTrue(ConnectionReauth::isFresh($this->app->make('session.store')));
+        $this->assertFalse(ConsentReauth::isFresh($this->app->make('session.store')));
+    }
+
+    public function test_one_connection_per_client_however_many_rows_rotation_left(): void
+    {
+        $viewer = Member::factory()->create();
+        $first = $this->grant($viewer);
+        $first->forceFill(['created_at' => now()->subDays(3)])->save();
+        $this->grant($viewer, client: $first->client);
+
+        $this->actingAs($viewer, 'member')->get('/member/config')
+            ->assertInertia(fn ($page) => $page
+                ->has('form.connections.items', 1)
+                ->where('form.connections.items.0.createdAt', $first->created_at->toIso8601String()));
     }
 
     public function test_someone_elses_connection_is_not_there_at_all(): void
@@ -101,7 +121,7 @@ class ConnectionsTest extends OAuthTestCase
         $stranger = Member::factory()->create();
         $access = $this->grant($stranger);
 
-        $this->actingAs($viewer, 'member')->post("/member/config/connections/{$access->getKey()}/delete", ['current_password' => 'password'])
+        $this->actingAs($viewer, 'member')->post("/member/config/connections/{$access->client_id}/{$stranger->getKey()}/delete", ['current_password' => 'password'])
             ->assertNotFound();
         $this->assertDatabaseHas('oauth_access_tokens', ['id' => $access->getKey()]);
     }
@@ -112,7 +132,7 @@ class ConnectionsTest extends OAuthTestCase
         $viewer = Member::factory()->create();
         $access = $this->grant($viewer);
 
-        $this->actingAs($viewer, 'member')->post("/member/config/connections/{$access->getKey()}/delete", ['current_password' => 'password'])
+        $this->actingAs($viewer, 'member')->post("/member/config/connections/{$access->client_id}/{$viewer->getKey()}/delete", ['current_password' => 'password'])
             ->assertRedirect(route('member.config'));
         $this->assertDatabaseMissing('oauth_access_tokens', ['id' => $access->getKey()]);
     }
@@ -121,7 +141,8 @@ class ConnectionsTest extends OAuthTestCase
     {
         $viewer = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($viewer)->create();
-        $this->grant($aiAccount);
+        $live = $this->grant($aiAccount);
+        $this->grant($aiAccount, client: $live->client);
         $this->grant($aiAccount, accessExpired: true, refreshLive: false);
 
         $this->actingAs($viewer, 'member')->get("/member/config/ai/{$aiAccount->getKey()}")
@@ -139,7 +160,7 @@ class ConnectionsTest extends OAuthTestCase
             ->assertSee('member_config_connections')
             ->assertSee('claude.ai');
 
-        $this->post("/member/config/connections/{$access->getKey()}/delete", ['current_password' => 'password'])->assertRedirect();
+        $this->post("/member/config/connections/{$access->client_id}/{$viewer->getKey()}/delete", ['current_password' => 'password'])->assertRedirect();
         $this->assertDatabaseMissing('oauth_access_tokens', ['id' => $access->getKey()]);
     }
 
@@ -160,6 +181,7 @@ class ConnectionsTest extends OAuthTestCase
         $viewer = Member::factory()->create();
         $live = $this->grant($viewer);
         $expiredButRefreshable = $this->grant($viewer, accessExpired: true);
+        $expiredButRefreshable->forceFill(['expires_at' => now()->subDays(8)])->save();
         $spent = $this->grant($viewer, accessExpired: true, refreshLive: false);
         Passport::refreshToken()->newQuery()->where('access_token_id', $spent->getKey())->update(['expires_at' => now()->subDays(8)]);
         $spent->forceFill(['expires_at' => now()->subDays(8)])->save();

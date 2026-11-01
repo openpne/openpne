@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\OAuth;
 
-use App\Mcp\OAuth\ConsentReauth;
+use App\Mcp\OAuth\ConnectionReauth;
 use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Ending a connection re-authenticates the way making one does, through the same window. */
+/** Ending a connection re-authenticates the way making one does, through a window of its own. */
 class ConnectionRevokeRequest extends FormRequest
 {
     private ?bool $requiresPassword = null;
@@ -39,6 +39,6 @@ class ConnectionRevokeRequest extends FormRequest
 
     public function requiresPassword(): bool
     {
-        return $this->requiresPassword ??= ! ConsentReauth::isFresh($this->session());
+        return $this->requiresPassword ??= ! ConnectionReauth::isFresh($this->session());
     }
 }

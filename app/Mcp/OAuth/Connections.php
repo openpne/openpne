@@ -15,9 +15,9 @@ use Laravel\Passport\Passport;
 use Laravel\Passport\Token;
 
 /**
- * The OAuth grants a member can see and end: their own and those of the AI accounts they own,
- * addressed by `user_id` (never through Passport's deprecated user relation). Live means the
- * access token or its refresh token is still usable, the rows a prune would keep.
+ * A connection is one client speaking for one member, the pair rather than a token row, since
+ * rotation replaces the row every hour. Live means the access token or its refresh token is still
+ * usable, addressed by `user_id` and never through Passport's deprecated user relation.
  */
 final class Connections
 {
@@ -26,50 +26,61 @@ final class Connections
     {
         $subjects = self::subjectsOf($viewer);
 
-        return self::live($subjects)->with('client')->orderByDesc('created_at')->orderByDesc('id')->get()
-            ->map(fn (Token $token): array => [
-                'id' => $token->getKey(),
-                'clientName' => (string) $token->client?->name,
-                'host' => (string) parse_url((string) ($token->client?->redirect_uris[0] ?? ''), PHP_URL_HOST),
-                'actor' => (int) $token->user_id === (int) $viewer->getKey() ? null : MemberRefSerializer::ref($subjects[(int) $token->user_id]),
-                'readOnly' => ! in_array(McpAbilities::WRITE, (array) $token->scopes, true),
-                'createdAt' => $token->created_at?->toIso8601String(),
-            ])
+        return self::live($subjects)->with('client')->get()
+            ->groupBy(fn (Token $token): string => $token->client_id.':'.$token->user_id)
+            ->map(function (Collection $tokens) use ($viewer, $subjects): array {
+                /** @var Token $latest */
+                $latest = $tokens->sortByDesc('created_at')->first();
+
+                return [
+                    'client' => (string) $latest->client_id,
+                    'subject' => (int) $latest->user_id,
+                    'clientName' => (string) $latest->client?->name,
+                    'host' => (string) parse_url((string) ($latest->client?->redirect_uris[0] ?? ''), PHP_URL_HOST),
+                    'actor' => (int) $latest->user_id === (int) $viewer->getKey() ? null : MemberRefSerializer::ref($subjects[(int) $latest->user_id]),
+                    'readOnly' => ! in_array(McpAbilities::WRITE, (array) $latest->scopes, true),
+                    // The oldest surviving row: the sweep of long-expired tokens moves it forward over time.
+                    'createdAt' => $tokens->min('created_at')?->toIso8601String(),
+                    'lastRenewedAt' => $latest->created_at?->toIso8601String(),
+                ];
+            })
+            ->sortByDesc('lastRenewedAt')
+            ->values()
             ->all();
     }
 
     /**
-     * On the subject's locked row, the order a refresh takes, so a rotation in flight cannot leave a
-     * fresh pair behind the one ended here.
+     * Every code and token the pair holds, on the subject's locked row (the order a refresh takes),
+     * so a rotation in flight cannot leave a fresh pair behind the one ended here.
      *
-     * @return int|null the member the ended grant spoke for, or null when it was not a live grant of the viewer's
+     * @return bool whether the pair was a live connection of the viewer's
      */
-    public static function revoke(Member $viewer, string $tokenId): ?int
+    public static function revoke(Member $viewer, string $clientId, int $subjectId): bool
     {
-        return DB::transaction(function () use ($viewer, $tokenId): ?int {
-            $subjects = self::subjectsOf($viewer);
-            $subjectId = self::live($subjects)->whereKey($tokenId)->value('user_id');
-
-            if ($subjectId === null || ActorLock::acquire((int) $subjectId) === null) {
-                return null;
+        return DB::transaction(function () use ($viewer, $clientId, $subjectId): bool {
+            if (! self::subjectsOf($viewer)->has($subjectId) || ActorLock::acquire($subjectId) === null) {
+                return false;
             }
 
-            $token = self::live($subjects)->whereKey($tokenId)->first();
+            $pair = fn (Builder $q): Builder => $q->where('user_id', $subjectId)->where('client_id', $clientId);
 
-            if ($token === null) {
-                return null;
+            if (! self::liveQuery()->where($pair)->exists()) {
+                return false;
             }
 
-            Passport::refreshToken()->newQuery()->where('access_token_id', $token->getKey())->delete();
-            $token->delete();
+            Passport::refreshToken()->newQuery()
+                ->whereIn('access_token_id', Passport::token()->newQuery()->where($pair)->select('id'))
+                ->delete();
+            Passport::token()->newQuery()->where($pair)->delete();
+            Passport::authCode()->newQuery()->where($pair)->delete();
 
-            return (int) $subjectId;
+            return true;
         });
     }
 
     public static function countFor(Member $subject): int
     {
-        return self::liveQuery()->where('user_id', $subject->getKey())->count();
+        return self::liveQuery()->where('user_id', $subject->getKey())->distinct()->count('client_id');
     }
 
     /**

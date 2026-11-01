@@ -267,9 +267,9 @@
                         <ul>
                             @foreach ($connections['items'] as $c)
                                 <li>
-                                    <form method="POST" action="{{ route('member.config.connections.destroy', ['token' => $c['id']]) }}">
+                                    <form method="POST" action="{{ route('member.config.connections.destroy', ['client' => $c['client'], 'subject' => $c['subject']]) }}">
                                         @csrf
-                                        {{ $c['host'] ?: $c['clientName'] }} — {{ $c['actor'] ? __('As :name', ['name' => $c['actor']['name']]) : __('As yourself') }}@if ($c['readOnly']) · {{ __('Read-only') }}@endif
+                                        {{ $c['host'] ?: $c['clientName'] }}「{{ $c['clientName'] }}」 — {{ $c['actor'] ? __('As :name', ['name' => $c['actor']['name']]) : __('As yourself') }}@if ($c['readOnly']) · {{ __('Read-only') }}@endif
                                         @if ($connections['requiresPassword'])
                                             <label for="connection_password_{{ $loop->index }}">{{ __('Current password') }}</label>
                                             <input type="password" id="connection_password_{{ $loop->index }}" name="current_password" class="input_text" autocomplete="current-password">

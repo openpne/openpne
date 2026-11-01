@@ -53,13 +53,15 @@ interface ConfigForm {
 }
 
 interface Connection {
-    id: string;
+    client: string;
+    subject: number;
     clientName: string;
     host: string;
     /** Null when the connection speaks for the member themselves. */
     actor: { id: number; name: string; isAi: boolean } | null;
     readOnly: boolean;
     createdAt: string | null;
+    lastRenewedAt: string | null;
 }
 
 interface ConfigProps extends PageProps {
@@ -135,9 +137,9 @@ export default function MemberConfig() {
                 danger: true,
             })
         ) {
-            connection.post(`/member/config/connections/${c.id}/delete`, {
+            connection.post(`/member/config/connections/${c.client}/${c.subject}/delete`, {
                 preserveScroll: true,
-                onStart: () => setEnding(c.id),
+                onStart: () => setEnding(`${c.client}:${c.subject}`),
                 onSuccess: () => connection.reset(),
                 onFinish: () => setEnding(null),
             });
@@ -434,11 +436,12 @@ export default function MemberConfig() {
             {form.connections && (
                 <SettingsGroup title={t('Connected apps')}>
                     {form.connections.items.map((c) => (
-                        <GroupItem key={c.id}>
+                        <GroupItem key={`${c.client}:${c.subject}`}>
                             <DetailRow
                                 title={c.host || c.clientName}
                                 value={
                                     <>
+                                        {`“${c.clientName}” · `}
                                         {c.actor ? t('As :name', { name: c.actor.name }) : t('As yourself')}
                                         {c.actor?.isAi && (
                                             <>
@@ -451,7 +454,7 @@ export default function MemberConfig() {
                                     </>
                                 }
                                 action={
-                                    <Button type="button" variant="outline" size="sm" loading={ending === c.id} onClick={() => endConnection(c)}>
+                                    <Button type="button" variant="outline" size="sm" loading={ending === `${c.client}:${c.subject}`} onClick={() => endConnection(c)}>
                                         {t('End')}
                                     </Button>
                                 }

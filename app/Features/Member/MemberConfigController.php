@@ -30,8 +30,8 @@ use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\UpdateProfileVisibilityRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
 use App\Http\Requests\OAuth\ConnectionRevokeRequest;
+use App\Mcp\OAuth\ConnectionReauth;
 use App\Mcp\OAuth\Connections;
-use App\Mcp\OAuth\ConsentReauth;
 use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\Feature;
@@ -115,7 +115,7 @@ class MemberConfigController extends Controller
                         ? AiAccountSerializer::list($viewer, $this->aiSettings)
                         : null,
                     'connections' => $category === MemberConfigCategory::Ai
-                        ? ['items' => Connections::listFor($viewer), 'requiresPassword' => ! ConsentReauth::isFresh($request->session())]
+                        ? ['items' => Connections::listFor($viewer), 'requiresPassword' => ! ConnectionReauth::isFresh($request->session())]
                         : null,
                     'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                     'diaryOptions' => DiaryVisibility::options(),
@@ -336,19 +336,18 @@ class MemberConfigController extends Controller
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
     }
 
-    public function destroyConnection(ConnectionRevokeRequest $request, string $token): RedirectResponse
+    public function destroyConnection(ConnectionRevokeRequest $request, string $client, int $subject): RedirectResponse
     {
         $viewer = $this->viewer();
 
         if ($request->requiresPassword()) {
-            ConsentReauth::stamp($request->session());
+            ConnectionReauth::stamp($request->session());
         }
 
-        $subjectId = Connections::revoke($viewer, $token);
-        abort_if($subjectId === null, 404);
+        abort_unless(Connections::revoke($viewer, $client, $subject), 404);
 
         SecurityLog::event('token.revoked', [
-            'member_id' => $subjectId,
+            'member_id' => $subject,
             'owner_id' => (int) $viewer->getKey(),
             'name' => 'oauth',
             'count' => 1,

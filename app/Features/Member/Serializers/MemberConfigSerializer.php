@@ -6,8 +6,8 @@ use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Profile\ProfilePageVisibility;
 use App\Files\ImageProcessor;
+use App\Mcp\OAuth\ConnectionReauth;
 use App\Mcp\OAuth\Connections;
-use App\Mcp\OAuth\ConsentReauth;
 use App\Models\Member;
 use App\Support\Autoplay;
 use App\Support\Feature;
@@ -77,7 +77,7 @@ class MemberConfigSerializer
         if ($connections !== []) {
             $form['connections'] = [
                 'items' => $connections,
-                'requiresPassword' => ! ConsentReauth::isFresh(request()->session()),
+                'requiresPassword' => ! ConnectionReauth::isFresh(request()->session()),
             ];
         }
 
