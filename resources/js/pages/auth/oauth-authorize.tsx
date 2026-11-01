@@ -14,7 +14,7 @@ type AiAccountRef = { id: number; name: string; isAi: boolean };
 
 type Props = {
     client: { name: string; host: string };
-    actors: { aiAccounts: AiAccountRef[]; enabled: boolean; canCreate: boolean };
+    actors: { aiAccounts: AiAccountRef[]; canCreate: boolean };
     authToken: string;
     csrfToken: string;
 };

@@ -67,7 +67,6 @@ class FlowTest extends OAuthTestCase
                 ->component('auth/oauth-authorize')
                 ->where('client.name', 'Claude')
                 ->where('client.host', 'client.example')
-                ->where('actors.enabled', true)
                 ->where('actors.canCreate', true)
                 ->has('actors.aiAccounts', 1)
                 ->where('actors.aiAccounts.0.id', $mine->getKey())

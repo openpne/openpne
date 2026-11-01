@@ -321,6 +321,12 @@ The raw token is flashed for exactly one render, with the same accepted residual
 as the recovery codes above — a browser may re-show that render from its own
 history state.
 
+The OAuth consent screen ([mcp.md](mcp.md), "Signing in from a client") is the
+one credential-minting step that asks for no password: it answers an
+authorization server's own flow on the signed-in session alone, as such a flow
+does. What bounds a grant taken on a stolen session is that a password change
+or reset ends every OAuth grant of the member, with the other devices.
+
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in

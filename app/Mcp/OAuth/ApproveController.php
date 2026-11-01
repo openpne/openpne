@@ -49,8 +49,8 @@ class ApproveController
         $viewer = $request->user();
         $actor = $request->actor();
         $readOnly = $request->boolean('read_only');
-        // Consumed first and handed back only on a refused choice, so a second submit of the same
-        // screen (a double click) is a stale token rather than a second account and a second code.
+        // Consumed first and handed back only on a refused choice: a submit arriving after the first
+        // answered is a stale token, while two in flight are held apart only by the screen's submit lock.
         $authToken = (string) $request->session()->pull('authToken');
 
         try {

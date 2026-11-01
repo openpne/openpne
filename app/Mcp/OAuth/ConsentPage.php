@@ -26,7 +26,6 @@ final class ConsentPage
         $client = $params['client'];
         $redirect = (string) ($params['request']->query('redirect_uri') ?: ($client->redirect_uris[0] ?? ''));
         $accounts = $params['user']->aiAccounts()->with('avatar.file')->orderBy('id')->get();
-        $enabled = $this->settings->enabled();
 
         return Inertia::render('auth/oauth-authorize', [
             'client' => [
@@ -35,8 +34,7 @@ final class ConsentPage
             ],
             'actors' => [
                 'aiAccounts' => $accounts->map(MemberRefSerializer::ref(...))->all(),
-                'enabled' => $enabled,
-                'canCreate' => $enabled && $accounts->count() < $this->settings->limit(),
+                'canCreate' => $this->settings->enabled() && $accounts->count() < $this->settings->limit(),
             ],
             'authToken' => $params['authToken'],
             // A plain form, not an Inertia visit: the approval answers with a redirect to the client,
