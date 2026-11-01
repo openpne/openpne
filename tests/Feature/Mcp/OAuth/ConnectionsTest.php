@@ -128,6 +128,33 @@ class ConnectionsTest extends OAuthTestCase
             ->assertInertia(fn ($page) => $page->where('tokens.connections', 1));
     }
 
+    public function test_the_classic_ai_category_lists_and_ends_connections_too(): void
+    {
+        config(['openpne.surface_mode' => 'classic_default']);
+        $viewer = Member::factory()->create();
+        $access = $this->grant($viewer);
+
+        $this->actingAs($viewer, 'member')->get('/member/config?category=ai')
+            ->assertOk()
+            ->assertSee('member_config_connections')
+            ->assertSee('claude.ai');
+
+        $this->post("/member/config/connections/{$access->getKey()}/delete", ['current_password' => 'password'])->assertRedirect();
+        $this->assertDatabaseMissing('oauth_access_tokens', ['id' => $access->getKey()]);
+    }
+
+    public function test_a_clients_first_code_marks_it_used(): void
+    {
+        $viewer = Member::factory()->create();
+        $client = $this->registerClient();
+        $this->assertNull(Passport::client()->newQuery()->find($client['client_id'])->used_at);
+        [, $challenge] = $this->pkce();
+
+        $this->redirectQuery($this->consent($viewer, $this->authorizeUrl($client['client_id'], $challenge), ['actor' => 'self']));
+
+        $this->assertNotNull(Passport::client()->newQuery()->find($client['client_id'])->used_at);
+    }
+
     public function test_pruning_keeps_what_the_flow_still_needs(): void
     {
         $viewer = Member::factory()->create();
@@ -137,14 +164,10 @@ class ConnectionsTest extends OAuthTestCase
         Passport::refreshToken()->newQuery()->where('access_token_id', $spent->getKey())->update(['expires_at' => now()->subDays(8)]);
         $spent->forceFill(['expires_at' => now()->subDays(8)])->save();
         $justExpired = $this->grant($viewer, accessExpired: true, refreshLive: false);
-        $usedClient = $live->client;
         $freshClient = Client::factory()->asPublic()->create();
         $forgottenClient = Client::factory()->asPublic()->create(['created_at' => now()->subDays(8)]);
-        $clientWithCode = Client::factory()->asPublic()->create(['created_at' => now()->subDays(8)]);
-        Passport::authCode()->forceFill([
-            'id' => Str::random(80), 'user_id' => $viewer->getKey(), 'client_id' => $clientWithCode->getKey(),
-            'scopes' => json_encode(['mcp:use']), 'revoked' => false, 'expires_at' => now()->addMinutes(5),
-        ])->save();
+        // Used once, every row of it since ended or swept: the other side still holds this id.
+        $onceUsedClient = Client::factory()->asPublic()->create(['created_at' => now()->subDays(40), 'used_at' => now()->subDays(40)]);
 
         PruneOAuth::run();
 
@@ -153,9 +176,8 @@ class ConnectionsTest extends OAuthTestCase
         $this->assertDatabaseMissing('oauth_access_tokens', ['id' => $spent->getKey()]);
         // Expired an hour ago: kept inside the grace window a refresh may still be in flight for.
         $this->assertDatabaseHas('oauth_access_tokens', ['id' => $justExpired->getKey()]);
-        $this->assertDatabaseHas('oauth_clients', ['id' => $usedClient->getKey()]);
+        $this->assertDatabaseHas('oauth_clients', ['id' => $onceUsedClient->getKey()]);
         $this->assertDatabaseHas('oauth_clients', ['id' => $freshClient->getKey()]);
-        $this->assertDatabaseHas('oauth_clients', ['id' => $clientWithCode->getKey()]);
         $this->assertDatabaseMissing('oauth_clients', ['id' => $forgottenClient->getKey()]);
     }
 }

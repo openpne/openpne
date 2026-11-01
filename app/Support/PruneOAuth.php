@@ -10,7 +10,7 @@ use Laravel\Passport\Passport;
 /**
  * Rows the OAuth flow no longer needs: revoked or long-expired codes and tokens (an access token
  * whose refresh token is still usable stays), and clients that registered but never obtained a
- * code — a client that was used keeps its id, which the other side still holds.
+ * code — a client once used keeps its id (`used_at`), which the other side still holds.
  */
 final class PruneOAuth
 {
@@ -30,12 +30,9 @@ final class PruneOAuth
             ->whereDoesntHave('refreshToken', fn (Builder $r) => $r->where('revoked', false)->where('expires_at', '>', now()))
             ->delete();
 
-        $removed += Passport::client()->newQuery()
+        return $removed + Passport::client()->newQuery()
+            ->whereNull('used_at')
             ->where('created_at', '<', now()->subDays(self::UNUSED_CLIENT_DAYS))
-            ->whereDoesntHave('tokens')
-            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('oauth_auth_codes')->whereColumn('oauth_auth_codes.client_id', 'oauth_clients.id'))
             ->delete();
-
-        return $removed;
     }
 }

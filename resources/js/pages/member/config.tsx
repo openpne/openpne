@@ -138,6 +138,7 @@ export default function MemberConfig() {
             connection.post(`/member/config/connections/${c.id}/delete`, {
                 preserveScroll: true,
                 onStart: () => setEnding(c.id),
+                onSuccess: () => connection.reset(),
                 onFinish: () => setEnding(null),
             });
         }

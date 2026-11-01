@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Mcp\OAuth;
 
+use App\Features\AiAccount\ActorLock;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Mcp\McpAbilities;
 use App\Models\Member;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Token;
 
@@ -24,7 +26,7 @@ final class Connections
     {
         $subjects = self::subjectsOf($viewer);
 
-        return self::live($viewer)->with('client')->orderByDesc('created_at')->orderByDesc('id')->get()
+        return self::live($subjects)->with('client')->orderByDesc('created_at')->orderByDesc('id')->get()
             ->map(fn (Token $token): array => [
                 'id' => $token->getKey(),
                 'clientName' => (string) $token->client?->name,
@@ -36,19 +38,33 @@ final class Connections
             ->all();
     }
 
-    /** @return bool whether a live grant of the viewer's was ended */
-    public static function revoke(Member $viewer, string $tokenId): bool
+    /**
+     * On the subject's locked row, the order a refresh takes, so a rotation in flight cannot leave a
+     * fresh pair behind the one ended here.
+     *
+     * @return int|null the member the ended grant spoke for, or null when it was not a live grant of the viewer's
+     */
+    public static function revoke(Member $viewer, string $tokenId): ?int
     {
-        $token = self::live($viewer)->whereKey($tokenId)->first();
+        return DB::transaction(function () use ($viewer, $tokenId): ?int {
+            $subjects = self::subjectsOf($viewer);
+            $subjectId = self::live($subjects)->whereKey($tokenId)->value('user_id');
 
-        if ($token === null) {
-            return false;
-        }
+            if ($subjectId === null || ActorLock::acquire((int) $subjectId) === null) {
+                return null;
+            }
 
-        Passport::refreshToken()->newQuery()->where('access_token_id', $token->getKey())->delete();
-        $token->delete();
+            $token = self::live($subjects)->whereKey($tokenId)->first();
 
-        return true;
+            if ($token === null) {
+                return null;
+            }
+
+            Passport::refreshToken()->newQuery()->where('access_token_id', $token->getKey())->delete();
+            $token->delete();
+
+            return (int) $subjectId;
+        });
     }
 
     public static function countFor(Member $subject): int
@@ -56,10 +72,13 @@ final class Connections
         return self::liveQuery()->where('user_id', $subject->getKey())->count();
     }
 
-    /** @return Builder<Token> */
-    private static function live(Member $viewer): Builder
+    /**
+     * @param  Collection<int, Member>  $subjects
+     * @return Builder<Token>
+     */
+    private static function live(Collection $subjects): Builder
     {
-        return self::liveQuery()->whereIn('user_id', self::subjectsOf($viewer)->keys()->all());
+        return self::liveQuery()->whereIn('user_id', $subjects->keys()->all());
     }
 
     /** @return Builder<Token> */

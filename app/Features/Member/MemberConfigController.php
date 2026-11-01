@@ -114,6 +114,9 @@ class MemberConfigController extends Controller
                     'ai' => $category === MemberConfigCategory::Ai
                         ? AiAccountSerializer::list($viewer, $this->aiSettings)
                         : null,
+                    'connections' => $category === MemberConfigCategory::Ai
+                        ? ['items' => Connections::listFor($viewer), 'requiresPassword' => ! ConsentReauth::isFresh($request->session())]
+                        : null,
                     'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                     'diaryOptions' => DiaryVisibility::options(),
                     'ageDefault' => AgeVisibility::defaultFor($viewer),
@@ -341,10 +344,12 @@ class MemberConfigController extends Controller
             ConsentReauth::stamp($request->session());
         }
 
-        abort_unless(Connections::revoke($viewer, $token), 404);
+        $subjectId = Connections::revoke($viewer, $token);
+        abort_if($subjectId === null, 404);
 
         SecurityLog::event('token.revoked', [
-            'member_id' => (int) $viewer->getKey(),
+            'member_id' => $subjectId,
+            'owner_id' => (int) $viewer->getKey(),
             'name' => 'oauth',
             'count' => 1,
             'via' => 'connections',
