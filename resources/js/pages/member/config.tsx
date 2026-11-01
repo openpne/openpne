@@ -1,17 +1,21 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
+import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
+import { useConfirm } from '@/components/confirm-dialog';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { DangerLink } from '@/components/ui/danger-link';
-import { FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
+import { Field, FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
+import { Input } from '@/components/ui/input';
 import { RadioCard } from '@/components/ui/radio-card';
 import { RadioPill } from '@/components/ui/radio-pill';
 import { type ColorMode, useColorMode } from '@/lib/color-mode';
 import { passkeysPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 
 const APPEARANCE_OPTIONS: { value: ColorMode; label: string }[] = [
@@ -37,6 +41,8 @@ interface ConfigForm {
     locale: { value: string; options: Option[] };
     // Absent for a member the site neither offers AI accounts to nor has given one already.
     ai?: { count: number };
+    // Absent while nothing is connected over OAuth.
+    connections?: { items: Connection[]; requiresPassword: boolean };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
     surface?: { value: string; description: string; options: Option[] };
     // Absent while the image processor drops frames (GD): nothing animates for the switch to stop.
@@ -44,6 +50,16 @@ interface ConfigForm {
     // Absent while the site offers fewer than two looks; `current` is the stored choice's label
     // (null = following the site default), never the label of the look being rendered.
     look?: { current: string | null; default: string };
+}
+
+interface Connection {
+    id: string;
+    clientName: string;
+    host: string;
+    /** Null when the connection speaks for the member themselves. */
+    actor: { id: number; name: string; isAi: boolean } | null;
+    readOnly: boolean;
+    createdAt: string | null;
 }
 
 interface ConfigProps extends PageProps {
@@ -106,6 +122,26 @@ export default function MemberConfig() {
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
     const autoplay = useForm({ autoplay_animations: form.autoplayAnimations?.value ?? '' });
+    const connection = useForm({ current_password: '' });
+    const confirm = useConfirm();
+    const { absolute } = useDateFormat();
+    const [ending, setEnding] = useState<string | null>(null);
+    const endConnection = async (c: Connection) => {
+        if (
+            await confirm({
+                title: t('End this connection?'),
+                description: t('The app stops reaching this site at once.'),
+                confirmLabel: t('End'),
+                danger: true,
+            })
+        ) {
+            connection.post(`/member/config/connections/${c.id}/delete`, {
+                preserveScroll: true,
+                onStart: () => setEnding(c.id),
+                onFinish: () => setEnding(null),
+            });
+        }
+    };
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
     const { preference, set: setColorMode } = useColorMode();
     // Const so the truthiness narrowing holds inside the options .map closures below.
@@ -391,6 +427,54 @@ export default function MemberConfig() {
                             }
                         />
                     </GroupItem>
+                </SettingsGroup>
+            )}
+
+            {form.connections && (
+                <SettingsGroup title={t('Connected apps')}>
+                    {form.connections.items.map((c) => (
+                        <GroupItem key={c.id}>
+                            <DetailRow
+                                title={c.host || c.clientName}
+                                value={
+                                    <>
+                                        {c.actor ? t('As :name', { name: c.actor.name }) : t('As yourself')}
+                                        {c.actor?.isAi && (
+                                            <>
+                                                {' '}
+                                                <AiChip isAi />
+                                            </>
+                                        )}
+                                        {c.readOnly && ` · ${t('Read-only')}`}
+                                        {c.createdAt && ` · ${t('Connected :date', { date: absolute(c.createdAt) })}`}
+                                    </>
+                                }
+                                action={
+                                    <Button type="button" variant="outline" size="sm" loading={ending === c.id} onClick={() => endConnection(c)}>
+                                        {t('End')}
+                                    </Button>
+                                }
+                            />
+                        </GroupItem>
+                    ))}
+                    {form.connections.requiresPassword && (
+                        <GroupItem>
+                            <Field
+                                label={t('Current password')}
+                                htmlFor="connection_password"
+                                help={t('Ending a connection asks for your password.')}
+                                error={connection.errors.current_password}
+                            >
+                                <Input
+                                    id="connection_password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    value={connection.data.current_password}
+                                    onChange={(e) => connection.setData('current_password', e.target.value)}
+                                />
+                            </Field>
+                        </GroupItem>
+                    )}
                 </SettingsGroup>
             )}
 

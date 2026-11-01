@@ -23,6 +23,6 @@ class Housekeeping
             $pruned += (new $model)->prunable()->delete();
         }
 
-        return $pruned;
+        return $pruned + PruneOAuth::run();
     }
 }

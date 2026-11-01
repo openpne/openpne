@@ -29,6 +29,9 @@ use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\UpdateProfileVisibilityRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
+use App\Http\Requests\OAuth\ConnectionRevokeRequest;
+use App\Mcp\OAuth\Connections;
+use App\Mcp\OAuth\ConsentReauth;
 use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\Feature;
@@ -328,6 +331,26 @@ class MemberConfigController extends Controller
     private function fullLoad(Request $request, string $target): Response
     {
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
+    }
+
+    public function destroyConnection(ConnectionRevokeRequest $request, string $token): RedirectResponse
+    {
+        $viewer = $this->viewer();
+
+        if ($request->requiresPassword()) {
+            ConsentReauth::stamp($request->session());
+        }
+
+        abort_unless(Connections::revoke($viewer, $token), 404);
+
+        SecurityLog::event('token.revoked', [
+            'member_id' => (int) $viewer->getKey(),
+            'name' => 'oauth',
+            'count' => 1,
+            'via' => 'connections',
+        ]);
+
+        return redirect()->route('member.config')->with('status', __('Connection ended.'));
     }
 
     /**

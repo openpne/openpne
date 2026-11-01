@@ -6,6 +6,8 @@ use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Profile\ProfilePageVisibility;
 use App\Files\ImageProcessor;
+use App\Mcp\OAuth\Connections;
+use App\Mcp\OAuth\ConsentReauth;
 use App\Models\Member;
 use App\Support\Autoplay;
 use App\Support\Feature;
@@ -68,6 +70,15 @@ class MemberConfigSerializer
 
         if ($aiSettings->availableTo($member)) {
             $form['ai'] = ['count' => $member->aiAccounts()->count()];
+        }
+
+        // Offered only while something is connected; the section is a list, not a setting.
+        $connections = Connections::listFor($member);
+        if ($connections !== []) {
+            $form['connections'] = [
+                'items' => $connections,
+                'requiresPassword' => ! ConsentReauth::isFresh(request()->session()),
+            ];
         }
 
         // Offered only while the processor keeps frames, since under GD nothing animates for the

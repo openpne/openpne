@@ -15,6 +15,9 @@ Artisan::command('inspire', function () {
 // Sweep expired pending tokens (see each model's prunable()): registration, email-change, and MFA-reset links.
 Schedule::command('model:prune', ['--model' => [RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class]])->daily();
 
+// Spent OAuth codes, tokens and never-used clients; also run by TickHousekeeping.
+Schedule::command('openpne:prune-oauth')->daily();
+
 // In the background: this can run for minutes, and a per-minute systemd timer skips rather than
 // queues while the last `schedule:run` is still running, so the daily sweeps would go missing.
 Schedule::command('openpne:prune-link-cards')->weeklyOn(0, '3:10')->runInBackground();

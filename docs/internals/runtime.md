@@ -164,7 +164,8 @@ link cards and the image each holds ([`routes/console.php`](../../routes/console
 never runs, and those rows accumulate. The daily prune of expired pending tokens —
 registration, email-change and MFA-reset links — is registered here too but does
 not depend on it: the first signed-in request of each site day runs the same prune
-after its response (`TickHousekeeping`, one cache lock per day). Nor does the daily
+after its response (`TickHousekeeping`, one cache lock per day), as does the sweep of
+spent OAuth codes, tokens and never-used clients (`openpne:prune-oauth`). Nor does the daily
 06:00 home issue: the Modern front page publishes the issue that is due when it is
 first read after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the
 scheduled run only moves publication from that first visit to 06:00 itself.
