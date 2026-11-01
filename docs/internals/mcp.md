@@ -37,7 +37,8 @@ Both go through the same [`IssueMcpToken`](../../app/Features/AiAccount/Actions/
 which holds what the two must not answer differently: the abilities are named, and the mint is
 decided on locked rows. From a signed-in session it also re-asks, on the locked owner row, whether
 the session's password is still the owner's ([`SessionCredential`](../../app/Auth/SessionCredential.php)),
-so a mint that passed the door just before a password change issues nothing after it. A third way is to sign in from the client itself ("Signing in from a
+so a mint that passed the door just before a password change issues nothing after it. A third way
+is to sign in from the client itself ("Signing in from a
 client" below), which is how a person's own account gets a token: by their consent on a screen,
 never by a pasted credential.
 
