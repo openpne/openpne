@@ -15,6 +15,7 @@ use App\Support\SecurityLog;
 use Exception;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Server\Registrar;
 use Laravel\Passport\Bridge\Client;
@@ -90,6 +91,12 @@ class ApproveController
             $request->session()->put('authToken', $authToken);
 
             return $this->backWith($e->reason->message());
+        } catch (AuthenticationException $e) {
+            // The session's password is not the person's any more: end it here, not on the next request.
+            Auth::guard('member')->logout();
+            $request->session()->invalidate();
+
+            throw $e;
         }
 
         $request->session()->forget('authRequest');

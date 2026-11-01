@@ -182,6 +182,7 @@ class FlowTest extends OAuthTestCase
             ->assertRedirect(route('login'));
 
         $this->assertSame(0, Passport::authCode()->newQuery()->count());
+        $this->assertGuest('member');
     }
 
     public function test_approving_asks_for_the_password_once_per_sitting(): void

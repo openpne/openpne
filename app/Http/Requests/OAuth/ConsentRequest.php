@@ -17,6 +17,8 @@ use Illuminate\Validation\Rule;
  */
 class ConsentRequest extends FormRequest
 {
+    private ?bool $requiresPassword = null;
+
     public function authorize(): bool
     {
         return $this->user() instanceof Member;
@@ -25,7 +27,7 @@ class ConsentRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // An empty field is "not provided", not a wrong password: the form submits it even inside
-        // the window, when the UI shows no password field at all (AiTokenRequest precedent).
+        // the window, when the UI shows no password field at all.
         if (in_array($this->input('current_password'), [null, ''], true)) {
             $this->request->remove('current_password');
         }
@@ -46,10 +48,10 @@ class ConsentRequest extends FormRequest
         ];
     }
 
-    /** Whether this request demanded (and thus verified) the password — what the controller stamps on. */
+    /** Decided once per request, so the rule and the stamp cannot straddle the window's edge. */
     public function requiresPassword(): bool
     {
-        return ! ConsentReauth::isFresh($this->session());
+        return $this->requiresPassword ??= ! ConsentReauth::isFresh($this->session());
     }
 
     /** @return 'self'|'new'|int */

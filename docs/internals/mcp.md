@@ -90,7 +90,7 @@ spends the `/mcp` bucket of the same address.
 
 **The person chooses who the connection speaks for, and proves it is them.** The consent screen
 offers the AI accounts they own — or creating one there, under the site's usual offer and cap —
-and, as the other choice, themselves; approving asks for their password, once per sitting
+and, as the other choice, themselves; approving asks for their password, once within a 15-minute window
 ([security.md](security.md), "AI account access tokens"). A token so minted names that member as
 its subject and is, from the endpoint's side,
 indistinguishable from a personal one: it carries `mcp:read` and, unless *read-only* was ticked,

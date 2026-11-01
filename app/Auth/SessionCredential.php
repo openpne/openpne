@@ -17,8 +17,9 @@ use Illuminate\Support\Facades\Auth;
  */
 final class SessionCredential
 {
-    public static function stillHolds(Session $session, Member $locked, string $guard = 'member'): bool
+    public static function stillHolds(Session $session, Member $locked): bool
     {
+        $guard = Auth::getDefaultDriver();
         $signedInWith = $session->get('password_hash_'.$guard);
         $current = (string) $locked->getAuthPassword();
 
