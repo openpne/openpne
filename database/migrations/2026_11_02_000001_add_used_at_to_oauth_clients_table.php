@@ -18,7 +18,7 @@ return new class extends Migration
         });
 
         // A client that already holds a code or token was used before the column existed.
-        DB::table('oauth_clients')
+        DB::connection($this->getConnection())->table('oauth_clients')
             ->where(fn ($q) => $q
                 ->whereExists(fn ($s) => $s->selectRaw('1')->from('oauth_access_tokens')->whereColumn('oauth_access_tokens.client_id', 'oauth_clients.id'))
                 ->orWhereExists(fn ($s) => $s->selectRaw('1')->from('oauth_auth_codes')->whereColumn('oauth_auth_codes.client_id', 'oauth_clients.id')))
