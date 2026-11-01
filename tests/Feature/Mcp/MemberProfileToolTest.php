@@ -72,6 +72,17 @@ class MemberProfileToolTest extends McpTestCase
                 ->etc());
     }
 
+    public function test_the_fields_are_read_in_the_callers_own_language(): void
+    {
+        $this->hobby->setTranslation('en', 'Pastime');
+        $subject = Member::factory()->create();
+        $this->says($subject, $this->hobby, 'Climbing');
+        Sanctum::actingAs(Member::factory()->create(['locale' => 'en']), [McpAbilities::READ]);
+
+        OpenPneServer::tool(ReadMemberProfileTool::class, ['member_id' => $subject->getKey()])
+            ->assertStructuredContent(fn ($json) => $json->where('member.fields', [['caption' => 'Pastime', 'value' => 'Climbing']])->etc());
+    }
+
     public function test_a_member_who_blocks_you_does_not_exist(): void
     {
         $subject = Member::factory()->create();
