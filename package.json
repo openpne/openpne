@@ -58,6 +58,7 @@
         "laravel-react-i18n": {
             "react": "$react"
         },
+        "minimatch": "^11.0.1",
         "shell-quote": "^1.10.0"
     }
 }
