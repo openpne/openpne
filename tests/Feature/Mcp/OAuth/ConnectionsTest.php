@@ -107,12 +107,12 @@ class ConnectionsTest extends OAuthTestCase
         $viewer = Member::factory()->create();
         $first = $this->grant($viewer);
         $first->forceFill(['created_at' => now()->subDays(3)])->save();
-        $this->grant($viewer, client: $first->client);
+        $latest = $this->grant($viewer, client: $first->client);
 
         $this->actingAs($viewer, 'member')->get('/member/config')
             ->assertInertia(fn ($page) => $page
                 ->has('form.connections.items', 1)
-                ->where('form.connections.items.0.createdAt', $first->created_at->toIso8601String()));
+                ->where('form.connections.items.0.lastRenewedAt', $latest->created_at->toIso8601String()));
     }
 
     public function test_someone_elses_connection_is_not_there_at_all(): void
@@ -164,6 +164,18 @@ class ConnectionsTest extends OAuthTestCase
         $this->assertDatabaseMissing('oauth_access_tokens', ['id' => $access->getKey()]);
     }
 
+    public function test_classic_reaches_the_list_with_ai_accounts_switched_off(): void
+    {
+        config(['openpne.surface_mode' => 'classic_default']);
+        $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, false);
+        $viewer = Member::factory()->create();
+        $this->grant($viewer);
+
+        $this->actingAs($viewer, 'member')->get('/member/config?category=ai')
+            ->assertOk()
+            ->assertSee('member_config_connections');
+    }
+
     public function test_a_clients_first_code_marks_it_used(): void
     {
         $viewer = Member::factory()->create();
@@ -190,6 +202,9 @@ class ConnectionsTest extends OAuthTestCase
         $forgottenClient = Client::factory()->asPublic()->create(['created_at' => now()->subDays(8)]);
         // Used once, every row of it since ended or swept: the other side still holds this id.
         $onceUsedClient = Client::factory()->asPublic()->create(['created_at' => now()->subDays(40), 'used_at' => now()->subDays(40)]);
+        // Unmarked, as a client from before the column, but still holding a live token.
+        $unmarkedLive = Client::factory()->asPublic()->create(['created_at' => now()->subDays(8)]);
+        $this->grant($viewer, client: $unmarkedLive);
 
         PruneOAuth::run();
 
@@ -201,5 +216,6 @@ class ConnectionsTest extends OAuthTestCase
         $this->assertDatabaseHas('oauth_clients', ['id' => $onceUsedClient->getKey()]);
         $this->assertDatabaseHas('oauth_clients', ['id' => $freshClient->getKey()]);
         $this->assertDatabaseMissing('oauth_clients', ['id' => $forgottenClient->getKey()]);
+        $this->assertDatabaseHas('oauth_clients', ['id' => $unmarkedLive->getKey()]);
     }
 }

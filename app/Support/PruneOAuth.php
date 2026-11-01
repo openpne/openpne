@@ -33,6 +33,7 @@ final class PruneOAuth
         return $removed + Passport::client()->newQuery()
             ->whereNull('used_at')
             ->where('created_at', '<', now()->subDays(self::UNUSED_CLIENT_DAYS))
+            ->whereDoesntHave('tokens')
             ->delete();
     }
 }

@@ -39,8 +39,6 @@ final class Connections
                     'host' => (string) parse_url((string) ($latest->client?->redirect_uris[0] ?? ''), PHP_URL_HOST),
                     'actor' => (int) $latest->user_id === (int) $viewer->getKey() ? null : MemberRefSerializer::ref($subjects[(int) $latest->user_id]),
                     'readOnly' => ! in_array(McpAbilities::WRITE, (array) $latest->scopes, true),
-                    // The oldest surviving row: the sweep of long-expired tokens moves it forward over time.
-                    'createdAt' => $tokens->min('created_at')?->toIso8601String(),
                     'lastRenewedAt' => $latest->created_at?->toIso8601String(),
                 ];
             })

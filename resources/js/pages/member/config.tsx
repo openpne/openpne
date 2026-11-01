@@ -60,7 +60,6 @@ interface Connection {
     /** Null when the connection speaks for the member themselves. */
     actor: { id: number; name: string; isAi: boolean } | null;
     readOnly: boolean;
-    createdAt: string | null;
     lastRenewedAt: string | null;
 }
 
@@ -450,7 +449,7 @@ export default function MemberConfig() {
                                             </>
                                         )}
                                         {c.readOnly && ` · ${t('Read-only')}`}
-                                        {c.createdAt && ` · ${t('Connected :date', { date: absolute(c.createdAt) })}`}
+                                        {c.lastRenewedAt && ` · ${t('Renewed :date', { date: absolute(c.lastRenewedAt) })}`}
                                     </>
                                 }
                                 action={

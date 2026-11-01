@@ -116,7 +116,7 @@ the database on every request, so a deleted row is refused at once whatever the 
 **A connection is a client speaking for a member, and the member can end it.** The settings hub
 (and Classic's AI category) lists the live connections of the member and of the AI accounts they
 own — one per client and subject however many token rows rotation has left, with who it speaks
-for, whether it may write and the oldest surviving row's date — and ends one on the member's
+for, whether it may write and when its token was last renewed — and ends one on the member's
 password, through a window of its own ([`Connections`](../../app/Mcp/OAuth/Connections.php)).
 Ending it deletes every code and token of that pair on the subject's locked row, the order a refresh
 takes, so a rotation in flight cannot leave a fresh pair behind; the next request from that client

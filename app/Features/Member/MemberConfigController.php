@@ -98,7 +98,10 @@ class MemberConfigController extends Controller
                     $category = null;
                 }
 
-                $aiAvailable = $this->aiSettings->availableTo($viewer);
+                // The category also carries the OAuth connections, which a member may hold with
+                // AI accounts switched off, so it stays reachable while one exists.
+                $connections = Connections::listFor($viewer);
+                $aiAvailable = $this->aiSettings->availableTo($viewer) || $connections !== [];
                 if ($category === MemberConfigCategory::Ai && ! $aiAvailable) {
                     $category = null;
                 }
@@ -115,7 +118,7 @@ class MemberConfigController extends Controller
                         ? AiAccountSerializer::list($viewer, $this->aiSettings)
                         : null,
                     'connections' => $category === MemberConfigCategory::Ai
-                        ? ['items' => Connections::listFor($viewer), 'requiresPassword' => ! ConnectionReauth::isFresh($request->session())]
+                        ? ['items' => $connections, 'requiresPassword' => ! ConnectionReauth::isFresh($request->session())]
                         : null,
                     'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                     'diaryOptions' => DiaryVisibility::options(),
@@ -354,7 +357,7 @@ class MemberConfigController extends Controller
             'via' => 'connections',
         ]);
 
-        return redirect()->route('member.config')->with('status', __('Connection ended.'));
+        return $this->savedRedirect($request, MemberConfigCategory::Ai)->with('status', __('Connection ended.'));
     }
 
     /**
