@@ -321,6 +321,13 @@ The raw token is flashed for exactly one render, with the same accepted residual
 as the recovery codes above — a browser may re-show that render from its own
 history state.
 
+The OAuth consent screen ([mcp.md](mcp.md), "Signing in from a client") asks
+for the same password, whoever the connection will speak for, through a window
+of its own ([`ConsentReauth`](../../app/Mcp/OAuth/ConsentReauth.php)): a grant
+is a credential like a minted token, and a signed-in session alone does not
+make one. A password change or reset ends every OAuth grant of the member, with
+the other devices.
+
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in

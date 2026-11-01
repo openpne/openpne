@@ -63,6 +63,13 @@ return [
             'driver' => 'sanctum',
             'provider' => 'members',
         ],
+
+        // OAuth access tokens (docs/internals/mcp.md, "Signing in from a client"). A guard that stays
+        // a guest until the signing keys exist, so a site without them keeps its bearer-only 401.
+        'oauth' => [
+            'driver' => 'passport-if-keyed',
+            'provider' => 'token_members',
+        ],
     ],
 
     /*
@@ -88,6 +95,12 @@ return [
             // another member, with no credential of their own — from every retrieval, so no session
             // id, remember-me cookie or credential lookup can produce one.
             'driver' => 'member-eloquent',
+            'model' => env('AUTH_MODEL', Member::class),
+        ],
+
+        // Only the `oauth` guard: an OAuth token may name an AI account, which `members` hides.
+        'token_members' => [
+            'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', Member::class),
         ],
 

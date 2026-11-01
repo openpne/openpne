@@ -17,22 +17,27 @@ mounted outside the `web` group, so it has no session, no CSRF token, no Inertia
 redirect, and a request that presents no bearer token is answered `401` rather than being sent to a
 login form — the framework's `{"message":"Unauthenticated."}` for a JSON request, an empty body for
 anything else. A signed-in browser session does not reach it either — `config/sanctum.php`
-pins `guard` to an empty list, so a bearer token is the only credential the guard accepts.
+pins `guard` to an empty list, so a bearer token is the only credential the guard accepts. The
+token endpoint and the client registration under `/oauth` and the `/.well-known` metadata belong to
+this realm too; only the consent screen (`/oauth/authorize`) is a member page, since a person has to
+be signed in to answer it.
 
 ## Tokens and abilities
 
-A token is minted two ways, both of which show the raw credential exactly once and never log it — a
-lost one is replaced, not recovered:
+A personal token is minted two ways, both of which show the raw credential exactly once and never
+log it — a lost one is replaced, not recovered:
 
 - **From the server**, by `php artisan openpne:mcp:token {email}` or `--id` (an AI account has no
   address, so the id is how one is named here). Server access is the trust boundary.
 - **By an owner**, from `/member/config/ai/{id}` — and only for the AI accounts they own, never for
-  a person's account, including their own. The POST re-authenticates with the owner's account
-  password ([security.md](security.md)).
+  a person's account by hand. The POST re-authenticates with the owner's account password
+  ([security.md](security.md)).
 
 Both go through the same [`IssueMcpToken`](../../app/Features/AiAccount/Actions/IssueMcpToken.php),
 which holds what the two must not answer differently: the abilities are named, and the mint is
-decided on locked rows.
+decided on locked rows. A third way is to sign in from the client itself ("Signing in from a
+client" below), which is how a person's own account gets a token: by their consent on a screen,
+never by a pasted credential.
 
 Two abilities ([`McpAbilities`](../../app/Mcp/McpAbilities.php)) in two layers:
 
@@ -54,6 +59,65 @@ tokens of any AI account they own, that account being a foothold of theirs held 
 [`EnsureTokenMemberNotFrozen`](../../app/Http/Middleware/EnsureTokenMemberNotFrozen.php) refuses a
 token behind that sweep, for a row it did not reach, asking the same question of the caller and of
 its owner ([`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorEligibility.php)).
+Every such sweep goes through [`MemberTokens`](../../app/Features/AiAccount/MemberTokens.php), so a
+personal token and an OAuth grant end together: a ban, a withdrawal and the operator's `--revoke`
+take both; a password change or reset takes the member's own OAuth grants (a connection signed in
+with the old password) and the tokens of the AI accounts they own, and leaves a personal token
+minted for the person by the operator in place.
+
+## Signing in from a client
+
+A client that cannot carry a pasted header signs in instead: `/mcp` is an OAuth 2.1 resource server
+and the site is its authorization server, on `laravel/passport`. The surface opens when the site
+holds a signing pair — `php artisan passport:keys`, or `PASSPORT_PRIVATE_KEY` / `PASSPORT_PUBLIC_KEY`
+([runtime.md](runtime.md)) — and until then nothing here is registered and a refused bearer is
+answered exactly as before ([`PassportKeys`](../../app/Auth/PassportKeys.php)). With the keys, the
+401 carries `resource_metadata`, the `/.well-known` documents point at `/oauth/authorize`,
+`/oauth/token` and `/oauth/register`, and a client finds its way from there. Every piece is behind
+the `mcp` unit, the metadata included. A switched-off endpoint still names the metadata URL on its
+401 — that header is written outside the gate, like the 401 itself — and the URL then answers 404,
+so the client stops there.
+
+**Registration is open.** Any client may register (RFC 7591), with any name; what it may not do is
+receive the code anywhere but over `https` or on the caller's own machine (`http` on `localhost`,
+`127.0.0.1` or `[::1]`, on any port at registration — and never with a fragment; at authorization
+league matches a `localhost` redirect exactly, port included, and only the two address literals
+port-agnostically). The screen that follows names the
+host the code will go to, which league has already matched against the registration, and shows the
+registered name only as the label it is. Registration has a per-IP budget of its own
+(`openpne.throttle.oauth_register_ip`), as does the token endpoint (`oauth_token_ip`), so neither
+spends the `/mcp` bucket of the same address.
+
+**The person chooses who the connection speaks for, and proves it is them.** The consent screen
+offers the AI accounts they own — or creating one there, under the site's usual offer and cap —
+and, as the other choice, themselves; approving asks for their password, once within a 15-minute window
+([security.md](security.md), "AI account access tokens"). A token so minted names that member as
+its subject and is, from the endpoint's side,
+indistinguishable from a personal one: it carries `mcp:read` and, unless *read-only* was ticked,
+`mcp:write`, which is why the gate reads both kinds alike ([`ApproveController`](../../app/Mcp/OAuth/ApproveController.php)).
+`mcp:use` is the one scope the client asks for; the two abilities are granted by the screen, so a
+client naming `mcp:write` in its request gains nothing by it. The screen is never skipped for a
+client the person connected before: each connection is a choice.
+
+**A grant is persisted under the same lock as a personal mint.** The authorization code is written
+inside the transaction that locked the owner's row and then the actor's and re-asked
+[`TokenActorEligibility`](../../app/Features/AiAccount/TokenActorEligibility.php)
+([`BindConsentActor`](../../app/Features/AiAccount/Actions/BindConsentActor.php)) — and, on that
+locked row, whether the session's password is still the person's
+([`SessionCredential`](../../app/Auth/SessionCredential.php)), so a consent that passed the door
+just before a password change persists nothing after it; the access token,
+at exchange and at every refresh, is written by [`LockedAccessTokenRepository`](../../app/Mcp/OAuth/LockedAccessTokenRepository.php)
+under the same lock, so a grant racing a ban is refused rather than outliving the sweep. A refresh
+token is consumed exactly once: [`SingleUseRefreshTokenRepository`](../../app/Mcp/OAuth/SingleUseRefreshTokenRepository.php)
+revokes it by compare-and-set, and the loser of a concurrent pair rolls back the rows it wrote. An
+access token lives an hour and a refresh token thirty days, rotated on use; revocation is read from
+the database on every request, so a deleted row is refused at once whatever the token says.
+
+**The guard resolves an AI account.** The `oauth` guard reads its member through the `token_members`
+provider, which, unlike the session provider, does not hide a member owned by another. `Member`
+keeps Sanctum's trait and none of Passport's: Passport's guard asks the user only for
+`withAccessToken()`, which that trait answers, and a test pins that the model is not Passport's
+`OAuthenticatable`.
 
 ## Tools
 

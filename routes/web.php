@@ -1,5 +1,6 @@
 <?php
 
+use App\Auth\PassportKeys;
 use App\Captcha\Captcha;
 use App\Features\AiAccount\AiAccountController;
 use App\Features\Auth\PasskeyLoginController;
@@ -61,6 +62,8 @@ use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\EnsureWebPublicDiaryEnabled;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
+use App\Mcp\OAuth\ApproveController;
+use App\Mcp\OAuth\AuthorizeController;
 use App\Models\Member;
 use App\Support\BrandColor;
 use App\Support\ClassicErrorPage;
@@ -72,6 +75,7 @@ use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
+use Laravel\Passport\Http\Controllers\DenyAuthorizationController;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // OpenPNE 3 member/home, guest-reachable, so it carries auth.session itself: a session whose
@@ -341,6 +345,18 @@ Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->c
 // database-driver sessions outright (see ResetMemberPassword).
 Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+
+    // The OAuth consent screen, the one session-bound step of the token realm
+    // (docs/internals/mcp.md, "Signing in from a client"); the rest is in routes/ai.php.
+    if (PassportKeys::present()) {
+        Route::middleware(EnsureFeatureEnabled::class.':mcp')->group(function () {
+            Route::get('/oauth/authorize', [AuthorizeController::class, 'authorize'])->name('passport.authorizations.authorize');
+            Route::post('/oauth/authorize', [ApproveController::class, 'consent'])
+                ->middleware('throttle:ai-manage')->name('passport.authorizations.approve');
+            Route::delete('/oauth/authorize', [DenyAuthorizationController::class, 'deny'])
+                ->middleware('throttle:ai-manage')->name('passport.authorizations.deny');
+        });
+    }
 
     // OpenPNE 3 upload-plugin links (/f/show/{id}.{ext}); the extension is whatever the uploader's name ended in.
     Route::get('/f/show/{file}', [LegacyUploadFileController::class, 'show'])

@@ -66,6 +66,7 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
+php artisan passport:keys  # optional: lets AI clients sign in to the MCP server
 
 php artisan serve         # http://localhost:8000
 npm run dev               # Vite dev server on :5173 (HMR)

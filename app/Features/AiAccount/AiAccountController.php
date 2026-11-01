@@ -10,7 +10,6 @@ use App\Features\AiAccount\Actions\IssueMcpToken;
 use App\Features\AiAccount\Actions\RevokeMcpToken;
 use App\Features\AiAccount\Actions\UpdateAiAccountIdentity;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
-use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
 use App\Features\AiAccount\Serializers\AiAccountSerializer;
 use App\Features\Group\Actions\CancelGroupJoinRequest;
 use App\Features\Group\Actions\JoinGroup;
@@ -142,7 +141,7 @@ class AiAccountController extends Controller
         try {
             $aiAccount = $create($this->viewer(), (string) $request->validated('name'));
         } catch (AiAccountActionException $e) {
-            return $this->listRedirect($request)->with('error', $this->messageFor($e->reason));
+            return $this->listRedirect($request)->with('error', $e->reason->message());
         }
 
         return $this->accountRedirect($aiAccount)->with('status', __('AI account created.'));
@@ -192,7 +191,7 @@ class AiAccountController extends Controller
         try {
             $delete($this->viewer(), $member);
         } catch (AiAccountActionException $e) {
-            return $this->listRedirect($request)->with('error', $this->messageFor($e->reason));
+            return $this->listRedirect($request)->with('error', $e->reason->message());
         }
 
         return $this->listRedirect($request)->with('status', __('AI account deleted.'));
@@ -209,7 +208,7 @@ class AiAccountController extends Controller
         try {
             $token = $issue($member, $request->boolean('read_only'));
         } catch (AiAccountActionException $e) {
-            return $back->with('error', $this->messageFor($e->reason));
+            return $back->with('error', $e->reason->message());
         }
 
         // After the Action's commit, so a rolled-back mint is never recorded as one; `via` is what
@@ -299,17 +298,6 @@ class AiAccountController extends Controller
         return SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC
             ? redirect()->route('member.config', ['category' => MemberConfigCategory::Ai->value])
             : redirect()->route('member.config.ai');
-    }
-
-    private function messageFor(AiAccountActionFailure $reason): string
-    {
-        return match ($reason) {
-            AiAccountActionFailure::Disabled => __('This site is not offering AI accounts right now.'),
-            AiAccountActionFailure::OwnerFrozen, AiAccountActionFailure::OwnerIsAiAccount => __('You cannot create an AI account.'),
-            AiAccountActionFailure::LimitReached => __('You already have as many AI accounts as this site allows.'),
-            AiAccountActionFailure::NotOwned, AiAccountActionFailure::MemberGone => __('That is not one of your AI accounts.'),
-            AiAccountActionFailure::ActorFrozen => __('This AI account cannot be given a token right now.'),
-        };
     }
 
     private function groupMessageFor(GroupActionFailure $reason): string

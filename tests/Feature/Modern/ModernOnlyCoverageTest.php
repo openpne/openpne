@@ -252,7 +252,7 @@ class ModernOnlyCoverageTest extends TestCase
             }
             // Out of scope: Fortify/guest auth (separate modern_only concern) and Closure compat
             // redirects (aliases that only redirect, not surface-rendering pages).
-            if (str_starts_with($name, 'password.') || in_array($name, ['login', 'register', 'register.sent', 'register.form', 'logout'], true)) {
+            if (str_starts_with($name, 'password.') || in_array($name, ['login', 'register', 'register.sent', 'register.form', 'logout', 'passport.authorizations.authorize'], true)) {
                 continue;
             }
             if ($route->getActionName() === 'Closure') {

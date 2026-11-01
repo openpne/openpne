@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Laravel\Passkeys\Exceptions\InvalidPasskeyException;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
+use League\OAuth2\Server\Exception\OAuthServerException;
 use Psr\Log\LogLevel;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -104,6 +105,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // The handler ignores every HttpException by default, and un-ignoring only the subclass would
         // not lift that, so the parent is un-ignored and ->stop() keeps the rest out of the default channel.
         $exceptions->stopIgnoring(HttpException::class);
+
+        // Passport's guard reports every bearer it cannot read, which on `auth:sanctum,oauth` is each
+        // refused personal token too; the endpoint already answers these with 401.
+        $exceptions->dontReport(OAuthServerException::class);
         $exceptions->report(function (HttpException $e): void {
             if ($e instanceof ThrottleRequestsException) {
                 // The limiter key is never logged: login keys embed the attempted email.

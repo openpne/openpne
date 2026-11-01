@@ -20,7 +20,10 @@ class GuestBounceSweepTest extends TestCase
     use RefreshDatabase;
 
     /** First URI segments of the token realm, the framework's own endpoints and dev-only tooling; the admin realm is AdminRealm's. */
-    private const OUTSIDE_SEGMENTS = ['mcp', 'storage', 'up', '_boost', '_inertia'];
+    private const OUTSIDE_SEGMENTS = ['mcp', '.well-known', 'storage', 'up', '_boost', '_inertia'];
+
+    /** The token realm's two POSTs under /oauth; the consent screen beside them is a member page and is swept. */
+    private const TOKEN_REALM = ['passport.token', 'mcp.oauth.register'];
 
     /** The sign-in flow and the token links a member opens while signed out. */
     private const GUEST_FLOW = [
@@ -94,7 +97,7 @@ class GuestBounceSweepTest extends TestCase
             return true;
         }
 
-        return in_array($route->getName(), self::guestRoutes(), true);
+        return in_array($route->getName(), [...self::guestRoutes(), ...self::TOKEN_REALM], true);
     }
 
     private function methodOf(RoutingRoute $route): string
