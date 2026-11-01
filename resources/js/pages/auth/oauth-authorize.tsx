@@ -17,13 +17,15 @@ type Props = {
     actors: { aiAccounts: AiAccountRef[]; canCreate: boolean };
     authToken: string;
     csrfToken: string;
+    /** Whether the account password is due (the re-auth window has lapsed). */
+    requiresPassword: boolean;
 };
 
 const NEW = 'new';
 
 // Two native forms rather than useForm: both answers are a redirect to the client's own origin,
 // which the page must follow as a navigation.
-export default function OAuthAuthorize({ client, actors, authToken, csrfToken }: Props) {
+export default function OAuthAuthorize({ client, actors, authToken, csrfToken, requiresPassword }: Props) {
     const t = useT();
     const { flash, errors } = usePage<PageProps>().props;
     const hasAccounts = actors.aiAccounts.length > 0;
@@ -98,6 +100,12 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken }:
                 {!offersAi && <p className="text-sm text-foreground">{t('Reads and writes under your name. What the AI writes is yours.')}</p>}
 
                 <CheckboxField name="read_only" value="1" label={t('Read-only: it can read but not post')} />
+
+                {requiresPassword && (
+                    <Field label={t('Current password')} htmlFor="current_password" help={t('Connecting asks for your password.')} error={errors.current_password} required>
+                        <Input id="current_password" name="current_password" type="password" autoComplete="current-password" />
+                    </Field>
+                )}
 
                 <FormActions className="justify-end">
                     <Button type="submit" form="consent-deny" variant="outline" disabled={submitting}>

@@ -424,6 +424,7 @@
     "Conflict": "競合",
     "Connect": "接続",
     "Connect :host": ":host をつなぐ",
+    "Connecting asks for your password.": "つなぐにはパスワードが必要です。",
     "Connection Closed Without Response": "応答なしで接続が閉じられました",
     "Connection Timed Out": "接続がタイムアウト",
     "Constraints & sort order": "制約と並び順",

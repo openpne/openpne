@@ -57,7 +57,7 @@ abstract class OAuthTestCase extends McpTestCase
         $screen->assertOk();
         $authToken = $screen->inertiaPage()['props']['authToken'];
 
-        return $this->post('/oauth/authorize', ['auth_token' => $authToken] + $form);
+        return $this->post('/oauth/authorize', ['auth_token' => $authToken, 'current_password' => 'password'] + $form);
     }
 
     /** @return array<string, string> the query the client was redirected with */

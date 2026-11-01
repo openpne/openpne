@@ -37,6 +37,7 @@ final class ConsentPage
                 'canCreate' => $this->settings->enabled() && $accounts->count() < $this->settings->limit(),
             ],
             'authToken' => $params['authToken'],
+            'requiresPassword' => ! ConsentReauth::isFresh($params['request']->session()),
             // A plain form, not an Inertia visit: the approval answers with a redirect to the client,
             // which an XHR could not follow.
             'csrfToken' => csrf_token(),

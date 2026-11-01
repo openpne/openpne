@@ -148,12 +148,12 @@ class FlowTest extends OAuthTestCase
         $screen = $this->actingAs($viewer, 'member')->get($url);
         $authToken = $screen->inertiaPage()['props']['authToken'];
 
-        $this->post('/oauth/authorize', ['auth_token' => $authToken, 'actor' => 'new', 'name' => 'Scout'])
+        $this->post('/oauth/authorize', ['auth_token' => $authToken, 'current_password' => 'password', 'actor' => 'new', 'name' => 'Scout'])
             ->assertRedirect()
             ->assertSessionHas('error');
 
         // The same screen, the same token: the viewer corrects the choice without starting over.
-        $query = $this->redirectQuery($this->post('/oauth/authorize', ['auth_token' => $authToken, 'actor' => 'self']));
+        $query = $this->redirectQuery($this->post('/oauth/authorize', ['auth_token' => $authToken, 'current_password' => 'password', 'actor' => 'self']));
         $this->assertArrayHasKey('code', $query);
         $this->assertSame('st4te', $query['state']);
     }
@@ -178,10 +178,36 @@ class FlowTest extends OAuthTestCase
             }
         });
 
-        $this->post('/oauth/authorize', ['auth_token' => $authToken, 'actor' => 'ai:'.$aiAccount->getKey()])
+        $this->post('/oauth/authorize', ['auth_token' => $authToken, 'current_password' => 'password', 'actor' => 'ai:'.$aiAccount->getKey()])
             ->assertRedirect(route('login'));
 
         $this->assertSame(0, Passport::authCode()->newQuery()->count());
+    }
+
+    public function test_approving_asks_for_the_password_once_per_sitting(): void
+    {
+        $viewer = Member::factory()->create();
+        $client = $this->registerClient();
+        [, $challenge] = $this->pkce();
+        $url = $this->authorizeUrl($client['client_id'], $challenge);
+
+        $screen = $this->actingAs($viewer, 'member')->get($url);
+        $screen->assertInertia(fn ($page) => $page->where('requiresPassword', true));
+        $authToken = $screen->inertiaPage()['props']['authToken'];
+
+        $this->post('/oauth/authorize', ['auth_token' => $authToken, 'actor' => 'self'])
+            ->assertSessionHasErrors('current_password');
+        $this->post('/oauth/authorize', ['auth_token' => $authToken, 'current_password' => 'wrong', 'actor' => 'self'])
+            ->assertSessionHasErrors('current_password');
+        $this->assertSame(0, Passport::authCode()->newQuery()->count());
+
+        $this->redirectQuery($this->post('/oauth/authorize', ['auth_token' => $authToken, 'current_password' => 'password', 'actor' => 'self']));
+
+        // Inside the window the next connection asks no password and the field is not offered.
+        $second = $this->actingAs($viewer, 'member')->get($url);
+        $second->assertInertia(fn ($page) => $page->where('requiresPassword', false));
+        $query = $this->redirectQuery($this->post('/oauth/authorize', ['auth_token' => $second->inertiaPage()['props']['authToken'], 'actor' => 'self']));
+        $this->assertArrayHasKey('code', $query);
     }
 
     public function test_a_stale_auth_token_is_refused(): void
@@ -192,7 +218,7 @@ class FlowTest extends OAuthTestCase
 
         $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge))->assertOk();
 
-        $this->post('/oauth/authorize', ['auth_token' => 'not-it', 'actor' => 'self'])->assertForbidden();
+        $this->post('/oauth/authorize', ['auth_token' => 'not-it', 'current_password' => 'password', 'actor' => 'self'])->assertForbidden();
     }
 
     public function test_declining_sends_the_client_access_denied(): void
@@ -300,7 +326,7 @@ class FlowTest extends OAuthTestCase
         $client = $this->registerClient();
         [, $challenge] = $this->pkce();
         $screen = $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge));
-        $form = ['auth_token' => $screen->inertiaPage()['props']['authToken'], 'actor' => 'new', 'name' => 'Scout'];
+        $form = ['auth_token' => $screen->inertiaPage()['props']['authToken'], 'current_password' => 'password', 'actor' => 'new', 'name' => 'Scout'];
 
         $this->redirectQuery($this->post('/oauth/authorize', $form));
         $this->post('/oauth/authorize', $form)->assertForbidden();
