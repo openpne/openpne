@@ -5,6 +5,7 @@ namespace App\Features\Member;
 use App\Auth\SessionRevocation;
 use App\Features\AiAccount\AiAccountSettings;
 use App\Features\AiAccount\AiAccountTokens;
+use App\Features\AiAccount\MemberTokens;
 use App\Features\AiAccount\Serializers\AiAccountSerializer;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\GroupTalk\Queries\MutedTalkRooms;
@@ -215,8 +216,9 @@ class MemberConfigController extends Controller
         Auth::guard('member')->logoutOtherDevices($newPassword);
 
         // A token minted for an owned AI account carries the old password's authority, so it drops
-        // with the other devices.
+        // with the other devices, as does every OAuth connection signed in with that password.
         AiAccountTokens::revokeOwnedBy($viewer);
+        MemberTokens::deleteOAuth($viewer);
 
         // A stolen-password attacker could have requested an email change, so a password change voids
         // any pending one.

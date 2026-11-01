@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Features\AiAccount\Actions;
 
 use App\Features\AiAccount\MemberSelector;
+use App\Features\AiAccount\MemberTokens;
 use App\Mcp\McpAbilities;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Only the tokens this endpoint mints: one minted for some other purpose is not collateral damage.
+ * Only the tokens this endpoint mints, personal and OAuth: one minted for some other purpose is not collateral damage.
  * Taken on the member's row lock, so a revoke cannot report "0" while a token minted a moment
  * earlier lands right behind it.
  */
@@ -26,7 +27,7 @@ class RevokeMcpTokens
 
             return $locked === null || ! $selector->names($locked)
                 ? null
-                : $locked->tokens()->where('name', McpAbilities::TOKEN_NAME)->delete();
+                : $locked->tokens()->where('name', McpAbilities::TOKEN_NAME)->delete() + MemberTokens::deleteOAuth($locked);
         });
     }
 }

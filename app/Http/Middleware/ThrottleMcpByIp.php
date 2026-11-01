@@ -12,23 +12,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Spelled out rather than `throttle:` because the framework's ThrottleRequests sorts below
- * Authenticate in the priority list and would run only once a credential is accepted; this one is
- * outside the list and keeps the first slot. Keyed by IP alone, so behind a proxy TRUSTED_PROXIES
- * must be set or every caller shares one bucket.
+ * Authenticate in the priority list and would run only once a credential is accepted. Keyed by IP
+ * alone under `openpne.throttle.<bucket>_ip`, so behind a proxy TRUSTED_PROXIES must be set.
  */
 class ThrottleMcpByIp
 {
     private const DECAY_SECONDS = 60;
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $bucket = 'mcp'): Response
     {
-        $perMinute = max(0, (int) config('openpne.throttle.mcp_ip'));
+        $perMinute = max(0, (int) config("openpne.throttle.{$bucket}_ip"));
 
         if ($perMinute === 0) {
             return $next($request);
         }
 
-        $key = 'mcp-ip|'.$request->ip();
+        $key = "{$bucket}-ip|".$request->ip();
 
         if (RateLimiter::tooManyAttempts($key, $perMinute)) {
             $retryAfter = RateLimiter::availableIn($key);

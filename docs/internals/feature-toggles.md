@@ -12,8 +12,9 @@ prefix and the URL segment too. Some units come apart from it: `directMessage`'s
 on the OpenPNE 3 `message` word until they are redesigned, and `groupTopic` / `groupEvent` /
 `groupTalk` own `group.topics.*` / `group.events.*` / `group.talk.*` — nested inside their parent's
 prefix, which `owningRouteName()` resolves by longest match. They declare their prefixes explicitly
-instead of deriving them. `mcp` declares none at all: its routes come from the package unnamed, and
-the gate audit claims them by URL segment ([mcp.md](mcp.md)).
+instead of deriving them. `mcp` declares the OAuth sign-in routes (`passport.`, `mcp.oauth.`); the
+`/mcp` routes themselves come from the package unnamed, and the gate audit claims them by URL
+segment ([mcp.md](mcp.md)).
 
 **Switching a unit off is a gate, not a data operation.** Diaries, messages, topics, files and
 friendships stay exactly as they were, and switching the unit back on restores the feature intact.

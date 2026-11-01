@@ -77,9 +77,9 @@ class McpEndpointTest extends McpTestCase
     {
         $this->postJson('/mcp', $this->envelope('tools/list'))
             ->assertUnauthorized()
-            // The transport spec's challenge, which the package would otherwise attach inside the
-            // gate — where a 401 thrown by it never arrives.
-            ->assertHeader('WWW-Authenticate', 'Bearer realm="mcp", error="invalid_token"')
+            // The transport spec's challenge, attached outside the gate where the 401 is thrown; the
+            // keyless form is OAuthKeysAbsentTest's.
+            ->assertHeader('WWW-Authenticate', 'Bearer realm="mcp", resource_metadata="'.url('/.well-known/oauth-protected-resource/mcp').'"')
             // The framework's JSON refusal, pinned because docs/internals/mcp.md names it.
             ->assertExactJson(['message' => 'Unauthenticated.']);
 

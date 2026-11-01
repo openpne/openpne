@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Auth\LegacyEloquentUserProvider;
 use App\Auth\MemberUserProvider;
+use App\Auth\PassportGuard;
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
@@ -16,6 +17,11 @@ use App\Http\Middleware\UseAdminSessionStore;
 use App\LinkCard\InternalCardResolver;
 use App\LinkCard\LinkCardSettings;
 use App\Listeners\Http\DeclareContentLength;
+use App\Mcp\McpAbilities;
+use App\Mcp\OAuth\AuthorizeController;
+use App\Mcp\OAuth\ConsentPage;
+use App\Mcp\OAuth\LockedAccessTokenRepository;
+use App\Mcp\OAuth\SingleUseRefreshTokenRepository;
 use App\Models\BannerImage;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -42,6 +48,7 @@ use App\Support\ViewerRelations;
 use App\Translation\TermTranslator;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Http\Events\RequestHandled;
@@ -57,6 +64,11 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Rules\Password;
 use InvalidArgumentException;
+use Laravel\Mcp\Server\Registrar;
+use Laravel\Passport\AccessToken;
+use Laravel\Passport\Bridge\AccessTokenRepository;
+use Laravel\Passport\Bridge\RefreshTokenRepository;
+use Laravel\Passport\Passport;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AppServiceProvider extends ServiceProvider
@@ -67,6 +79,13 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TermService::class);
+
+        // Before Passport boots: its routes are replaced by the subset in routes/ai.php and
+        // routes/web.php (docs/internals/mcp.md, "Signing in from a client").
+        Passport::ignoreRoutes();
+        $this->app->bind(AccessTokenRepository::class, LockedAccessTokenRepository::class);
+        $this->app->bind(RefreshTokenRepository::class, SingleUseRefreshTokenRepository::class);
+        $this->app->when(AuthorizeController::class)->needs(StatefulGuard::class)->give(fn () => Auth::guard('member'));
 
         // Singleton so its constructor captures the member-surface session config
         // once per process, before any request's surface pin mutates it.
@@ -161,6 +180,9 @@ class AppServiceProvider extends ServiceProvider
         // cookie or credentials (see MemberUserProvider).
         Auth::provider('member-eloquent', fn ($app, array $config): MemberUserProvider => new MemberUserProvider($app['hash'], $config['model']));
 
+        Auth::extend('passport-if-keyed', fn ($app, string $name, array $config) => PassportGuard::make($app, $config));
+        $this->configurePassport();
+
         // The one password policy; the guessability rules are gated so a dev environment can opt out
         // (docs/internals/security.md).
         Password::defaults(function (): Password {
@@ -205,6 +227,23 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Scopes carry the same two abilities the personal tokens do, so the `/mcp` gate reads both
+     * kinds alike; `mcp:use` is the one the client asks for (docs/internals/mcp.md, "Signing in
+     * from a client").
+     */
+    private function configurePassport(): void
+    {
+        Passport::tokensCan([
+            Registrar::OAUTH_SCOPE => 'Use the MCP server',
+            McpAbilities::READ => 'Read as this member',
+            McpAbilities::WRITE => 'Write as this member',
+        ]);
+        Passport::tokensExpireIn(now()->addHour());
+        Passport::refreshTokensExpireIn(now()->addDays(30));
+        Passport::authorizationView(fn (array $params) => $this->app->make(ConsentPage::class)->render($params));
+    }
+
+    /**
      * Named limiters for the content-posting and mail-triggering member writes, the keystroke-driven
      * endpoints a compose form calls and the reactor list, the one read a pointer or a keyboard fires
      * without navigating (auth-flow limiters live in FortifyServiceProvider). Attached per route in
@@ -241,9 +280,11 @@ class AppServiceProvider extends ServiceProvider
 
             // A session user carries a TransientToken with no id of its own; the endpoint admits no
             // such caller, so falling back to the IP is a backstop rather than a second key space.
-            return Limit::perMinute($perMinute)->by('mcp|'.(
-                $token instanceof PersonalAccessToken ? $token->getKey() : $request->ip()
-            ));
+            return Limit::perMinute($perMinute)->by('mcp|'.match (true) {
+                $token instanceof PersonalAccessToken => $token->getKey(),
+                $token instanceof AccessToken => 'oauth:'.$token->oauth_access_token_id,
+                default => $request->ip(),
+            });
         };
     }
 

@@ -239,6 +239,10 @@ return [
         // ahead of authentication (App\Http\Middleware\ThrottleMcpByIp).
         'mcp' => (int) env('OPENPNE_THROTTLE_MCP', 60),
         'mcp_ip' => (int) env('OPENPNE_THROTTLE_MCP_IP', 60),
+        // The unauthenticated OAuth endpoints, in their own buckets so a client's token refreshes and
+        // registrations never spend the `/mcp` budget of the same address.
+        'oauth_token_ip' => (int) env('OPENPNE_THROTTLE_OAUTH_TOKEN_IP', 30),
+        'oauth_register_ip' => (int) env('OPENPNE_THROTTLE_OAUTH_REGISTER_IP', 5),
     ],
 
     /*

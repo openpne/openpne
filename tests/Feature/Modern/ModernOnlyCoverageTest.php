@@ -82,6 +82,8 @@ class ModernOnlyCoverageTest extends TestCase
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
     private const COVERED = [
         'home', 'dashboard', 'home.issues',
+        // The OAuth consent screen is an auth/ page, surface-independent like the login screen.
+        'passport.authorizations.authorize',
         'diary.list', 'diary.list_friend', 'diary.search', 'diary.new',
         'timeline.index', 'timeline.new',
         'friend.list', 'friend.requests', 'friend.link.show',

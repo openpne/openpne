@@ -13,8 +13,10 @@ the member realm's Classic/Modern presentation.)
 
 `/mcp` is a third realm and holds no session at all: it is mounted outside the `web` group, accepts a
 bearer token as its only credential, and answers 401 instead of redirecting a guest
-([mcp.md](mcp.md)). `UseAdminSessionStore` still runs — it is global — and pinning a store nothing
-starts is harmless; a test asserts the response carries no cookie and writes no session row.
+([mcp.md](mcp.md)). The OAuth token endpoint, client registration (`/oauth/token`, `/oauth/register`)
+and the `/.well-known` metadata sit in that realm too; the consent screen `/oauth/authorize` is a
+member page. `UseAdminSessionStore` still runs — it is global — and pinning a store nothing starts
+is harmless; a test asserts the response carries no cookie and writes no session row.
 
 The switch is [`UseAdminSessionStore`](../../app/Http/Middleware/UseAdminSessionStore.php),
 **global** middleware keyed by request path. It cannot live in the Filament

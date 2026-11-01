@@ -107,8 +107,9 @@ enum Feature: string
             self::GroupEvent => ['group.events.'],
             self::GroupTalk => ['group.talk.'],
             self::Friend => ['friend.'],
-            // The MCP endpoint's routes come from the package unnamed, so there is no name to claim.
-            self::Mcp => [],
+            // The `/mcp` routes come from the package unnamed and carry the gate by hand (routes/ai.php);
+            // the named ones are the OAuth sign-in surface.
+            self::Mcp => ['passport.', 'mcp.oauth.'],
         };
     }
 

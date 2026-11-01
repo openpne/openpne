@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Features\AiAccount\MemberTokens;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
@@ -25,7 +26,7 @@ class MemberObserver
 
         // No cascade reaches the polymorphic tokens, and a reused member id would hand a surviving
         // token to whoever inherits the id; deleted inline, not afterCommit, so a rollback restores them.
-        $member->tokens()->delete();
+        MemberTokens::deleteAll($member);
 
         // Same id-reuse hazard (a surviving subscription would push the next id holder's notifications
         // to a stranger's browser); only rows addressed to this member go, since rows where they are

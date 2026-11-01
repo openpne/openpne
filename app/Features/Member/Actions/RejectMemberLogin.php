@@ -4,6 +4,7 @@ namespace App\Features\Member\Actions;
 
 use App\Auth\SessionRevocation;
 use App\Features\AiAccount\AiAccountTokens;
+use App\Features\AiAccount\MemberTokens;
 use App\Models\Member;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,7 @@ class RejectMemberLogin
             $member->save();
             SessionRevocation::revokeMember($member);
             // Every token, not just the MCP ones: a ban ends every foothold, whatever minted it.
-            $member->tokens()->delete();
+            MemberTokens::deleteAll($member);
 
             // Only the AI account's tokens: it has no session to end, and banning the account itself
             // would need a symmetric un-ban.

@@ -24,7 +24,7 @@ final class AiAccountTokens
             }
 
             foreach ($locked->aiAccounts()->lockForUpdate()->get() as $aiAccount) {
-                $aiAccount->tokens()->delete();
+                MemberTokens::deleteAll($aiAccount);
             }
         });
     }

@@ -17,6 +17,16 @@ are read with `getenv()` before the app boots. When neither is set the
 application uses its default in-project paths and behaves identically to a
 stock install.
 
+## OAuth signing keys
+
+An AI client that signs in rather than pasting a token ([mcp.md](mcp.md), "Signing in from a
+client") needs the site to hold an RSA pair. `php artisan passport:keys` writes
+`storage/oauth-private.key` and `storage/oauth-public.key` (so `LARAVEL_STORAGE_PATH` relocates
+them with the rest); `PASSPORT_PRIVATE_KEY` and `PASSPORT_PUBLIC_KEY` carry the same pair in the
+environment instead. Without either the OAuth routes are not registered and the endpoint behaves
+as a bearer-only one. Replacing the pair ends every access token at once; clients recover by
+refreshing.
+
 ## Key invariants
 
 1. With `OPENPNE_ENV_PATH` and `LARAVEL_STORAGE_PATH` unset, the hook is a no-op:
@@ -153,7 +163,8 @@ link cards and the image each holds ([`routes/console.php`](../../routes/console
 never runs, and those rows accumulate. The daily prune of expired pending tokens —
 registration, email-change and MFA-reset links — is registered here too but does
 not depend on it: the first signed-in request of each site day runs the same prune
-after its response (`TickHousekeeping`, one cache lock per day). Nor does the daily
+after its response (`TickHousekeeping`, one cache lock per day). Expired and revoked
+OAuth rows are not pruned yet. Nor does the daily
 06:00 home issue: the Modern front page publishes the issue that is due when it is
 first read after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the
 scheduled run only moves publication from that first visit to 06:00 itself.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Features\AiAccount\Actions;
 
+use App\Features\AiAccount\ActorLock;
 use App\Features\AiAccount\Exceptions\AiAccountActionException;
 use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
 use App\Features\AiAccount\MemberSelector;
@@ -43,34 +44,17 @@ class IssueMcpToken
     }
 
     /**
-     * The owner's row is locked before the account's, and `owner_member_id` is immutable, so the
-     * caller's snapshot decides that order. Everything then judged comes from the locked rows,
-     * including whether the selector still names this one.
+     * Everything judged comes from the locked rows, including whether the selector still names
+     * this one.
      *
      * @throws AiAccountActionException
      */
     private function lockActor(MemberSelector $selector): Member
     {
-        $member = $selector->member();
-        $owner = null;
-
-        if ($member->owner_member_id !== null) {
-            $owner = Member::whereKey($member->owner_member_id)->lockForUpdate()->first();
-
-            if ($owner === null) {
-                throw new AiAccountActionException(AiAccountActionFailure::MemberGone);
-            }
-        }
-
-        $actor = Member::whereKey($member->getKey())->lockForUpdate()->first();
+        $actor = ActorLock::acquire((int) $selector->member()->getKey());
 
         if ($actor === null || ! $selector->names($actor)) {
             throw new AiAccountActionException(AiAccountActionFailure::MemberGone);
-        }
-
-        if ($owner !== null) {
-            // So the eligibility read uses the row this transaction locked, not a fresh unlocked one.
-            $actor->setRelation('owner', $owner);
         }
 
         return $actor;
