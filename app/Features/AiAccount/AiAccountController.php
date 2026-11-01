@@ -39,9 +39,11 @@ use App\Models\Member;
 use App\Support\Feature;
 use App\Support\SecurityLog;
 use App\Support\SurfaceResolver;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -206,9 +208,15 @@ class AiAccountController extends Controller
         $back = $this->accountRedirect($member);
 
         try {
-            $token = $issue($member, $request->boolean('read_only'));
+            $token = $issue($member, $request->boolean('read_only'), $request->session());
         } catch (AiAccountActionException $e) {
             return $back->with('error', $e->reason->message());
+        } catch (AuthenticationException $e) {
+            // The session's password is not the owner's any more: end it here, not on the next request.
+            Auth::guard('member')->logout();
+            $request->session()->invalidate();
+
+            throw $e;
         }
 
         // After the Action's commit, so a rolled-back mint is never recorded as one; `via` is what

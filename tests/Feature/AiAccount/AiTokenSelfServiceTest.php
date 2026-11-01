@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AiAccount;
 
+use App\Features\AiAccount\Actions\IssueMcpToken;
+use App\Features\AiAccount\MemberSelector;
 use App\Mcp\McpAbilities;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
+use Laravel\Sanctum\NewAccessToken;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
@@ -324,5 +328,29 @@ class AiTokenSelfServiceTest extends TestCase
         [, $aiAccount] = $this->ownerWithAccount();
 
         $this->post($this->tokensUrl($aiAccount))->assertRedirect(route('login'));
+    }
+
+    public function test_a_mint_that_passed_the_door_before_a_password_change_issues_nothing(): void
+    {
+        [$owner, $account] = $this->ownerWithAccount();
+
+        // The password changes after auth.session let the request in and before the rows are locked.
+        $this->app->bind(IssueMcpToken::class, fn () => new class extends IssueMcpToken
+        {
+            public function __invoke(Member|MemberSelector $member, bool $readOnly = false, ?Session $session = null): NewAccessToken
+            {
+                $owner = ($member instanceof Member ? $member : $member->member())->owner;
+                Member::whereKey($owner->getKey())->update(['password' => bcrypt('changed-elsewhere')]);
+
+                return parent::__invoke($member, $readOnly, $session);
+            }
+        });
+
+        $this->actingAs($owner, 'member')
+            ->post("/member/config/ai/{$account->getKey()}/tokens", ['current_password' => 'password'])
+            ->assertRedirect(route('login'));
+
+        $this->assertSame(0, $account->tokens()->count());
+        $this->assertGuest('member');
     }
 }
