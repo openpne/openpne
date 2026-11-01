@@ -546,6 +546,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/row-actions-hint', [RowActionsHintController::class, 'dismiss'])->name('member.config.row_actions_hint');
     // The layout choice (docs/internals/looks.md); its picker is the GET detail page below.
     Route::post('/member/config/look', [MemberConfigController::class, 'updateLook'])->name('member.config.look');
+    // Ends an OAuth connection (docs/internals/mcp.md, "Signing in from a client"); no unit gate, so a
+    // grant can be ended while the endpoint is switched off, as a token can.
+    Route::post('/member/config/connections/{client}/{subject}/delete', [MemberConfigController::class, 'destroyConnection'])
+        ->whereUuid('client')->whereNumber('subject')->middleware('throttle:ai-manage')->name('member.config.connections.destroy');
     Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
     Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])->name('member.config.withdrawal');
     Route::post('/member/config/email', [MemberConfigController::class, 'updateEmail'])

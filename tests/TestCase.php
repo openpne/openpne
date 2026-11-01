@@ -98,7 +98,9 @@ abstract class TestCase extends BaseTestCase
             return array_values(array_filter(
                 DB::getQueryLog(),
                 fn (array $query): bool => preg_match('/["`]cache(_locks)?["`]/', $query['query']) !== 1
-                    && preg_match('/^delete from ["`](registration_tokens|email_change_requests|mfa_reset_requests)["`] where ["`]created_at["`] < \?$/', $query['query']) !== 1,
+                    && preg_match('/^delete from ["`](registration_tokens|email_change_requests|mfa_reset_requests)["`] where ["`]created_at["`] < \?$/', $query['query']) !== 1
+                    && preg_match('/^delete from ["`]oauth_(auth_codes|refresh_tokens|access_tokens)["`] where \(["`]revoked["`] = \? or ["`]expires_at["`] < \?\)/', $query['query']) !== 1
+                    && preg_match('/^delete from ["`]oauth_clients["`] where ["`]used_at["`] is null/', $query['query']) !== 1,
             ));
         } finally {
             DB::disableQueryLog();

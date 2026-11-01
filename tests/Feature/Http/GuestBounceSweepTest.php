@@ -44,7 +44,7 @@ class GuestBounceSweepTest extends TestCase
     ];
 
     /** Tried in order against each parameter's `where` pattern; the first match stands in for it. */
-    private const PLACEHOLDERS = ['1', '2026', 'x', '00000000-0000-4000-8000-000000000000'];
+    private const PLACEHOLDERS = ['1', '2026', 'x', '00000000-0000-4000-8000-000000000000', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'];
 
     public function test_every_other_route_sends_a_guest_to_login(): void
     {

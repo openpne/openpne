@@ -261,6 +261,28 @@
                     <div class="body">{{ __('You already have as many AI accounts as this site allows.') }}</div>
                 </x-classic.parts>
             @endif
+            @if ($connections !== null && count($connections['items']) > 0)
+                <x-classic.parts id="member_config_connections" name="form" :title="__('Connected apps')">
+                    <div class="body">
+                        <ul>
+                            @foreach ($connections['items'] as $c)
+                                <li>
+                                    <form method="POST" action="{{ route('member.config.connections.destroy', ['client' => $c['client'], 'subject' => $c['subject']]) }}">
+                                        @csrf
+                                        {{ $c['host'] ?: $c['clientName'] }}「{{ $c['clientName'] }}」 — {{ $c['actor'] ? __('As :name', ['name' => $c['actor']['name']]) : __('As yourself') }}@if ($c['readOnly']) · {{ __('Read-only') }}@endif
+                                        @if ($connections['requiresPassword'])
+                                            <label for="connection_password_{{ $loop->index }}">{{ __('Current password') }}</label>
+                                            <input type="password" id="connection_password_{{ $loop->index }}" name="current_password" class="input_text" autocomplete="current-password">
+                                        @endif
+                                        <input type="submit" class="input_submit" value="{{ __('End') }}">
+                                    </form>
+                                </li>
+                            @endforeach
+                        </ul>
+                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                </x-classic.parts>
+            @endif
             @break
 
         @case(MemberConfigCategory::Passkey)

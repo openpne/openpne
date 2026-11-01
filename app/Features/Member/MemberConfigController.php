@@ -29,6 +29,9 @@ use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\UpdateProfileVisibilityRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
+use App\Http\Requests\OAuth\ConnectionRevokeRequest;
+use App\Mcp\OAuth\ConnectionReauth;
+use App\Mcp\OAuth\Connections;
 use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\Feature;
@@ -95,7 +98,10 @@ class MemberConfigController extends Controller
                     $category = null;
                 }
 
-                $aiAvailable = $this->aiSettings->availableTo($viewer);
+                // The category also carries the OAuth connections, which a member may hold with
+                // AI accounts switched off, so it stays reachable while one exists.
+                $connections = Connections::listFor($viewer);
+                $aiAvailable = $this->aiSettings->availableTo($viewer) || $connections !== [];
                 if ($category === MemberConfigCategory::Ai && ! $aiAvailable) {
                     $category = null;
                 }
@@ -110,6 +116,9 @@ class MemberConfigController extends Controller
                     'aiAvailable' => $aiAvailable,
                     'ai' => $category === MemberConfigCategory::Ai
                         ? AiAccountSerializer::list($viewer, $this->aiSettings)
+                        : null,
+                    'connections' => $category === MemberConfigCategory::Ai
+                        ? ['items' => $connections, 'requiresPassword' => ! ConnectionReauth::isFresh($request->session())]
                         : null,
                     'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                     'diaryOptions' => DiaryVisibility::options(),
@@ -328,6 +337,27 @@ class MemberConfigController extends Controller
     private function fullLoad(Request $request, string $target): Response
     {
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
+    }
+
+    public function destroyConnection(ConnectionRevokeRequest $request, string $client, int $subject): RedirectResponse
+    {
+        $viewer = $this->viewer();
+
+        if ($request->requiresPassword()) {
+            ConnectionReauth::stamp($request->session());
+        }
+
+        abort_unless(Connections::revoke($viewer, $client, $subject), 404);
+
+        SecurityLog::event('token.revoked', [
+            'member_id' => $subject,
+            'owner_id' => (int) $viewer->getKey(),
+            'name' => 'oauth',
+            'count' => 1,
+            'via' => 'connections',
+        ]);
+
+        return $this->savedRedirect($request, MemberConfigCategory::Ai)->with('status', __('Connection ended.'));
     }
 
     /**

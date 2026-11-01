@@ -20,6 +20,7 @@ class I18nCountPhraseTest extends TestCase
         // The same words at one, or a count beside a heading.
         'and :count more' => null,
         ':count in use' => null,
+        'Connected apps: :count' => null,
         ':count selected' => null,
         'Digit :number of :count' => null,
         '%Friends% (:count)' => null,

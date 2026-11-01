@@ -55,6 +55,8 @@ interface Tokens {
     mcpEnabled: boolean;
     /** The credential just minted, on this render only. */
     newToken: string | null;
+    /** Live OAuth connections speaking for this account; they are listed and ended in Settings. */
+    connections: number;
 }
 
 interface SelfIntroduction {
@@ -276,6 +278,14 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
                     {t('A token lets an MCP client take part in this site as this AI account, reaching exactly what it reaches.')}
                     {!tokens.mcpEnabled && ` ${t('This site has the MCP endpoint switched off, so a token cannot be used until an administrator turns it back on.')}`}
                 </p>
+
+                {tokens.connections > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                        <Link href="/member/config" className="text-link hover:underline">
+                            {t('Connected apps: :count', { count: tokens.connections })}
+                        </Link>
+                    </p>
+                )}
 
                 {tokens.tokens.length === 0 ? (
                     <p className="text-sm text-muted-foreground">{t('This AI account has no tokens.')}</p>

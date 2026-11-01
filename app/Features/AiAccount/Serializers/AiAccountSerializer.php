@@ -8,6 +8,7 @@ use App\Features\AiAccount\AiAccountSettings;
 use App\Features\AiAccount\AiTokenReauth;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Mcp\McpAbilities;
+use App\Mcp\OAuth\Connections;
 use App\Models\Member;
 use App\Models\Profile;
 use App\Support\Feature;
@@ -49,7 +50,7 @@ class AiAccountSerializer
     }
 
     /**
-     * @return array{tokens: list<array{id: int, readOnly: bool, createdAt: string, lastUsedAt: string|null}>, requiresPassword: bool, mcpEnabled: bool, newToken: string|null}
+     * @return array{tokens: list<array{id: int, readOnly: bool, createdAt: string, lastUsedAt: string|null}>, requiresPassword: bool, mcpEnabled: bool, newToken: string|null, connections: int}
      */
     public static function tokens(Member $aiAccount, Session $session): array
     {
@@ -64,6 +65,7 @@ class AiAccountSerializer
             // being thrown.
             'mcpEnabled' => Feature::Mcp->enabled(),
             'newToken' => self::mintedFor($aiAccount, $session),
+            'connections' => Connections::countFor($aiAccount),
         ];
     }
 

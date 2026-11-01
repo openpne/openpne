@@ -9,8 +9,9 @@ use App\Models\MfaResetRequest;
 use App\Models\RegistrationToken;
 
 /**
- * The daily cleanup a host without cron would otherwise never run: the scheduler's `model:prune`
- * does the same work, so running both is harmless (docs/internals/runtime.md, "Scheduled tasks").
+ * The daily cleanup a host without cron would otherwise never run: the scheduler's `model:prune` and
+ * `openpne:prune-oauth` do the same work, so running both is harmless (docs/internals/runtime.md,
+ * "Scheduled tasks").
  */
 class Housekeeping
 {
@@ -23,6 +24,6 @@ class Housekeeping
             $pruned += (new $model)->prunable()->delete();
         }
 
-        return $pruned;
+        return $pruned + PruneOAuth::run();
     }
 }

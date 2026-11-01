@@ -113,6 +113,19 @@ revokes it by compare-and-set, and the loser of a concurrent pair rolls back the
 access token lives an hour and a refresh token thirty days, rotated on use; revocation is read from
 the database on every request, so a deleted row is refused at once whatever the token says.
 
+**A connection is a client speaking for a member, and the member can end it.** The settings hub
+(and Classic's AI category) lists the live connections of the member and of the AI accounts they
+own — one per client and subject however many token rows rotation has left, with who it speaks
+for, whether it may write and when its token was last renewed — and ends one on the member's
+password, through a window of its own ([`Connections`](../../app/Mcp/OAuth/Connections.php)).
+Ending it deletes every code and token of that pair on the subject's locked row, the order a refresh
+takes, so a rotation in flight cannot leave a fresh pair behind; the next request from that client
+is refused, with no unit gate in the way: a grant can be ended while the endpoint is switched off,
+as a token can. Spent codes and tokens are swept daily ([runtime.md](runtime.md), "Scheduled
+tasks"), as are clients that registered but never obtained a code within a week — a client once
+used is marked (`used_at`) and keeps its id, which the other side still holds; a client made by
+hand is subject to the same week.
+
 **The guard resolves an AI account.** The `oauth` guard reads its member through the `token_members`
 provider, which, unlike the session provider, does not hide a member owned by another. `Member`
 keeps Sanctum's trait and none of Passport's: Passport's guard asks the user only for
