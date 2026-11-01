@@ -12,12 +12,12 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * One transaction around the exchange, so the member lock LockedAccessTokenRepository takes holds
- * until the new rows are committed and a refresh that lost the single-use race leaves nothing behind.
+ * until the new rows are committed and a grant that lost a single-use race leaves nothing behind.
  */
 class TokenController extends AccessTokenController
 {
     public function issueToken(ServerRequestInterface $psrRequest, ResponseInterface $psrResponse): Response
     {
-        return DB::transaction(fn (): Response => parent::issueToken($psrRequest, $psrResponse));
+        return DB::transaction(fn (): Response => parent::issueToken($psrRequest, $psrResponse), attempts: 3);
     }
 }

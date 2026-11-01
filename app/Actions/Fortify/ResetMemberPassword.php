@@ -45,7 +45,7 @@ class ResetMemberPassword implements ResetsUserPasswords
         // An owned AI account's tokens are a foothold this member minted, so a reset revokes them too
         // rather than leaving them for the owner to notice.
         AiAccountTokens::revokeOwnedBy($member);
-        MemberTokens::deleteOAuth($member);
+        MemberTokens::revokeOAuth($member);
 
         // A reset answers a possible compromise, so void any pending email change too: otherwise an
         // attacker who requested one before the reset still holds a live confirmation token.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Features\AiAccount;
 
 use App\Models\Member;
+use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
 
 /**
@@ -17,6 +18,16 @@ final class MemberTokens
     public static function deleteAll(Member $member): int
     {
         return $member->tokens()->delete() + self::deleteOAuth($member);
+    }
+
+    /** The OAuth grants alone, on the member's locked row, for a caller holding no transaction of its own. */
+    public static function revokeOAuth(Member $member): void
+    {
+        DB::transaction(function () use ($member): void {
+            if (ActorLock::acquire((int) $member->getKey()) !== null) {
+                self::deleteOAuth($member);
+            }
+        });
     }
 
     /** @return int OAuth access tokens removed */

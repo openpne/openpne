@@ -21,6 +21,7 @@ use App\Mcp\McpAbilities;
 use App\Mcp\OAuth\AuthorizeController;
 use App\Mcp\OAuth\ConsentPage;
 use App\Mcp\OAuth\LockedAccessTokenRepository;
+use App\Mcp\OAuth\SingleUseAuthCodeRepository;
 use App\Mcp\OAuth\SingleUseRefreshTokenRepository;
 use App\Models\BannerImage;
 use App\Models\Diary;
@@ -67,6 +68,7 @@ use InvalidArgumentException;
 use Laravel\Mcp\Server\Registrar;
 use Laravel\Passport\AccessToken;
 use Laravel\Passport\Bridge\AccessTokenRepository;
+use Laravel\Passport\Bridge\AuthCodeRepository;
 use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -85,6 +87,7 @@ class AppServiceProvider extends ServiceProvider
         Passport::ignoreRoutes();
         $this->app->bind(AccessTokenRepository::class, LockedAccessTokenRepository::class);
         $this->app->bind(RefreshTokenRepository::class, SingleUseRefreshTokenRepository::class);
+        $this->app->bind(AuthCodeRepository::class, SingleUseAuthCodeRepository::class);
         $this->app->when(AuthorizeController::class)->needs(StatefulGuard::class)->give(fn () => Auth::guard('member'));
 
         // Singleton so its constructor captures the member-surface session config

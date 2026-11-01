@@ -82,8 +82,6 @@ class ModernOnlyCoverageTest extends TestCase
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
     private const COVERED = [
         'home', 'dashboard', 'home.issues',
-        // The OAuth consent screen is an auth/ page, surface-independent like the login screen.
-        'passport.authorizations.authorize',
         'diary.list', 'diary.list_friend', 'diary.search', 'diary.new',
         'timeline.index', 'timeline.new',
         'friend.list', 'friend.requests', 'friend.link.show',
@@ -254,7 +252,7 @@ class ModernOnlyCoverageTest extends TestCase
             }
             // Out of scope: Fortify/guest auth (separate modern_only concern) and Closure compat
             // redirects (aliases that only redirect, not surface-rendering pages).
-            if (str_starts_with($name, 'password.') || in_array($name, ['login', 'register', 'register.sent', 'register.form', 'logout'], true)) {
+            if (str_starts_with($name, 'password.') || in_array($name, ['login', 'register', 'register.sent', 'register.form', 'logout', 'passport.authorizations.authorize'], true)) {
                 continue;
             }
             if ($route->getActionName() === 'Closure') {

@@ -9,6 +9,8 @@ use App\Mcp\McpAbilities;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Laravel\Passport\AccessToken;
 use Laravel\Passport\Contracts\OAuthenticatable;
@@ -41,7 +43,15 @@ class OAuthGuardTest extends TestCase
         $this->assertNotInstanceOf(OAuthenticatable::class, new Member);
     }
 
-    public function test_an_ai_account_is_resolved_although_the_session_provider_hides_it(): void
+    public function test_the_oauth_guards_provider_resolves_an_ai_account_the_session_provider_hides(): void
+    {
+        $aiAccount = Member::factory()->aiAccount()->create();
+
+        $this->assertNull(Auth::createUserProvider('members')->retrieveById($aiAccount->getKey()));
+        $this->assertTrue(Auth::createUserProvider(config('auth.guards.oauth.provider'))->retrieveById($aiAccount->getKey())?->is($aiAccount));
+    }
+
+    public function test_a_passport_access_token_carries_the_abilities_through_sanctums_trait(): void
     {
         $aiAccount = Member::factory()->aiAccount()->create();
         Passport::actingAs($aiAccount, [McpAbilities::READ], 'oauth');
@@ -49,6 +59,18 @@ class OAuthGuardTest extends TestCase
         $this->getJson(self::PROBE)
             ->assertOk()
             ->assertExactJson(['member' => $aiAccount->getKey(), 'write' => false, 'token' => AccessToken::class]);
+    }
+
+    public function test_the_endpoint_limiter_keys_an_oauth_token_by_its_own_id(): void
+    {
+        $member = Member::factory()->create();
+        $member->withAccessToken(new AccessToken(['oauth_access_token_id' => 'tok-1', 'oauth_user_id' => $member->getKey(), 'oauth_scopes' => [McpAbilities::READ]]));
+        $request = Request::create('/mcp', 'POST');
+        $request->setUserResolver(fn () => $member);
+
+        $limit = RateLimiter::limiter('mcp')($request);
+
+        $this->assertSame('mcp|oauth:tok-1', $limit->key);
     }
 
     public function test_a_frozen_owner_closes_the_guard_to_the_account(): void

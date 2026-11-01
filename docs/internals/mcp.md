@@ -74,11 +74,15 @@ holds a signing pair — `php artisan passport:keys`, or `PASSPORT_PRIVATE_KEY` 
 answered exactly as before ([`PassportKeys`](../../app/Auth/PassportKeys.php)). With the keys, the
 401 carries `resource_metadata`, the `/.well-known` documents point at `/oauth/authorize`,
 `/oauth/token` and `/oauth/register`, and a client finds its way from there. Every piece is behind
-the `mcp` unit, the metadata included: a switched-off endpoint advertises nothing.
+the `mcp` unit, the metadata included. A switched-off endpoint still names the metadata URL on its
+401 — that header is written outside the gate, like the 401 itself — and the URL then answers 404,
+so the client stops there.
 
 **Registration is open.** Any client may register (RFC 7591), with any name; what it may not do is
 receive the code anywhere but over `https` or on the caller's own machine (`http` on `localhost`,
-`127.0.0.1` or `[::1]`, any port — and never with a fragment). The screen that follows names the
+`127.0.0.1` or `[::1]`, on any port at registration — and never with a fragment; at authorization
+league matches a `localhost` redirect exactly, port included, and only the two address literals
+port-agnostically). The screen that follows names the
 host the code will go to, which league has already matched against the registration, and shows the
 registered name only as the label it is. Registration has a per-IP budget of its own
 (`openpne.throttle.oauth_register_ip`), as does the token endpoint (`oauth_token_ip`), so neither

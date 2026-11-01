@@ -218,7 +218,7 @@ class MemberConfigController extends Controller
         // A token minted for an owned AI account carries the old password's authority, so it drops
         // with the other devices, as does every OAuth connection signed in with that password.
         AiAccountTokens::revokeOwnedBy($viewer);
-        MemberTokens::deleteOAuth($viewer);
+        MemberTokens::revokeOAuth($viewer);
 
         // A stolen-password attacker could have requested an email change, so a password change voids
         // any pending one.

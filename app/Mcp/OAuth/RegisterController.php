@@ -33,7 +33,7 @@ class RegisterController extends OAuthRegisterController
 
     protected function isValidRedirectUri(string $value): bool
     {
-        if (! parent::isValidRedirectUri($value) || parse_url($value, PHP_URL_FRAGMENT) !== null) {
+        if (! parent::isValidRedirectUri($value) || parse_url($value, PHP_URL_FRAGMENT) !== null || preg_match('/\s/', $value)) {
             return false;
         }
 

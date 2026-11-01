@@ -30,6 +30,7 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken }:
     const offersAi = hasAccounts || actors.canCreate;
     const [kind, setKind] = useState<'ai' | 'self'>(offersAi ? 'ai' : 'self');
     const [account, setAccount] = useState<string>(hasAccounts ? `ai:${actors.aiAccounts[0]?.id}` : NEW);
+    const [submitting, setSubmitting] = useState(false);
     const actor = kind === 'self' ? 'self' : account;
     const title = t('Connect :host', { host: client.host });
 
@@ -41,13 +42,13 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken }:
 
             <p className="text-sm text-muted-foreground">{t('“:name” is asking to connect.', { name: client.name })}</p>
 
-            <form id="consent-deny" method="post" action="/oauth/authorize">
+            <form id="consent-deny" method="post" action="/oauth/authorize" onSubmit={() => setSubmitting(true)}>
                 <input type="hidden" name="_token" value={csrfToken} />
                 <input type="hidden" name="_method" value="DELETE" />
                 <input type="hidden" name="auth_token" value={authToken} />
             </form>
 
-            <form method="post" action="/oauth/authorize" className="space-y-4">
+            <form method="post" action="/oauth/authorize" className="space-y-4" onSubmit={() => setSubmitting(true)}>
                 <input type="hidden" name="_token" value={csrfToken} />
                 <input type="hidden" name="auth_token" value={authToken} />
                 <input type="hidden" name="actor" value={actor} />
@@ -99,10 +100,12 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken }:
                 <CheckboxField name="read_only" value="1" label={t('Read-only: it can read but not post')} />
 
                 <FormActions className="justify-end">
-                    <Button type="submit" form="consent-deny" variant="outline">
+                    <Button type="submit" form="consent-deny" variant="outline" disabled={submitting}>
                         {t('Cancel')}
                     </Button>
-                    <Button type="submit">{t('Connect')}</Button>
+                    <Button type="submit" loading={submitting}>
+                        {t('Connect')}
+                    </Button>
                 </FormActions>
             </form>
         </AuthLayout>

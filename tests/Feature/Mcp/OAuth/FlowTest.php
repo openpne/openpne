@@ -27,11 +27,23 @@ class FlowTest extends OAuthTestCase
         $this->registerClient(['http://localhost:3118/callback']);
         $this->registerClient(['http://127.0.0.1:65000/cb']);
 
-        foreach (['http://client.example/cb', 'https://client.example/cb#frag', 'http://127.0.0.1/cb#frag', 'claude://cb'] as $uri) {
+        foreach (['http://client.example/cb', 'https://client.example/cb#frag', 'http://127.0.0.1/cb#frag', 'claude://cb', "https://client.example/c\tb"] as $uri) {
             $this->postJson('/oauth/register', ['redirect_uris' => [$uri]])
                 ->assertStatus(400)
                 ->assertJsonPath('error', 'invalid_redirect_uri');
         }
+    }
+
+    public function test_a_linked_prompt_login_does_not_end_the_session(): void
+    {
+        $viewer = Member::factory()->create();
+        $client = $this->registerClient();
+        [, $challenge] = $this->pkce();
+
+        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&prompt=login')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('auth/oauth-authorize'));
+        $this->assertAuthenticatedAs($viewer, 'member');
     }
 
     public function test_a_guest_meets_the_login_screen_before_consent(): void
@@ -238,17 +250,37 @@ class FlowTest extends OAuthTestCase
         $this->assertSame(0, Passport::token()->newQuery()->count());
     }
 
-    public function test_the_token_endpoint_starts_no_session_and_sets_no_cookie(): void
+    public function test_the_token_realm_endpoints_start_no_session_and_set_no_cookie(): void
     {
         $viewer = Member::factory()->create();
         $client = $this->registerClient();
         [$verifier, $challenge] = $this->pkce();
         $query = $this->redirectQuery($this->consent($viewer, $this->authorizeUrl($client['client_id'], $challenge), ['actor' => 'self']));
+        config(['session.driver' => 'database']);
 
         $this->freshRequestState();
-        $response = $this->exchange($client['client_id'], $query['code'], $verifier)->assertOk();
+        $exchange = $this->exchange($client['client_id'], $query['code'], $verifier)->assertOk();
+        $this->freshRequestState();
+        $register = $this->postJson('/oauth/register', ['redirect_uris' => [self::REDIRECT]])->assertCreated();
 
-        $this->assertSame([], $response->headers->getCookies());
+        $this->assertSame([], $exchange->headers->getCookies());
+        $this->assertSame([], $register->headers->getCookies());
+        $this->assertDatabaseCount(config('session.table'), 0);
+    }
+
+    public function test_a_second_submit_of_the_same_screen_is_a_stale_token(): void
+    {
+        $viewer = Member::factory()->create();
+        $client = $this->registerClient();
+        [, $challenge] = $this->pkce();
+        $screen = $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge));
+        $form = ['auth_token' => $screen->inertiaPage()['props']['authToken'], 'actor' => 'new', 'name' => 'Scout'];
+
+        $this->redirectQuery($this->post('/oauth/authorize', $form));
+        $this->post('/oauth/authorize', $form)->assertForbidden();
+
+        $this->assertSame(1, Member::query()->where('owner_member_id', $viewer->getKey())->count());
+        $this->assertSame(1, Passport::authCode()->newQuery()->count());
     }
 
     public function test_a_refused_bearer_points_the_client_at_the_resource_metadata(): void
@@ -274,6 +306,11 @@ class FlowTest extends OAuthTestCase
     {
         $this->setSnsSetting(SnsSettingKey::FeatureMcpEnabled, false);
 
+        // The 401 is answered ahead of the gate and still names the metadata, which then answers 404.
+        $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])
+            ->assertUnauthorized()
+            ->assertHeader('WWW-Authenticate', 'Bearer realm="mcp", resource_metadata="'.url('/.well-known/oauth-protected-resource/mcp').'"');
+        $this->getJson('/.well-known/oauth-protected-resource/mcp')->assertNotFound();
         $this->getJson('/.well-known/oauth-authorization-server')->assertNotFound();
         $this->postJson('/oauth/register', ['redirect_uris' => [self::REDIRECT]])->assertNotFound();
         $this->post('/oauth/token', ['grant_type' => 'refresh_token'])->assertNotFound();

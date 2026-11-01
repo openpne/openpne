@@ -29,8 +29,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Passport's approve, with the subject and the scopes decided here rather than taken from the
- * signed-in user and the client's request. The session's authorization request is read, not
- * pulled, until the code is committed, so a refused choice can be corrected on the same screen.
+ * signed-in user and the client's request. The session's authorization request stays until the
+ * code is committed, so a refused choice can be corrected on the same screen.
  */
 class ApproveController
 {
@@ -49,6 +49,9 @@ class ApproveController
         $viewer = $request->user();
         $actor = $request->actor();
         $readOnly = $request->boolean('read_only');
+        // Consumed first and handed back only on a refused choice, so a second submit of the same
+        // screen (a double click) is a stale token rather than a second account and a second code.
+        $authToken = (string) $request->session()->pull('authToken');
 
         try {
             if ($actor === 'new') {
@@ -73,10 +76,12 @@ class ApproveController
                 ];
             });
         } catch (AiAccountActionException $e) {
+            $request->session()->put('authToken', $authToken);
+
             return $this->backWith($e->reason->message());
         }
 
-        $request->session()->forget(['authToken', 'authRequest']);
+        $request->session()->forget('authRequest');
 
         SecurityLog::event('oauth.consent.approved', [
             'member_id' => (int) $viewer->getKey(),
