@@ -46,6 +46,17 @@ class AdminReplyToTest extends TestCase
         $this->assertSame([], $this->onlySentEmail()->getReplyTo());
     }
 
+    public function test_no_reply_to_when_the_saved_administrator_address_is_a_placeholder(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'hello@example.com');
+
+        Notification::route('mail', 'member@example.test')->notifyNow(new RegistrationLinkNotification('raw-token', 'en'));
+
+        $email = $this->onlySentEmail();
+        $this->assertSame('noreply@example.test', $email->getFrom()[0]->getAddress());
+        $this->assertSame([], $email->getReplyTo());
+    }
+
     public function test_no_reply_to_by_default(): void
     {
         Notification::route('mail', 'member@example.test')->notifyNow(new RegistrationLinkNotification('raw-token', 'en'));

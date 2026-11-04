@@ -30,7 +30,7 @@ final class ApplyAdminMailAddress
             return;
         }
 
-        if ($email->getReplyTo() !== []) {
+        if ($email->getReplyTo() !== [] || ! MailFromAddress::isConfigured($admin)) {
             return;
         }
 

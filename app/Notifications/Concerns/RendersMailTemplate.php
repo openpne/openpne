@@ -62,7 +62,7 @@ trait RendersMailTemplate
         $locale = $this->locale ?? app()->getLocale();
         $rendered = app(MailTemplateService::class)->render($template, $locale, $context);
 
-        // Not admin_mail_address as in OpenPNE 3: ApplyAdminMailAddress places it (docs/internals/notifications.md, "Mail headers").
+        // The mailer's address unless unconfigured, not OpenPNE 3's admin_mail_address (docs/internals/notifications.md, "Mail headers").
         return (new MailMessage)
             ->from(MailFromAddress::sender(), sns_name())
             ->subject($rendered->subject)
