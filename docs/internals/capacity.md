@@ -95,6 +95,6 @@ consent screen); `CreateAiAccount` re-reads it under the locks and refuses with
 
 ## Dashboard
 
-`MemberCapacityWidget` appears only once a cap is set. It shows members against the cap, how many
-are invited and how many seats are left, coloured by `state()`, and the AI count against its cap
-when that is set. It has no control behind it.
+`OverviewStatsWidget` counts members and AI accounts as two stats, as the caps do. Once a cap is
+set the stat reads `count / cap`, with how many are invited and how many seats are left (or that
+the cap is reached), coloured by `state()`. There is no control behind it.
