@@ -108,17 +108,18 @@ class KnownConfigNamesTest extends TestCase
     public function test_the_names_the_subquery_steps_actually_read_are_recognised(): void
     {
         $sets = [
-            [new MemberUpgrade, 'member_config', StepRegistry::knownMemberConfigNames()],
-            [new GroupUpgrade, 'community_config', StepRegistry::knownCommunityConfigNames()],
+            [new MemberUpgrade, 'member_config', StepRegistry::knownMemberConfigNames(), StepRegistry::memberConfigDispositions()],
+            [new GroupUpgrade, 'community_config', StepRegistry::knownCommunityConfigNames(), StepRegistry::communityConfigDispositions()],
         ];
 
-        foreach ($sets as [$step, $table, $known]) {
+        foreach ($sets as [$step, $table, $known, $dispositions]) {
             $class = $step::class;
             $read = self::configNamesReadBy($step, $table);
 
             $this->assertNotEmpty($read, "{$class} reads no config name — the SQL shape changed");
             foreach ($read as $name) {
                 $this->assertContains($name, $known, "{$class} reads `{$name}` but the preflight would call it unrecognised");
+                $this->assertStringStartsNotWith('Dropped:', $dispositions[$name] ?? '', "{$class} reads `{$name}` but the matrix says it is dropped");
             }
         }
     }

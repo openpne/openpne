@@ -141,6 +141,21 @@ class ZeroDatePreflightTest extends UpgradeSqlTestCase
         ], $this->inspect([new DirectMessageUpgrade]));
     }
 
+    public function test_a_zero_last_login_read_by_subquery_is_an_error(): void
+    {
+        $member = $this->activeMember();
+        $this->withoutStrictMode(fn () => DB::table('member_config')->insert([
+            'id' => 70, 'member_id' => $member->id, 'name' => 'lastLogin', 'value' => self::ZERO, 'value_datetime' => self::ZERO,
+            'name_value_hash' => md5('lastLogin'.self::ZERO), 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00',
+        ]));
+
+        // Both the carried value (the step's own SELECT) and the row it is read from are named.
+        $this->assertSame([
+            ZeroDatePreflight::zeroDateMessage('MemberUpgrade', 'members', 'last_login_at', 'member', [], true, 1, [$member->id], false),
+            ZeroDatePreflight::zeroDateReadMessage('MemberUpgrade', 'member_config', 'value_datetime', 1, [70], true),
+        ], $this->inspect([new MemberUpgrade]));
+    }
+
     public function test_a_sentinel_the_step_maps_to_null_is_not_an_error_but_a_zero_month_is(): void
     {
         $member = $this->activeMember();

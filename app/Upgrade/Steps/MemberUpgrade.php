@@ -30,6 +30,7 @@ class MemberUpgrade extends UpgradeStep
             'is_login_rejected' => Column::source('is_login_rejected'),
             'profile_visibility' => Column::expr($this->profileVisibilityExpr(), uses: ['id']),
             'locale' => Column::expr($this->localeExpr(), uses: ['id']),
+            'last_login_at' => Column::expr($this->memberConfigDatetimeLatest('lastLogin'), uses: ['id']),
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
@@ -77,7 +78,21 @@ class MemberUpgrade extends UpgradeStep
     /** The latest `member_config` value for a name (no (member_id, name) unique exists), else NULL. */
     private function memberConfigValueLatest(string $name): string
     {
-        return '(SELECT `value` FROM '.SourceRef::table('member_config')." WHERE `member_id` = `member`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
+        return $this->memberConfigLatest('value', $name);
+    }
+
+    /**
+     * The typed `value_datetime` of the latest row, not the free-text `value` copy OpenPNE 3 writes
+     * beside it: strict sql_mode would abort the step on a malformed text date.
+     */
+    private function memberConfigDatetimeLatest(string $name): string
+    {
+        return $this->memberConfigLatest('value_datetime', $name);
+    }
+
+    private function memberConfigLatest(string $column, string $name): string
+    {
+        return "(SELECT `{$column}` FROM ".SourceRef::table('member_config')." WHERE `member_id` = `member`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
     }
 
     /**

@@ -280,6 +280,7 @@ final class StepRegistry
             'password' => 'members.password (wrapped as bcrypt(md5) by PasswordWrap, plain bcrypt after first login), MemberUpgrade.',
             'profile_page_public_flag' => 'members.profile_visibility, MemberUpgrade.',
             'language' => 'members.locale (ja_JP→ja, …), MemberUpgrade.',
+            'lastLogin' => 'members.last_login_at (value_datetime, OpenPNE 3\'s last-access time), MemberUpgrade.',
             'diary_public_flag' => 'member_preferences[diary_default_visibility], MemberPreferenceUpgrade.',
             'age_public_flag' => 'member_preferences[age_visibility], MemberPreferenceUpgrade.',
             // Owned by another OpenPNE 4 surface, migrated with that feature (not here).
@@ -292,7 +293,6 @@ final class StepRegistry
             'secret_answer' => 'Dropped: secret-question recovery is not in scope.',
             'mobile_uid' => 'Dropped: mobile (feature-phone) frontend is not in scope.',
             'mobile_cookie_uid' => 'Dropped: mobile (feature-phone) frontend is not in scope.',
-            'lastLogin' => 'Dropped: login state, not a preference; not tracked in member_config.',
             'api_key' => 'Dropped: API authentication is handled by the framework, not member_config.',
             'mail_address_hash' => 'Dropped: derived lookup hash, recomputable when needed.',
             'is_admin_invited' => 'Dropped: registration-flow flag with no OpenPNE 4 successor.',

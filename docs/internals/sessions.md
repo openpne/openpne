@@ -118,6 +118,12 @@ to the store, so the request is wrapped to keep it.
    `database` driver. GC sweeps each table on its own realm's traffic, so
    stale `admin_sessions` rows may linger between admin visits — lifetime is
    still enforced on read.
+6. **`members.last_login_at` is written at session start, not per request**: the
+   `member`-guard `Login` event (`App\Listeners\Auth\RecordLastLogin`) covers the
+   password, passkey and two-factor logins and a remember-me restore, so a live
+   session lags by at most the idle `session.lifetime`. The write leaves
+   `updated_at` alone; an AI account never logs in, so its value stays NULL. The
+   column is read by site operators (`MAX(last_login_at)`), never shown to members.
 
 A per-realm idle lifetime (shorter admin sessions) would slot into the same
 middleware pin.
