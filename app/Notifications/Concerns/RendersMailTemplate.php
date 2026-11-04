@@ -62,7 +62,7 @@ trait RendersMailTemplate
         $rendered = app(MailTemplateService::class)->render($template, $locale, $context);
 
         return (new MailMessage)
-            ->from(sns_admin_mail_address(), sns_name())
+            ->from((string) config('mail.from.address'), sns_name())
             ->subject($rendered->subject)
             ->view(['text' => 'mail.template-text'], ['body' => $rendered->body]);
     }

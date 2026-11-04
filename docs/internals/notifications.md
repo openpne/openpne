@@ -128,6 +128,15 @@ effect while `DirectMessageNew` is off — an enabled broad kind already covers 
 Delivery reproduces the extension's chain: broad kind on → deliver; else narrow kind on and the
 relation holds (e.g. sender is a friend) → deliver.
 
+## Mail headers
+
+Every outbound mail is **From** the configured `mail.from.address`, displayed under the site name
+(`sns_name`), so the sending identity stays the one the mailer is authenticated for. The
+administrator's `admin_mail_address` setting is where replies go: when it differs from the From
+address, [`AddAdminReplyTo`](../../app/Listeners/Mail/AddAdminReplyTo.php) adds it as **Reply-To**
+at `MessageSending`, for every mail whatever built it. A mail that sets its own Reply-To keeps it.
+When the two addresses are the same (the setting's default), no Reply-To is added.
+
 ## Gating flow
 
 A notification's `via($notifiable)` decides channels through

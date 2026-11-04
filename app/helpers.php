@@ -32,7 +32,7 @@ if (! function_exists('sns_title')) {
 }
 
 if (! function_exists('sns_admin_mail_address')) {
-    /** From-address for system mail, or the configured mail.from.address by default. */
+    /** Reply-To for system mail (docs/internals/notifications.md, "Mail headers"), or the configured mail.from.address by default. */
     function sns_admin_mail_address(): string
     {
         return (string) app(SnsSettingService::class)->get(SnsSettingKey::AdminMailAddress);
