@@ -9,14 +9,15 @@ use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
 use Laravel\Passkeys\Actions\StorePasskey;
 use Laravel\Passkeys\Support\WebAuthn;
 use PragmaRX\Google2FA\Google2FA;
+use RuntimeException;
 use Tests\Support\FakeAuthenticator;
 use Tests\TestCase;
 use Webauthn\PublicKeyCredential;
@@ -158,16 +159,22 @@ class RecordLastLoginTest extends TestCase
     public function test_a_failed_write_is_reported_and_does_not_block_the_login(): void
     {
         $member = Member::factory()->create();
-        Schema::dropColumns('members', ['last_login_at']);
-        $reported = 0;
-        $this->app[ExceptionHandler::class]->reportable(function (\Throwable $e) use (&$reported): void {
-            $reported++;
+        // Injected at the query layer: DDL would auto-commit on MySQL and leak past RefreshDatabase.
+        DB::connection()->beforeExecuting(function (string $query): void {
+            if (str_contains($query, 'last_login_at')) {
+                throw new RuntimeException('last_login_at write refused');
+            }
+        });
+        $reported = [];
+        $this->app[ExceptionHandler::class]->reportable(function (RuntimeException $e) use (&$reported): void {
+            $reported[] = $e->getMessage();
         });
 
         $this->post('/login', ['email' => $member->email, 'password' => 'password'])->assertRedirect('/');
 
         $this->assertAuthenticatedAs($member);
-        $this->assertGreaterThan(0, $reported);
+        $this->assertSame(['last_login_at write refused'], array_values(array_unique($reported)));
+        $this->assertNull($member->fresh()->last_login_at);
     }
 
     public function test_a_member_logging_in_on_another_guard_is_not_recorded(): void

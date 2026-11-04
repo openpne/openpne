@@ -33,6 +33,10 @@ class RecordLastLogin
             return;
         }
 
-        rescue(fn () => Member::withoutTimestamps(fn () => $user->forceFill(['last_login_at' => now()])->saveQuietly()));
+        $now = now();
+        rescue(function () use ($user, $now): void {
+            Member::whereKey($user->getKey())->toBase()->update(['last_login_at' => $now]);
+            $user->setAttribute('last_login_at', $now)->syncOriginalAttribute('last_login_at');
+        });
     }
 }
