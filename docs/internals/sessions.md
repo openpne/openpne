@@ -122,11 +122,12 @@ to the store, so the request is wrapped to keep it.
    `App\Listeners\Auth\RecordLastLogin` writes it on every `member`-guard `Login`
    (password, passkey, two-factor, post-registration, remember-me restore) and
    again on the first `Authenticated` of each later day (site timezone), because
-   a session kept alive by polling never logs in again. A failed write is reported, not thrown,
-   so it cannot block a login. The write leaves `updated_at` alone; an AI account
-   never authenticates, so its value stays NULL. Site operators read it
-   (`MAX(last_login_at)`, the admin member list); members see each other's only
-   as a calendar day in member search (`App\Features\Member\LastLoginLabel`).
+   a session kept alive by polling never logs in again. A failed write is
+   reported, not thrown, so it cannot block a login. The write leaves
+   `updated_at` alone; an AI account never authenticates, so its value stays
+   NULL. Site operators read it (`MAX(last_login_at)`, the admin member list);
+   members see each other's only as a calendar day in member search
+   (`App\Features\Member\LastLoginLabel`).
 
 A per-realm idle lifetime (shorter admin sessions) would slot into the same
 middleware pin.

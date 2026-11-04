@@ -145,7 +145,8 @@ class RecordLastLoginTest extends TestCase
 
     public function test_a_session_in_use_refreshes_the_time_on_the_first_request_of_a_new_day(): void
     {
-        $this->travelTo(today()->setTime(0, 30));
+        // A late login: the day turns less than 24 hours later, which a 24-hour rule would skip.
+        $this->travelTo(today()->setTime(23, 0));
         $member = Member::factory()->create();
         $this->post('/login', ['email' => $member->email, 'password' => 'password']);
         $loggedInAt = $member->fresh()->last_login_at;
@@ -156,8 +157,7 @@ class RecordLastLoginTest extends TestCase
         $this->get('/')->assertOk();
         $this->assertTrue($member->fresh()->last_login_at->equalTo($loggedInAt));
 
-        // Two hours on, but the day has turned: the search label would otherwise say "yesterday".
-        $this->travelTo(today()->addDay()->setTime(1, 30));
+        $this->travelTo(today()->addDay()->setTime(0, 30));
         app('auth')->forgetGuards();
         $this->get('/')->assertOk();
         $this->assertSame(now()->toDateTimeString(), $member->fresh()->last_login_at->toDateTimeString());
