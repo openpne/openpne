@@ -5,9 +5,12 @@ namespace Tests\Feature\Auth\Listeners;
 use App\Models\AdminUser;
 use App\Models\Member;
 use App\Models\RegistrationToken;
+use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
@@ -123,6 +126,48 @@ class RecordLastLoginTest extends TestCase
         $this->assertNotNull($member->fresh()->last_login_at);
         $this->assertCount(1, $seen);
         $this->assertTrue($seen[0]->remember);
+    }
+
+    public function test_a_session_in_use_refreshes_the_time_once_a_day(): void
+    {
+        $member = Member::factory()->create();
+        $this->post('/login', ['email' => $member->email, 'password' => 'password']);
+        $loggedInAt = $member->fresh()->last_login_at;
+
+        // Same session, a later request: the guard resolves the member from the session, no Login fires.
+        $this->travel(23)->hours();
+        app('auth')->forgetGuards();
+        $this->get('/')->assertOk();
+        $this->assertTrue($member->fresh()->last_login_at->equalTo($loggedInAt));
+
+        $this->travel(2)->hours();
+        app('auth')->forgetGuards();
+        $this->get('/')->assertOk();
+        $this->assertSame(now()->toDateTimeString(), $member->fresh()->last_login_at->toDateTimeString());
+    }
+
+    public function test_a_member_never_recorded_is_recorded_on_first_authenticated_request(): void
+    {
+        $member = Member::factory()->create();
+
+        event(new Authenticated('member', $member));
+
+        $this->assertNotNull($member->fresh()->last_login_at);
+    }
+
+    public function test_a_failed_write_is_reported_and_does_not_block_the_login(): void
+    {
+        $member = Member::factory()->create();
+        Schema::dropColumns('members', ['last_login_at']);
+        $reported = 0;
+        $this->app[ExceptionHandler::class]->reportable(function (\Throwable $e) use (&$reported): void {
+            $reported++;
+        });
+
+        $this->post('/login', ['email' => $member->email, 'password' => 'password'])->assertRedirect('/');
+
+        $this->assertAuthenticatedAs($member);
+        $this->assertGreaterThan(0, $reported);
     }
 
     public function test_a_member_logging_in_on_another_guard_is_not_recorded(): void

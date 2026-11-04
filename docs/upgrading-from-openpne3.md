@@ -366,8 +366,8 @@ change from a problem when you go through it.
   community timeline showed to friends only, to their author alone or to everyone on the web, and
   the timelines of communities already deleted, are not carried (the dry run counts them).
 - **Last login** — each member's OpenPNE 3 `lastLogin` (its last-access time) is carried as the
-  member's last login, and is replaced by their first OpenPNE 4 login; a member OpenPNE 3 never
-  recorded starts empty.
+  member's last login, and moves on as they use the site; a member OpenPNE 3 never recorded
+  starts empty.
 - **Member count** — expect it to be lower than the number of rows in OpenPNE 3's `member` table, and
   to match what OpenPNE 3's own member list showed. The difference is the registrations below.
 

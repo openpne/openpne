@@ -3,22 +3,36 @@
 namespace App\Listeners\Auth;
 
 use App\Models\Member;
+use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
- * Writes members.last_login_at at session start only — a password, passkey or two-factor login and a
- * remember-me restore — never per request, so the value lags a live session by up to the idle
- * lifetime (docs/internals/sessions.md, "Key invariants").
+ * members.last_login_at is bookkeeping for site operators: a failed write is reported, never surfaced,
+ * so a login still completes (docs/internals/sessions.md, "Key invariants").
  */
 class RecordLastLogin
 {
-    public function handle(Login $event): void
+    public function handleLogin(Login $event): void
     {
-        $member = $event->user;
-        if ($event->guard !== 'member' || ! $member instanceof Member) {
+        $this->record($event->guard, $event->user, always: true);
+    }
+
+    /** A session kept alive by polling never logs in again, so a live member is refreshed once a day. */
+    public function handleAuthenticated(Authenticated $event): void
+    {
+        $this->record($event->guard, $event->user, always: false);
+    }
+
+    private function record(string $guard, ?Authenticatable $user, bool $always): void
+    {
+        if ($guard !== 'member' || ! $user instanceof Member) {
+            return;
+        }
+        if (! $always && $user->last_login_at !== null && $user->last_login_at->gt(now()->subDay())) {
             return;
         }
 
-        Member::withoutTimestamps(fn () => $member->forceFill(['last_login_at' => now()])->saveQuietly());
+        rescue(fn () => Member::withoutTimestamps(fn () => $user->forceFill(['last_login_at' => now()])->saveQuietly()));
     }
 }
