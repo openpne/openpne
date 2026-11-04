@@ -72,7 +72,9 @@ one that request sees (on InnoDB under REPEATABLE READ an absent row leaves a ga
 member and AI rows are separate locks, and each is the first lock of its transaction:
 `CreateAiAccount` takes the AI cap row before the owner's rows, so creations on a capped site
 serialize there instead of deadlocking on two owners' index locks. The counts under the lock are
-consistent reads, so nothing may read in that transaction before the lock is taken.
+consistent reads, so nothing may read in that transaction before the lock is taken. On SQLite
+`FOR UPDATE` compiles to nothing, so the connection's `transaction_mode` is `IMMEDIATE`: `BEGIN`
+takes the write lock and a second writer waits there instead of failing busy at its first write.
 
 ### Asking for a seat
 

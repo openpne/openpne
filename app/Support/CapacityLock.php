@@ -26,8 +26,7 @@ final class CapacityLock
      */
     public static function hold(SnsSettingKey $key, Closure $body): mixed
     {
-        // On SQLite the lock is a no-op and the transaction deferred: the second writer's first
-        // write fails busy, and the retry re-reads the counts.
+        // On SQLite the lock is a no-op; the IMMEDIATE transaction mode makes BEGIN the lock.
         return DB::transaction(function () use ($key, $body): mixed {
             $row = DB::table('sns_settings')->where('key', $key->value)->lockForUpdate()->first();
 
