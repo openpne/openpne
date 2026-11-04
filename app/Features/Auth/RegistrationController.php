@@ -63,8 +63,8 @@ class RegistrationController extends Controller
     }
 
     /**
-     * OpenPNE 3's hosting plugin, pnejp/sendRegisterRequest. 404 outside a full site, and on a closed one, where the
-     * operator has nothing to reopen and the mail would only be a relay.
+     * 404 outside a full site, and on a closed one, where the operator has nothing to reopen and
+     * the mail would only be a relay.
      */
     public function capacityRequest(Request $request): RedirectResponse
     {
@@ -200,7 +200,7 @@ class RegistrationController extends Controller
             ->with('status', __('This address is already registered. Please sign in.'));
     }
 
-    /** The registration-paused screen with the request button (OpenPNE 3's hosting build, member/registerError.php). */
+    /** The registration-paused screen with the request button. */
     private function paused(Request $request): View|InertiaResponse
     {
         return $this->screen($request, 'auth.registration-paused', 'auth/registration-paused');

@@ -24,7 +24,7 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The host-set member capacity (OpenPNE 3's hosting plugin, pnejp_member_capacity): seats are
+ * The host-set member capacity: seats are
  * members plus live registration links, every issuance path stops at the last seat, and the paused
  * screen offers the request mail.
  */

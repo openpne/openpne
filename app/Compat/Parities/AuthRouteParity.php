@@ -37,10 +37,6 @@ class AuthRouteParity extends RouteParity
             // OpenPNE 3's mailed link hit opAuthMailAddress/register, which forwarded to
             // member/registerInput; the body id follows the rendered form.
             new RouteMap(null, null, 'register.form', 'GET', op3Action: 'registerInput', op3Module: 'member'),
-
-            // OpenPNE 3's hosting plugin (opPNESupportPlugin pnejp/sendRegisterRequest) mailed the
-            // administrator from the registration-paused screen.
-            new RouteMap(null, null, 'register.capacity-request', 'POST', op3Action: 'sendRegisterRequest', op3Module: 'pnejp'),
         ];
     }
 
@@ -75,7 +71,6 @@ class AuthRouteParity extends RouteParity
                 new ScreenElement('submit button', L::Two, S::Ported, 'op_include_form requestRegisterURL'),
                 new ScreenElement('"invitation sent" confirmation screen', L::Two, S::Ported, 'requestRegisterURLSuccess.php', 'register.sent; enumeration-safe (shown whether or not the address is a member)'),
                 new ScreenElement('CAPTCHA', L::Three, S::Ported, 'is_use_captcha', 'self-hosted ALTCHA proof-of-work replaces the OpenPNE 3 image CAPTCHA'),
-                new ScreenElement('registration-paused box with request button', L::Two, S::Ported, 'member/registerError.php noRegisterBoxError', 'shown while the member capacity is full (registration-paused.blade.php)'),
             ],
             // member/registerInput → resources/views/auth/register-complete.blade.php
             'registerInput' => [

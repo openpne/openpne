@@ -60,7 +60,7 @@ final class MemberCapacity
 
     /**
      * Whether a live link may complete: its own seat is already in pending(), so only members count.
-     * OpenPNE 3 also counted the invitee's own pre-member row here and so refused the last seat.
+     * Counting the invitee's own link here too would refuse the last seat to its holder.
      */
     public function isFullForCompletion(): bool
     {

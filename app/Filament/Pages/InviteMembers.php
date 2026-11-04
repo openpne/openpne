@@ -88,7 +88,6 @@ class InviteMembers extends Page
 
     public function content(Schema $schema): Schema
     {
-        // OpenPNE 3's hosting build, pc_backend member/inviteSuccess.php: no form while the site is full.
         if (app(MemberCapacity::class)->isFull()) {
             return $schema->components([
                 Section::make()->schema([

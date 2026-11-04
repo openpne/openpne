@@ -287,7 +287,6 @@ enum MailTemplate: string
                 ],
             ),
             self::MemberCapacityRequest => new MailTemplateDefinition(
-                // OpenPNE 3 built this mail inline in its hosting plugin; the wording is carried, not imported.
                 op3SourceName: null,
                 isConfigurable: false,
                 caption: 'Member capacity request (admin notice)',

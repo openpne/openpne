@@ -1,4 +1,3 @@
-{{-- OpenPNE 3 member/registerError.php slot _request_register_url_body. --}}
 <p>{{ __('Registration is paused for now.') }}</p>
 <p>{{ __('Please wait until it reopens.') }}</p>
 <p>

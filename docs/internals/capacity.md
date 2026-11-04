@@ -36,8 +36,8 @@ counted under their own cap, so a site offering AI accounts does not spend its m
 - `remaining()` — `limit − members − pending`, floored at 0; `null` under no cap.
 - `isFull()` — no seat for a **new link**.
 - `isFullForCompletion()` — `members ≥ limit`: a live link's own seat is already in `pending()`, so
-  completing it only asks whether the members alone fill the cap. OpenPNE 3 also counted the
-  invitee's pre-member row at this step and so refused the last seat to the person it was issued to.
+  completing it only asks whether the members alone fill the cap; counting the invitee's own
+  link here too would refuse the last seat to the person it was issued to.
 - `state()` — `Unlimited | Ok | Low | Full | Over` for the dashboard; `Low` is five seats or fewer
   left, `Full` is none, `Over` is a cap lowered below the members the site already holds.
 
@@ -47,7 +47,7 @@ counted under their own cap, so a site offering AI accounts does not spend its m
 |---|---|---|
 | self-registration entry (`/register`) | registration-paused box instead of the form; the submit redirects back to it | `IssueRegistrationToken` |
 | member invitation (`/invite`) | the same box, under the invite page's own id | `IssueRegistrationToken` |
-| administrator invitation (admin "Member invites") | the OpenPNE 3 notice in place of the form; a batch that fills the site part-way reports how many were not sent | `IssueRegistrationToken` |
+| administrator invitation (admin "Member invites") | a notice in place of the form; a batch that fills the site part-way reports how many were not sent | `IssueRegistrationToken` |
 | link completion (`/register/{token}`) | the paused box instead of the account form; the token is kept, so the link works again once a seat frees | `CompleteRegistration` |
 
 The entry screens check before rendering so a visitor sees the notice rather than a form that will
@@ -59,8 +59,8 @@ refuses one; the entry screens, which pause for every visitor, are what keep a f
 re-mailing. The link still completes while the members alone are below the cap.
 
 A link is a seat whoever asked for it: on an open site, addresses that never complete hold seats
-until their links expire, bounded only by the `register-email` limiter and the TTL. That is the
-OpenPNE 3 behaviour and is accepted; the host's cap is the business lever, not a defence.
+until their links expire, bounded only by the `register-email` limiter and the TTL. That is
+accepted: the host's cap is the business lever, not a defence.
 
 ### Reservation
 
@@ -79,8 +79,7 @@ takes the write lock and a second writer waits there instead of failing busy at 
 ### Asking for a seat
 
 The paused box carries one button: `POST /register/capacity-request`, which mails
-`admin_mail_address` the `member-capacity-request` template (the wording of OpenPNE 3's hosting plugin, naming the
-site's host) and flashes a confirmation. It answers 404 unless the site is full, and on a closed
+`admin_mail_address` the `member-capacity-request` template (naming the site's host) and flashes a confirmation. It answers 404 unless the site is full, and on a closed
 registration mode, where there is nothing to reopen. A guest or a member may send it, so it sits
 outside the guest middleware; the `capacity-request` limiter allows 3 a minute per address and 20 an
 hour site-wide — the site-wide limb is what bounds a relay from many addresses, at the cost that
