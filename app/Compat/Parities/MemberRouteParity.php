@@ -147,7 +147,7 @@ class MemberRouteParity extends RouteParity
             // member/search → searchSuccess.php + _partsSearchResultList.php → resources/views/member/search.blade.php
             'search' => [
                 new ScreenElement('field ids', L::Three, S::Ported, 'MemberSearchForm name format member[%s] → member_name, member_profile_{name}', 'the %nickname% input and each select / text profile filter; a checkbox profile is drawn as checkboxes, which OpenPNE 3 drew as one select, and the month / day birthday selects carry no id'),
-                new ScreenElement('last-login row on each result', L::Three, S::Missing, 'searchSuccess.php op_format_last_login_time', 'OpenPNE 4 stores no last-login time, so the row has no source'),
+                new ScreenElement('last-login row on each result', L::Three, S::Missing, 'searchSuccess.php op_format_last_login_time', 'last_login_at is recorded for operators but not shown to members, so the row is not drawn'),
             ],
             // member/config → configSuccess.php (pageNav sidemenu + one category form) + configCompleteSuccess.php
             'config' => [

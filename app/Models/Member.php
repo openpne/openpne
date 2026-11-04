@@ -36,7 +36,7 @@ use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'tokens'])]
+#[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'last_login_at', 'tokens'])]
 class Member extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<MemberFactory> */
@@ -92,6 +92,7 @@ class Member extends Authenticatable implements PasskeyUser
             'is_login_rejected' => 'boolean',
             'profile_visibility' => Visibility::class,
             'two_factor_confirmed_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'avatar_color' => AvatarColor::class,
         ];
     }

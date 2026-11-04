@@ -222,6 +222,40 @@ class MemberUpgradeSqlTest extends UpgradeSqlTestCase
         DB::table('sns_config')->insert(['name' => $name, 'value' => $value]);
     }
 
+    public function test_carries_last_login_from_the_typed_value_datetime_unconverted(): void
+    {
+        $this->seedMember(30, 'Ivy');
+        $this->seedConfig(30, 'lastLogin', '2024-05-06 07:08:09', '2024-05-06 07:08:09');
+
+        $this->runUpgrade();
+
+        $this->assertSame('2024-05-06 07:08:09', DB::table('members')->where('id', 30)->value('last_login_at'));
+    }
+
+    public function test_a_last_login_with_only_the_text_copy_lands_as_null(): void
+    {
+        // OpenPNE 3 writes value_datetime and value together; only the typed column is read.
+        $this->seedMember(31, 'Jack');
+        $this->seedConfig(31, 'lastLogin', '2024-05-06 07:08:09');
+        $this->seedMember(32, 'Kim');
+
+        $this->runUpgrade();
+
+        $this->assertNull(DB::table('members')->where('id', 31)->value('last_login_at'));
+        $this->assertNull(DB::table('members')->where('id', 32)->value('last_login_at'));
+    }
+
+    public function test_the_latest_last_login_row_wins(): void
+    {
+        $this->seedMember(33, 'Lee');
+        $this->seedConfigWithId(901, 33, 'lastLogin', '2024-01-01 00:00:00', '2024-01-01 00:00:00');
+        $this->seedConfigWithId(900, 33, 'lastLogin', '2023-01-01 00:00:00', '2023-01-01 00:00:00');
+
+        $this->runUpgrade();
+
+        $this->assertSame('2024-01-01 00:00:00', DB::table('members')->where('id', 33)->value('last_login_at'));
+    }
+
     private function runUpgrade(): void
     {
         DB::statement((new InsertSelectCompiler)->compile(new MemberUpgrade));
@@ -250,25 +284,27 @@ class MemberUpgradeSqlTest extends UpgradeSqlTestCase
         ]);
     }
 
-    private function seedConfig(int $memberId, string $name, string $value): void
+    private function seedConfig(int $memberId, string $name, string $value, ?string $valueDatetime = null): void
     {
         DB::table('member_config')->insert([
             'member_id' => $memberId,
             'name' => $name,
             'value' => $value,
+            'value_datetime' => $valueDatetime,
             'name_value_hash' => md5($name.$value),
             'created_at' => '2018-03-04 12:34:56',
             'updated_at' => '2019-06-07 01:02:03',
         ]);
     }
 
-    private function seedConfigWithId(int $id, int $memberId, string $name, string $value): void
+    private function seedConfigWithId(int $id, int $memberId, string $name, string $value, ?string $valueDatetime = null): void
     {
         DB::table('member_config')->insert([
             'id' => $id,
             'member_id' => $memberId,
             'name' => $name,
             'value' => $value,
+            'value_datetime' => $valueDatetime,
             'name_value_hash' => md5($name.$value),
             'created_at' => '2018-03-04 12:34:56',
             'updated_at' => '2019-06-07 01:02:03',
