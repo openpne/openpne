@@ -8,6 +8,7 @@ use App\Notifications\Concerns\RendersMailTemplate;
 use Illuminate\Notifications\Notification;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use ReflectionClass;
 use SplFileInfo;
 use Tests\TestCase;
 
@@ -31,6 +32,11 @@ class MailFromSeamTest extends TestCase
                 RendersMailTemplate::class,
                 class_uses_recursive($class),
                 "{$class} builds a mail without ".RendersMailTemplate::class.'; its From would not carry the site name.',
+            );
+            $this->assertStringNotContainsString(
+                'new MailMessage',
+                (string) file_get_contents((new ReflectionClass($class))->getFileName()),
+                "{$class} builds its own MailMessage instead of calling mailFromTemplate().",
             );
         }
 
