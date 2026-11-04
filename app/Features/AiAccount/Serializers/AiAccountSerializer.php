@@ -31,21 +31,20 @@ class AiAccountSerializer
      * Shared so the Modern page and the Classic category cannot disagree about whether the create
      * form is offered.
      *
-     * @return array{accounts: list<array<string, mixed>>, used: int, limit: int, enabled: bool, canCreate: bool}
+     * @return array{accounts: list<array<string, mixed>>, used: int, limit: int, enabled: bool, siteFull: bool, canCreate: bool}
      */
     public static function list(Member $viewer, AiAccountSettings $settings): array
     {
         $accounts = $viewer->aiAccounts()->with('avatar.file')->withCount('groupMemberships')->orderBy('id')->get();
-        $limit = $settings->limit();
-        $enabled = $settings->enabled();
 
         return [
             'accounts' => self::accounts($accounts),
             'used' => $accounts->count(),
-            'limit' => $limit,
-            'enabled' => $enabled,
-            // Advisory only: the creation re-reads both under the owner lock.
-            'canCreate' => $enabled && $accounts->count() < $limit,
+            'limit' => $settings->limit(),
+            'enabled' => $settings->enabled(),
+            'siteFull' => $settings->capacityReached(),
+            // Advisory only: the creation re-reads everything under the locks.
+            'canCreate' => $settings->canCreate($accounts->count()),
         ];
     }
 

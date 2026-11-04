@@ -34,7 +34,7 @@ final class ConsentPage
             ],
             'actors' => [
                 'aiAccounts' => $accounts->map(MemberRefSerializer::ref(...))->all(),
-                'canCreate' => $this->settings->enabled() && $accounts->count() < $this->settings->limit(),
+                'canCreate' => $this->settings->canCreate($accounts->count()),
             ],
             'authToken' => $params['authToken'],
             'requiresPassword' => ! ConsentReauth::isFresh($params['request']->session()),

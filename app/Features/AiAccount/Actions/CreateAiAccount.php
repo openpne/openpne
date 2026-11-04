@@ -10,6 +10,7 @@ use App\Features\AiAccount\Exceptions\AiAccountActionFailure;
 use App\Features\Member\MemberNameRules;
 use App\Models\Member;
 use App\Support\SecurityLog;
+use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -29,7 +30,9 @@ class CreateAiAccount
         // caller can persist a nameless or over-long member.
         Validator::make(['name' => $name], ['name' => MemberNameRules::rules()])->validate();
 
-        $aiAccount = DB::transaction(function () use ($owner, $name): Member {
+        // AI cap row first, then the owner's rows: every creation on a capped site serializes on the
+        // cap row, so two owners' next-key locks never wait on each other.
+        $aiAccount = $this->settings->reserve(fn (Closure $siteHasRoom): Member => DB::transaction(function () use ($owner, $name, $siteHasRoom): Member {
             $locked = Member::whereKey($owner->getKey())->lockForUpdate()->firstOrFail();
 
             if (! $this->settings->enabled()) {
@@ -50,16 +53,19 @@ class CreateAiAccount
                 throw new AiAccountActionException(AiAccountActionFailure::LimitReached);
             }
 
+            $siteHasRoom();
+
             // `owner_member_id` is deliberately not mass-assignable, and email and password stay
             // null as the `members` CHECK insists.
             $aiAccount = new Member;
             $aiAccount->forceFill([
                 'name' => $name,
                 'owner_member_id' => $locked->getKey(),
-            ])->save();
+            ]);
+            $aiAccount->save();
 
             return $aiAccount;
-        });
+        }));
 
         // After the commit: an audit line for a creation that did not happen would be worse than a
         // missing one for a creation that did.

@@ -404,6 +404,11 @@ a route carrying one of these limiters cannot go unlisted. Each has two limbs: a
 | `reaction` | 60 / 120 | member id / client IP | reaction add, remove (group talk, timeline, diary, group boards) |
 | `reaction-read` | 120 / 240 | member id / client IP | reactor list (who reacted) on the same four surfaces; read once a chip's tip has stayed open, and each answer lists members with avatars |
 
+The registration-paused screen's request mail has a limiter of its own, `capacity-request`
+([`FortifyServiceProvider`](../../app/Providers/FortifyServiceProvider.php)): 3 a minute per client
+IP and 20 an hour for the whole site, since a guest may send it
+([capacity](capacity.md), "Asking for a seat").
+
 The defaults are deliberately loose: tuning draws on the 429 observability the security event log
 now provides — every throttled request logs a `throttle.hit` event (route + member, never the
 limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /

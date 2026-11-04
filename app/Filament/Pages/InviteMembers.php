@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Features\Auth\Actions\IssueRegistrationToken;
 use App\Features\Auth\Actions\IssueResult;
+use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\RegistrationMode;
 use App\Features\Auth\RegistrationTokenSource;
 use BackedEnum;
@@ -18,6 +19,7 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
@@ -86,6 +88,15 @@ class InviteMembers extends Page
 
     public function content(Schema $schema): Schema
     {
+        if (app(MemberCapacity::class)->isFull()) {
+            return $schema->components([
+                Section::make()->schema([
+                    Text::make(__('The site is at its member capacity, so no one can be invited.')),
+                    Text::make(__('To invite someone, remove a member or raise the member capacity.')),
+                ]),
+            ]);
+        }
+
         return $schema->components([$this->getFormContentComponent()]);
     }
 
@@ -114,20 +125,30 @@ class InviteMembers extends Page
 
         $sent = 0;
         $skipped = 0;
+        $unseated = 0;
         foreach ($valid as $email) {
-            $issue($email, RegistrationTokenSource::AdminInvite) === IssueResult::AlreadyMember
-                ? $skipped++
-                : $sent++;
+            match ($issue($email, RegistrationTokenSource::AdminInvite)) {
+                IssueResult::Issued => $sent++,
+                IssueResult::AlreadyMember => $skipped++,
+                IssueResult::CapacityFull => $unseated++,
+            };
+        }
+
+        $body = __(':sent sent, :skipped already registered, :invalid invalid.', [
+            'sent' => $sent,
+            'skipped' => $skipped,
+            'invalid' => count($invalid),
+        ]);
+        if ($unseated > 0) {
+            $body .= ' '.($unseated === 1
+                ? __('1 not sent: the site reached the member capacity.')
+                : __(':count not sent: the site reached the member capacity.', ['count' => $unseated]));
         }
 
         Notification::make()
-            ->success()
+            ->{$unseated > 0 ? 'warning' : 'success'}()
             ->title(__('Invitations processed'))
-            ->body(__(':sent sent, :skipped already registered, :invalid invalid.', [
-                'sent' => $sent,
-                'skipped' => $skipped,
-                'invalid' => count($invalid),
-            ]))
+            ->body($body)
             ->send();
 
         $this->form->fill();

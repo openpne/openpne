@@ -2,6 +2,9 @@
 
 namespace App\Filament\Widgets;
 
+use App\Features\AiAccount\AiAccountSettings;
+use App\Features\Auth\CapacityState;
+use App\Features\Auth\MemberCapacity;
 use App\Filament\Resources\Diaries\DiaryResource;
 use App\Filament\Resources\Groups\GroupResource;
 use App\Filament\Resources\Members\MemberResource;
@@ -13,9 +16,13 @@ use App\Models\Member;
 use Carbon\CarbonInterface;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-/** Message volume and any 1:1 communication metric are deliberately omitted (OpenPNE's privacy stance). */
+/**
+ * Message volume and any 1:1 communication metric are deliberately omitted (OpenPNE's privacy stance).
+ * Members and AI accounts are counted apart, as the host's two caps are (docs/internals/capacity.md, "Dashboard").
+ */
 class OverviewStatsWidget extends StatsOverviewWidget
 {
     protected ?string $heading = null;
@@ -28,15 +35,15 @@ class OverviewStatsWidget extends StatsOverviewWidget
         $lastMonthStart = $monthStart->copy()->subMonthNoOverflow();
         $activeSince = now()->subDays(30);
 
-        $newMembers = $this->countSince(Member::class, $monthStart);
-        $newMembersDelta = $newMembers - $this->countSince(Member::class, $lastMonthStart, $monthStart);
+        $newMembers = $this->countSince(self::humans(), $monthStart);
+        $newMembersDelta = $newMembers - $this->countSince(self::humans(), $lastMonthStart, $monthStart);
 
-        $diaries = $this->countSince(Diary::class, $monthStart);
-        $diariesDelta = $diaries - $this->countSince(Diary::class, $lastMonthStart, $monthStart);
+        $diaries = $this->countSince(Diary::query(), $monthStart);
+        $diariesDelta = $diaries - $this->countSince(Diary::query(), $lastMonthStart, $monthStart);
 
         return [
-            Stat::make(__('Member count'), number_format(Member::query()->count()))
-                ->url(MemberResource::getUrl('index')),
+            $this->memberStat(),
+            ...$this->aiAccountStat(),
 
             Stat::make(__('New members this month'), number_format($newMembers))
                 ->description($this->delta($newMembersDelta))
@@ -57,10 +64,68 @@ class OverviewStatsWidget extends StatsOverviewWidget
         ];
     }
 
-    /** @param  class-string<Model>  $model */
-    private function countSince(string $model, CarbonInterface $from, ?CarbonInterface $to = null): int
+    /** @return Builder<Member> */
+    private static function humans(): Builder
     {
-        $query = $model::query()->where('created_at', '>=', $from);
+        return Member::query()->whereNull('owner_member_id');
+    }
+
+    private function memberStat(): Stat
+    {
+        $capacity = app(MemberCapacity::class);
+        $limit = $capacity->limit();
+        $stat = Stat::make(__('Member count'), number_format($capacity->members()).($limit === null ? '' : ' / '.number_format($limit)))
+            ->url(MemberResource::getUrl('index'));
+        if ($limit === null) {
+            return $stat;
+        }
+
+        $state = $capacity->state();
+        $pending = $capacity->pending() === 1 ? __('1 invited') : __(':count invited', ['count' => $capacity->pending()]);
+        $description = match ($state) {
+            CapacityState::Over => __('Over capacity'),
+            CapacityState::Full => __('At capacity'),
+            default => self::left((int) $capacity->remaining()),
+        };
+        $color = match ($state) {
+            CapacityState::Over, CapacityState::Full => 'danger',
+            CapacityState::Low => 'warning',
+            default => 'success',
+        };
+
+        return $stat->description($description.' · '.$pending)->descriptionColor($color)->color($color);
+    }
+
+    /** @return list<Stat> */
+    private function aiAccountStat(): array
+    {
+        $ai = app(AiAccountSettings::class);
+        $inUse = $ai->inUse();
+        $capacity = $ai->capacity();
+        if (! $ai->enabled() && $inUse === 0 && $capacity === null) {
+            return [];
+        }
+
+        $stat = Stat::make(__('AI accounts'), number_format($inUse).($capacity === null ? '' : ' / '.number_format($capacity)));
+        if ($capacity === null) {
+            return [$stat];
+        }
+        $full = $inUse >= $capacity;
+
+        return [$stat->description($full ? __('At capacity') : self::left($capacity - $inUse))
+            ->descriptionColor($full ? 'danger' : 'success')
+            ->color($full ? 'danger' : 'success')];
+    }
+
+    private static function left(int $count): string
+    {
+        return $count === 1 ? __('1 left') : __(':count left', ['count' => $count]);
+    }
+
+    /** @param  Builder<Model>  $query */
+    private function countSince(Builder $query, CarbonInterface $from, ?CarbonInterface $to = null): int
+    {
+        $query = $query->where('created_at', '>=', $from);
         if ($to !== null) {
             $query->where('created_at', '<', $to);
         }

@@ -89,6 +89,10 @@ final class MailTemplateDefaults
             'en' => 'A member has withdrawn from {{ op_config.sns_name }}',
             'ja' => '{{ op_config.sns_name }} からメンバーが退会しました',
         ],
+        'member-capacity-request' => [
+            'en' => 'Request for more member capacity',
+            'ja' => 'メンバー収容数追加リクエスト',
+        ],
         'password-changed' => [
             'en' => 'Your password was changed',
             'ja' => 'パスワードが変更されました',

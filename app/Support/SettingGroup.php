@@ -67,4 +67,7 @@ enum SettingGroup
 
     /** Which OpenPNE 3 theme package the Classic shell wears, edited on the theme page. */
     case Theme;
+
+    /** Caps the host writes (openpne:capacity); no admin page saves this group, so a page's bulk save cannot reset them. */
+    case Capacity;
 }

@@ -62,7 +62,9 @@ return [
                 'EXTRA', '3' => 'EXTRA',
                 default => null,
             },
-            'transaction_mode' => 'DEFERRED',
+            // BEGIN takes the write lock, so a read-then-write transaction waits for its turn
+            // instead of failing busy when it reaches the write (docs/internals/capacity.md, "Reservation").
+            'transaction_mode' => 'IMMEDIATE',
         ],
 
         'mysql' => [

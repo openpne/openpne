@@ -17,6 +17,7 @@ use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
+use App\Models\RegistrationToken;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,6 +52,61 @@ class DashboardWidgetsTest extends TestCase
             ->assertSee(__('Member count'))
             ->assertSee(__('New members this month'))
             ->assertSee(__('%Diaries% this month'));
+    }
+
+    public function test_member_count_leaves_ai_accounts_to_their_own_stat(): void
+    {
+        $members = Member::factory()->count(3)->create();
+        Member::factory()->aiAccount($members->first())->create();
+
+        Livewire::test(OverviewStatsWidget::class)
+            ->assertSuccessful()
+            ->assertSeeInOrder([__('Member count'), '3', __('AI accounts'), '1', __('New members this month'), '3']);
+    }
+
+    public function test_the_ai_stat_is_absent_until_the_site_has_or_offers_one(): void
+    {
+        Member::factory()->create();
+        Livewire::test(OverviewStatsWidget::class)->assertDontSee(__('AI accounts'));
+
+        $this->setSnsSetting(SnsSettingKey::AiAccountsEnabled, true);
+        Livewire::test(OverviewStatsWidget::class)->assertSee(__('AI accounts'));
+    }
+
+    public function test_the_member_stat_shows_the_cap_seats_invited_and_left(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 10);
+        $members = Member::factory()->count(3)->create();
+        Member::factory()->aiAccount($members->first())->create();
+        RegistrationToken::create(['email' => 'invited@example.com', 'token' => hash('sha256', 'x'), 'created_at' => now()]);
+
+        Livewire::test(OverviewStatsWidget::class)
+            ->assertSuccessful()
+            ->assertSee('3 / 10')
+            ->assertSee(__(':count left', ['count' => 6]))
+            ->assertSee(__(':count invited', ['count' => 1]));
+    }
+
+    public function test_the_member_stat_says_at_capacity_and_over(): void
+    {
+        Member::factory()->count(3)->create();
+
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 3);
+        Livewire::test(OverviewStatsWidget::class)->assertSee(__('At capacity'));
+
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 2);
+        Livewire::test(OverviewStatsWidget::class)->assertSee(__('Over capacity'));
+    }
+
+    public function test_the_ai_stat_counts_against_its_own_cap(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AiAccountCapacity, 2);
+        Member::factory()->create();
+        Member::factory()->aiAccount()->create();
+
+        Livewire::test(OverviewStatsWidget::class)
+            ->assertSee('1 / 2')
+            ->assertSee(__(':count left', ['count' => 1]));
     }
 
     public function test_registration_mode_widget_reflects_current_mode(): void

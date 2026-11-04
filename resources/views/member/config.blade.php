@@ -256,6 +256,10 @@
                 <x-classic.parts id="member_config_ai_disabled" name="box" :title="__('Create an AI account')">
                     <div class="body">{{ __('This site is not offering new AI accounts right now. The ones you already have keep working.') }}</div>
                 </x-classic.parts>
+            @elseif ($ai['siteFull'])
+                <x-classic.parts id="member_config_ai_site_full" name="box" :title="__('Create an AI account')">
+                    <div class="body">{{ __('This site has as many AI accounts as it can hold.') }}</div>
+                </x-classic.parts>
             @else
                 <x-classic.parts id="member_config_ai_limit" name="box" :title="__('Create an AI account')">
                     <div class="body">{{ __('You already have as many AI accounts as this site allows.') }}</div>

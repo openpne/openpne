@@ -4,6 +4,8 @@ namespace App\Features\Auth\Actions;
 
 use App\Actions\Fortify\CreateNewMember;
 use App\Features\Auth\Events\MemberRegistered;
+use App\Features\Auth\MemberCapacity;
+use App\Features\Auth\MemberCapacityReached;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Models\Member;
 use App\Models\RegistrationToken;
@@ -20,17 +22,18 @@ use Illuminate\Validation\ValidationException;
  */
 class CompleteRegistration
 {
-    public function __construct(private CreateNewMember $create) {}
+    public function __construct(private CreateNewMember $create, private MemberCapacity $capacity) {}
 
     /**
      * @param  array<string, mixed>  $input  the posted form (name, password, profile); email is ignored
      *
      * @throws ValidationException name/password/profile failed validation
      * @throws QueryException the email was claimed between check and insert
+     * @throws MemberCapacityReached no seat left; the token is kept so the link works once one frees up
      */
     public function __invoke(RegistrationToken $pending, array $input): Member
     {
-        return DB::transaction(function () use ($pending, $input): Member {
+        return $this->capacity->reserveMember(fn (): Member => DB::transaction(function () use ($pending, $input): Member {
             $member = $this->create->create(['email' => $pending->email] + $input);
             $this->autoFriendInviter($pending, $member);
             $pending->delete();
@@ -40,7 +43,7 @@ class CompleteRegistration
             MemberRegistered::dispatch($member);
 
             return $member;
-        });
+        }));
     }
 
     /**

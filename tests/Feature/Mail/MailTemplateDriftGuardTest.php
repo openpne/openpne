@@ -14,6 +14,7 @@ use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Notifications\Auth\MemberCapacityRequestNotification;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\CommentReason;
@@ -107,6 +108,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new RegistrationCompletedNotification('en'), $recipient],
             [new WithdrawalCompletedNotification('Sender', 'en'), new AnonymousNotifiable],
             [new WithdrawalAdminNotification('Sender', 'sender@example.test', (int) $sender->getKey(), 'en'), new AnonymousNotifiable],
+            [new MemberCapacityRequestNotification('sns.example.test', 'en'), new AnonymousNotifiable],
             [new PasswordChangedNotification('en'), $recipient],
             [new MfaEnabledNotification('en'), $recipient],
             [new MfaDisabledNotification('en'), $recipient],
