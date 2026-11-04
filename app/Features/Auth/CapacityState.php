@@ -15,6 +15,6 @@ enum CapacityState
 
     case Full;
 
-    /** More seats taken than the cap allows: the cap was lowered under a larger site. */
+    /** More members than the cap allows: the cap was lowered under a larger site. */
     case Over;
 }

@@ -1,7 +1,7 @@
 # Capacity
 
 Two caps a host sets on a site and an administrator cannot: how many members it may hold, and how
-many AI accounts. A site with neither row behaves as every site did before the caps existed.
+many AI accounts. A site with neither row refuses nothing; what it gains is the gate's transaction and locking read.
 
 ## The two settings
 
@@ -68,7 +68,7 @@ Each gate takes the cap's own `sns_settings` row `FOR UPDATE` (`App\Support\Capa
 re-reads the counts, decides, and writes inside that transaction. Two writers racing for the last
 seat are serialized on that row, and the cap read under the lock is the row's, not the cached one:
 the gate takes the row even while the cache says no cap, so a cap written during a request is the
-one that request sees (on MySQL an absent row leaves a gap lock the writer's insert waits on). The
+one that request sees (on InnoDB under REPEATABLE READ an absent row leaves a gap lock the writer's insert waits on). The
 member and AI rows are separate locks, and each is the first lock of its transaction:
 `CreateAiAccount` takes the AI cap row before the owner's rows, so creations on a capped site
 serialize there instead of deadlocking on two owners' index locks. The counts under the lock are

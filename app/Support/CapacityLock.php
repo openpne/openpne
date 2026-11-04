@@ -26,8 +26,8 @@ final class CapacityLock
      */
     public static function hold(SnsSettingKey $key, Closure $body): mixed
     {
-        // SQLite promotes the read to a write here and refuses a second promoter outright
-        // ("database is locked"), which Laravel retries as a concurrency error.
+        // On SQLite the lock is a no-op and the transaction deferred: the second writer's first
+        // write fails busy, and the retry re-reads the counts.
         return DB::transaction(function () use ($key, $body): mixed {
             $row = DB::table('sns_settings')->where('key', $key->value)->lockForUpdate()->first();
 
