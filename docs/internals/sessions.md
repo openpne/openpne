@@ -118,14 +118,16 @@ to the store, so the request is wrapped to keep it.
    `database` driver. GC sweeps each table on its own realm's traffic, so
    stale `admin_sessions` rows may linger between admin visits — lifetime is
    still enforced on read.
-6. **`members.last_login_at` is the member's last activity, at most a day behind**:
+6. **`members.last_login_at` names the calendar day of the member's last activity**:
    `App\Listeners\Auth\RecordLastLogin` writes it on every `member`-guard `Login`
    (password, passkey, two-factor, post-registration, remember-me restore) and
-   again on `Authenticated` once the value is a day old, because a session kept
-   alive by polling never logs in again. A failed write is reported, not thrown,
-   so it cannot block a login. The write leaves `updated_at` alone; an AI account
-   never authenticates, so its value stays NULL. The column is read by site
-   operators (`MAX(last_login_at)`), never shown to members.
+   again on the first `Authenticated` of each later day (site timezone), because
+   a session kept alive by polling never logs in again. A failed write is
+   reported, not thrown, so it cannot block a login. The write leaves
+   `updated_at` alone; an AI account never authenticates, so its value stays
+   NULL. Site operators read it (`MAX(last_login_at)`, the admin member list);
+   members see each other's only as a calendar day in member search
+   (`App\Features\Member\LastLoginLabel`).
 
 A per-realm idle lifetime (shorter admin sessions) would slot into the same
 middleware pin.

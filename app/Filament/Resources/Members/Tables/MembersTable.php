@@ -54,6 +54,12 @@ class MembersTable
                     ->label(__('Created At'))
                     ->dateTime()
                     ->sortable(),
+
+                TextColumn::make('last_login_at')
+                    ->label(__('Last login'))
+                    ->dateTime()
+                    ->placeholder('-')
+                    ->sortable(),
             ])
             ->filters([
                 TernaryFilter::make('is_login_rejected')

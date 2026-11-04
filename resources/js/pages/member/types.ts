@@ -75,6 +75,8 @@ export interface MemberRow {
     isAi: boolean;
     /** Visible only when the viewer's clearance covers the field's visibility; null otherwise. */
     selfIntroduction: string | null;
+    /** Day-granular label; null for an AI account, which never logs in. */
+    lastLogin: string | null;
 }
 
 export interface SearchCriteria {

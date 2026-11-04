@@ -151,7 +151,7 @@ export default function MemberSearch() {
                                     key={member.id}
                                     rowLink
                                     chevron
-                                    className={member.selfIntroduction ? 'items-start' : undefined}
+                                    className="items-start"
                                 >
                                     <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} isAi={member.isAi} size="md" decorative />
                                     <div className="min-w-0 flex-1">
@@ -166,6 +166,11 @@ export default function MemberSearch() {
                                         {member.selfIntroduction && (
                                             <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                                                 {member.selfIntroduction}
+                                            </span>
+                                        )}
+                                        {member.lastLogin !== null && (
+                                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                                                {t('Last login')}: {member.lastLogin}
                                             </span>
                                         )}
                                     </div>

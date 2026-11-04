@@ -305,6 +305,18 @@ class MemberResourceTest extends TestCase
             ->assertTableColumnStateSet('two_factor', false, $off);
     }
 
+    public function test_last_login_column_takes_the_panel_format_and_is_empty_for_a_member_never_logged_in(): void
+    {
+        $recent = Member::factory()->create(['last_login_at' => '2026-08-10 09:05:30']);
+        $never = Member::factory()->create();
+
+        Livewire::test(ListMembers::class)
+            ->assertTableColumnFormattedStateSet('last_login_at', '2026-08-10 09:05', $recent)
+            ->assertTableColumnStateSet('last_login_at', null, $never)
+            ->sortTable('last_login_at', 'desc')
+            ->assertCanSeeTableRecords([$recent, $never], inOrder: true);
+    }
+
     /** A member with a confirmed (live) two-factor factor and a registered address. */
     private function memberWithLiveFactor(): Member
     {

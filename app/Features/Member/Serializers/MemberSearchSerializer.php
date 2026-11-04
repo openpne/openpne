@@ -2,6 +2,7 @@
 
 namespace App\Features\Member\Serializers;
 
+use App\Features\Member\LastLoginLabel;
 use App\Models\Member;
 use App\Models\Profile;
 use App\Services\CountryListService;
@@ -14,7 +15,7 @@ class MemberSearchSerializer
     /**
      * @param  LengthAwarePaginator<int, Member>  $members
      * @param  array<int, string>  $introductions  member id => self-introduction visible to the viewer
-     * @return array{data: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, selfIntroduction: ?string}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, selfIntroduction: ?string, lastLogin: ?string}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $members, array $introductions = []): array
     {
@@ -51,12 +52,13 @@ class MemberSearchSerializer
         ])->values()->all();
     }
 
-    /** @return array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, selfIntroduction: ?string} */
+    /** @return array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool, selfIntroduction: ?string, lastLogin: ?string} */
     private static function memberRow(Member $member, ?string $selfIntroduction): array
     {
         return [
             ...MemberRefSerializer::ref($member),
             'selfIntroduction' => $selfIntroduction,
+            'lastLogin' => LastLoginLabel::for($member),
         ];
     }
 
