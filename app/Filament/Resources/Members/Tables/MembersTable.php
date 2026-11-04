@@ -57,8 +57,7 @@ class MembersTable
 
                 TextColumn::make('last_login_at')
                     ->label(__('Last login'))
-                    ->since()
-                    ->dateTimeTooltip()
+                    ->dateTime()
                     ->placeholder('-')
                     ->sortable(),
             ])

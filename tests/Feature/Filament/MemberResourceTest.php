@@ -305,14 +305,13 @@ class MemberResourceTest extends TestCase
             ->assertTableColumnStateSet('two_factor', false, $off);
     }
 
-    public function test_last_login_column_is_relative_and_empty_for_a_member_never_logged_in(): void
+    public function test_last_login_column_takes_the_panel_format_and_is_empty_for_a_member_never_logged_in(): void
     {
-        $this->travelTo(now()->startOfDay()->addHours(12));
-        $recent = Member::factory()->create(['last_login_at' => now()->subDays(3)]);
+        $recent = Member::factory()->create(['last_login_at' => '2026-08-10 09:05:30']);
         $never = Member::factory()->create();
 
         Livewire::test(ListMembers::class)
-            ->assertTableColumnFormattedStateSet('last_login_at', $recent->last_login_at->diffForHumans(), $recent)
+            ->assertTableColumnFormattedStateSet('last_login_at', '2026-08-10 09:05', $recent)
             ->assertTableColumnStateSet('last_login_at', null, $never)
             ->sortTable('last_login_at', 'desc')
             ->assertCanSeeTableRecords([$recent, $never], inOrder: true);
