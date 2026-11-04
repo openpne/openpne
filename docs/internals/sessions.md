@@ -124,8 +124,9 @@ to the store, so the request is wrapped to keep it.
    again on `Authenticated` once the value is a day old, because a session kept
    alive by polling never logs in again. A failed write is reported, not thrown,
    so it cannot block a login. The write leaves `updated_at` alone; an AI account
-   never authenticates, so its value stays NULL. The column is read by site
-   operators (`MAX(last_login_at)`), never shown to members.
+   never authenticates, so its value stays NULL. Site operators read it
+   (`MAX(last_login_at)`, the admin member list); members see each other's only
+   as a calendar day in member search (`App\Features\Member\LastLoginLabel`).
 
 A per-realm idle lifetime (shorter admin sessions) would slot into the same
 middleware pin.

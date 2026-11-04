@@ -49,8 +49,50 @@ class MemberSearchTest extends TestCase
         $response->assertSee('Runner and cook.');
         // _partsSearchResultList.php sizes the photo cell by the row count, so the member with a
         // visible self-introduction spans one row more than the one without.
+        $this->assertSame(1, substr_count((string) $response->getContent(), '<td rowspan="3" class="photo">'));
         $this->assertSame(1, substr_count((string) $response->getContent(), '<td rowspan="2" class="photo">'));
-        $this->assertSame(1, substr_count((string) $response->getContent(), '<td rowspan="1" class="photo">'));
+    }
+
+    public function test_classic_results_close_each_band_with_the_last_login_by_day(): void
+    {
+        $viewer = Member::factory()->create();
+        // Newest member first, so the bands come out in this order.
+        Member::factory()->create(['name' => 'Zula Never']);
+        Member::factory()->create(['name' => 'Zula Week', 'last_login_at' => now()->subDays(7)]);
+        Member::factory()->create(['name' => 'Zula Yesterday', 'last_login_at' => now()->subDay()->endOfDay()]);
+        Member::factory()->create(['name' => 'Zula Today', 'last_login_at' => now()->startOfDay()]);
+
+        $response = $this->actingAs($viewer)->get('/member/search?name=Zula')->assertOk();
+
+        $response->assertSeeInOrder(['Zula Today', 'Today', 'Zula Yesterday', 'Yesterday', 'Zula Week', '7 days ago', 'Zula Never', 'Not logged in yet']);
+        $this->assertSame(4, substr_count((string) $response->getContent(), '<th>Last login</th>'));
+    }
+
+    public function test_classic_results_show_no_last_login_row_for_an_ai_account(): void
+    {
+        $viewer = Member::factory()->create();
+        Member::factory()->aiAccount()->create(['name' => 'Zula Bot']);
+
+        $response = $this->actingAs($viewer)->get('/member/search?name=Zula')->assertOk();
+
+        $response->assertSee('Zula Bot')->assertDontSee('Last login')->assertDontSee('Not logged in yet');
+    }
+
+    public function test_modern_search_carries_the_last_login_by_day_and_none_for_an_ai_account(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $viewer = Member::factory()->create(['created_at' => now()->subMinute()]);
+        $human = Member::factory()->create(['name' => 'Zula Human', 'last_login_at' => now()->subDays(3)->setTime(23, 59)]);
+        $bot = Member::factory()->aiAccount($viewer)->create(['name' => 'Zula Bot']);
+
+        $this->actingAs($viewer)->get('/member/search?name=Zula')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/search')
+                ->where('members.meta.total', 2)
+                ->where('members.data.0.id', $bot->getKey())
+                ->where('members.data.0.lastLogin', null)
+                ->where('members.data.1.id', $human->getKey())
+                ->where('members.data.1.lastLogin', '3 days ago'));
     }
 
     public function test_classic_results_hide_a_self_introduction_above_the_viewers_clearance(): void

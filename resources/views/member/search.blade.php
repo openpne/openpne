@@ -74,11 +74,8 @@
             <div class="body">{{ __('No members found.') }}</div>
         </x-classic.parts>
     @else
-        {{-- OpenPNE 3 closed each band with a last-login row; OpenPNE 4 records last_login_at for
-             operators but does not show it to members (MemberRouteParity screen gap), so a member
-             with no visible self-introduction shows the nickname alone. The nickname prints as
-             text: OpenPNE 3 passed use_op_link_to_member here but _partsSearchResultList.php never
-             read it.
+        {{-- The nickname prints as text: OpenPNE 3 passed use_op_link_to_member here but
+             _partsSearchResultList.php never read it.
 
              Inline PHP rather than a block: Blade pairs the first raw-PHP opener in a file with the
              first terminator, so a block here would swallow the inline PHP in the form above. --}}
@@ -91,6 +88,9 @@
                 ['caption' => __('%Nickname%'), 'value' => $member->name],
                 isset($introductions[$member->getKey()])
                     ? ['caption' => __('Self Introduction'), 'value' => $introductions[$member->getKey()]]
+                    : null,
+                ($lastLogin = \App\Features\Member\LastLoginLabel::for($member)) !== null
+                    ? ['caption' => __('Last login'), 'value' => $lastLogin]
                     : null,
             ])),
         ])->all())
