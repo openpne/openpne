@@ -55,6 +55,7 @@ class MemberSearchTest extends TestCase
 
     public function test_classic_results_close_each_band_with_the_last_login_by_day(): void
     {
+        $this->travelTo(today()->setTime(12, 0)); // away from midnight, so the fixtures and the request share a day
         $viewer = Member::factory()->create();
         // Newest member first, so the bands come out in this order.
         Member::factory()->create(['name' => 'Zula Never']);
@@ -81,6 +82,7 @@ class MemberSearchTest extends TestCase
     public function test_modern_search_carries_the_last_login_by_day_and_none_for_an_ai_account(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
+        $this->travelTo(today()->setTime(12, 0));
         $viewer = Member::factory()->create(['created_at' => now()->subMinute()]);
         $human = Member::factory()->create(['name' => 'Zula Human', 'last_login_at' => now()->subDays(3)->setTime(23, 59)]);
         $bot = Member::factory()->aiAccount($viewer)->create(['name' => 'Zula Bot']);

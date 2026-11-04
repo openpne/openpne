@@ -143,19 +143,21 @@ class RecordLastLoginTest extends TestCase
         $this->assertTrue($seen[0]->remember);
     }
 
-    public function test_a_session_in_use_refreshes_the_time_once_a_day(): void
+    public function test_a_session_in_use_refreshes_the_time_on_the_first_request_of_a_new_day(): void
     {
+        $this->travelTo(today()->setTime(0, 30));
         $member = Member::factory()->create();
         $this->post('/login', ['email' => $member->email, 'password' => 'password']);
         $loggedInAt = $member->fresh()->last_login_at;
 
         // Same session, a later request: the guard resolves the member from the session, no Login fires.
-        $this->travel(23)->hours();
+        $this->travelTo(today()->setTime(23, 30));
         app('auth')->forgetGuards();
         $this->get('/')->assertOk();
         $this->assertTrue($member->fresh()->last_login_at->equalTo($loggedInAt));
 
-        $this->travel(2)->hours();
+        // Two hours on, but the day has turned: the search label would otherwise say "yesterday".
+        $this->travelTo(today()->addDay()->setTime(1, 30));
         app('auth')->forgetGuards();
         $this->get('/')->assertOk();
         $this->assertSame(now()->toDateTimeString(), $member->fresh()->last_login_at->toDateTimeString());
