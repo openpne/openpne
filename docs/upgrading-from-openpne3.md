@@ -57,8 +57,9 @@ DB_USERNAME=openpne
 DB_PASSWORD=your-password
 ```
 
-Set the `MAIL_*` lines in the same pass, `MAIL_FROM_ADDRESS` included: OpenPNE 4 sends every mail
-from that address (OpenPNE 3 sent from the administrator's address, which OpenPNE 4 puts in Reply-To).
+Set the `MAIL_*` lines in the same pass. With `MAIL_FROM_ADDRESS` set, OpenPNE 4 sends every mail
+from that address and puts the administrator's address in Reply-To; left at the placeholder, it sends
+from the administrator's address as OpenPNE 3 did.
 
 Create the file first (`cp .env.example .env`) and edit it, then install. Both paths create the
 schema as part of that — `php artisan migrate` on the host, or the first container start with the

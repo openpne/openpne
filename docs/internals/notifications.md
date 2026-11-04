@@ -133,11 +133,15 @@ relation holds (e.g. sender is a friend) → deliver.
 Every outbound mail is **From** the configured `mail.from.address`, so the sending identity stays
 the one the mailer is authenticated for; a notification shows it under the site name (`sns_name`),
 other mail under `mail.from.name`. The administrator's `admin_mail_address` setting is where replies
-go: when it differs from the From address, [`AddAdminReplyTo`](../../app/Listeners/Mail/AddAdminReplyTo.php)
-adds it as **Reply-To** at `MessageSending`, for every mail whatever built it. A mail that sets its
-own Reply-To keeps it. When the two addresses are the same (the setting's default), no Reply-To is
-added. OpenPNE 3 sent From the administrator's address instead, so an operator has to set
-`MAIL_FROM_ADDRESS` ([upgrading-from-openpne3.md](../upgrading-from-openpne3.md#1-install-openpne-4-on-a-fresh-database)).
+go: when it differs from the From address,
+[`ApplyAdminMailAddress`](../../app/Listeners/Mail/ApplyAdminMailAddress.php) adds it as
+**Reply-To** at `MessageSending`, for every mail whatever built it. A mail that sets its own Reply-To
+keeps it. When the two addresses are the same (the setting's default), no Reply-To is added.
+
+While `MAIL_FROM_ADDRESS` is **not configured** — empty, or under one of the RFC 2606 documentation
+domains (`example.com`, `example.net`, `example.org`) where the shipped placeholder lives
+([`MailFromAddress`](../../app/Support/MailFromAddress.php)) — the same listener sends From the
+administrator's address instead, as OpenPNE 3 did, and adds no Reply-To.
 
 ## Gating flow
 

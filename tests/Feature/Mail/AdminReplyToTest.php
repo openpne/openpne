@@ -73,6 +73,35 @@ class AdminReplyToTest extends TestCase
         $this->assertSame('author@example.test', $replyTo[0]->getAddress());
     }
 
+    public function test_a_placeholder_from_address_is_replaced_by_the_administrator_and_gets_no_reply_to(): void
+    {
+        config(['mail.from.address' => 'hello@example.com']);
+        Mail::forgetMailers();
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
+
+        Notification::route('mail', 'member@example.test')->notifyNow(new RegistrationLinkNotification('raw-token', 'en'));
+
+        $email = $this->onlySentEmail();
+        $this->assertCount(1, $email->getFrom());
+        $this->assertSame('ops@example.test', $email->getFrom()[0]->getAddress());
+        $this->assertSame('My Group', $email->getFrom()[0]->getName());
+        $this->assertSame([], $email->getReplyTo());
+    }
+
+    public function test_a_raw_mail_under_a_placeholder_from_address_is_also_sent_by_the_administrator(): void
+    {
+        config(['mail.from.address' => 'hello@example.com']);
+        Mail::forgetMailers();
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
+
+        Mail::raw('body', fn ($message) => $message->to('member@example.test')->subject('raw'));
+
+        $email = $this->onlySentEmail();
+        $this->assertSame('ops@example.test', $email->getFrom()[0]->getAddress());
+        $this->assertSame('Mailer', $email->getFrom()[0]->getName());
+        $this->assertSame([], $email->getReplyTo());
+    }
+
     private function onlySentEmail(): Email
     {
         $messages = Mail::mailer()->getSymfonyTransport()->messages();

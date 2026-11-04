@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Listeners\Mail;
 
+use App\Support\MailFromAddress;
 use Illuminate\Mail\Events\MessageSending;
 use Symfony\Component\Mime\Address;
 
@@ -11,22 +12,29 @@ use Symfony\Component\Mime\Address;
  * Runs below every producer (notification, mailable, raw), so no mail class has to opt in
  * (docs/internals/notifications.md, "Mail headers").
  */
-final class AddAdminReplyTo
+final class ApplyAdminMailAddress
 {
     public function handle(MessageSending $event): void
     {
         $email = $event->message;
-        if ($email->getReplyTo() !== []) {
-            return;
-        }
-
         $admin = sns_admin_mail_address();
         if ($admin === '') {
             return;
         }
 
-        foreach ($email->getFrom() as $from) {
-            if (strcasecmp($from->getAddress(), $admin) === 0) {
+        $from = $email->getFrom();
+        if (! MailFromAddress::isConfigured($from[0]?->getAddress() ?? '')) {
+            $email->from(new Address($admin, $from[0]?->getName() ?: sns_name()));
+
+            return;
+        }
+
+        if ($email->getReplyTo() !== []) {
+            return;
+        }
+
+        foreach ($from as $address) {
+            if (strcasecmp($address->getAddress(), $admin) === 0) {
                 return;
             }
         }
