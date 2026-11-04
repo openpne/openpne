@@ -128,6 +128,22 @@ effect while `DirectMessageNew` is off — an enabled broad kind already covers 
 Delivery reproduces the extension's chain: broad kind on → deliver; else narrow kind on and the
 relation holds (e.g. sender is a friend) → deliver.
 
+## Mail headers
+
+Every outbound mail is **From** the configured `mail.from.address`, so the sending identity stays
+the one the mailer is authenticated for; a notification shows it under the site name (`sns_name`),
+other mail under `mail.from.name`. The administrator's `admin_mail_address` setting is where replies
+go: when it differs from the From address,
+[`ApplyAdminMailAddress`](../../app/Listeners/Mail/ApplyAdminMailAddress.php) adds it as
+**Reply-To** at `MessageSending`, for every mail whatever built it. A mail that sets its own Reply-To
+keeps it. When the two addresses are the same (the setting's default), or the administrator's
+address is itself a placeholder, no Reply-To is added.
+
+While `MAIL_FROM_ADDRESS` is **not configured** — empty, or under one of the RFC 2606 documentation
+domains (`example.com`, `example.net`, `example.org`) where the shipped placeholder lives
+([`MailFromAddress`](../../app/Support/MailFromAddress.php)) — the same listener sends From the
+administrator's address instead, as OpenPNE 3 did, and adds no Reply-To.
+
 ## Gating flow
 
 A notification's `via($notifiable)` decides channels through

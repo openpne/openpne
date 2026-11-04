@@ -84,16 +84,18 @@ class SnsSettingWiringTest extends TestCase
         $this->assertNull(brand_favicon_url());
     }
 
-    public function test_system_mail_uses_the_configured_sns_from_address(): void
+    public function test_system_mail_is_from_the_mailer_address_under_the_sns_name(): void
     {
         DB::table('sns_settings')->insert([
             ['key' => 'sns_name', 'value' => 'My Group'],
             ['key' => 'admin_mail_address', 'value' => 'ops@example.test'],
         ]);
 
+        config(['mail.from.address' => 'noreply@example.test']);
+
         $mail = (new RegistrationLinkNotification('raw-token', 'en'))->toMail(new AnonymousNotifiable);
 
-        $this->assertSame(['ops@example.test', 'My Group'], $mail->from);
+        $this->assertSame(['noreply@example.test', 'My Group'], $mail->from);
         $this->assertStringContainsString('My Group', $mail->subject);
     }
 
