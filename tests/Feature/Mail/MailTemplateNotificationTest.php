@@ -36,9 +36,11 @@ class MailTemplateNotificationTest extends TestCase
 
     public function test_mail_is_from_the_mailer_address_under_the_sns_name_without_laravel_branding(): void
     {
+        config(['mail.from.address' => 'noreply@example.test']);
+
         $mail = (new RegistrationLinkNotification('raw-token', 'en'))->toMail(new AnonymousNotifiable);
 
-        $this->assertSame([(string) config('mail.from.address'), 'My Group'], $mail->from);
+        $this->assertSame(['noreply@example.test', 'My Group'], $mail->from);
         $this->assertSame('My Group Letter of invitation', $mail->subject);
 
         $text = $this->renderMailText($mail);

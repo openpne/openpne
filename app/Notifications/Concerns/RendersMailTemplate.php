@@ -9,6 +9,7 @@ use App\Mail\Template\MailTemplateService;
 use App\Models\Member;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\MailFromAddress;
 use Illuminate\Notifications\Messages\MailMessage;
 
 /**
@@ -63,7 +64,7 @@ trait RendersMailTemplate
 
         // Not admin_mail_address as in OpenPNE 3: ApplyAdminMailAddress places it (docs/internals/notifications.md, "Mail headers").
         return (new MailMessage)
-            ->from((string) config('mail.from.address'), sns_name())
+            ->from(MailFromAddress::sender(), sns_name())
             ->subject($rendered->subject)
             ->view(['text' => 'mail.template-text'], ['body' => $rendered->body]);
     }

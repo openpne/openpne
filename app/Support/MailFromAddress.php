@@ -9,6 +9,14 @@ final class MailFromAddress
     /** The RFC 2606 documentation domains: the shipped placeholder lives there, and nothing under them can be a real sender. */
     private const PLACEHOLDER_DOMAINS = ['example.com', 'example.net', 'example.org'];
 
+    /** The configured mail.from.address, or the administrator's address while that is not configured. */
+    public static function sender(): string
+    {
+        $configured = (string) config('mail.from.address');
+
+        return self::isConfigured($configured) ? $configured : sns_admin_mail_address();
+    }
+
     public static function isConfigured(string $address): bool
     {
         $at = strrpos($address, '@');

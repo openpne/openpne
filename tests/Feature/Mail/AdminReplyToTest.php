@@ -102,6 +102,34 @@ class AdminReplyToTest extends TestCase
         $this->assertSame([], $email->getReplyTo());
     }
 
+    public function test_an_empty_from_address_is_replaced_by_the_administrator_for_a_notification(): void
+    {
+        config(['mail.from.address' => '']);
+        Mail::forgetMailers();
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
+
+        Notification::route('mail', 'member@example.test')->notifyNow(new RegistrationLinkNotification('raw-token', 'en'));
+
+        $email = $this->onlySentEmail();
+        $this->assertSame('ops@example.test', $email->getFrom()[0]->getAddress());
+        $this->assertSame('My Group', $email->getFrom()[0]->getName());
+        $this->assertSame([], $email->getReplyTo());
+    }
+
+    public function test_an_empty_from_address_is_replaced_by_the_administrator_for_a_raw_mail(): void
+    {
+        config(['mail.from.address' => '']);
+        Mail::forgetMailers();
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
+
+        Mail::raw('body', fn ($message) => $message->to('member@example.test')->subject('raw'));
+
+        $email = $this->onlySentEmail();
+        $this->assertSame('ops@example.test', $email->getFrom()[0]->getAddress());
+        $this->assertSame('My Group', $email->getFrom()[0]->getName());
+        $this->assertSame([], $email->getReplyTo());
+    }
+
     private function onlySentEmail(): Email
     {
         $messages = Mail::mailer()->getSymfonyTransport()->messages();

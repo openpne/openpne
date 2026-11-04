@@ -23,8 +23,9 @@ final class ApplyAdminMailAddress
         }
 
         $from = $email->getFrom();
-        if (! MailFromAddress::isConfigured($from[0]?->getAddress() ?? '')) {
-            $email->from(new Address($admin, $from[0]?->getName() ?: sns_name()));
+        $first = $from[0] ?? null;
+        if (! MailFromAddress::isConfigured($first?->getAddress() ?? '')) {
+            $email->from(new Address($admin, $first?->getName() ?: sns_name()));
 
             return;
         }

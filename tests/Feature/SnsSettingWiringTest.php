@@ -91,9 +91,11 @@ class SnsSettingWiringTest extends TestCase
             ['key' => 'admin_mail_address', 'value' => 'ops@example.test'],
         ]);
 
+        config(['mail.from.address' => 'noreply@example.test']);
+
         $mail = (new RegistrationLinkNotification('raw-token', 'en'))->toMail(new AnonymousNotifiable);
 
-        $this->assertSame([(string) config('mail.from.address'), 'My Group'], $mail->from);
+        $this->assertSame(['noreply@example.test', 'My Group'], $mail->from);
         $this->assertStringContainsString('My Group', $mail->subject);
     }
 
