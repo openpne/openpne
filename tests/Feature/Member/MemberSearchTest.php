@@ -392,7 +392,8 @@ class MemberSearchTest extends TestCase
             $this->memberWithIntro($profile, "Intro {$i}", Visibility::Members);
         }
 
-        $queries = $this->countApplicationQueries(fn () => $this->actingAs($viewer)->get('/member/search')->assertOk());
+        $this->actingAs($viewer); // outside the count: the first authentication writes last_login_at once
+        $queries = $this->countApplicationQueries(fn () => $this->get('/member/search')->assertOk());
 
         // Bounded just above the steady state, so a per-row read (which would reach 25) trips this
         // instead of hiding.

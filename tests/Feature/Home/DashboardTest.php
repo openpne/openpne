@@ -231,7 +231,8 @@ class DashboardTest extends TestCase
             ]);
         }
 
-        $queries = $this->countApplicationQueries(fn () => $this->actingAs($viewer)->get('/dashboard')->assertOk());
+        $this->actingAs($viewer); // outside the count: the first authentication writes last_login_at once
+        $queries = $this->countApplicationQueries(fn () => $this->get('/dashboard')->assertOk());
 
         // Bounded by the feeds and their eager loads, never by the row count, and kept tight (steady
         // state 38 with this fixture's single look: the shell's preference read, the timeline
