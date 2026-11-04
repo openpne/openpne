@@ -56,7 +56,11 @@ class CreateAiAccount
             $aiAccount->forceFill([
                 'name' => $name,
                 'owner_member_id' => $locked->getKey(),
-            ])->save();
+            ]);
+
+            // Owner lock first, site lock second, everywhere: the site lock is never held while
+            // waiting for an owner row.
+            $this->settings->reserve(static fn (): bool => $aiAccount->save());
 
             return $aiAccount;
         });

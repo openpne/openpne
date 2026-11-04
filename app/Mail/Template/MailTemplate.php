@@ -37,6 +37,7 @@ enum MailTemplate: string
     case MfaResetLink = 'mfa-reset-link';
     case PasskeyRegistered = 'passkey-registered';
     case PasskeyRemoved = 'passkey-removed';
+    case MemberCapacityRequest = 'member-capacity-request';
 
     case Signature = 'signature';
 
@@ -283,6 +284,15 @@ enum MailTemplate: string
                 caption: 'Two-factor authentication reset (link)',
                 variables: [
                     'url' => ['help' => 'The two-factor reset URL.', 'sample' => 'https://example.test/member/mfa/reset/token'],
+                ],
+            ),
+            self::MemberCapacityRequest => new MailTemplateDefinition(
+                // OpenPNE 3 built this mail inline in its hosting plugin; the wording is carried, not imported.
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Member capacity request (admin notice)',
+                variables: [
+                    'site.host' => ['help' => 'The host name of this site.', 'sample' => 'sns.example.test'],
                 ],
             ),
             self::Signature => new MailTemplateDefinition(

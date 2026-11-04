@@ -16,7 +16,7 @@ class RegistrationModeWidget extends StatsOverviewWidget
 {
     protected ?string $heading = null;
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
     protected function getStats(): array
     {

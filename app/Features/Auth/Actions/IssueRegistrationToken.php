@@ -2,6 +2,8 @@
 
 namespace App\Features\Auth\Actions;
 
+use App\Features\Auth\MemberCapacity;
+use App\Features\Auth\MemberCapacityReached;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Models\Member;
 use App\Models\RegistrationToken;
@@ -17,6 +19,8 @@ use Illuminate\Support\Str;
  */
 class IssueRegistrationToken
 {
+    public function __construct(private readonly MemberCapacity $capacity) {}
+
     public function __invoke(
         string $email,
         RegistrationTokenSource $source = RegistrationTokenSource::Selfservice,
@@ -36,7 +40,7 @@ class IssueRegistrationToken
         // 500, and source/inviter_id are overwritten on every issuance so a self re-request never
         // inherits a prior invite's provenance.
         $raw = Str::random(40);
-        RegistrationToken::upsert(
+        $write = static fn () => RegistrationToken::upsert(
             [[
                 'email' => $email,
                 'token' => hash('sha256', $raw),
@@ -47,6 +51,18 @@ class IssueRegistrationToken
             ['email'],
             ['token', 'source', 'inviter_id', 'created_at'],
         );
+
+        // An address holding a live link already holds its seat, so re-mailing it takes none.
+        $resend = RegistrationToken::query()
+            ->where('email', $email)
+            ->where('created_at', '>', now()->subMinutes((int) config('openpne.registration.token_ttl_minutes')))
+            ->exists();
+
+        try {
+            $this->capacity->reserveToken($write, resend: $resend);
+        } catch (MemberCapacityReached) {
+            return IssueResult::CapacityFull;
+        }
 
         Notification::route('mail', $email)->notify(
             new RegistrationLinkNotification($raw, app()->getLocale(), $source, $inviter?->name, $message),

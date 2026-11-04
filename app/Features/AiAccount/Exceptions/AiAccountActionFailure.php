@@ -14,6 +14,9 @@ enum AiAccountActionFailure: string
 
     case LimitReached = 'limit_reached';
 
+    /** The site-wide cap (SnsSettingKey::AiAccountCapacity), as opposed to the per-member limit. */
+    case SiteCapacityReached = 'site_capacity_reached';
+
     case NotOwned = 'not_owned';
 
     /** The account, or the owner behind it, is banned. */
@@ -28,6 +31,7 @@ enum AiAccountActionFailure: string
             self::Disabled => __('This site is not offering AI accounts right now.'),
             self::OwnerFrozen, self::OwnerIsAiAccount => __('You cannot create an AI account.'),
             self::LimitReached => __('You already have as many AI accounts as this site allows.'),
+            self::SiteCapacityReached => __('This site has as many AI accounts as it can hold.'),
             self::NotOwned, self::MemberGone => __('That is not one of your AI accounts.'),
             self::ActorFrozen => __('This AI account cannot be given a token right now.'),
         };

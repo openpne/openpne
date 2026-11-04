@@ -3,6 +3,14 @@
 @section('title', __('Invite a new member'))
 
 @section('content')
+    @if ($paused)
+    {{-- OpenPNE 3 member/inviteInput.php shows the registerError box under its own box id. --}}
+    <x-classic.parts id="requestRegisterURL" name="box" :title="__('Register')">
+        <div class="body">
+            @include('auth._registration-paused')
+        </div>
+    </x-classic.parts>
+    @else
     <x-classic.parts id="inviteForm" name="form" :title="__('Invite a new member')">
         <form method="POST" action="{{ route('member.invite.submit') }}">
             @csrf
@@ -29,4 +37,5 @@
             </div>
         </form>
     </x-classic.parts>
+    @endif
 @endsection

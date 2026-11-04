@@ -26,12 +26,14 @@ interface AiIndexProps extends PageProps {
     limit: number;
     /** Whether the site is offering creation at all — false still lists and links what is owned. */
     enabled: boolean;
+    /** The site-wide cap is reached, whatever this member owns. */
+    siteFull: boolean;
     canCreate: boolean;
 }
 
 export default function AiAccountIndex() {
     const t = useT();
-    const { accounts, used, limit, enabled, canCreate } = usePage<AiIndexProps>().props;
+    const { accounts, used, limit, enabled, siteFull, canCreate } = usePage<AiIndexProps>().props;
     const form = useForm({ name: '' });
 
     const submit = (e: FormEvent) => {
@@ -106,12 +108,14 @@ export default function AiAccountIndex() {
                         </FormActions>
                     </form>
                 ) : (
-                    // Two different dead ends, and which one it is decides what to do about it: wait
-                    // for the operator, or delete one of your own.
+                    // Three different dead ends, and which one it is decides what to do about it: wait
+                    // for the operator, wait for the host, or delete one of your own.
                     <p className="text-sm text-muted-foreground">
-                        {enabled
-                            ? t('You already have as many AI accounts as this site allows.')
-                            : t('This site is not offering new AI accounts right now. The ones you already have keep working.')}
+                        {!enabled
+                            ? t('This site is not offering new AI accounts right now. The ones you already have keep working.')
+                            : siteFull
+                              ? t('This site has as many AI accounts as it can hold.')
+                              : t('You already have as many AI accounts as this site allows.')}
                     </p>
                 )}
             </Panel>

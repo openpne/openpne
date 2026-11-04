@@ -3,13 +3,14 @@
 namespace App\Features\Auth\Actions;
 
 /**
- * The outcome of issuing a registration token. The self-service entry ignores this (it always shows
- * the same neutral screen, so a token issue and an already-registered no-op are indistinguishable);
- * the invite entries, whose caller is authenticated, use it to tell the inviter the address was
- * already taken.
+ * The self-service entry shows the same neutral screen for Issued and AlreadyMember, so the two are
+ * indistinguishable to a guest; the invite entries, whose caller is authenticated, tell them apart.
  */
 enum IssueResult
 {
     case Issued;
     case AlreadyMember;
+
+    /** No seat left (App\Features\Auth\MemberCapacity): nothing issued, nothing mailed. */
+    case CapacityFull;
 }

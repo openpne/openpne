@@ -6,9 +6,12 @@ import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
+import { RegistrationPaused } from '@/components/registration-paused';
 import { useT } from '@/lib/i18n';
 
-export default function MemberInvite() {
+type Props = { paused: boolean };
+
+export default function MemberInvite({ paused }: Props) {
     const t = useT();
     // Flashed after a send: "invitation sent" or "already has an account".
     const { data, setData, post, processing, errors } = useForm<Record<string, string>>({
@@ -22,6 +25,18 @@ export default function MemberInvite() {
     }
 
     const title = t('Invite a new member');
+
+    if (paused) {
+        return (
+            <>
+                <Head title={title} />
+                <Heading variant="page">{title}</Heading>
+                <Panel>
+                    <RegistrationPaused />
+                </Panel>
+            </>
+        );
+    }
 
     return (
         <>

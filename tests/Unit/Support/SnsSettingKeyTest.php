@@ -91,6 +91,28 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame('0', $key->encode($key->coerce(false)));
     }
 
+    public function test_the_capacities_are_host_written_and_absent_means_no_cap(): void
+    {
+        foreach ([SnsSettingKey::MemberCapacity, SnsSettingKey::AiAccountCapacity] as $key) {
+            $this->assertSame(SettingGroup::Capacity, $key->group(), $key->value);
+            $this->assertNull($key->op3SourceName(), $key->value);
+            $this->assertFalse($key->isMigratedFromOp3(), $key->value);
+            $this->assertNull($key->default(), $key->value);
+
+            // '' is how null is stored; a number reads back as itself, floored at 0.
+            $this->assertSame('', $key->encode($key->coerce(null)), $key->value);
+            $this->assertSame('', $key->encode($key->coerce(' ')), $key->value);
+            $this->assertSame('50', $key->encode($key->coerce(' 50 ')), $key->value);
+            $this->assertNull($key->decode(null), $key->value);
+            $this->assertNull($key->decode(''), $key->value);
+            $this->assertSame(50, $key->decode('50'), $key->value);
+            $this->assertSame(0, $key->decode('0'), $key->value);
+            $this->assertSame(0, $key->decode('-1'), $key->value);
+            // Corruption is not a cap the host set.
+            $this->assertNull($key->decode('x'), $key->value);
+        }
+    }
+
     public function test_the_ai_account_limit_is_the_registrys_one_integer_key(): void
     {
         $key = SnsSettingKey::AiAccountLimit;

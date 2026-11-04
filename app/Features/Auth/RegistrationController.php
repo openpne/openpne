@@ -6,17 +6,20 @@ use App\Captcha\Captcha;
 use App\Compat\RouteParityRegistry;
 use App\Features\Auth\Actions\CompleteRegistration;
 use App\Features\Auth\Actions\IssueRegistrationToken;
+use App\Features\Auth\Actions\IssueResult;
 use App\Features\Profile\Queries\RegistrationFields;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterEmailRequest;
 use App\Models\Member;
 use App\Models\RegistrationToken;
+use App\Notifications\Auth\MemberCapacityRequestNotification;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Inertia\Inertia;
@@ -24,8 +27,14 @@ use Inertia\Response as InertiaResponse;
 
 class RegistrationController extends Controller
 {
+    public function __construct(private readonly MemberCapacity $capacity) {}
+
     public function requestForm(Request $request, SpamTrap $trap, Captcha $captcha): View|InertiaResponse
     {
+        if ($this->capacity->isFull()) {
+            return $this->paused($request);
+        }
+
         $trap->arm($request);
 
         // Render the widget iff the resolved driver actually enforces a challenge, so the UI can never
@@ -39,13 +48,33 @@ class RegistrationController extends Controller
 
     public function request(RegisterEmailRequest $request, IssueRegistrationToken $issue, SpamTrap $trap): RedirectResponse
     {
+        if ($this->capacity->isFull()) {
+            return redirect()->route('register');
+        }
+
         // A tripped bot filter only skips issuing the token: the same neutral screen answers either
         // way, so a bot cannot tell it was caught.
-        if ($trap->passes($request)) {
-            $issue($request->validated()['email']);
+        if ($trap->passes($request) && $issue($request->validated()['email']) === IssueResult::CapacityFull) {
+            return redirect()->route('register');
         }
 
         return redirect()->route('register.sent');
+    }
+
+    /**
+     * OpenPNE 3 pnejp/sendRegisterRequest. 404 outside a full site, and on a closed one, where the
+     * operator has nothing to reopen and the mail would only be a relay.
+     */
+    public function capacityRequest(Request $request): RedirectResponse
+    {
+        abort_unless($this->capacity->isFull() && RegistrationMode::current() !== RegistrationMode::Closed, 404);
+
+        Notification::route('mail', sns_admin_mail_address())->notify(
+            new MemberCapacityRequestNotification((string) parse_url((string) config('app.url'), PHP_URL_HOST), config('app.locale')),
+        );
+
+        return redirect()->route(Auth::check() ? 'home' : 'login')
+            ->with('status', __('Your request has been sent to the administrator.'));
     }
 
     public function sent(Request $request): View|InertiaResponse
@@ -58,6 +87,10 @@ class RegistrationController extends Controller
         $pending = $this->resolveForCompletion($token);
         if ($pending instanceof RedirectResponse) {
             return $pending;
+        }
+
+        if ($this->capacity->isFullForCompletion()) {
+            return $this->paused($request);
         }
 
         $lang = $this->translationLang();
@@ -92,6 +125,8 @@ class RegistrationController extends Controller
 
         try {
             $member = $complete($pending, $request->all());
+        } catch (MemberCapacityReached) {
+            return redirect()->route('register.form', ['token' => $token]);
         } catch (ValidationException $e) {
             if ($e->validator->errors()->has('email')) {
                 return $this->addressClaimed($pending);
@@ -162,6 +197,12 @@ class RegistrationController extends Controller
 
         return redirect()->route('login')
             ->with('status', __('This address is already registered. Please sign in.'));
+    }
+
+    /** The registration-paused screen with the request button (OpenPNE 3 member/registerError.php). */
+    private function paused(Request $request): View|InertiaResponse
+    {
+        return $this->screen($request, 'auth.registration-paused', 'auth/registration-paused');
     }
 
     private function translationLang(): string

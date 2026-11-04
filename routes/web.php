@@ -211,6 +211,9 @@ Route::middleware(['guest', NoReferrer::class, EnsureOpenRegistration::class])->
     Route::post('/register', 'request')->middleware('throttle:register-email')->name('register.request');
     Route::get('/register/sent', 'sent')->name('register.sent');
 });
+// Outside both the guest and the open-registration gates: a member on the invite screen sends it too.
+Route::post('/register/capacity-request', [RegistrationController::class, 'capacityRequest'])
+    ->middleware([NoReferrer::class, 'throttle:capacity-request'])->name('register.capacity-request');
 // The completion half sits outside EnsureOpenRegistration because an invited member must finish in
 // invite or admin_only mode; the controller re-checks the mode against the token's origin.
 Route::middleware(['guest', NoReferrer::class])->controller(RegistrationController::class)->group(function () {

@@ -81,6 +81,12 @@ enum SnsSettingKey: string
     /** The theme package under public/opSkinThemePlugin the Classic shell wears; '' is the default skin. */
     case ClassicTheme = 'classic_theme';
 
+    /** How many members (not AI accounts) the site may hold; null is no cap (docs/internals/capacity.md, "Member capacity"). */
+    case MemberCapacity = 'member_capacity';
+
+    /** How many AI accounts the whole site may hold; null is no cap (docs/internals/capacity.md, "AI account capacity"). */
+    case AiAccountCapacity = 'ai_account_capacity';
+
     /** An absent row means enabled (OpenPNE 3's lazy `plugin` rows). */
     case FeatureDiaryEnabled = 'feature_diary_enabled';
 
@@ -192,6 +198,7 @@ enum SnsSettingKey: string
             self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
             self::ImageUploadBrowserShrink => SettingGroup::Images,
             self::ClassicTheme => SettingGroup::Theme,
+            self::MemberCapacity, self::AiAccountCapacity => SettingGroup::Capacity,
         };
     }
 
@@ -216,6 +223,8 @@ enum SnsSettingKey: string
             self::ImageUploadBrowserShrink => null,
             // Theme_used alone does not say which skin OpenPNE 3 showed: the active skin plugin decided.
             self::ClassicTheme => null,
+            // Written by the host after an upgrade, never copied from a plugin's sns_config row.
+            self::MemberCapacity, self::AiAccountCapacity => null,
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
             self::AllowWebPublicAge => 'is_allow_web_public_flag_age',
@@ -292,7 +301,8 @@ enum SnsSettingKey: string
             SettingGroup::Auth, SettingGroup::Surface, SettingGroup::Features,
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
             SettingGroup::Ai, SettingGroup::Look,
-            SettingGroup::GroupTalk, SettingGroup::Images, SettingGroup::Theme => false,
+            SettingGroup::GroupTalk, SettingGroup::Images, SettingGroup::Theme,
+            SettingGroup::Capacity => false,
         };
     }
 
@@ -334,6 +344,8 @@ enum SnsSettingKey: string
             // A cap an operator can raise, not a ceiling the code assumes; three is enough for the
             // one-assistant-per-tool case without a single member filling the member directory.
             self::AiAccountLimit => 3,
+            // No cap until the host sets one.
+            self::MemberCapacity, self::AiAccountCapacity => null,
             self::CaptchaEnabled => true,
             // Off, matching OpenPNE 3's is_allow_web_public_flag_age default — members may not make
             // their age web-public until an admin opts in.
@@ -405,6 +417,7 @@ enum SnsSettingKey: string
             self::AiAccountsEnabled, self::ImageUploadBrowserShrink => (bool) $value,
             // A non-numeric submission lands on 0, the safe side of a cap.
             self::AiAccountLimit => (int) (is_string($value) ? trim($value) : $value),
+            self::MemberCapacity, self::AiAccountCapacity => self::capacity($value),
             self::DiarySearchPeriodDays => self::clampDays((int) (is_string($value) ? trim($value) : $value)),
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
@@ -430,6 +443,7 @@ enum SnsSettingKey: string
             self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,
             self::AiAccountsEnabled, self::ImageUploadBrowserShrink => $value ? '1' : '0',
             self::AiAccountLimit, self::DiarySearchPeriodDays => (string) (int) $value,
+            self::MemberCapacity, self::AiAccountCapacity => $value === null ? '' : (string) max(0, (int) $value),
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value->value : (string) $value,
@@ -470,6 +484,8 @@ enum SnsSettingKey: string
             // A non-numeric stored value is corruption and reads as the shipped cap; a negative one
             // clamps to 0 rather than inverting the comparison it feeds.
             self::AiAccountLimit => is_numeric($value) ? max(0, (int) $value) : $this->default(),
+            // '' is the stored form of null; a non-numeric value is corruption and reads as no cap.
+            self::MemberCapacity, self::AiAccountCapacity => is_numeric($value) ? max(0, (int) $value) : null,
             self::DiarySearchPeriodDays => is_numeric($value) ? self::clampDays((int) $value) : $this->default(),
             // OpenPNE 3 read all of these as PHP truthy, so '' closes like '0' while any other stored value opens.
             self::TimelinePostingEnabled, self::DiarySearchEnabled, self::DiarySearchPeriodEnabled,
@@ -546,6 +562,8 @@ enum SnsSettingKey: string
             self::DefaultLook => __('Default UI layout'),
             self::ClassicTheme => __('Theme'),
             self::SelectableLooks => __('Selectable UI layouts'),
+            self::MemberCapacity => __('Member capacity'),
+            self::AiAccountCapacity => __('AI account capacity'),
         };
     }
 
@@ -567,7 +585,8 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
             self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks,
             self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply,
-            self::ImageUploadBrowserShrink, self::ClassicTheme => false,
+            self::ImageUploadBrowserShrink, self::ClassicTheme,
+            self::MemberCapacity, self::AiAccountCapacity => false,
         };
     }
 
@@ -603,6 +622,16 @@ enum SnsSettingKey: string
     public static function inGroup(SettingGroup $group): array
     {
         return array_values(array_filter(self::cases(), fn (self $key): bool => $key->group() === $group));
+    }
+
+    /** null and '' are no cap; anything else is an integer floored at 0. */
+    private static function capacity(mixed $value): ?int
+    {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+
+        return max(0, (int) (is_string($value) ? trim($value) : $value));
     }
 
     private static function clampDays(int $days): int

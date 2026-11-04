@@ -184,6 +184,13 @@ class FortifyServiceProvider extends ServiceProvider
             ];
         });
 
+        // The site-wide limb bounds the admin-mail relay from many addresses; an attacker who spends it
+        // silences real requests for the hour, which a courtesy mail can bear.
+        RateLimiter::for('capacity-request', fn (Request $request) => [
+            Limit::perMinute(3)->by('capacity-request|'.$request->ip()),
+            Limit::perHour(20)->by('capacity-request|site'),
+        ]);
+
         // The 40-char token is the real gate; this bounds blind guessing against it.
         RateLimiter::for('register-complete', fn (Request $request) => Limit::perMinute(10)->by('register-complete|'.$request->ip()));
 

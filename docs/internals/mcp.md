@@ -364,7 +364,8 @@ proxy the per-IP layer needs `TRUSTED_PROXIES`, or every caller shares one bucke
 
 The account is an **AI account**: a member owned by another member, made from the owner's own
 settings at `/member/config/ai` while an administrator offers them (`ai_accounts_enabled`, capped by
-`ai_account_limit`). Both are read when an account is created and never again — switching the offer
+`ai_account_limit` per member and, when the host sets one, `ai_account_capacity` for the whole site —
+[capacity](capacity.md)). All are read when an account is created and never again — switching the offer
 off stops new ones and leaves the existing ones running, still manageable and deletable by their
 owners, so remediation is never gated on the same switch that gated creation.
 
