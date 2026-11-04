@@ -173,7 +173,9 @@ class RecordLastLoginTest extends TestCase
         $this->post('/login', ['email' => $member->email, 'password' => 'password'])->assertRedirect('/');
 
         $this->assertAuthenticatedAs($member);
+        // More than once: the Authenticated retry only happens if the refused write left the model untouched.
         $this->assertSame(['last_login_at write refused'], array_values(array_unique($reported)));
+        $this->assertGreaterThanOrEqual(2, count($reported));
         $this->assertNull($member->fresh()->last_login_at);
     }
 
