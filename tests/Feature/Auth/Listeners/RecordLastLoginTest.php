@@ -52,6 +52,20 @@ class RecordLastLoginTest extends TestCase
         $this->assertTrue($fresh->updated_at->equalTo($updatedAt));
     }
 
+    public function test_a_second_login_within_the_day_still_moves_the_time(): void
+    {
+        $member = Member::factory()->create();
+        $this->post('/login', ['email' => $member->email, 'password' => 'password']);
+        $first = $member->fresh()->last_login_at;
+
+        $this->travel(2)->hours();
+        $this->freshRequestState();
+        $this->post('/login', ['email' => $member->email, 'password' => 'password']);
+
+        $this->assertAuthenticatedAs($member);
+        $this->assertTrue($member->fresh()->last_login_at->gt($first));
+    }
+
     public function test_a_two_factor_login_records_the_time_at_the_challenge_not_the_password_step(): void
     {
         $member = Member::factory()->create();
@@ -176,6 +190,7 @@ class RecordLastLoginTest extends TestCase
         // More than once: the Authenticated retry only happens if the refused write left the model untouched.
         $this->assertSame(['last_login_at write refused'], array_values(array_unique($reported)));
         $this->assertGreaterThanOrEqual(2, count($reported));
+        $this->assertNull(auth('member')->user()->last_login_at);
         $this->assertNull($member->fresh()->last_login_at);
     }
 
