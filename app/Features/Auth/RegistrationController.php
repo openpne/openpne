@@ -14,6 +14,7 @@ use App\Http\Requests\Auth\RegisterEmailRequest;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\MemberCapacityRequestNotification;
+use App\Support\SiteLocale;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -62,7 +63,7 @@ class RegistrationController extends Controller
     }
 
     /**
-     * OpenPNE 3 pnejp/sendRegisterRequest. 404 outside a full site, and on a closed one, where the
+     * OpenPNE 3's hosting plugin, pnejp/sendRegisterRequest. 404 outside a full site, and on a closed one, where the
      * operator has nothing to reopen and the mail would only be a relay.
      */
     public function capacityRequest(Request $request): RedirectResponse
@@ -70,7 +71,7 @@ class RegistrationController extends Controller
         abort_unless($this->capacity->isFull() && RegistrationMode::current() !== RegistrationMode::Closed, 404);
 
         Notification::route('mail', sns_admin_mail_address())->notify(
-            new MemberCapacityRequestNotification((string) parse_url((string) config('app.url'), PHP_URL_HOST), config('app.locale')),
+            new MemberCapacityRequestNotification((string) parse_url((string) config('app.url'), PHP_URL_HOST), SiteLocale::default()),
         );
 
         return redirect()->route(Auth::check() ? 'home' : 'login')
@@ -199,7 +200,7 @@ class RegistrationController extends Controller
             ->with('status', __('This address is already registered. Please sign in.'));
     }
 
-    /** The registration-paused screen with the request button (OpenPNE 3 member/registerError.php). */
+    /** The registration-paused screen with the request button (OpenPNE 3's hosting build, member/registerError.php). */
     private function paused(Request $request): View|InertiaResponse
     {
         return $this->screen($request, 'auth.registration-paused', 'auth/registration-paused');

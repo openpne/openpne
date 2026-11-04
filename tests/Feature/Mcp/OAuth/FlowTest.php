@@ -47,6 +47,18 @@ class FlowTest extends OAuthTestCase
         $this->assertAuthenticatedAs($viewer, 'member');
     }
 
+    public function test_the_consent_screen_withholds_creation_once_the_site_cap_is_reached(): void
+    {
+        $viewer = Member::factory()->create();
+        Member::factory()->aiAccount()->create();
+        $this->setSnsSetting(SnsSettingKey::AiAccountCapacity, 1);
+        $client = $this->registerClient();
+        [, $challenge] = $this->pkce();
+
+        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge))
+            ->assertInertia(fn ($page) => $page->where('actors.canCreate', false));
+    }
+
     public function test_a_guest_meets_the_login_screen_before_consent(): void
     {
         $client = $this->registerClient();

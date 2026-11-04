@@ -39,7 +39,7 @@ counted under their own cap, so a site offering AI accounts does not spend its m
   completing it only asks whether the members alone fill the cap. OpenPNE 3 also counted the
   invitee's pre-member row at this step and so refused the last seat to the person it was issued to.
 - `state()` — `Unlimited | Ok | Low | Full | Over` for the dashboard; `Low` is five seats or fewer
-  left, `Over` is a cap lowered below what the site already holds.
+  left, `Full` is none, `Over` is a cap lowered below the members the site already holds.
 
 ### Where a seat is taken
 
@@ -54,22 +54,30 @@ The entry screens check before rendering so a visitor sees the notice rather tha
 refuse; the two actions are the gates, and `RegistrationTokenWritersTest` pins that no other code
 writes a registration token.
 
-Re-mailing a link to an address that already holds a live one takes no seat, so a visitor who lost
-the mail is not kept out of a full site until their first link expires.
+A live link's own seat is not counted against a re-mail to the same address, so the gate never
+refuses one; the entry screens, which pause for every visitor, are what keep a full site from
+re-mailing. The link still completes while the members alone are below the cap.
+
+A link is a seat whoever asked for it: on an open site, addresses that never complete hold seats
+until their links expire, bounded only by the `register-email` limiter and the TTL. That is the
+OpenPNE 3 behaviour and is accepted; the host's cap is the business lever, not a defence.
 
 ### Reservation
 
-Under a finite cap, each gate takes the cap's own `sns_settings` row `FOR UPDATE`
-(`App\Support\CapacityLock`), re-reads the counts, decides, and writes inside that transaction.
-Two writers racing for the last seat are serialized on that row, and the cap read under the lock is
-the row's, not the cached one. The member and AI rows are separate locks; `CreateAiAccount` holds
-the owner's member row first and the AI cap row second, and nothing takes them in the other order.
-Under no cap the gate neither locks nor opens a transaction.
+Each gate takes the cap's own `sns_settings` row `FOR UPDATE` (`App\Support\CapacityLock`),
+re-reads the counts, decides, and writes inside that transaction. Two writers racing for the last
+seat are serialized on that row, and the cap read under the lock is the row's, not the cached one:
+the gate takes the row even while the cache says no cap, so a cap written during a request is the
+one that request sees (on MySQL an absent row leaves a gap lock the writer's insert waits on). The
+member and AI rows are separate locks, and each is the first lock of its transaction:
+`CreateAiAccount` takes the AI cap row before the owner's rows, so creations on a capped site
+serialize there instead of deadlocking on two owners' index locks. The counts under the lock are
+consistent reads, so nothing may read in that transaction before the lock is taken.
 
 ### Asking for a seat
 
 The paused box carries one button: `POST /register/capacity-request`, which mails
-`admin_mail_address` the `member-capacity-request` template (the OpenPNE 3 wording, naming the
+`admin_mail_address` the `member-capacity-request` template (the wording of OpenPNE 3's hosting plugin, naming the
 site's host) and flashes a confirmation. It answers 404 unless the site is full, and on a closed
 registration mode, where there is nothing to reopen. A guest or a member may send it, so it sits
 outside the guest middleware; the `capacity-request` limiter allows 3 a minute per address and 20 an
@@ -86,6 +94,6 @@ consent screen); `CreateAiAccount` re-reads it under the locks and refuses with
 
 ## Dashboard
 
-`MemberCapacityWidget` appears only once a cap is set. It shows seats taken against the cap, how
-many are invited and how many are left, coloured by `state()`, and the AI count against its cap
+`MemberCapacityWidget` appears only once a cap is set. It shows members against the cap, how many
+are invited and how many seats are left, coloured by `state()`, and the AI count against its cap
 when that is set. It has no control behind it.

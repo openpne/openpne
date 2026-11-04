@@ -24,7 +24,7 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The host-set member capacity (OpenPNE 3 opPNESupportPlugin's pnejp_member_capacity): seats are
+ * The host-set member capacity (OpenPNE 3's hosting plugin, pnejp_member_capacity): seats are
  * members plus live registration links, every issuance path stops at the last seat, and the paused
  * screen offers the request mail.
  */
@@ -149,8 +149,7 @@ class MemberCapacityTest extends TestCase
 
     public function test_the_last_seat_fills_at_the_entry_as_the_cap_is_reached(): void
     {
-        // The entry screen's pre-check is not the gate: the issuance is, under the lock, so a
-        // site that fills between the screen and the submit still issues nothing.
+        // A site that fills between the screen rendering and the submit still issues nothing.
         Notification::fake();
         $this->cap(1);
         $this->armEntry();

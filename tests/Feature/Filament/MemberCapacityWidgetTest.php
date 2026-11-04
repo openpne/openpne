@@ -55,7 +55,7 @@ class MemberCapacityWidgetTest extends TestCase
         Member::factory()->count(3)->create();
 
         $this->setSnsSetting(SnsSettingKey::MemberCapacity, 3);
-        Livewire::test(MemberCapacityWidget::class)->assertSee(__('Full'));
+        Livewire::test(MemberCapacityWidget::class)->assertSee(__('At capacity'));
 
         $this->setSnsSetting(SnsSettingKey::MemberCapacity, 2);
         Livewire::test(MemberCapacityWidget::class)->assertSee(__('Over capacity'));

@@ -10,6 +10,7 @@ use App\Services\SnsSettingService;
 use App\Support\CapacityLock;
 use App\Support\SnsSettingKey;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Seats are members who are not AI accounts plus the registration links still live, so an invitation
@@ -35,9 +36,13 @@ final class MemberCapacity
 
     public function pending(): int
     {
+        return $this->liveLinks()->count();
+    }
+
+    private function liveLinks(): Builder
+    {
         return RegistrationToken::query()
-            ->where('created_at', '>', now()->subMinutes((int) config('openpne.registration.token_ttl_minutes')))
-            ->count();
+            ->where('created_at', '>', now()->subMinutes((int) config('openpne.registration.token_ttl_minutes')));
     }
 
     public function remaining(): ?int
@@ -71,18 +76,20 @@ final class MemberCapacity
             return CapacityState::Unlimited;
         }
 
-        $taken = $this->members() + $this->pending();
+        $members = $this->members();
+        $taken = $members + $this->pending();
 
         return match (true) {
-            $taken > $limit => CapacityState::Over,
-            $taken === $limit => CapacityState::Full,
+            $members > $limit => CapacityState::Over,
+            $taken >= $limit => CapacityState::Full,
             $limit - $taken <= self::LOW_WATER => CapacityState::Low,
             default => CapacityState::Ok,
         };
     }
 
     /**
-     * Issues a link under the lock; $resend skips the seat check because the address already holds one.
+     * Issues a link under the lock; a live link $email already holds is its own seat, so re-mailing
+     * it is never refused.
      *
      * @template T
      *
@@ -91,14 +98,10 @@ final class MemberCapacity
      *
      * @throws MemberCapacityReached
      */
-    public function reserveToken(Closure $write, bool $resend = false): mixed
+    public function reserveToken(string $email, Closure $write): mixed
     {
-        if ($resend || $this->limit() === null) {
-            return $write();
-        }
-
-        return CapacityLock::hold(SnsSettingKey::MemberCapacity, function (?int $limit) use ($write): mixed {
-            if ($limit !== null && $this->members() + $this->pending() >= $limit) {
+        return CapacityLock::hold(SnsSettingKey::MemberCapacity, function (?int $limit) use ($email, $write): mixed {
+            if ($limit !== null && $this->members() + $this->pending() >= $limit && ! $this->liveLinks()->where('email', $email)->exists()) {
                 throw new MemberCapacityReached;
             }
 
@@ -118,10 +121,6 @@ final class MemberCapacity
      */
     public function reserveMember(Closure $write): mixed
     {
-        if ($this->limit() === null) {
-            return $write();
-        }
-
         return CapacityLock::hold(SnsSettingKey::MemberCapacity, function (?int $limit) use ($write): mixed {
             if ($limit !== null && $this->members() >= $limit) {
                 throw new MemberCapacityReached;

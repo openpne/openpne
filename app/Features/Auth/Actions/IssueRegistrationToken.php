@@ -52,14 +52,8 @@ class IssueRegistrationToken
             ['token', 'source', 'inviter_id', 'created_at'],
         );
 
-        // An address holding a live link already holds its seat, so re-mailing it takes none.
-        $resend = RegistrationToken::query()
-            ->where('email', $email)
-            ->where('created_at', '>', now()->subMinutes((int) config('openpne.registration.token_ttl_minutes')))
-            ->exists();
-
         try {
-            $this->capacity->reserveToken($write, resend: $resend);
+            $this->capacity->reserveToken($email, $write);
         } catch (MemberCapacityReached) {
             return IssueResult::CapacityFull;
         }

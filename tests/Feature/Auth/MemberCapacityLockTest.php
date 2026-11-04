@@ -87,7 +87,7 @@ class MemberCapacityLockTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::MemberCapacity, 1);
         $outcome = null;
 
-        app(MemberCapacity::class)->reserveToken(function () use (&$outcome): void {
+        app(MemberCapacity::class)->reserveToken('first@example.com', function () use (&$outcome): void {
             $outcome = $this->race(fn () => app(IssueRegistrationToken::class)('second@example.com'));
             $this->pending('first@example.com');
         });

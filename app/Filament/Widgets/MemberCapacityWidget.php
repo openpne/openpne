@@ -40,7 +40,7 @@ class MemberCapacityWidget extends StatsOverviewWidget
         if ($aiCapacity !== null) {
             $full = $ai->inUse() >= $aiCapacity;
             $stats[] = Stat::make(SnsSettingKey::AiAccountCapacity->label(), $ai->inUse().' / '.$aiCapacity)
-                ->description($full ? __('Full') : self::left($aiCapacity - $ai->inUse()))
+                ->description($full ? __('At capacity') : self::left($aiCapacity - $ai->inUse()))
                 ->color($full ? 'danger' : 'success');
         }
 
@@ -53,7 +53,7 @@ class MemberCapacityWidget extends StatsOverviewWidget
 
         return match ($state) {
             CapacityState::Over => __('Over capacity').' · '.$pending,
-            CapacityState::Full => __('Full').' · '.$pending,
+            CapacityState::Full => __('At capacity').' · '.$pending,
             default => self::left((int) $capacity->remaining()).' · '.$pending,
         };
     }

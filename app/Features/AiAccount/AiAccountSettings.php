@@ -57,28 +57,21 @@ final class AiAccountSettings
     }
 
     /**
-     * Creates an account under the site cap's lock.
+     * Runs $body under the site cap's lock; $body calls the check it is handed right before its
+     * write, after its own refusals, so those are answered first.
      *
      * @template T
      *
-     * @param  Closure(): T  $write
+     * @param  Closure(Closure(): void): T  $body
      * @return T
-     *
-     * @throws AiAccountActionException SiteCapacityReached
      */
-    public function reserve(Closure $write): mixed
+    public function reserve(Closure $body): mixed
     {
-        if ($this->capacity() === null) {
-            return $write();
-        }
-
-        return CapacityLock::hold(SnsSettingKey::AiAccountCapacity, function (?int $capacity) use ($write): mixed {
+        return CapacityLock::hold(SnsSettingKey::AiAccountCapacity, fn (?int $capacity): mixed => $body(function () use ($capacity): void {
             if ($capacity !== null && $this->inUse() >= $capacity) {
                 throw new AiAccountActionException(AiAccountActionFailure::SiteCapacityReached);
             }
-
-            return $write();
-        });
+        }));
     }
 
     /** Whether the member config offers its AI category: the offer is on, or the member already owns an account it must keep reaching. */
