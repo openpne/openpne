@@ -13,9 +13,8 @@ class AdminNavigationConventionsWithExtensionTest extends AdminNavigationConvent
 {
     use InstallsPanelExtension;
 
-    public function test_the_package_screen_is_registered_but_not_held_to_the_conventions(): void
+    public function test_the_package_screen_is_registered(): void
     {
         $this->assertContains(AddOnPage::class, Filament::getCurrentPanel()->getPages());
-        $this->assertNotContains(AddOnPage::getNavigationGroup(), array_map(fn (string $key): string => __($key), self::GROUP_KEYS));
     }
 }

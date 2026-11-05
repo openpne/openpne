@@ -19,7 +19,7 @@ class AdminNavigationConventionsTest extends TestCase
     use RefreshDatabase;
 
     /** The groups AdminPanelProvider registers, by translation key. */
-    protected const GROUP_KEYS = ['Members', 'Content', 'Settings', 'Appearance (Classic)', 'System'];
+    private const GROUP_KEYS = ['Members', 'Content', 'Settings', 'Appearance (Classic)', 'System'];
 
     protected function setUp(): void
     {

@@ -66,5 +66,5 @@ Those are the package's to place and label; the five groups keep their relative 
 1. Every navigable `App\Filament` screen sits in one of the five registered groups and declares an
    explicit `$navigationSort`, unique within its group. A package's screens and groups are allowed
    beside them.
-2. No two navigable screens render the same navigation label in any locale.
-3. Settings-group labels end in "settings" (`設定` in Japanese).
+2. No two navigable `App\Filament` screens render the same navigation label in any locale.
+3. `App\Filament` Settings-group labels end in "settings" (`設定` in Japanese).
