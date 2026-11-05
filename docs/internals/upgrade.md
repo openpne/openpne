@@ -348,7 +348,7 @@ contracts:
 ## Post-walk passes
 
 Work an `INSERT ... SELECT` cannot express runs after the walk, in this order, each under its own
-checkpoint except the two settings stamps, which write no `openpne4_upgrade_state` row:
+checkpoint except the three settings stamps, which write no `openpne4_upgrade_state` row:
 
 | Pass | Why after the walk | Resume model |
 |---|---|---|
@@ -362,6 +362,7 @@ checkpoint except the two settings stamps, which write no `openpne4_upgrade_stat
 | `FileBinMigration` move + rewire | `files` must exist for the FK | `information_schema` state (source table presence, FK target) |
 | `surface_mode` stamp | no OpenPNE 3 source column | insert-if-absent, only after full success |
 | `brand_favicon_fallback` stamp | no OpenPNE 3 source column; OpenPNE 3 showed no browser-tab icon ([site-icon.md](site-icon.md)) | insert-if-absent, only after full success, independent of the surface stamp |
+| OpenPNE 3 form-default stamp (`SnsSettingKey::op3FormDefault()`, today `sns_name` = `MySNS`) | an `INSERT ... SELECT` copies rows, and the key has none in a source whose admin never saved the page; OpenPNE 3 then showed its form default, which differs from the default here | insert-if-absent after the settings step, only after full success; a copied or operator-set row stands |
 
 `PasswordWrap` writes `bcrypt(md5hex)` at cost 10 with `password_scheme = md5_bcrypt`; login
 verifies `Hash::check(md5($attempt), $hash)` and rehashes to plain bcrypt on the first success.

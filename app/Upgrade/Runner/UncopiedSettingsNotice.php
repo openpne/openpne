@@ -93,6 +93,15 @@ final class UncopiedSettingsNotice
 
     private static function nullValueMessage(string $name, SnsSettingKey $key): string
     {
+        if (($op3Default = $key->op3FormDefault()) !== null) {
+            return sprintf(
+                "sns_config `%s` is NULL and is not copied: OpenPNE 3 read its default there, and `%s` is set to that default here ('%s').",
+                $name,
+                $key->value,
+                $op3Default,
+            );
+        }
+
         return sprintf(
             "sns_config `%s` is NULL and is not copied: OpenPNE 3 read its default there, and `%s` keeps its default here ('%s').",
             $name,

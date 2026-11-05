@@ -311,6 +311,19 @@ enum SnsSettingKey: string
     }
 
     /**
+     * The OpenPNE 3 form default (sns_config.yml) the upgrade writes when the source has no row for the
+     * key, for the keys whose default here differs from it; admin_mail_address is left out because its
+     * OpenPNE 3 default was a placeholder address and the configured sender applies instead.
+     */
+    public function op3FormDefault(): ?string
+    {
+        return match ($this) {
+            self::SnsName => 'MySNS',
+            default => null,
+        };
+    }
+
+    /**
      * OpenPNE 3 read these straight off sns_config (SnsConfigTable::get), where a NULL value was the
      * value it rendered or tested; every other migrated key went through opConfig::get, which fell
      * to the declared default the way a missing sns_settings row does here.

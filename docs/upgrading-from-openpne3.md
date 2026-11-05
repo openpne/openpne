@@ -161,7 +161,7 @@ data the upgrade does not recognise, not carried.
 | `W-UNKNOWN-NAME` | A `name` the upgrade does not recognise, with a row count; names in `member_config` / `community_config` that differ only in a trailing number are reported once as a family. A third-party plugin or a local customisation put it there. OpenPNE 4 has no home for it, so those rows are not migrated. |
 | `W-ABSENT-PLUGIN` | A plugin's tables are not in the source at all: its step migrates nothing. |
 | `W-SETTING-IN-ENV` / `W-SETTING-UNREADABLE` | `image_max_filesize` lives in `.env` here; the `ENV_HINT` line gives the value, or the size could not be read and you set it yourself. |
-| `W-SETTING-NULL` | An `sns_config` row with a NULL value: OpenPNE 3 read its default there, and OpenPNE 4 keeps its own. |
+| `W-SETTING-NULL` | An `sns_config` row with a NULL value: OpenPNE 3 read its default there, and OpenPNE 4 keeps its own (or OpenPNE 3's, where the two differ — the message says which). |
 | `W-MAIL-BROKEN` / `W-MAIL-DEGRADED` | A mail template that does not render: broken means the mail cannot be sent until the template is fixed; degraded means it sends with the failing reference as empty text. An admin customised it into something OpenPNE 4 cannot render, or it links through an OpenPNE 3 address that no longer exists. |
 | `W-MAIL-INERT-LOCALE` | A mail translation in a locale OpenPNE 4 never reads. It migrates but is never sent: OpenPNE 4 sends each recipient `ja` or `en`. |
 | `W-ACTIVITY-DEEP-REPLY` / `W-ACTIVITY-UNRESOLVABLE-REPLY` | Timeline replies answering another reply, or nested deeper than 4. OpenPNE 4 threads are one level deep. A reply to a reply is attached to the thread's first post (where OpenPNE 3 showed it too); one nested deeper than 4 is not migrated — point its `in_reply_to_activity_id` at the first post in the source to carry it. |
@@ -337,7 +337,9 @@ change from a problem when you go through it.
   variable, `OPENPNE_IMAGE_MAX_UPLOAD_KB`; the report (dry run and real run alike) prints the value
   to set, or tells you the OpenPNE 3 value could not be read as a size. A copied setting whose
   OpenPNE 3 row holds NULL (the admin screens wrote an empty string, so only a hand-edited row does)
-  is left out where OpenPNE 3 itself read its default, and the report names it. The Classic theme is
+  is left out where OpenPNE 3 itself read its default, and the report names it. Where OpenPNE 3's
+  default differs from this version's, a setting the site never saved lands on the OpenPNE 3 one, so
+  the site reads as it did: a site with no `sns_name` row is named "MySNS" here too. The Classic theme is
   not a copied row either: a pass after the walk reads which skin plugins OpenPNE 3 had enabled (from
   its `plugin` table; an activation written in `data/config/plugin.yml` is not seen), and only when the
   theme plugin was the one enabled skin does `Theme_used` become `classic_theme`; change it afterwards

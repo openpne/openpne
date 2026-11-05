@@ -113,6 +113,20 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
         $this->assertDatabaseMissing('sns_settings', ['key' => 'allow_web_public_age']);
     }
 
+    public function test_a_null_value_of_a_setting_with_an_openpne3_form_default_is_reported_with_that_default(): void
+    {
+        DB::table('sns_config')->insert(['name' => 'sns_name', 'value' => null]);
+
+        [$ok, $output] = $this->upgrade([new SnsSettingUpgrade], dryRun: false);
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString(
+            "WARN W-SETTING-NULL: sns_config `sns_name` is NULL and is not copied: OpenPNE 3 read its default there, and `sns_name` is set to that default here ('MySNS').",
+            $output,
+        );
+        $this->assertDatabaseHas('sns_settings', ['key' => 'sns_name', 'value' => 'MySNS']);
+    }
+
     public function test_a_hand_edited_spelling_the_source_collation_still_matches_is_reported(): void
     {
         // Case, a trailing space and a full-width letter are all one name under utf8mb3_unicode_ci.
@@ -142,6 +156,9 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
             if ($key->op3NullValueIsKept()) {
                 $this->assertDatabaseHas('sns_settings', ['key' => $key->value, 'value' => '']);
                 $this->assertStringNotContainsString($notice, $output, "{$key->op3SourceName()} is copied as empty, not reported");
+            } elseif ($key->op3FormDefault() !== null) {
+                $this->assertDatabaseHas('sns_settings', ['key' => $key->value, 'value' => $key->op3FormDefault()]);
+                $this->assertStringContainsString($notice, $output, "{$key->op3SourceName()} lands on the OpenPNE 3 default and is reported");
             } else {
                 $this->assertDatabaseMissing('sns_settings', ['key' => $key->value]);
                 $this->assertStringContainsString($notice, $output, "{$key->op3SourceName()} is left out and must be reported");
