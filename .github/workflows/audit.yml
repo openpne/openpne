@@ -8,12 +8,9 @@
 #     are the base branch's problem, owned by the scheduled audit below, so an
 #     unrelated PR never has to carry the fix.
 #   - Scheduled full audit (every 4 hours): all severities plus abandoned
-#     packages. A failure files or updates a `dependency-audit` issue instead of
-#     painting commits red — and a clean run closes it — so the fix flows
-#     through a separate lock-only bump PR. Dependabot security updates are
-#     enabled but cover only advisories listed in the GitHub Advisory Database
-#     with a fix inside the declared ranges; Packagist-first advisories and
-#     pinned transitive dependencies do not produce a Dependabot PR.
+#     packages. Findings file or update a `dependency-audit` issue — a clean run
+#     closes it — and the fix is a separate lock-only bump PR. The run itself
+#     only fails when reporting fails, so the issue is the sole signal.
 #
 # roave/security-advisories (require-dev) keeps `composer update` from resolving
 # to a vulnerable version; it does not re-check a committed lock on install, so
@@ -38,15 +35,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Extract the base branch lockfiles
+      - name: Extract the base lockfiles
+        # The event's base SHA, not the branch tip: a re-run after main moved
+        # must still compare the same two states the merge commit was built from.
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          git fetch --no-tags --depth=1 origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
           mkdir base
           for f in composer.json composer.lock package.json package-lock.json; do
-            git show "origin/$BASE_REF:$f" > "base/$f"
+            git show "$BASE_SHA:$f" > "base/$f"
           done
+          cp .npmrc base/
 
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
@@ -106,9 +106,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         # The fingerprint keeps a 4-hourly run from re-posting the same findings;
-        # the issue only gets a comment when the set of findings changes.
+        # the issue only gets a comment when the set of advisory ids changes.
         run: |
-          fingerprint="$(cat composer-audit.txt npm-audit.txt | sha256sum | cut -c1-16)"
+          fingerprint="$(grep -ohE 'PKSA-[a-z0-9-]+|GHSA-[a-z0-9-]+' composer-audit.txt npm-audit.txt | sort -u | sha256sum | cut -c1-16)"
           {
             echo "<!-- audit-fingerprint:$fingerprint -->"
             echo "Scheduled full-severity audit found advisories ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}))."
@@ -146,9 +146,3 @@ jobs:
           for issue in $(gh issue list --label dependency-audit --state open --json number --jq '.[].number'); do
             gh issue close "$issue" --comment "Scheduled audit is clean again ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}))."
           done
-
-      - name: Reflect the audit result
-        if: steps.composer.outcome == 'failure' || steps.npm.outcome == 'failure'
-        run: |
-          echo "Advisories found — see the dependency-audit issue."
-          exit 1

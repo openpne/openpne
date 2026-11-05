@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Usage: audit-delta.sh <base-dir> <head-dir>
 #
-# Fails only when the head lockfiles carry an advisory the base lockfiles do
-# not. Each dir holds composer.json, composer.lock, package.json and
-# package-lock.json. Advisories present on both sides are printed and ignored:
-# they belong to the scheduled full audit, not to the PR under test.
+# Fails only when the head lockfiles carry a (package, advisory) pair the base
+# lockfiles do not. Each dir holds composer.json, composer.lock, package.json,
+# package-lock.json and the same .npmrc. Pairs present on both sides are printed
+# and ignored: they belong to the scheduled full audit, not to the PR under test.
 set -euo pipefail
 
 base="$1"
