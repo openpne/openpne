@@ -17,7 +17,7 @@ export function ConversationRow({ conversation }: { conversation: ConversationRo
     const { counterpart, latest, unread } = conversation;
     // A departed member leaves no id to key a conversation by, so all of them share one address.
     const href = `/messages/${counterpart?.id ?? 'withdrawn'}`;
-    const name = counterpart?.name ?? t('Withdrawn member');
+    const name = counterpart?.name ?? t('%Withdrawn_member%');
 
     return (
         <ListRow rowLink className="items-start">

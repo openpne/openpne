@@ -280,7 +280,7 @@ test('a talk burst is the end of the conversation, printed', () => {
     );
     expect(screen.getAllByText('Rin')).toHaveLength(5);
     // The message stays and the person is gone.
-    expect(screen.getByText('Withdrawn member')).toBeTruthy();
+    expect(screen.getByText('%Withdrawn_member%')).toBeTruthy();
     // A mention in a message is the link it is everywhere else.
     expect(screen.getByRole('link', { name: '@rin' }).getAttribute('href')).toBe('/member/3');
 

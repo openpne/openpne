@@ -60,7 +60,7 @@ export function ConversationMessageRow({
                                 {author.name}
                             </Link>
                         ) : (
-                            <span className="truncate">{t('Withdrawn member')}</span>
+                            <span className="truncate">{t('%Withdrawn_member%')}</span>
                         )}
                         <AiChip isAi={author?.isAi ?? false} />
                         <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />

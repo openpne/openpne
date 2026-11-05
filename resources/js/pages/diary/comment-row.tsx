@@ -59,7 +59,7 @@ export function DiaryCommentRow({
                         {comment.author.name}
                     </Link>
                 ) : (
-                    <span className="truncate">{t('Withdrawn member')}</span>
+                    <span className="truncate">{t('%Withdrawn_member%')}</span>
                 )}
                 <AiChip isAi={comment.author?.isAi ?? false} />
                 <span className="ml-auto shrink-0">#{comment.number}</span>

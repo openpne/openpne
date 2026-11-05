@@ -96,7 +96,7 @@ export function EntryRow({ href, author, group, content, contentLines = 1, bylin
         );
     }
 
-    const subjectName = group ? group.name : (author?.name ?? t('Withdrawn member'));
+    const subjectName = group ? group.name : (author?.name ?? t('%Withdrawn_member%'));
     const subjectImage = group ? (
         // Matches the Avatar's md size — the two alternate in this one byline slot.
         <CommunityImage name={group.name} src={group.imageUrl} className="size-10" textClassName="text-sm" decorative />

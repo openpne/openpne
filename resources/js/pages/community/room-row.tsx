@@ -16,7 +16,7 @@ export function RoomRow({ room }: { room: TalkRoomRow }) {
     const latest = room.latest;
     // The one place the AI marker is text rather than an AiChip: the preview is a single truncated
     // line, and a pill cannot live inside one.
-    const speaker = latest === null ? '' : markedName(latest.authorName ?? t('Withdrawn member'), latest.authorIsAi, t);
+    const speaker = latest === null ? '' : markedName(latest.authorName ?? t('%Withdrawn_member%'), latest.authorIsAi, t);
 
     return (
         <ListRow rowLink className="items-start">

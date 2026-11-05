@@ -46,7 +46,7 @@ test('the whole body can be copied in one press where a clipboard exists, and a 
     const onClose = vi.fn();
     renderWithProviders(<SelectTextSheet text={{ ...text, author: null }} returnFocusTo={null} onClose={onClose} />);
 
-    expect(screen.getByText('Withdrawn member')).toBeTruthy();
+    expect(screen.getByText('%Withdrawn_member%')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Copy all text' }));
     expect(writeText).toHaveBeenCalledWith('line one\nline two');
     expect(onClose).toHaveBeenCalled();

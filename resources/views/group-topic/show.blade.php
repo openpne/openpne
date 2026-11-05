@@ -18,7 +18,7 @@
                         @if ($topic->member)
                             <a href="{{ route('member.profile.show', $topic->member) }}">{{ $topic->member->name }}</a><x-classic.ai-mark :is-ai="$topic->member->isAiAccount()" />
                         @else
-                            {{ __('Withdrawn member') }}
+                            {{ __('%Withdrawn_member%') }}
                         @endif
                     </p>
                 </div>
@@ -77,13 +77,13 @@
                                 @if ($comment->member)
                                     <a href="{{ route('member.profile.show', $comment->member) }}">{{ $comment->member->name }}</a>
                                 @else
-                                    {{ __('Withdrawn member') }}
+                                    {{ __('%Withdrawn_member%') }}
                                 @endif
                                 @if (\App\Features\GroupTopic\GroupTopicAccess::canDeleteComment($comment, auth()->user()))
                                     <a href="{{ route('group.topics.comment.delete.show', $comment) }}">{{ __('Delete') }}</a>
                                 @endif
                                 @if ($commentReplyLink && $canComment)
-                                    <a class="reply" href="#formCommunityTopicComment" data-comment-reply="#community_topic_comment_body" data-number="{{ $comment->number }}" data-name="{{ $comment->member?->name ?? __('Withdrawn member') }}">{{ __('Reply') }}</a>
+                                    <a class="reply" href="#formCommunityTopicComment" data-comment-reply="#community_topic_comment_body" data-number="{{ $comment->number }}" data-name="{{ $comment->member?->name ?? __('%Withdrawn_member%') }}">{{ __('Reply') }}</a>
                                 @endif
                             </p>
                         </div>

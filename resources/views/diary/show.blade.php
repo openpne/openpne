@@ -97,7 +97,7 @@
                                 @if ($comment->member)
                                     <a href="{{ route('member.profile.show', $comment->member) }}">{{ $comment->member->name }}</a>
                                 @else
-                                    {{ __('Withdrawn member') }}
+                                    {{ __('%Withdrawn_member%') }}
                                 @endif
                                 @if ($comment->isDeletableBy(auth()->user()))
                                     <a href="{{ route('diary.comment.delete.show', $comment) }}">{{ __('Delete') }}</a>

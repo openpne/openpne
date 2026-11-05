@@ -98,7 +98,7 @@ class NotificationFeedTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('feed.data.0.actor', null)
-                ->where('feed.data.0.label', __(':name sent you a %friend% request.', ['name' => __('Withdrawn member')])),
+                ->where('feed.data.0.label', __(':name sent you a %friend% request.', ['name' => __('%Withdrawn_member%')])),
             );
     }
 

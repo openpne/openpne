@@ -171,7 +171,7 @@ export function TalkComposer({
     // The server's verdict first: it explains why the message was refused, which a cap note does not.
     const attachmentNote = imageError || capNote;
 
-    const replyName = replyTo === null ? '' : (replyTo.author?.name ?? t('Withdrawn member'));
+    const replyName = replyTo === null ? '' : (replyTo.author?.name ?? t('%Withdrawn_member%'));
     const replyLine = replyTo === null ? '' : replyPreview(replyTo, t('Image'), t('File'));
 
     return (

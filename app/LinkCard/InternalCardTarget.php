@@ -201,7 +201,7 @@ enum InternalCardTarget: string
                 'image' => $record->avatar?->file,
             ],
             self::TalkMessage => [
-                'title' => __('Message from :name', ['name' => $record->author?->name ?? __('Withdrawn member')]),
+                'title' => __('Message from :name', ['name' => $record->author?->name ?? __('%Withdrawn_member%')]),
                 // The same line every list previews a message by, so a card of a message and the
                 // room row above it read alike.
                 'description' => ChatPreview::lineOrImages([$record->body], self::firstImage($record) !== null, $record->images->isNotEmpty()),

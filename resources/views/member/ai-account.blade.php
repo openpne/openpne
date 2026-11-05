@@ -219,7 +219,7 @@
     <x-classic.parts id="member_ai_account_delete" name="form" :title="__('Delete this AI account')">
         <form method="POST" action="{{ route('member.config.ai.destroy', ['member' => $aiAccount->getKey()]) }}">
             @csrf
-            <p>{{ __('Deleting is permanent. What it posted stays on the site, shown as by a withdrawn member.') }}</p>
+            <p>{{ __('Deleting is permanent. What it posted stays on the site, shown as by a %withdrawn_member%.') }}</p>
             <table>
                 <tr>
                     <th><label for="ai_delete_password">{{ __('Current password') }}</label></th>

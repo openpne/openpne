@@ -247,7 +247,7 @@ export default function MessageConversation() {
 
     return (
         <>
-            <Head title={counterpart?.name ?? t('Withdrawn member')} />
+            <Head title={counterpart?.name ?? t('%Withdrawn_member%')} />
 
             {/* The withdrawn bucket keeps it: nobody can write there again, so it is the one
                 conversation whose only remaining action is clearing it out. */}

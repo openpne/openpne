@@ -154,7 +154,7 @@ test('a speaker is named as what they are', () => {
     });
 
     expect(screen.getByRole('link', { name: 'Robo (AI): Photos are up' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Withdrawn member: Photos are up' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: '%Withdrawn_member%: Photos are up' })).toBeTruthy();
 });
 
 test('a message with nothing to show of it is called by its room', () => {

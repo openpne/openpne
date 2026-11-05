@@ -138,7 +138,7 @@ class AiAccountDisplayNameTest extends TestCase
 
         $feed = NotificationFeedSerializer::stream(StreamQuery::older($reader->notifications(), null, 30), null)();
 
-        $this->assertSame(__(':name sent you a message.', ['name' => __('Withdrawn member')]), $feed['data'][0]['label']);
+        $this->assertSame(__(':name sent you a message.', ['name' => __('%Withdrawn_member%')]), $feed['data'][0]['label']);
         $this->assertNull($feed['data'][0]['actor']);
     }
 

@@ -95,7 +95,7 @@ class DirectMessageRouteParity extends RouteParity
                 new ScreenElement('sent box: To column is the first recipient', L::Two, S::Ported, '$message->getSendTo() (getSendList()[0]->getMember())', 'an upgraded multi-recipient send names only its first recipient, as OpenPNE 3'),
                 new ScreenElement('sent box: subject links to /message/check/:id', L::One, S::Ported, "link_to(\$detail_title, '@readSendMessage?id='.\$message->getId())"),
                 new ScreenElement('sent box: delete trashes the sender copy only', L::One, S::Ported, 'MessageDeleteForm object_name=SendMessageData', 'sender_deleted_at; each recipient keeps their receipt'),
-                new ScreenElement('sent box: withdrawn recipient leaves the To cell empty', L::Three, S::Partial, 'op_message_link_to_member(null) returns an empty string', 'OpenPNE 4 prints "Withdrawn member" rather than an empty cell'),
+                new ScreenElement('sent box: withdrawn recipient leaves the To cell empty', L::Three, S::Partial, 'op_message_link_to_member(null) returns an empty string', 'OpenPNE 4 prints the withdrawn_member term rather than an empty cell'),
                 // Draft box (@draftList).
                 new ScreenElement('draft box: unsent authored messages, newest first', L::Two, S::Ported, 'SendMessageDataTable::getDraftMessagePager (is_send=0, is_deleted=0, created_at DESC)'),
                 new ScreenElement("draft box: To column from the draft's send list", L::Two, S::Ported, '$message->getSendTo()', 'a draft has no receipt in OpenPNE 4, so the recipient is the draft_recipient_id column'),

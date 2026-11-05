@@ -80,7 +80,7 @@ test('a staged reply to a file-only message previews as a file', () => {
 test('a staged reply to a withdrawn author names them with the established label', () => {
     mount({ replyTo: parent({ author: null }) });
 
-    expect(screen.getByText('Replying to Withdrawn member')).toBeTruthy();
+    expect(screen.getByText('Replying to %Withdrawn_member%')).toBeTruthy();
 });
 
 // Plain shapes: the test renderer copies an init's own properties onto a fresh DataTransfer, and a real one keeps its files behind getters.

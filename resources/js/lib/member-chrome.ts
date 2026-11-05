@@ -640,7 +640,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
 
         return {
             mode: 'contextual',
-            title: counterpart ? MESSAGES : t('Withdrawn member'),
+            title: counterpart ? MESSAGES : t('%Withdrawn_member%'),
             context: counterpart ? memberContext(counterpart) : MESSAGES_HUB,
             scope: counterpart ? memberScope(counterpart) : undefined,
             conversation: true,

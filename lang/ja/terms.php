@@ -9,4 +9,5 @@ return [
     'post_activity' => 'ポスト',
     'diary' => '日記',
     'topic' => 'トピック',
+    'withdrawn_member' => '退会したメンバー',
 ];
