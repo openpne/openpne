@@ -2,12 +2,14 @@
 @props(['config' => [], 'subject' => null, 'partId' => null])
 @if ($subject)
     @php($avatar = $subject->avatar?->file)
+    {{-- OpenPNE 3's Member::getNameAndCount(): "%s (%d)" while the %friend% feature is on, the bare name otherwise. --}}
+    @php($text = \App\Support\Feature::Friend->enabled() ? sprintf('%s (%d)', $subject->name, $subject->friendships()->count()) : $subject->name)
     <x-classic.parts :id="$partId" name="memberImageBox">
         <div class="sortHandle">
             <p class="photo">
                 <x-classic.image :file="$avatar" :size="180" :alt="$subject->name" />
             </p>
-            <p class="text">{{ $subject->name }}<x-classic.ai-mark :is-ai="$subject->isAiAccount()" /></p>
+            <p class="text">{{ $text }}<x-classic.ai-mark :is-ai="$subject->isAiAccount()" /></p>
         </div>
         @if ($subject->is(auth()->user()))
             {{-- OpenPNE 3's parts frame renders its moreInfo option as div.moreInfo > ul.moreInfo.

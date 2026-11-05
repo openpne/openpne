@@ -9,6 +9,7 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
+use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -56,6 +57,33 @@ class ClassicHomeGadgetTest extends TestCase
             ->assertSee('id="Left"', false)
             ->assertSee('id="memberImageBox_'.$gadget->id.'"', false)
             ->assertSee('Hanako');
+    }
+
+    public function test_member_image_box_text_is_name_and_friend_count_while_friends_are_on(): void
+    {
+        $member = Member::factory()->create(['name' => 'Hanako']);
+        $friend = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $member->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $member->getKey(), 'created_at' => now()],
+        ]);
+        $this->makeGadget('home', 'sideMenu', 'memberImageBox');
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('<p class="text">Hanako (1)', false);
+    }
+
+    public function test_member_image_box_text_is_the_bare_name_while_friends_are_off(): void
+    {
+        $member = Member::factory()->create(['name' => 'Hanako']);
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $this->makeGadget('home', 'sideMenu', 'memberImageBox');
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('<p class="text">Hanako<', false)
+            ->assertDontSee('Hanako (', false);
     }
 
     public function test_top_zone_renders_layout_a(): void
