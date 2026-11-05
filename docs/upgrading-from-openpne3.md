@@ -172,6 +172,7 @@ data the upgrade does not recognise, not carried.
 | `W-LIKE-GONE-TARGET` | Likes on a diary, diary comment, topic comment or event comment that no longer exists, counted per kind. Nothing to land on. |
 | `W-LIKE-UNINSTALLED-TARGET` | Likes on a kind of record whose plugin this source does not have, counted per kind. Nothing to land on. |
 | `W-LIKE-UNKNOWN-TABLE` | Likes under a `foreign_table` letter opLikePlugin never writes. A third-party plugin or a local customisation put them there; not migrated. |
+| `W-MESSAGE-NOTIFICATION-TYPE` / `W-MESSAGE-UNKNOWN-TYPE` | `message` rows of a type other than a personal or community message, counted per type. The notification letters OpenPNE 3 wrote for friend requests, join requests, invitations and admin hand-overs are not migrated — what they announced is carried by the member and community tables (an invitation not yet accepted is the exception). A type opMessagePlugin does not write is a third-party plugin's; not migrated. |
 | `W-ACTIVITY-TEMPLATE-RENDERED` / `W-ACTIVITY-TEMPLATE-DROPPED` / `W-ACTIVITY-TEMPLATE-UNKNOWN` | Template activities (`diary` / `community_topic` / `community_event`), with where they land. The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; one in a thread that is not migrated goes with it; a template OpenPNE 4 does not know keeps its stored text. |
 | `W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN` / `W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS` / `W-ACTIVITY-TEMPLATE-KEPT-NO-LINK` / `W-ACTIVITY-TEMPLATE-KEPT-UNFIT` | After the copy, template rows whose line could not be rendered keep their stored text, counted by reason: a template OpenPNE 4 does not know, parameters that are not what OpenPNE 3 wrote, a link that names no OpenPNE 4 page, or a link alone longer than the body allows. |
 | `W-UPLOAD-OWNERLESS` | Upload-plugin files whose member or community the upgrade does not carry. They arrive with no owner, so their `/f/show` links answer 404; delete them in the source, or afterwards in the admin file list. |
@@ -369,6 +370,13 @@ change from a problem when you go through it.
   talk read up to its latest message, so nothing arrives marked unread. Messages the old
   community timeline showed to friends only, to their author alone or to everyone on the web, and
   the timelines of communities already deleted, are not carried (the dry run counts them).
+- **Messages** — personal messages and community messages (a letter to every member of a community)
+  arrive in the inbox, each recipient keeping their own read and trash state. A community message
+  stays one letter with many recipients: in the Modern surface the sender sees it once per recipient
+  (as OpenPNE 3's phone view did), deleting it from one of those conversations removes it from all
+  of them, and the "<community> 参加者" line OpenPNE 3 showed in place of the names is not carried.
+  The notification letters OpenPNE 3 also filed as messages are not carried (the dry run counts them
+  under `W-MESSAGE-NOTIFICATION-TYPE`).
 - **Last login** — each member's OpenPNE 3 `lastLogin` (its last-access time) is carried as the
   member's last login, and moves on as they use the site; a member OpenPNE 3 never recorded
   starts empty.

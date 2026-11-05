@@ -20,9 +20,10 @@ class DirectMessageUpgradeSqlTest extends UpgradeSqlTestCase
     {
         parent::setUp();
 
-        // Personal-message type (migrated) and a notification type (skipped by the filter).
+        // The two mailbox types (migrated) and a notification type (skipped by the filter).
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
+        $this->seedType(3, 'community_message');
     }
 
     public function test_migrates_a_sent_personal_message_preserving_id_and_timestamps(): void
@@ -54,16 +55,31 @@ class DirectMessageUpgradeSqlTest extends UpgradeSqlTestCase
         ]);
     }
 
-    public function test_only_personal_messages_migrate(): void
+    public function test_only_the_mailbox_types_migrate(): void
     {
         $sender = Member::factory()->create();
         $this->seedMessage(600, $sender->id, ['is_send' => 1, 'message_type_id' => 1]);
         $this->seedMessage(601, $sender->id, ['is_send' => 1, 'message_type_id' => 2]); // friend_link
+        $this->seedMessage(602, $sender->id, ['is_send' => 1, 'message_type_id' => 3, 'foreign_id' => 7]); // community_message
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('direct_messages', ['id' => 600]);
         $this->assertDatabaseMissing('direct_messages', ['id' => 601]);
+        $this->assertDatabaseHas('direct_messages', ['id' => 602, 'sender_id' => $sender->id, 'is_draft' => 0, 'draft_recipient_id' => null]);
+    }
+
+    public function test_a_reply_to_a_community_message_keeps_its_parent(): void
+    {
+        // OpenPNE 3 lets a recipient answer a community message with a personal message pointing back at it.
+        $admin = Member::factory()->create();
+        $member = Member::factory()->create();
+        $this->seedMessage(610, $admin->id, ['is_send' => 1, 'message_type_id' => 3, 'foreign_id' => 7]);
+        $this->seedMessage(611, $member->id, ['is_send' => 1, 'return_message_id' => 610, 'thread_message_id' => 610]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('direct_messages', ['id' => 611, 'parent_id' => 610, 'thread_id' => 610]);
     }
 
     public function test_preserves_long_text_body(): void

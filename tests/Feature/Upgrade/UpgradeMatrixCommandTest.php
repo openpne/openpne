@@ -42,6 +42,7 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('`topic_authority`')
             // The admin-invited family is listed under its prefix, since the matrix is where a dropped name is explained.
             ->expectsOutputToContain('`community_admin_invited_*` — Dropped:')
+            ->expectsOutputToContain('`community_message_unsubscribe_*` — Dropped:')
             ->expectsOutputToContain('`community_member_position`');
     }
 

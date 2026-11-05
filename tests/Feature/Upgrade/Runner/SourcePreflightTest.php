@@ -217,10 +217,10 @@ class SourcePreflightTest extends TestCase
         $this->createSource('member');
         $this->seedMembers(1, 2);
         $this->insertConfig([
-            ['member_id' => 1, 'name' => 'community_message_unsubscribe_1', 'value' => '1'],
-            ['member_id' => 2, 'name' => 'community_message_unsubscribe_1', 'value' => '1'],
-            ['member_id' => 1, 'name' => 'community_message_unsubscribe_4', 'value' => '1'],
-            ['member_id' => 1, 'name' => 'community_message_unsubscribe_95', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'op_custom_badge_1', 'value' => '1'],
+            ['member_id' => 2, 'name' => 'op_custom_badge_1', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'op_custom_badge_4', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'op_custom_badge_95', 'value' => '1'],
             ['member_id' => 1, 'name' => 'foo_bar', 'value' => 'x'],
             ['member_id' => 1, 'name' => 'foo_bar_7', 'value' => 'x'],
         ]);
@@ -230,9 +230,9 @@ class SourcePreflightTest extends TestCase
 
         $this->assertTrue((new UpgradeRunner(new InsertSelectCompiler, [new MemberPreferenceUpgrade]))->run(new RunOptions(dryRun: true), null, $report));
 
-        $family = SourcePreflight::unknownSourceFamilyMessage('member_config', 'community_message_unsubscribe_*', ['community_message_unsubscribe_1', 'community_message_unsubscribe_4', 'community_message_unsubscribe_95'], 4);
+        $family = SourcePreflight::unknownSourceFamilyMessage('member_config', 'op_custom_badge_*', ['op_custom_badge_1', 'op_custom_badge_4', 'op_custom_badge_95'], 4);
         $this->assertContains('WARN W-UNKNOWN-NAME: '.$family, $lines);
-        $this->assertStringContainsString('(e.g. `community_message_unsubscribe_1`, `community_message_unsubscribe_4`, `community_message_unsubscribe_95`)', $family);
+        $this->assertStringContainsString('(e.g. `op_custom_badge_1`, `op_custom_badge_4`, `op_custom_badge_95`)', $family);
         // A lone numbered name and its unnumbered sibling stay two lines: a family of one is a name.
         $this->assertContains('WARN W-UNKNOWN-NAME: '.SourcePreflight::unknownSourceNameMessage('member_config', 'foo_bar', 1), $lines);
         $this->assertContains('WARN W-UNKNOWN-NAME: '.SourcePreflight::unknownSourceNameMessage('member_config', 'foo_bar_7', 1), $lines);
@@ -365,6 +365,23 @@ class SourcePreflightTest extends TestCase
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::missingColumnMessage('member_config', 'name'), $output);
+    }
+
+    public function test_the_community_message_opt_out_family_is_recognised_by_prefix(): void
+    {
+        $this->createSource('member_config');
+        $this->createSource('member');
+        $this->seedMembers(1);
+        $this->insertConfig([
+            ['member_id' => 1, 'name' => 'community_message_unsubscribe_5', 'value' => '1'],  // the opt-out family
+            ['member_id' => 1, 'name' => 'community_message_unsubscribex_1', 'value' => '1'], // NOT the family
+        ]);
+
+        [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade], new RunOptions(dryRun: true));
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString(SourcePreflight::unknownSourceNameMessage('member_config', 'community_message_unsubscribex_1', 1), $output);
+        $this->assertStringNotContainsString('named `community_message_unsubscribe_5`', $output);
     }
 
     public function test_unrecognised_community_config_names_are_reported(): void

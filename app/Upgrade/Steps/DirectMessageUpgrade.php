@@ -7,14 +7,20 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `message` (opMessagePlugin) → OpenPNE 4 `direct_messages`, personal messages only: the
- * friend/community message types were OpenPNE 3's notification mechanism. A draft's recipient is
+ * OpenPNE 3 `message` (opMessagePlugin) → OpenPNE 4 `direct_messages`, the two mailbox types only
+ * (MIGRATED_TYPES): the other types were OpenPNE 3's notification letters. A draft's recipient is
  * folded from its message_send_list row onto draft_recipient_id, and OpenPNE 3's trash
  * (message.is_deleted plus a deleted_message pointer whose own is_deleted marks the purge) onto
  * sender_deleted_at / sender_purged_at.
  */
 class DirectMessageUpgrade extends UpgradeStep
 {
+    /**
+     * A personal message and a community message are both one sender's letter to the members listed
+     * in message_send_list; the other message types announce a state the member / community steps carry.
+     */
+    public const MIGRATED_TYPES = ['message', 'community_message'];
+
     protected string $source = 'message';
 
     protected string $target = 'direct_messages';
@@ -40,7 +46,7 @@ class DirectMessageUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return self::isPersonalMessage('message');
+        return self::isMailboxMessage('message');
     }
 
     public function filterColumns(): array
@@ -51,14 +57,16 @@ class DirectMessageUpgrade extends UpgradeStep
     public function gaps(): array
     {
         return [
-            'foreign_id' => 'OpenPNE 3 foreign-table identifier for non-`message` message-types (friend/community notifications); those types are not migrated, so on a personal message foreign_id is always 0.',
+            'foreign_id' => 'OpenPNE 3 foreign-table identifier: 0 on a personal message, the community id on a community message (shown by OpenPNE 3 as "<community> 参加者" in place of the recipient list on both sides; OpenPNE 4 shows the sender and the recipients), and the notification types\' target, which are not migrated.',
         ];
     }
 
-    /** SQL boolean: the `<table>` row is a personal message (message_type.type_name = 'message'). */
-    public static function isPersonalMessage(string $table): string
+    /** SQL boolean: the `<table>` row is of a migrated type (message_type.type_name in MIGRATED_TYPES). */
+    public static function isMailboxMessage(string $table): string
     {
-        return "`{$table}`.`message_type_id` IN (SELECT `id` FROM ".SourceRef::table('message_type')." WHERE `type_name` = 'message')";
+        $types = implode(', ', array_map(static fn (string $type): string => "'{$type}'", self::MIGRATED_TYPES));
+
+        return "`{$table}`.`message_type_id` IN (SELECT `id` FROM ".SourceRef::table('message_type')." WHERE `type_name` IN ({$types}))";
     }
 
     /**
@@ -81,13 +89,13 @@ class DirectMessageUpgrade extends UpgradeStep
             .'ELSE NULL END';
     }
 
-    /** Keep a self reference only when it is non-zero and points at a migrated personal message. */
+    /** Keep a self reference only when it is non-zero and points at a migrated message. */
     private function portedRefExpr(string $column): string
     {
         return "CASE WHEN `{$column}` <> 0 AND EXISTS ("
             .'SELECT 1 FROM '.SourceRef::table('message').' `p` '
             ."WHERE `p`.`id` = `message`.`{$column}` AND "
-            .self::isPersonalMessage('p')
+            .self::isMailboxMessage('p')
             .") THEN `{$column}` ELSE NULL END";
     }
 

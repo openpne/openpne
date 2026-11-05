@@ -147,7 +147,7 @@ class InsertSelectCompilerTest extends TestCase
     public function test_file_upgrade_owner_subqueries_are_qualified(): void
     {
         // FileUpgrade's owner subqueries reference their table by name (column qualifiers), so each is
-        // aliased to its original name; the personal-message extra adds message / message_type.
+        // aliased to its original name; the mailbox-message extra adds message / message_type.
         $sql = (new InsertSelectCompiler)->compile(new FileUpgrade, sourcePrefix: 'op_', sourceDatabase: 'op3db');
 
         $this->assertStringContainsString('FROM `op3db`.`op_member_image` AS `member_image`', $sql);

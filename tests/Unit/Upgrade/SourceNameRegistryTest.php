@@ -15,16 +15,16 @@ class SourceNameRegistryTest extends TestCase
     {
         $registry = new SourceNameRegistry;
         $registry->recognise('member_config', 'webpay_customer_id', 'Migrated by the billing package.');
-        $registry->recogniseFamily('member_config', 'community_message_unsubscribe_', 'Dropped by the billing package.');
-        $registry->recognise('community_config', 'send_message_permission', 'Migrated by the messaging package.');
+        $registry->recogniseFamily('member_config', 'op_custom_badge_', 'Dropped by the billing package.');
+        $registry->recognise('community_config', 'custom_badge_rule', 'Migrated by the messaging package.');
 
         $this->assertSame(['webpay_customer_id'], $registry->names('member_config'));
-        $this->assertSame(['community_message_unsubscribe_'], $registry->prefixes('member_config'));
+        $this->assertSame(['op_custom_badge_'], $registry->prefixes('member_config'));
         $this->assertSame([
             'webpay_customer_id' => 'Migrated by the billing package.',
-            'community_message_unsubscribe_*' => 'Dropped by the billing package.',
+            'op_custom_badge_*' => 'Dropped by the billing package.',
         ], $registry->dispositions('member_config'));
-        $this->assertSame(['send_message_permission'], $registry->names('community_config'));
+        $this->assertSame(['custom_badge_rule'], $registry->names('community_config'));
         $this->assertSame([], $registry->names('notification_mail'));
     }
 

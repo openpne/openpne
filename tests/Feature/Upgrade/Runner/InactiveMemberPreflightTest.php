@@ -202,7 +202,7 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_rows_own_step_filter_scopes_the_count(): void
     {
-        // The friend/community message types are not migrated, so counting every `message` row would
+        // The notification message types are not migrated, so counting every `message` row would
         // abort on data the upgrade never reads.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
         $this->seedMember(1, isActive: 0);
@@ -222,6 +222,19 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedMember(1, isActive: 0);
         $this->seedMessageType(1, 'message');
         $this->seedMessage(10, memberId: 1, typeId: 1);
+
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message.member_id', 1), $output);
+    }
+
+    public function test_a_community_message_from_an_inactive_sender_aborts_like_a_personal_one(): void
+    {
+        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
+        $this->seedMember(1, isActive: 0);
+        $this->seedMessageType(3, 'community_message');
+        $this->seedMessage(10, memberId: 1, typeId: 3);
 
         [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 

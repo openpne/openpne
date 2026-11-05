@@ -7,8 +7,8 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `message_file` → OpenPNE 4 `direct_message_files`, attachments of migrated personal
- * messages only (the DirectMessageUpgrade type filter). OpenPNE 3 has no slot column, so `number` is
+ * OpenPNE 3 `message_file` → OpenPNE 4 `direct_message_files`, attachments of migrated messages
+ * only (the DirectMessageUpgrade type filter). OpenPNE 3 has no slot column, so `number` is
  * synthesized 1..N by id within the message.
  */
 class DirectMessageFileUpgrade extends UpgradeStep
@@ -30,8 +30,7 @@ class DirectMessageFileUpgrade extends UpgradeStep
     public function filter(): ?string
     {
         return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `p` '
-            .'WHERE `p`.`id` = `message_file`.`message_id` '
-            .'AND `p`.`message_type_id` IN (SELECT `id` FROM '.SourceRef::table('message_type')." WHERE `type_name` = 'message'))";
+            .'WHERE `p`.`id` = `message_file`.`message_id` AND '.DirectMessageUpgrade::isMailboxMessage('p').')';
     }
 
     public function filterColumns(): array

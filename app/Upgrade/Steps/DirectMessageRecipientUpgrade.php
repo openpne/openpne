@@ -8,7 +8,7 @@ use App\Upgrade\UpgradeStep;
 
 /**
  * OpenPNE 3 `message_send_list` (opMessagePlugin) → OpenPNE 4 `direct_message_recipients`. A receipt
- * means delivered, so only rows whose parent is a sent, migrated personal message are copied: a
+ * means delivered, so only rows whose parent is a sent message of a migrated type are copied: a
  * draft's recipient is folded onto direct_messages.draft_recipient_id by DirectMessageUpgrade
  * instead, and OpenPNE 3's is_read flag becomes read_at from the row's updated_at.
  */
@@ -36,7 +36,7 @@ class DirectMessageRecipientUpgrade extends UpgradeStep
     {
         return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `p` '
             .'WHERE `p`.`id` = `message_send_list`.`message_id` AND `p`.`is_send` = 1 AND '
-            .'`p`.`message_type_id` IN (SELECT `id` FROM '.SourceRef::table('message_type')." WHERE `type_name` = 'message'))";
+            .DirectMessageUpgrade::isMailboxMessage('p').')';
     }
 
     public function filterColumns(): array

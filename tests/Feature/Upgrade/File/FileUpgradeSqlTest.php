@@ -41,9 +41,10 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
     {
         parent::setUp();
 
-        // Personal-message type (owns its attachment) and a notification type (does not).
+        // The mailbox types (own their attachment) and a notification type (does not).
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
+        $this->seedType(3, 'community_message');
     }
 
     public function test_copies_metadata_with_id_and_name_verbatim(): void
@@ -188,7 +189,18 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseHas('files', ['id' => 40, 'related_entity_type' => 'directMessage', 'related_entity_id' => 500]);
     }
 
-    public function test_a_non_personal_message_attachment_is_migrated_ownerless(): void
+    public function test_owns_a_community_message_attachment(): void
+    {
+        $this->seedFile(42);
+        $this->seedMessage(502, messageTypeId: 3);
+        DB::table('message_file')->insert(['id' => 1, 'message_id' => 502, 'file_id' => 42, 'created_at' => '2017-01-01 00:00:00', 'updated_at' => '2017-01-01 00:00:00']);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 42, 'related_entity_type' => 'directMessage', 'related_entity_id' => 502]);
+    }
+
+    public function test_a_notification_message_attachment_is_migrated_ownerless(): void
     {
         $this->seedFile(41);
         $this->seedMessage(501, messageTypeId: 2); // friend_link notification, not migrated

@@ -39,6 +39,8 @@ class WarningTest extends TestCase
             ['W-LIKE-GONE-TARGET', 'dropped'],
             ['W-LIKE-UNINSTALLED-TARGET', 'dropped'],
             ['W-LIKE-UNKNOWN-TABLE', 'unknown'],
+            ['W-MESSAGE-NOTIFICATION-TYPE', 'dropped'],
+            ['W-MESSAGE-UNKNOWN-TYPE', 'unknown'],
             ['W-UPLOAD-OWNERLESS', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS', 'review'],

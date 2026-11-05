@@ -31,7 +31,7 @@ final class SourceNameRegistry
         $this->names[$table][$name] = $disposition;
     }
 
-    /** A family is every name starting with the prefix (`community_message_unsubscribe_` for `…_<id>` rows). */
+    /** A family is every name starting with the prefix (`op_custom_badge_` for `…_<id>` rows). */
     public function recogniseFamily(string $table, string $prefix, string $disposition): void
     {
         $this->assertTable($table);

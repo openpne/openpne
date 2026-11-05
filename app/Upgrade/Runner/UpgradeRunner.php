@@ -14,6 +14,7 @@ use App\Support\SurfaceMode;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\FileUpgrade;
 use App\Upgrade\UpgradeStep;
 use Closure;
@@ -137,6 +138,10 @@ final class UpgradeRunner
         $niceReport = ! $source->hasErrors()
             ? (new NicePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : new PreflightReport([], []);
+        // Only when this run migrates letters: a file-only subset reads `message` too but drops none.
+        $messageTypeReport = ! $source->hasErrors() && $this->hasStep(DirectMessageUpgrade::class)
+            ? (new MessageTypePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
+            : new PreflightReport([], []);
         $sharedFileError = $migratesFiles && ! $source->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : null;
@@ -157,7 +162,7 @@ final class UpgradeRunner
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings, $uploadReport->warnings) as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings, $messageTypeReport->warnings, $uploadReport->warnings) as $warning) {
             $report->warning($warning);
         }
 

@@ -96,7 +96,20 @@ class KnownConfigNamesTest extends TestCase
             if ($name === StepRegistry::MEMBER_CONFIG_NOTIFICATION_FAMILY) {
                 continue; // expanded above, and pinned by NotificationSettingDispositionsTest
             }
+            if ($name === StepRegistry::MEMBER_CONFIG_COMMUNITY_MESSAGE_UNSUBSCRIBE_PREFIX.'*') {
+                continue; // matched by prefix, pinned below
+            }
             $this->assertContains($name, $known);
+        }
+    }
+
+    public function test_member_config_names_hold_no_family(): void
+    {
+        $family = StepRegistry::MEMBER_CONFIG_COMMUNITY_MESSAGE_UNSUBSCRIBE_PREFIX.'*';
+        $this->assertArrayHasKey($family, StepRegistry::memberConfigDispositions());
+
+        foreach (StepRegistry::knownMemberConfigNames() as $name) {
+            $this->assertStringNotContainsString('*', $name, "`{$name}` is a family, not a name the source can hold");
         }
     }
 
