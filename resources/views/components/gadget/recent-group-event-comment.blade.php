@@ -5,6 +5,7 @@
         <div class="partsHeading"><h3>{{ __('Recently Posted %Community% Events') }}</h3></div>
         <div class="block">
             @include('components.gadget._group-recent-rows', ['entries' => $entries])
+            <div class="moreInfo"><ul class="moreInfo"><li><a href="{{ route('group.events.recent') }}">{{ __('More') }}</a></li></ul></div>
         </div>
     </div></div>
 @endif

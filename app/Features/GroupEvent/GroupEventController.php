@@ -10,6 +10,7 @@ use App\Features\GroupEvent\Actions\UpdateEvent;
 use App\Features\GroupEvent\Exceptions\GroupEventActionException;
 use App\Features\GroupEvent\Queries\EventParticipants;
 use App\Features\GroupEvent\Queries\ListGroupEvents;
+use App\Features\GroupEvent\Queries\ListJoinedGroupEvents;
 use App\Features\GroupEvent\Queries\ShowEvent;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
@@ -46,6 +47,16 @@ use Inertia\Response as InertiaResponse;
 class GroupEventController extends Controller
 {
     use RespondsWithSurface;
+
+    public function recent(Request $request, ListJoinedGroupEvents $query): View|RedirectResponse
+    {
+        // Modern's face of the joined groups' recent threads is the activity page, which is not paged.
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
+            return redirect()->route('group.recent');
+        }
+
+        return $this->classic('group-event.recent', ['events' => $query($this->viewer())]);
+    }
 
     public function index(Request $request, Group $group, ListGroupEvents $query): View|InertiaResponse
     {

@@ -24,6 +24,7 @@ class GroupEventRouteParity extends RouteParity
             new RouteMap('communityEvent_delete_confirm', '/communityEvent/deleteConfirm/:id', 'group.events.delete.show', 'GET', op3Action: 'deleteConfirm'),
             new RouteMap('communityEvent_delete', '/communityEvent/delete/:id', 'group.events.delete', 'POST'),
             new RouteMap('communityEvent_memberList', '/communityEvent/:id/memberList', 'group.events.member_list', 'GET', op3Action: 'memberList'),
+            new RouteMap('communityEvent_recently_event_list', '/communityEvent/recentlyEventList', 'group.events.recent', 'GET', op3Action: 'recentlyEventList'),
 
             // communityEventComment module (op3Module override).
             new RouteMap('communityEvent_comment_create', '/communityEvent/:id/comment/create', 'group.events.comment.store', 'POST'),
@@ -36,7 +37,6 @@ class GroupEventRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            'communityEvent_recently_event_list' => 'Cross-community recently-updated events feed; a sidebar widget outside the event board.',
             'communityEvent_search_all' => 'Global event search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
         ];
     }
@@ -54,6 +54,7 @@ class GroupEventRouteParity extends RouteParity
             '/communityEvent/deleteConfirm/:id' => 'group.events.delete.show',
             '/communityEvent/:id/memberList' => 'group.events.member_list',
             '/communityEvent/comment/deleteConfirm/:id' => 'group.events.comment.delete.show',
+            '/communityEvent/recentlyEventList' => 'group.events.recent',
         ];
     }
 
@@ -73,6 +74,14 @@ class GroupEventRouteParity extends RouteParity
                 new ScreenElement('create-event entry', L::Two, S::Ported, "op_include_parts('buttonBox', 'communityEventList', button Create)", 'a buttonBox of its own with the Create submit'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityEvent_list_community')"),
                 new ScreenElement('box heading', L::Three, S::Ported, 'listCommunitySuccess.php <h3>List of events</h3>', 'List of events'),
+            ],
+            // recentlyEventListSuccess.php → group-event/recent.blade.php
+            'recentlyEventList' => [
+                new ScreenElement('event list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'recentlyEventListSuccess.php recentList dl > dt + dd', 'one dl per row: the last-comment datetime (bumped_at; OpenPNE 3 drew updated_at) in the dt, the untruncated name(count) link in the dd'),
+                new ScreenElement('community name after the link', L::Two, S::Ported, "recentlyEventListSuccess.php sprintf('%s (%s)', link, \$event->getCommunity()->getName())"),
+                new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityEvent_recently_event_list?page=%d')"),
+                new ScreenElement('box heading', L::Three, S::Ported, 'recentlyEventListSuccess.php <h3>Recently Posted %Community% Events</h3>', 'Recently Posted %Community% Events'),
+                new ScreenElement('empty state', L::Three, S::Partial, 'recentlyEventListSuccess.php if ($pager->getNbResults()) around the whole box', 'the box stays with "No events to show." (also on a page past the end), as the board does; OpenPNE 3 rendered no box at all'),
             ],
             // showSuccess.php + communityEventComment/_list.php → group-event/show.blade.php.
             'show' => [
