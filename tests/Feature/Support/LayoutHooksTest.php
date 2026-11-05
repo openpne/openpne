@@ -9,6 +9,7 @@ use App\Support\LayoutHook;
 use App\Support\LayoutHooks;
 use App\Support\SnsSettingKey;
 use Database\Seeders\NavigationSeeder;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\HtmlString;
@@ -150,7 +151,24 @@ class LayoutHooksTest extends TestCase
         $this->assertArrayNotHasKey('modern.body_end', $expected);
     }
 
-    public function test_the_client_map_is_the_same_for_a_guest_and_empty_without_registrations(): void
+    public function test_a_deferred_htmlable_that_throws_is_reported_too(): void
+    {
+        Exceptions::fake();
+        $hooks = app(LayoutHooks::class);
+        $hooks->register(LayoutHook::ClassicHead, fn (): Htmlable => new class implements Htmlable
+        {
+            public function toHtml(): string
+            {
+                throw new RuntimeException('view blew up');
+            }
+        });
+        $hooks->register(LayoutHook::ClassicHead, fn (): string => '<i data-probe="after"></i>');
+
+        $this->assertSame('<i data-probe="after"></i>', $hooks->render(LayoutHook::ClassicHead));
+        Exceptions::assertReported(RuntimeException::class);
+    }
+
+    public function test_the_client_map_for_a_guest_is_empty_without_registrations_and_carries_one_otherwise(): void
     {
         config()->set('openpne.surface_mode', 'modern_only');
 

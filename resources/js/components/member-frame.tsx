@@ -102,8 +102,7 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             )}
             {props.flash.status && <FlashMessage>{props.flash.status}</FlashMessage>}
             {props.flash.error && <FlashMessage variant="error">{props.flash.error}</FlashMessage>}
-            {/* Keyed on the URL: the frame persists across visits, and these two follow the page the
-                way an OpenPNE 3 page load did. */}
+            {/* Keyed on the URL because the frame itself persists across visits. */}
             <LayoutHook key={`start:${url}`} name="modern.main_start" />
             {children}
             <LayoutHook key={`end:${url}`} name="modern.main_end" />

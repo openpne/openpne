@@ -74,17 +74,21 @@ Two lifetimes follow from Inertia's persistent layout, which keeps the shell and
 while pages change under them:
 
 - `ModernLeftNavEnd` and `ModernRightRailEnd` mount once per full page load, like the two Blade positions.
-- `ModernMainStart` and `ModernMainEnd` are keyed on the URL, so each page gets fresh nodes and its
-  scripts run again — the rhythm an ad unit written for one page load expects. The auth positions
-  mount per auth page, which has no persistent layout.
+- `ModernMainStart` and `ModernMainEnd` are keyed on the URL, so a new URL (a query change
+  included) gets fresh nodes and its scripts run again; a visit that lands on the same URL — a
+  redirect back after a form post, a link to the current page — keeps them. Fresh per URL, not per
+  visit. The auth positions mount per auth page, which has no persistent layout.
 
 A persistent position that wants to react to navigation listens for Inertia's `inertia:navigate`
-document event in its own script; the shell does not re-run it.
+document event in its own script; the shell does not re-run it. The re-created scripts are inserted
+dynamically, so they run asynchronously and in no guaranteed order: a queue-based loader works, an
+inline script that needs a preceding `src` script finished does not, and `document.write` must not
+be used.
 
 ## Key invariants
 
 1. A position whose registrations render nothing leaves no wrapper, column or attribute behind;
-   the default install's HTML is unchanged.
+   the default install's markup is unchanged.
 2. OpenPNE gives a hook no setting and no admin screen. What is drawn and when is the registering
    package's code; the operator-editable layer stays the `pc_html_*` slots.
 3. Every `LayoutHook` case is emitted at its one named position, and every `<LayoutHook name>` in

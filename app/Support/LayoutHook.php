@@ -28,7 +28,6 @@ enum LayoutHook: string
     case ModernAuthStart = 'modern.auth_start';
     case ModernAuthEnd = 'modern.auth_end';
 
-    /** The Modern positions the React shell draws from the shared `layoutHooks` prop; the other two are Blade. */
     public function isClientRendered(): bool
     {
         return str_starts_with($this->value, 'modern.') && $this !== self::ModernHead && $this !== self::ModernBodyEnd;

@@ -32,12 +32,10 @@ final class LayoutHooks
         foreach ($this->renderers[$hook->value] ?? [] as $render) {
             try {
                 $part = $render();
+                $html .= $part instanceof Htmlable ? $part->toHtml() : (string) $part;
             } catch (Throwable $e) {
                 report($e);
-
-                continue;
             }
-            $html .= $part instanceof Htmlable ? $part->toHtml() : (string) $part;
         }
 
         return $html;

@@ -20,14 +20,16 @@ class LayoutHookCoverageTest extends TestCase
         $blade = $this->concat(resource_path('views'), 'blade.php');
         $tsx = $this->concat(resource_path('js'), 'tsx', exclude: '.test.tsx');
 
-        // str_contains + assertTrue: the string assertions would print both source trees on failure.
+        // preg_match + assertTrue: the string assertions would print both source trees on failure.
         foreach (LayoutHook::cases() as $hook) {
+            $inBlade = (bool) preg_match('/LayoutHook::'.$hook->name.'\b/', $blade);
+            $inTsx = str_contains($tsx, 'name="'.$hook->value.'"');
             if ($hook->isClientRendered()) {
-                $this->assertTrue(str_contains($tsx, 'name="'.$hook->value.'"'), "{$hook->value} is drawn by no React shell component");
-                $this->assertFalse(str_contains($blade, 'LayoutHook::'.$hook->name), "{$hook->value} is client-rendered and must not also be a Blade position");
+                $this->assertTrue($inTsx, "{$hook->value} is drawn by no React shell component");
+                $this->assertFalse($inBlade, "{$hook->value} is client-rendered and must not also be a Blade position");
             } else {
-                $this->assertTrue(str_contains($blade, 'LayoutHook::'.$hook->name), "{$hook->value} is emitted by no Blade layout");
-                $this->assertFalse(str_contains($tsx, 'name="'.$hook->value.'"'), "{$hook->value} is a Blade position and must not also be drawn by React");
+                $this->assertTrue($inBlade, "{$hook->value} is emitted by no Blade layout");
+                $this->assertFalse($inTsx, "{$hook->value} is a Blade position and must not also be drawn by React");
             }
         }
     }
