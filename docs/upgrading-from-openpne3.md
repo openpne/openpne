@@ -347,6 +347,13 @@ change from a problem when you go through it.
   not among the vendored packages, is kept by name with a warning and shows the default skin until you
   copy its directory into `public/opSkinThemePlugin/` (`openpne:verify-upgrade` fails until then);
   see "Bringing an OpenPNE 3 theme" below.
+- **Friends** — a site that had `enable_friend_link = 0` has the friend feature off here too: no friend
+  requests, no friend list, and the friends-only audience is gone from every picker (existing
+  friendships still decide who may read what was already published). Switch it on under *Settings →
+  Features* if you want it back.
+- **Inserted HTML and scripts** — the Classic surface does not load OpenPNE 3's bundled jQuery or its
+  other page scripts. Inserted HTML (`pc_html_head` and the other slots) that calls `$` must load its own
+  copy, in `pc_html_head`, ahead of the code that uses it.
 - **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.
