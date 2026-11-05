@@ -11,14 +11,15 @@ use Tests\TestCase;
 
 /**
  * The sidebar conventions from docs/internals/admin-navigation.md: five groups, every entry placed
- * and sorted explicitly, no two entries reading alike.
+ * and sorted explicitly, no two entries reading alike. They bind App\Filament; a screen a package
+ * adds to the panel is the package's to place.
  */
 class AdminNavigationConventionsTest extends TestCase
 {
     use RefreshDatabase;
 
     /** The groups AdminPanelProvider registers, by translation key. */
-    private const GROUP_KEYS = ['Members', 'Content', 'Settings', 'Appearance (Classic)', 'System'];
+    protected const GROUP_KEYS = ['Members', 'Content', 'Settings', 'Appearance (Classic)', 'System'];
 
     protected function setUp(): void
     {
@@ -43,7 +44,9 @@ class AdminNavigationConventionsTest extends TestCase
             [...array_values($panel->getPages()), ...array_values($panel->getResources())],
             // Filament's own Dashboard sits above the groups by design; screens like SecuritySettings
             // (reached from the user menu) opt out of the sidebar altogether.
-            fn (string $screen): bool => $screen !== Dashboard::class && $screen::shouldRegisterNavigation(),
+            fn (string $screen): bool => str_starts_with($screen, 'App\\Filament\\')
+                && $screen !== Dashboard::class
+                && $screen::shouldRegisterNavigation(),
         );
 
         $this->assertNotEmpty($screens, 'The admin panel registers navigable screens to check.');
