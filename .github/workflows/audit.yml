@@ -34,17 +34,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
 
       - name: Extract the base lockfiles
-        # The event's base SHA, not the branch tip: a re-run after main moved
-        # must still compare the same two states the merge commit was built from.
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        # HEAD is the PR merge commit, so HEAD^1 is the exact base it was built
+        # from; the branch tip would move under a re-run.
         run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
           mkdir base
           for f in composer.json composer.lock package.json package-lock.json; do
-            git show "$BASE_SHA:$f" > "base/$f"
+            git show "HEAD^1:$f" > "base/$f"
           done
           cp .npmrc base/
 
