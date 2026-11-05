@@ -112,6 +112,26 @@ class TermOverridePreflightTest extends TestCase
         $this->assertStringContainsString(TermOverridePreflight::collisionMessage('friend', 'ja', 2), $output);
     }
 
+    public function test_the_width_is_measured_after_the_trim(): void
+    {
+        $this->seedTerm('nickname', ['ja_JP' => ' '.str_repeat('あ', 255).' ']);
+
+        [$ok, $output] = $this->preflight(dryRun: false);
+
+        $this->assertTrue($ok, $output);
+        $this->assertDatabaseHas('term_overrides', ['name' => 'nickname', 'locale' => 'ja', 'value' => str_repeat('あ', 255)]);
+    }
+
+    public function test_a_blank_duplicate_does_not_count(): void
+    {
+        $this->seedTerm('community', ['ja_JP' => 'コミュニティ']);
+        $this->seedTerm('community', ['ja_JP' => ' ']);
+
+        [$ok, $output] = $this->preflight();
+
+        $this->assertTrue($ok, $output);
+    }
+
     public function test_a_mobile_duplicate_does_not_count(): void
     {
         $this->seedTerm('community', ['ja_JP' => 'コミュニティ']);

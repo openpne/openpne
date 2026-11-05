@@ -37,9 +37,9 @@ class WithdrawnMemberTermUpgradeSqlTest extends UpgradeSqlTestCase
     }
 
     /** OpenPNE 3 read a NULL row as its default, like no row; an empty one the admin page could not keep. */
-    public function test_the_source_default_a_null_an_empty_value_and_no_row_write_nothing(): void
+    public function test_the_source_default_a_null_a_blank_value_and_no_row_write_nothing(): void
     {
-        foreach ([WithdrawnMemberTermUpgrade::SOURCE_DEFAULT, null, ''] as $value) {
+        foreach ([WithdrawnMemberTermUpgrade::SOURCE_DEFAULT, "-\t", null, '', "\t\n"] as $value) {
             DB::table('sns_config')->delete();
             $this->seedConfig($value);
 
@@ -53,10 +53,10 @@ class WithdrawnMemberTermUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertSame(0, DB::table('term_overrides')->count());
     }
 
-    /** The column's collation equates these with `-`; a site that typed them keeps them. */
-    public function test_a_dash_the_collation_equates_with_the_default_is_a_site_value(): void
+    /** The column's collation equates the full-width dash with `-`; a site that typed it keeps it. */
+    public function test_a_full_width_dash_is_a_site_value_and_a_padded_value_is_trimmed(): void
     {
-        foreach (['－', '- '] as $value) {
+        foreach (['－' => '－', " 卒業生\t" => '卒業生'] as $value => $carried) {
             DB::table('sns_config')->delete();
             DB::table('term_overrides')->delete();
             $this->seedConfig($value);
@@ -64,7 +64,7 @@ class WithdrawnMemberTermUpgradeSqlTest extends UpgradeSqlTestCase
             $this->runUpgrade();
 
             $this->assertSame(
-                ['en' => $value, 'ja' => $value],
+                ['en' => $carried, 'ja' => $carried],
                 DB::table('term_overrides')->orderBy('locale')->pluck('value', 'locale')->all(),
             );
         }

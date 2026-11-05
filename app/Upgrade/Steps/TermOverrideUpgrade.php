@@ -5,13 +5,14 @@ namespace App\Upgrade\Steps;
 use App\Upgrade\Column;
 use App\Upgrade\SourceLocale;
 use App\Upgrade\SourceRef;
+use App\Upgrade\TermValue;
 use App\Upgrade\UpgradeStep;
 
 /**
  * OpenPNE 3 `sns_term` + `sns_term_translation` → OpenPNE 4 `term_overrides`, name for name and value
  * for value, so a migrated site keeps the wording its members know even where OpenPNE 4 ships a new
- * default (docs/internals/upgrade.md, "Terms"). Only the PC application's rows: the mobile ones hold
- * half-width kana for feature phones.
+ * default (docs/internals/upgrade.md, "Terms"). Only the PC application's rows, and only a value the
+ * admin page could hold (TermValue).
  */
 class TermOverrideUpgrade extends UpgradeStep
 {
@@ -33,15 +34,15 @@ class TermOverrideUpgrade extends UpgradeStep
         return [
             'name' => Column::expr(self::nameSelect(), uses: ['id']),
             'locale' => Column::expr(SourceLocale::foldExpr(), uses: ['lang']),
-            // NULL and '' both rendered as nothing in OpenPNE 3; the default would reverse that.
-            'value' => Column::expr("COALESCE(`value`, '')", uses: ['value']),
+            'value' => Column::expr(TermValue::trimmedExpr('`value`'), uses: ['value']),
         ];
     }
 
     public function filter(): ?string
     {
         return sprintf(
-            '`id` IN (SELECT `id` FROM %s WHERE `application` = \'%s\' AND `name` IN (%s))',
+            '`value` IS NOT NULL AND %s AND `id` IN (SELECT `id` FROM %s WHERE `application` = \'%s\' AND `name` IN (%s))',
+            TermValue::carriedExpr('`value`'),
             SourceRef::table('sns_term'),
             self::APPLICATION,
             implode(', ', array_map(static fn (string $name): string => "'{$name}'", self::SOURCE_NAMES)),
@@ -50,7 +51,7 @@ class TermOverrideUpgrade extends UpgradeStep
 
     public function filterColumns(): array
     {
-        return ['id'];
+        return ['id', 'value'];
     }
 
     public function targetFilter(): ?string
