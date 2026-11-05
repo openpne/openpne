@@ -144,6 +144,12 @@ abstract class UpgradeStep
         return null;
     }
 
+    /** Target rows under targetFilter() that the runner writes after the walk rather than this step's INSERT ... SELECT, given the qualified source table. */
+    public function stampedTargetRows(string $qualifiedSource): int
+    {
+        return 0;
+    }
+
     /** @return list<string> distinct source columns read across mappings and the filter */
     public function consumedSourceColumns(): array
     {

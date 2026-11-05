@@ -16,6 +16,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FileUpgrade;
+use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\Steps\TermOverrideUpgrade;
 use App\Upgrade\Steps\WithdrawnMemberTermUpgrade;
 use App\Upgrade\UpgradeStep;
@@ -210,6 +211,11 @@ final class UpgradeRunner
             }
             $report->line('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
             $report->line('PLAN would set brand_favicon_fallback=none if unset (no browser-tab icon, as in OpenPNE 3).');
+            if ($this->readsSourceTable('sns_config')) {
+                foreach ((new SnsSettingUpgrade)->op3FormDefaults() as $key => $value) {
+                    $report->line("PLAN would set {$key}={$value} if unset (the OpenPNE 3 default where the site never saved the setting).");
+                }
+            }
 
             return $this->walk($options, $report);
         }
@@ -297,6 +303,9 @@ final class UpgradeRunner
             if ($walked) {
                 $this->stampFaviconFallback($report);
             }
+            if ($walked && $this->readsSourceTable('sns_config')) {
+                $this->stampOp3FormDefaults();
+            }
 
             return $walked;
         } finally {
@@ -354,6 +363,16 @@ final class UpgradeRunner
         if ($inserted > 0) {
             $report->nextStep('No browser-tab icon, as in OpenPNE 3; choose the generated icon or upload one on the Branding page.');
         }
+    }
+
+    /** Insert-if-absent after the settings step, so a copied or operator-set row stands. */
+    private function stampOp3FormDefaults(): void
+    {
+        foreach ((new SnsSettingUpgrade)->op3FormDefaults() as $key => $value) {
+            DB::table('sns_settings')->insertOrIgnore(['key' => $key, 'value' => $value]);
+        }
+
+        app(SnsSettingService::class)->clearCache();
     }
 
     /**
