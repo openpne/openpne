@@ -100,9 +100,9 @@ has needs an answer here.
 | `sender_deleted_at` / `recipient_deleted_at` (trash) | hidden from that side's conversation only. Restoring is the mailbox's trash screen. |
 | `sender_purged_at` / `recipient_purged_at` | the same, permanently — the row survives for the other side. |
 | `parent_id` / `thread_id` | lineage the reply flow writes; a conversation is linear and neither reads nor writes it. |
-| withdrawn member | the bucket above, with `author` serialized as null and drawn as "Withdrawn member". |
+| withdrawn member | the bucket above, with `author` serialized as null and drawn as the `withdrawn_member` term. |
 | several recipients (upgraded OpenPNE 3 multi-recipient sends and community messages) | the row appears in each recipient's conversation, and `read` is **that** conversation's receipt. |
-| no recipient (an upgraded letter whose receipts were all quarantined, or a community message every other member had opted out of or was inactive for) | the sender's Classic sent box lists it as sent to "Withdrawn member"; it sits in no conversation, and its `/message/read/<id>` lands the sender in the withdrawn-member chat. |
+| no recipient (an upgraded letter whose receipts were all quarantined, or a community message every other member had opted out of or was inactive for) | the sender's Classic sent box lists it as sent to the `withdrawn_member` term; it sits in no conversation, and its `/message/read/<id>` lands the sender in the withdrawn-member chat. |
 
 `read` is the sender's own view of delivery: true once the counterpart's receipt carries a `read_at`.
 A received message reports null — reading it is what the reader is doing — and so does anything in the

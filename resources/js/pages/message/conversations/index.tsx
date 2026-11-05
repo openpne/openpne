@@ -63,7 +63,7 @@ export default function MessageConversations() {
 
 function DraftRow({ draft }: { draft: MessageRow }) {
     const t = useT();
-    const name = draft.counterparty?.name ?? t('Withdrawn member');
+    const name = draft.counterparty?.name ?? t('%Withdrawn_member%');
 
     return (
         <ListRow rowLink chevron className="items-start">

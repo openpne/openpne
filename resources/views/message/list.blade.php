@@ -49,7 +49,7 @@
                                 @if ($item->counterparty)
                                     <a href="{{ route('member.profile.show', $item->counterparty) }}">{{ $item->counterparty->name }}</a>
                                 @else
-                                    {{ __('Withdrawn member') }}
+                                    {{ __('%Withdrawn_member%') }}
                                 @endif
                             </span></td>
                             <td><span><a href="{{ route($openRoute, ['message' => $item->messageId]) }}">{{ $item->subject }}</a></span></td>

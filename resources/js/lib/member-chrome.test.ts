@@ -350,7 +350,7 @@ test('the withdrawn bucket names itself, since it has no member to be scoped to'
 
     assert.equal(bucket.conversation, true);
     assert.equal(bucket.scope, undefined);
-    assert.deepEqual(bucket.title, { key: 'Withdrawn member', replacements: undefined });
+    assert.deepEqual(bucket.title, { key: '%Withdrawn_member%', replacements: undefined });
     assert.notEqual(bucket.context, undefined);
 });
 

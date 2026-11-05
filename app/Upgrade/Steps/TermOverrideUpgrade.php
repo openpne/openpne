@@ -53,6 +53,11 @@ class TermOverrideUpgrade extends UpgradeStep
         return ['id'];
     }
 
+    public function targetFilter(): ?string
+    {
+        return sprintf('`name` IN (%s)', implode(', ', array_map(static fn (string $name): string => "'{$name}'", self::SOURCE_NAMES)));
+    }
+
     /** The OpenPNE 3 term name of the translation row, correlated on the FROM alias. */
     public static function nameSelect(): string
     {

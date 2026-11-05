@@ -18,7 +18,7 @@ import type { TalkBurst, TalkExcerptMessage } from './types';
 function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
     const t = useT();
     const author = message.author;
-    const name = author?.name ?? t('Withdrawn member');
+    const name = author?.name ?? t('%Withdrawn_member%');
 
     return (
         <li className="flex min-w-0 gap-2">

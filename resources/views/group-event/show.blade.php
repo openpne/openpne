@@ -15,7 +15,7 @@
                     @if ($event->member)
                         <a href="{{ route('member.profile.show', $event->member) }}">{{ $event->member->name }}</a><x-classic.ai-mark :is-ai="$event->member->isAiAccount()" />
                     @else
-                        {{ __('Withdrawn member') }}
+                        {{ __('%Withdrawn_member%') }}
                     @endif
                 </td>
             </tr>
@@ -108,13 +108,13 @@
                                 @if ($comment->member)
                                     <a href="{{ route('member.profile.show', $comment->member) }}">{{ $comment->member->name }}</a>
                                 @else
-                                    {{ __('Withdrawn member') }}
+                                    {{ __('%Withdrawn_member%') }}
                                 @endif
                                 @if (\App\Features\GroupEvent\GroupEventAccess::canDeleteComment($comment, auth()->user()))
                                     <a href="{{ route('group.events.comment.delete.show', $comment) }}">{{ __('Delete') }}</a>
                                 @endif
                                 @if ($commentReplyLink && $canComment)
-                                    <a class="reply" href="#communityEvent_comment_form" data-comment-reply="#community_event_comment_body" data-number="{{ $comment->number }}" data-name="{{ $comment->member?->name ?? __('Withdrawn member') }}">{{ __('Reply') }}</a>
+                                    <a class="reply" href="#communityEvent_comment_form" data-comment-reply="#community_event_comment_body" data-number="{{ $comment->number }}" data-name="{{ $comment->member?->name ?? __('%Withdrawn_member%') }}">{{ __('Reply') }}</a>
                                 @endif
                             </p>
                         </div>

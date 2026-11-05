@@ -95,7 +95,7 @@ export default function NotificationsIndex() {
                                         >
                                             <Avatar
                                                 id={item.actor?.id ?? 0}
-                                                name={item.actor?.name ?? t('Withdrawn member')}
+                                                name={item.actor?.name ?? t('%Withdrawn_member%')}
                                                 src={item.actor?.imageUrl ?? null}
                                                 color={item.actor?.avatarColor ?? null}
                                                 isAi={item.actor?.isAi ?? false}

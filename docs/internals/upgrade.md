@@ -129,6 +129,15 @@ NULL value is carried as empty (OpenPNE 3 rendered both as nothing). `lang` fold
 slug by `SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to
 neither `ja` nor `en` is inserted verbatim and never read, and the admin page does not list it.
 
+`WithdrawnMemberTermUpgrade` (one subclass per supported locale) copies
+`sns_config.nickname_of_member_who_does_not_have_credentials` — the name OpenPNE 3 printed for a member
+who no longer exists — into the `withdrawn_member` term for every locale, since OpenPNE 3 showed the
+one value to every reader. The OpenPNE 3 default `-` is not copied: OpenPNE 4 keeps its own default
+(`lang/{locale}/terms.php`) there, and a NULL row read as that default in OpenPNE 3. The comparison is
+binary, so a full-width or space-padded dash is a site value. Unlike the `sns_term` rows, an empty
+or whitespace-only value is not carried either: `/admin/term-settings` cannot hold one (a blank field means the
+default), and an empty name leaves page titles and "Message from" lines hanging.
+
 ## Source preflight
 
 Runs before any write, on the dry run too. Introspection goes through `information_schema`
@@ -156,7 +165,8 @@ audience from the other's page, so it is an ERROR. `UploadFileOwnerPreflight` co
 files whose name names a member or community the upgrade does not carry, a WARN: they migrate
 ownerless, and the operator learns which old links will answer 404. `TermOverridePreflight` counts the source term rows
 that fold onto one `term_overrides` (name, locale) key and a value wider than the column, both an
-ERROR for the same reason. `NicePreflight` counts a member's second like on one carried target as
+ERROR for the same reason; `WithdrawnMemberTermPreflight` does the width check for the sns_config
+nickname the withdrawn-member term is copied from. `NicePreflight` counts a member's second like on one carried target as
 an ERROR for the same reason again (opLikePlugin's unique index came after 0.9), and the likes the
 transfer leaves behind — on activities not migrated, on a diary, comment, topic comment or event
 comment that no longer exists or whose plugin the source lacks, and under a letter the plugin never

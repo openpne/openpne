@@ -163,7 +163,7 @@ export default function UnifiedGroup() {
                                 <span className="text-muted-foreground">{t('No messages yet.')}</span>
                             ) : (
                                 <>
-                                    <span className="text-muted-foreground">{talkPreview.authorName ?? t('Withdrawn member')}</span>
+                                    <span className="text-muted-foreground">{talkPreview.authorName ?? t('%Withdrawn_member%')}</span>
                                     {/* Same separator as the room list: one preview idiom. */}
                                     {': '}
                                     {talkPreview.body}

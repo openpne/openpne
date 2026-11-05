@@ -64,6 +64,8 @@ use App\Upgrade\Steps\TimelinePostImageUpgrade;
 use App\Upgrade\Steps\TimelinePostUpgrade;
 use App\Upgrade\Steps\TimelineReactionUpgrade;
 use App\Upgrade\Steps\TimelineReplyUpgrade;
+use App\Upgrade\Steps\WithdrawnMemberTermEnUpgrade;
+use App\Upgrade\Steps\WithdrawnMemberTermJaUpgrade;
 
 /** The upgrade steps in run order. Adding a feature = adding its step here. */
 final class StepRegistry
@@ -153,6 +155,9 @@ final class StepRegistry
             SnsSettingUpgrade::class,
             // term_overrides is independent too; the PC sns_term rows, name for name.
             TermOverrideUpgrade::class,
+            // term_overrides again: the withdrawn-member nickname of sns_config, one row per locale.
+            WithdrawnMemberTermJaUpgrade::class,
+            WithdrawnMemberTermEnUpgrade::class,
             // Same target, also FK-free: OpenPNE 3's feature availability (`plugin`, plus sns_config's
             // enable_friend_link), each writing only the units OpenPNE 3 had switched off.
             PluginFeatureUpgrade::class,

@@ -60,7 +60,7 @@ would silently change nothing for the sites that matter — the ones with no row
 [Mentions](#mentions) and [Images](#images).
 
 **`member_id` is `nullOnDelete`.** A withdrawn author leaves the message in place and reads as
-`Withdrawn member`, matching the other group tables (`group_topics`, `group_events` and their
+the `withdrawn_member` term, matching the other group tables (`group_topics`, `group_events` and their
 comments). The repository splits this by axis rather than by table: personal content (diaries,
 timeline posts) goes with its author, content that belongs to a place stays in the place. A
 `group_message_mentions` row is the opposite — `cascadeOnDelete`, so deleting the member takes the
@@ -347,7 +347,7 @@ other badge there.
 All of them read the same predicate ([`UnreadTalkScope`](../../app/Features/GroupTalk/UnreadTalkScope.php)):
 newer than the cursor by the tuple, and **`member_id IS NULL OR member_id != viewer`**. That NULL arm
 is load-bearing, not defensive — `member_id != ?` is UNKNOWN for a withdrawn author's row, so without
-it the count would silently skip exactly the messages the page still shows as "Withdrawn member". The
+it the count would silently skip exactly the messages the page still shows under the `withdrawn_member` term. The
 visible set for counting is the same one the page renders, per the no-per-row-filter contract above.
 
 ### Mute

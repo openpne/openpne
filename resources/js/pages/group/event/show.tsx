@@ -104,7 +104,7 @@ export default function GroupEventShow() {
                             {event.author.name}
                         </Link>
                     ) : (
-                        <span>{t('Withdrawn member')}</span>
+                        <span>{t('%Withdrawn_member%')}</span>
                     )}
                     <AiChip isAi={event.author?.isAi ?? false} />
                     <span>&mdash; <Timestamp at={event.createdAt} preset="absolute" /></span>

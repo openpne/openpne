@@ -146,7 +146,7 @@ class InternalLinkCardRenderingTest extends TestCase
         [$group, $member] = $this->membersOnlyGroup();
         $message = GroupMessage::factory()->for($group)->create(['member_id' => null, 'body' => 'Left behind']);
 
-        $this->assertSame(__('Message from :name', ['name' => __('Withdrawn member')]), $this->draw($message, $member)['title']);
+        $this->assertSame(__('Message from :name', ['name' => __('%Withdrawn_member%')]), $this->draw($message, $member)['title']);
     }
 
     public function test_a_group_card_draws_for_any_signed_in_member(): void

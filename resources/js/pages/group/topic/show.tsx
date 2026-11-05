@@ -97,7 +97,7 @@ export default function GroupTopicShow() {
                             {topic.author.name}
                         </Link>
                     ) : (
-                        <span>{t('Withdrawn member')}</span>
+                        <span>{t('%Withdrawn_member%')}</span>
                     )}
                     <AiChip isAi={topic.author?.isAi ?? false} />
                     <span>&mdash; <Timestamp at={topic.createdAt} preset="absolute" /></span>

@@ -34,7 +34,7 @@ export function SelectTextSheet({ text, returnFocusTo, onClose }: { text: Select
                 {text.author !== undefined && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Avatar id={text.author?.id ?? 0} name={text.author?.name ?? ''} src={text.author?.imageUrl ?? null} color={text.author?.avatarColor ?? null} isAi={text.author?.isAi ?? false} size="md" decorative />
-                        <span className="truncate text-foreground">{text.author?.name ?? t('Withdrawn member')}</span>
+                        <span className="truncate text-foreground">{text.author?.name ?? t('%Withdrawn_member%')}</span>
                         <AiChip isAi={text.author?.isAi ?? false} />
                         {text.createdAt !== undefined && <Timestamp at={text.createdAt} preset="relative" className="shrink-0" />}
                     </div>

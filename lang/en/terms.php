@@ -9,4 +9,5 @@ return [
     'post_activity' => 'post',
     'diary' => 'diary',
     'topic' => 'topic',
+    'withdrawn_member' => 'withdrawn member',
 ];

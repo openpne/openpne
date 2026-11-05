@@ -57,7 +57,7 @@ function ReplyHeader({ reference, onJump }: { reference: TalkReplyReference; onJ
             <span className="sr-only">{t('Go to the replied message')}: </span>
             {elbow}
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                <span className="shrink-0">{reference.author?.name ?? t('Withdrawn member')}</span>
+                <span className="shrink-0">{reference.author?.name ?? t('%Withdrawn_member%')}</span>
                 {reference.thumbnailUrl !== null && (
                     <img src={reference.thumbnailUrl} alt="" className="size-5 shrink-0 rounded object-cover" />
                 )}
@@ -332,7 +332,7 @@ export function TalkMessageRow({
                     {grouped ? (
                         <>
                             <span className="sr-only">
-                                {author?.name ?? t('Withdrawn member')}, <Timestamp at={message.createdAt} preset="clockTime" />
+                                {author?.name ?? t('%Withdrawn_member%')}, <Timestamp at={message.createdAt} preset="clockTime" />
                             </span>
                             {content}
                         </>
@@ -344,7 +344,7 @@ export function TalkMessageRow({
                                         {author.name}
                                     </Link>
                                 ) : (
-                                    <span className="truncate">{t('Withdrawn member')}</span>
+                                    <span className="truncate">{t('%Withdrawn_member%')}</span>
                                 )}
                                 <AiChip isAi={author?.isAi ?? false} />
                                 <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />

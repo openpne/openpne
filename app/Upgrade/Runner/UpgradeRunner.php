@@ -15,6 +15,8 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FileUpgrade;
+use App\Upgrade\Steps\TermOverrideUpgrade;
+use App\Upgrade\Steps\WithdrawnMemberTermUpgrade;
 use App\Upgrade\UpgradeStep;
 use Closure;
 use Illuminate\Support\Facades\DB;
@@ -140,8 +142,11 @@ final class UpgradeRunner
         $sharedFileError = $migratesFiles && ! $source->hasErrors()
             ? (new FileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : null;
-        $termErrors = ! $source->hasErrors() && in_array('term_overrides', $this->targetTables(), true)
+        $termErrors = ! $source->hasErrors() && $this->hasStep(TermOverrideUpgrade::class)
             ? (new TermOverridePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
+            : [];
+        $withdrawnTermErrors = ! $source->hasErrors() && $this->hasStep(WithdrawnMemberTermUpgrade::class)
+            ? (new WithdrawnMemberTermPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : [];
         $uploadReport = ! $source->hasErrors() && $this->hasStep(FileUpgrade::class)
             ? (new UploadFileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
@@ -151,7 +156,7 @@ final class UpgradeRunner
             ? (new ZeroDatePreflight($this->steps(), SourceSchema::default(), $this->compiler))->inspect($options->sourcePrefix, $options->sourceDatabase, $source->absentOptional)
             : [];
 
-        foreach (array_merge($source->tableErrors, $source->columnErrors, $fileBinErrors, $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors, $zeroDateErrors) as $error) {
+        foreach (array_merge($source->tableErrors, $source->columnErrors, $fileBinErrors, $mailReport->errors, $memberErrors, $activityReport->errors, $niceReport->errors, $sharedFileError !== null ? [$sharedFileError] : [], $termErrors, $withdrawnTermErrors, $zeroDateErrors) as $error) {
             $report->error($error);
         }
 
@@ -161,7 +166,7 @@ final class UpgradeRunner
             $report->warning($warning);
         }
 
-        if ($source->hasErrors() || $fileBinErrors !== [] || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $niceReport->hasErrors() || $sharedFileError !== null || $termErrors !== [] || $zeroDateErrors !== []) {
+        if ($source->hasErrors() || $fileBinErrors !== [] || $mailReport->hasErrors() || $memberErrors !== [] || $activityReport->hasErrors() || $niceReport->hasErrors() || $sharedFileError !== null || $termErrors !== [] || $withdrawnTermErrors !== [] || $zeroDateErrors !== []) {
             $report->abort('the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;

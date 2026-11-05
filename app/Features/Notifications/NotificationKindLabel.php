@@ -14,7 +14,7 @@ final class NotificationKindLabel
 {
     public static function for(?string $kind, ?string $reason, ?string $actorName): string
     {
-        $name = $actorName ?? __('Withdrawn member');
+        $name = $actorName ?? __('%Withdrawn_member%');
         $cause = $reason === null ? null : CommentReason::tryFrom($reason);
 
         return match ($kind) {

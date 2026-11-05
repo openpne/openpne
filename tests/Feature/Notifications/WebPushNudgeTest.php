@@ -122,7 +122,7 @@ class WebPushNudgeTest extends TestCase
         $recipient->notify(new WebPushNudge(['kind' => 'direct_message_received'], (int) $goneActorId));
 
         $this->assertSame(
-            __(':name sent you a message.', ['name' => __('Withdrawn member')]),
+            __(':name sent you a message.', ['name' => __('%Withdrawn_member%')]),
             $this->pushesTo(self::ENDPOINT)[0]['title'],
         );
     }

@@ -146,7 +146,7 @@ export default function CommunityShow() {
                                     ) : (
                                         <>
                                             <span className="text-muted-foreground">
-                                                {talkPreview.authorName ?? t('Withdrawn member')}
+                                                {talkPreview.authorName ?? t('%Withdrawn_member%')}
                                             </span>
                                             {/* Same separator as the room list: one preview idiom. */}
                                             {': '}

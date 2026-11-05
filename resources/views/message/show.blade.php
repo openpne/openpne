@@ -39,7 +39,7 @@
                             @forelse ($view->counterparties as $member)
                                 <li><a href="{{ route('member.profile.show', $member) }}">{{ $member->name }}</a></li>
                             @empty
-                                <li>{{ __('Withdrawn member') }}</li>
+                                <li>{{ __('%Withdrawn_member%') }}</li>
                             @endforelse
                         </ul>
                     </td>

@@ -54,7 +54,7 @@ function Dot() {
 function Byline({ story }: { story: IssueStory }) {
     const t = useT();
     const author = story.author;
-    const name = author?.name ?? t('Withdrawn member');
+    const name = author?.name ?? t('%Withdrawn_member%');
 
     return (
         <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">

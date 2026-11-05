@@ -380,7 +380,7 @@ export default function AiAccountShow() {
         if (
             await confirm({
                 title: t('Delete :name?', { name: account.name }),
-                description: t('This cannot be undone. What it posted stays on the site, shown as by a withdrawn member.'),
+                description: t('This cannot be undone. What it posted stays on the site, shown as by "%Withdrawn_member%".'),
                 confirmLabel: t('Delete'),
                 danger: true,
             })
@@ -519,7 +519,7 @@ export default function AiAccountShow() {
             <Panel tone="destructive" title={t('Delete this AI account')}>
                 <form onSubmit={destroy} className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        {t('Deleting is permanent. What it posted stays on the site, shown as by a withdrawn member.')}
+                        {t('Deleting is permanent. What it posted stays on the site, shown as by "%Withdrawn_member%".')}
                     </p>
                     <Field label={t('Current password')} htmlFor="ai_delete_password" error={deleteForm.errors.password}>
                         <Input

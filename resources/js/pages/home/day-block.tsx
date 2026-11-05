@@ -35,7 +35,7 @@ export function said(t: Translate, talk: DayTalk): string {
     }
 
     // The AI marker is text here as in a room's row: one truncated line has no place for a chip.
-    return `${markedName(talk.speaker?.name ?? t('Withdrawn member'), talk.speaker?.isAi ?? false, t)}: ${talk.line}`;
+    return `${markedName(talk.speaker?.name ?? t('%Withdrawn_member%'), talk.speaker?.isAi ?? false, t)}: ${talk.line}`;
 }
 
 function Meta({ item }: { item: DayItem }) {

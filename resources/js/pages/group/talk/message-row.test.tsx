@@ -179,8 +179,8 @@ test('a reply to a withdrawn author names them with the established label', () =
 
     // The label is in the button's accessible name, and the row's own author (Rin) is present, so it
     // can only come from the reference.
-    expect(screen.getByRole('button', { name: (name: string) => name.includes('Withdrawn member') })).toBeTruthy();
-    expect(screen.getByText('Withdrawn member')).toBeTruthy();
+    expect(screen.getByRole('button', { name: (name: string) => name.includes('%Withdrawn_member%') })).toBeTruthy();
+    expect(screen.getByText('%Withdrawn_member%')).toBeTruthy();
 });
 
 test('the reference shows the parent thumbnail when it has one, and none when it does not', () => {
