@@ -209,6 +209,16 @@ re-copying under new keys. `reset()` (`--force-restart`) DELETEs the upgrade-own
 (TRUNCATE fails on an FK-referenced table, error 1701) after dropping the `file_bin` FK so the
 BLOBs cannot cascade.
 
+**Sites sharing one MySQL server may be upgraded at the same time.** Every piece of a run's state
+is in the site's own database (its `openpne4_upgrade_state`, its targets, the empty stand-ins for
+absent optional source tables created and dropped in its source schema) or in its own session
+(`FOREIGN_KEY_CHECKS`, the transaction); the tool takes no named lock, sets no global variable,
+creates no `TEMPORARY` table and qualifies every `information_schema` read by schema
+(`UpgradeServerStateTest`). The caches it clears at the end live in the cache store, the site's own
+database by default; sites pointed at one shared store must keep their `CACHE_PREFIX` apart. What two runs still share is the server's own capacity — connections,
+`table_definition_cache` for the two schemas' tables — which is the operator's sizing, not a
+contract of the tool.
+
 **The run manifest** (`RunManifest`) is what a resume is compared against: the run's phases in
 execution order, each with a version — every runnable step by `UpgradeStep::definition()` (a
 sha256 over its target table and the SQL compiled at an empty prefix and no database, so the
