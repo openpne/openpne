@@ -130,7 +130,7 @@ class AppIconTest extends TestCase
         $this->setFavicon(32);
 
         $this->assertSame(
-            app(GeneratedIcon::class)->png(512),
+            app(GeneratedIcon::class)->tile(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
     }
@@ -141,7 +141,7 @@ class AppIconTest extends TestCase
 
         $this->assertSame([192, 192], $this->dimensionsOf($this->get($this->url(192))->getContent()));
         $this->assertSame(
-            app(GeneratedIcon::class)->png(512),
+            app(GeneratedIcon::class)->tile(512),
             $this->get($this->url(512))->getContent(),
         );
     }
@@ -168,7 +168,7 @@ class AppIconTest extends TestCase
         $this->setFavicon(32);
 
         $this->assertSame(
-            app(GeneratedIcon::class)->png(192),
+            app(GeneratedIcon::class)->tile(192),
             $this->get($this->url(192))->getContent(),
         );
     }
@@ -184,7 +184,7 @@ class AppIconTest extends TestCase
         config(['openpne.images.max_source_pixels' => 64 * 64]);
 
         $this->assertSame(
-            app(GeneratedIcon::class)->png(512),
+            app(GeneratedIcon::class)->tile(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
         Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
@@ -199,7 +199,7 @@ class AppIconTest extends TestCase
         $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
 
         $this->assertSame(
-            app(GeneratedIcon::class)->png(512),
+            app(GeneratedIcon::class)->tile(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
@@ -213,7 +213,7 @@ class AppIconTest extends TestCase
         $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
 
         $this->assertSame(
-            app(GeneratedIcon::class)->png(512),
+            app(GeneratedIcon::class)->tile(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
@@ -235,7 +235,7 @@ class AppIconTest extends TestCase
         }
 
         $this->assertSame([192, 192], $this->dimensionsOf($response->getContent()));
-        $this->assertNotSame(app(GeneratedIcon::class)->png(192), $response->getContent(), 'The brand tile was served instead of the derived icon.');
+        $this->assertNotSame(app(GeneratedIcon::class)->tile(192), $response->getContent(), 'The brand tile was served instead of the derived icon.');
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-192.png');
     }
 

@@ -258,7 +258,7 @@ class ImageCache
      *
      * @throws ImageCachePublishException
      */
-    private function publish(string $key, string $bytes): void
+    public function publish(string $key, string $bytes): void
     {
         $disk = $this->disk();
         $temp = dirname($key).'/.tmp-'.Str::random(16);

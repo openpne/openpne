@@ -76,6 +76,10 @@ class SiteIconTest extends TestCase
         }
 
         $this->get('/site-icon/64.png')->assertNotFound();
+
+        // Short-lived: a raster an administrator's browser sends later replaces the tile.
+        $this->get('/site-icon/192.png')->assertHeader('Cache-Control', 'max-age=300, public');
+        $this->get('/favicon.ico')->assertHeader('Cache-Control', 'max-age=300, public');
     }
 
     public function test_the_version_follows_the_color_and_the_name(): void

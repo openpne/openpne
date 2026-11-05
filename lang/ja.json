@@ -1475,7 +1475,7 @@
     "The author’s name.": "作成者の名前。",
     "The body is too large.": "本文が大きすぎます。",
     "The brand color with the first letters of the site name.": "ブランドカラーの地にサイト名の頭文字を入れたアイコンです。",
-    "The browser shows its own default, as OpenPNE 3 did. The home-screen icon stays a brand-color tile.": "OpenPNE 3 と同じくブラウザの既定表示になります。ホーム画面のアイコンはブランドカラーのタイルのままです。",
+    "The browser shows its own default, as OpenPNE 3 did. The home-screen icon stays the generated one.": "OpenPNE 3 と同じくブラウザの既定表示になります。ホーム画面のアイコンは自動生成アイコンのままです。",
     "The check happens on your device, so your fingerprint and face never reach this site.": "確認は端末の中で行われるため、顔や指紋のデータがこのサイトに送られることはありません。",
     "The comment body.": "コメント本文。",
     "The comment was deleted.": "コメントを削除しました。",

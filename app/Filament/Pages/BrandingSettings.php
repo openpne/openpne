@@ -145,7 +145,7 @@ class BrandingSettings extends Page
                             ])
                             ->descriptions([
                                 FaviconFallback::Generated->value => __('The brand color with the first letters of the site name.'),
-                                FaviconFallback::None->value => __('The browser shows its own default, as OpenPNE 3 did. The home-screen icon stays a brand-color tile.'),
+                                FaviconFallback::None->value => __('The browser shows its own default, as OpenPNE 3 did. The home-screen icon stays the generated one.'),
                             ])
                             ->required(),
                     ],
