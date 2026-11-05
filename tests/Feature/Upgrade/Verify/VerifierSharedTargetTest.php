@@ -33,6 +33,11 @@ class VerifierSharedTargetTest extends UpgradeSqlTestCase
         parent::setUp();
 
         $this->seedSource();
+        $this->runUpgrade();
+    }
+
+    private function runUpgrade(): void
+    {
         (new UpgradeRunner(new InsertSelectCompiler, $this->settingSteps()))->run(new RunOptions);
     }
 
@@ -62,6 +67,48 @@ class VerifierSharedTargetTest extends UpgradeSqlTestCase
 
         $this->assertFalse($report->failed(), $out);
         $this->assertDatabaseHas('sns_settings', ['key' => 'surface_mode', 'value' => 'classic_default']);
+    }
+
+    public function test_a_stamped_form_default_is_not_target_drift(): void
+    {
+        // A source that never saved the SNS settings page: the stamp adds the sns_name row the copy did not.
+        DB::table('sns_settings')->truncate();
+        DB::table('openpne4_upgrade_state')->truncate();
+        DB::table('sns_config')->where('name', 'sns_name')->delete();
+        $this->runUpgrade();
+
+        [$report, $out] = $this->verify();
+
+        $this->assertFalse($report->failed(), $out);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'sns_name', 'value' => 'MySNS']);
+    }
+
+    public function test_a_null_source_row_landing_on_the_form_default_is_not_target_drift(): void
+    {
+        DB::table('sns_settings')->truncate();
+        DB::table('openpne4_upgrade_state')->truncate();
+        DB::table('sns_config')->where('name', 'sns_name')->update(['value' => null]);
+        $this->runUpgrade();
+
+        [$report, $out] = $this->verify();
+
+        $this->assertFalse($report->failed(), $out);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'sns_name', 'value' => 'MySNS']);
+    }
+
+    public function test_a_lost_stamped_row_is_still_caught(): void
+    {
+        DB::table('sns_settings')->truncate();
+        DB::table('openpne4_upgrade_state')->truncate();
+        DB::table('sns_config')->where('name', 'sns_name')->delete();
+        $this->runUpgrade();
+        DB::table('sns_settings')->where('key', 'sns_name')->delete();
+
+        [$report, $out] = $this->verify();
+
+        $this->assertTrue($report->failed());
+        $this->assertStringContainsString('FAIL SnsSettingUpgrade: target mismatch', $out);
+        $this->assertStringContainsString('stamped=1', $out);
     }
 
     public function test_scoping_still_catches_a_lost_row(): void

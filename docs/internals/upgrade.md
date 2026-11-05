@@ -421,9 +421,10 @@ reads status, not verify.
   PASS when equal, and PASS with the fact in the detail when the marker is unverified (legacy
   state), so tenants rehearsed before manifests are not red for ever once re-run.
 
-- **Check A**, per step: source rows under `effectiveFilter()` == recorded `rows_affected` == target
-  rows under `targetFilter()`; a FROM or filter-subquery table that is an absent optional plugin
-  counts as 0.
+- **Check A**, per step: source rows under `effectiveFilter()` == recorded `rows_affected`, and
+  `rows_affected` + the step's `stampedTargetRows()` (the runner's form-default stamps, which land
+  inside the settings step's `targetFilter()`) == target rows under `targetFilter()`; a FROM or
+  filter-subquery table that is an absent optional plugin counts as 0.
 - **`ActivityTemplateCheck`** re-derives every migrated template row from the source and compares it
   with the stored body (a rendered row must hold the render, a kept row its stored body after the
   emoji pass), and fails when the template pass has no completed checkpoint.

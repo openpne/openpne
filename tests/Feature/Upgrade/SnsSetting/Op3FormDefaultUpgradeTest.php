@@ -41,7 +41,7 @@ class Op3FormDefaultUpgradeTest extends UpgradeSqlTestCase
         $this->assertDatabaseMissing('sns_settings', ['key' => 'sns_name', 'value' => 'MySNS']);
     }
 
-    public function test_an_operator_set_row_stands_on_a_rerun(): void
+    public function test_a_row_set_before_the_run_stands(): void
     {
         DB::table('sns_settings')->insert(['key' => 'sns_name', 'value' => 'Renamed']);
 

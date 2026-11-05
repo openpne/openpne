@@ -167,8 +167,11 @@ final class UpgradeVerifier
             $target->whereRaw($step->targetFilter());
         }
         $targetN = (int) $target->count();
+        $stampedN = in_array($step->sourceTable(), $absent, true)
+            ? 0
+            : $step->stampedTargetRows(InsertSelectCompiler::qualify($options->sourceDatabase, $options->sourcePrefix, $step->sourceTable()));
 
-        if ($sourceN === $affectedN && $affectedN === $targetN) {
+        if ($sourceN === $affectedN && $affectedN + $stampedN === $targetN) {
             $this->record($report, $out, $key, true, "{$targetN} rows");
 
             return;
@@ -178,10 +181,11 @@ final class UpgradeVerifier
         if ($sourceN !== $affectedN) {
             $diagnosis[] = 'source drift';
         }
-        if ($targetN !== $affectedN) {
+        if ($targetN !== $affectedN + $stampedN) {
             $diagnosis[] = 'target mismatch';
         }
-        $this->record($report, $out, $key, false, implode(' + ', $diagnosis).": source={$sourceN} rows_affected={$affectedN} target={$targetN}");
+        $stamped = $stampedN > 0 ? " stamped={$stampedN}" : '';
+        $this->record($report, $out, $key, false, implode(' + ', $diagnosis).": source={$sourceN} rows_affected={$affectedN}{$stamped} target={$targetN}");
     }
 
     private function sourceCount(UpgradeStep $step, RunOptions $options): int

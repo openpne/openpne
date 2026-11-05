@@ -95,7 +95,7 @@ final class UncopiedSettingsNotice
     {
         if (($op3Default = $key->op3FormDefault()) !== null) {
             return sprintf(
-                "sns_config `%s` is NULL and is not copied: OpenPNE 3 read its default there, and `%s` is set to that default here ('%s').",
+                "sns_config `%s` is NULL and is not copied: OpenPNE 3 read its default there, and `%s` lands on that default here ('%s') unless a row is already set.",
                 $name,
                 $key->value,
                 $op3Default,

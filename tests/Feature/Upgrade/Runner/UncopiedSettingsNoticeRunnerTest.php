@@ -121,7 +121,7 @@ class UncopiedSettingsNoticeRunnerTest extends TestCase
 
         $this->assertTrue($ok);
         $this->assertStringContainsString(
-            "WARN W-SETTING-NULL: sns_config `sns_name` is NULL and is not copied: OpenPNE 3 read its default there, and `sns_name` is set to that default here ('MySNS').",
+            "WARN W-SETTING-NULL: sns_config `sns_name` is NULL and is not copied: OpenPNE 3 read its default there, and `sns_name` lands on that default here ('MySNS') unless a row is already set.",
             $output,
         );
         $this->assertDatabaseHas('sns_settings', ['key' => 'sns_name', 'value' => 'MySNS']);

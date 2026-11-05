@@ -354,4 +354,18 @@ class SnsSettingKeyTest extends TestCase
             $this->assertTrue($key->decode('1'), $key->value);
         }
     }
+
+    public function test_a_form_default_belongs_only_to_a_copied_key_whose_null_row_is_left_out(): void
+    {
+        // The stamp fills the two shapes the copy leaves out (no row, NULL row); a key kept as empty on
+        // NULL or never copied has no OpenPNE 3 value for the stamp to stand in for.
+        foreach (SnsSettingKey::cases() as $key) {
+            if ($key->op3FormDefault() === null) {
+                continue;
+            }
+            $this->assertTrue($key->isMigratedFromOp3(), $key->value);
+            $this->assertFalse($key->op3NullValueIsKept(), $key->value);
+        }
+        $this->assertSame('MySNS', SnsSettingKey::SnsName->op3FormDefault());
+    }
 }

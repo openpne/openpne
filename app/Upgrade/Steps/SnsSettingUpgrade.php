@@ -5,6 +5,7 @@ namespace App\Upgrade\Steps;
 use App\Support\SnsSettingKey;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
+use Illuminate\Support\Facades\DB;
 
 /**
  * OpenPNE 3 `sns_config` → OpenPNE 4 `sns_settings`, for the keys SnsSettingKey::isMigratedFromOp3()
@@ -43,7 +44,8 @@ class SnsSettingUpgrade extends UpgradeStep
 
     /**
      * The rows this step owns in a target it shares with the feature-flag steps. surface_mode falls
-     * outside by construction: it is not migrated, the runner stamps it after the walk.
+     * outside by construction: it is not migrated, the runner stamps it after the walk; the form-default
+     * stamps fall inside and are counted through stampedTargetRows().
      */
     public function targetFilter(): ?string
     {
@@ -51,6 +53,39 @@ class SnsSettingUpgrade extends UpgradeStep
             static fn (SnsSettingKey $key): string => "'{$key->value}'",
             $this->migratedKeys(),
         )));
+    }
+
+    /** @return array<string, string> stored key => OpenPNE 3 form default, for the migrated keys the runner stamps when the source has no copied row */
+    public function op3FormDefaults(): array
+    {
+        $defaults = [];
+        foreach ($this->migratedKeys() as $key) {
+            if (($value = $key->op3FormDefault()) !== null) {
+                $defaults[$key->value] = $value;
+            }
+        }
+
+        return $defaults;
+    }
+
+    public function stampedTargetRows(string $qualifiedSource): int
+    {
+        $stamped = 0;
+        foreach ($this->migratedKeys() as $key) {
+            if ($key->op3FormDefault() === null) {
+                continue;
+            }
+            // The same two shapes the filter leaves out: no row, or a NULL one.
+            $copied = DB::selectOne(
+                "SELECT COUNT(*) AS n FROM {$qualifiedSource} WHERE `name` = ? AND `value` IS NOT NULL",
+                [$key->op3SourceName()],
+            );
+            if ((int) $copied->n === 0) {
+                $stamped++;
+            }
+        }
+
+        return $stamped;
     }
 
     /** @return array<string, SnsSettingKey> OpenPNE 3 name => key, for the migrated keys whose NULL row the filter leaves out */
