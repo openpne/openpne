@@ -98,6 +98,8 @@ export interface PageProps {
     imageUpload: ImageUploadPolicy;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
+    /** Raw HTML a package registered per shell position, non-empty entries only (docs/internals/layout-hooks.md). */
+    layoutHooks: Record<string, string>;
     /** Null for a guest and while `groupTalk` is off. */
     talkNavRooms: TalkNavRooms | null;
     /** Null when push is unavailable here: a guest, or a site with no VAPID keypair. */

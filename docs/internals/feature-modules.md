@@ -168,7 +168,8 @@ wired via `createInertiaApp`'s `layout` option in
 [`app.tsx`](../../resources/js/app.tsx)): nav chrome plus the page frame
 ([`MemberFrame`](../../resources/js/components/member-frame.tsx)), which owns the
 single `<main>`, the hub header (h1 = nav label, tabs, primary action), and central
-flash. Per-section defaults live in the chrome registry
+flash. The shell and the frame, never a page, also own the positions a package may draw
+into ([layout-hooks.md](layout-hooks.md)). Per-section defaults live in the chrome registry
 ([`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts)) — the same
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame, so

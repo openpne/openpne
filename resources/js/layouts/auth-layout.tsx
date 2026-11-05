@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
+import { LayoutHook } from '@/components/layout-hook';
 import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -43,6 +44,7 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
     // card below the fold.
     return (
         <div className="flex min-h-dvh flex-col items-center justify-center bg-muted pt-safe-6 pr-safe-4 pb-safe-6 pl-safe-4 sm:pt-safe-12 sm:pb-safe-12">
+            <LayoutHook name="modern.auth_start" landmark />
             <header className={cn('mb-6 flex w-full flex-col items-center gap-3', column)}>
                 <BrandMark size="lg" />
                 <BrandName size="lg" className="max-w-full text-center break-words" />
@@ -101,6 +103,7 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
                     ))}
                 </ul>
             </nav>
+            <LayoutHook name="modern.auth_end" landmark />
         </div>
     );
 }

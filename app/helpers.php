@@ -11,6 +11,8 @@ use App\Services\SnsSettingService;
 use App\Support\BrandColor;
 use App\Support\ClassicTheme;
 use App\Support\ClassicThemes;
+use App\Support\LayoutHook;
+use App\Support\LayoutHooks;
 use App\Support\LinkTarget;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\Schema;
@@ -105,6 +107,14 @@ if (! function_exists('classic_html_slot')) {
         };
 
         return (string) app(SnsSettingService::class)->get($key);
+    }
+}
+
+if (! function_exists('layout_hook')) {
+    /** The HTML packages registered for a shell position, output raw (docs/internals/layout-hooks.md). */
+    function layout_hook(LayoutHook $hook): string
+    {
+        return app(LayoutHooks::class)->render($hook);
     }
 }
 
