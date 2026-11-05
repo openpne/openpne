@@ -34,6 +34,7 @@ class GroupTopicLegacyUrlRedirectTest extends TestCase
             "/communityTopic/edit/{$topicId}" => "/topics/{$topicId}/edit",
             "/communityTopic/deleteConfirm/{$topicId}" => "/topics/{$topicId}/delete",
             "/communityTopic/comment/deleteConfirm/{$comment->getKey()}" => "/topics/comments/{$comment->getKey()}/delete",
+            '/communityTopic/recentlyTopicList' => '/topics',
         ];
 
         foreach ($cases as $legacy => $canonical) {
@@ -53,6 +54,7 @@ class GroupTopicLegacyUrlRedirectTest extends TestCase
 
         $cases = [
             "/communityTopic/listCommunity/{$groupId}?page=3" => "/groups/{$groupId}/topics?page=3",
+            '/communityTopic/recentlyTopicList?page=3' => '/topics?page=3',
             "/communityTopic/{$topicId}?page=2&order=asc" => "/topics/{$topicId}?page=2&order=asc",
             // A stray ?topic= is consumed by the path parameter (the real id wins), page survives.
             "/communityTopic/{$topicId}?topic=999&page=2" => "/topics/{$topicId}?page=2",

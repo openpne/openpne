@@ -23,6 +23,7 @@ class GroupTopicRouteParity extends RouteParity
             new RouteMap('communityTopic_update', '/communityTopic/update/:id', 'group.topics.update', 'POST'),
             new RouteMap('communityTopic_delete_confirm', '/communityTopic/deleteConfirm/:id', 'group.topics.delete.show', 'GET', op3Action: 'deleteConfirm'),
             new RouteMap('communityTopic_delete', '/communityTopic/delete/:id', 'group.topics.delete', 'POST'),
+            new RouteMap('communityTopic_recently_topic_list', '/communityTopic/recentlyTopicList', 'group.topics.recent', 'GET', op3Action: 'recentlyTopicList'),
 
             // communityTopicComment module (op3Module override).
             new RouteMap('communityTopic_comment_create', '/communityTopic/:id/comment/create', 'group.topics.comment.store', 'POST'),
@@ -35,7 +36,6 @@ class GroupTopicRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            'communityTopic_recently_topic_list' => 'Cross-community recently-updated topics feed; a sidebar feature, not ported.',
             'communityTopic_search' => 'Per-community topic search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
             'communityTopic_search_all' => 'Global topic search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
             'communityTopic_search_form' => 'The shared topic/event search form page; a separate search surface the board adapter does not provide.',
@@ -55,6 +55,7 @@ class GroupTopicRouteParity extends RouteParity
             '/communityTopic/edit/:id' => 'group.topics.edit',
             '/communityTopic/deleteConfirm/:id' => 'group.topics.delete.show',
             '/communityTopic/comment/deleteConfirm/:id' => 'group.topics.comment.delete.show',
+            '/communityTopic/recentlyTopicList' => 'group.topics.recent',
         ];
     }
 
@@ -74,6 +75,14 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('create-topic entry', L::Two, S::Ported, "op_include_parts('buttonBox', 'communityTopicList', button Create)", 'a buttonBox of its own with the Create submit'),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityTopic_list_community')"),
                 new ScreenElement('box heading', L::Three, S::Ported, 'listCommunitySuccess.php <h3>List of topics</h3>', 'List of %topics%'),
+            ],
+            // recentlyTopicListSuccess.php → group-topic/recent.blade.php
+            'recentlyTopicList' => [
+                new ScreenElement('topic list (dl: last-activity datetime / name(count) link)', L::Two, S::Ported, 'recentlyTopicListSuccess.php recentList dl > dt + dd', 'one dl per row: the last-comment datetime (bumped_at; OpenPNE 3 drew updated_at) in the dt, the untruncated name(count) link in the dd'),
+                new ScreenElement('community name after the link', L::Two, S::Ported, "recentlyTopicListSuccess.php sprintf('%s (%s)', link, \$topic->getCommunity()->getName())"),
+                new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityTopic_recently_topic_list?page=%d')"),
+                new ScreenElement('box heading', L::Three, S::Ported, 'recentlyTopicListSuccess.php <h3>Recently Posted %Community% Topics</h3>', 'the gadget heading key, Recently Posted %Community% %Topics%'),
+                new ScreenElement('empty state', L::Three, S::Partial, 'recentlyTopicListSuccess.php if ($pager->getNbResults()) around the whole box', 'the box stays with "No %topics% to show.", as the board does; OpenPNE 3 rendered no box at all'),
             ],
             // showSuccess.php + communityTopicComment/_list.php → group-topic/show.blade.php.
             'show' => [

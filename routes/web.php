@@ -737,6 +737,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
 
     Route::middleware(EnsureFeatureEnabled::class.':groupTopic')->controller(GroupTopicController::class)->group(function () {
+        Route::get('/topics', 'recent')->name('group.topics.recent');
         Route::get('/groups/{group}/topics', 'index')->whereNumber('group')->name('group.topics.index');
         Route::get('/groups/{group}/topics/new', 'new')->whereNumber('group')->name('group.topics.new');
         Route::post('/groups/{group}/topics', 'store')->whereNumber('group')->middleware('throttle:posting')->name('group.topics.store');
@@ -773,6 +774,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // OpenPNE 3 /communityTopic/* redirects, GET only; the query rides along so a ?page=N bookmark
     // does not reset to page 1.
     Route::prefix('communityTopic')->middleware(EnsureFeatureEnabled::class.':groupTopic')->group(function () {
+        Route::get('/recentlyTopicList', fn (Request $request) => redirect()->route('group.topics.recent', $request->query()))
+            ->name('group.topics.recent.compat');
         Route::get('/listCommunity/{group}', fn (Request $request, int $group) => redirect()->route('group.topics.index', ['group' => $group] + $request->query()))
             ->whereNumber('group')->name('group.topics.index.compat');
         Route::get('/new/{group}', fn (Request $request, int $group) => redirect()->route('group.topics.new', ['group' => $group] + $request->query()))
@@ -818,6 +821,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
 
     Route::middleware(EnsureFeatureEnabled::class.':groupEvent')->controller(GroupEventController::class)->group(function () {
+        Route::get('/events', 'recent')->name('group.events.recent');
         Route::get('/groups/{group}/events', 'index')->whereNumber('group')->name('group.events.index');
         Route::get('/groups/{group}/events/new', 'new')->whereNumber('group')->name('group.events.new');
         Route::post('/groups/{group}/events', 'store')->whereNumber('group')->middleware('throttle:posting')->name('group.events.store');
@@ -855,6 +859,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // OpenPNE 3 /communityEvent/* redirects, GET only; the query rides along so a ?page=N bookmark
     // does not reset to page 1.
     Route::prefix('communityEvent')->middleware(EnsureFeatureEnabled::class.':groupEvent')->group(function () {
+        Route::get('/recentlyEventList', fn (Request $request) => redirect()->route('group.events.recent', $request->query()))
+            ->name('group.events.recent.compat');
         Route::get('/listCommunity/{group}', fn (Request $request, int $group) => redirect()->route('group.events.index', ['group' => $group] + $request->query()))
             ->whereNumber('group')->name('group.events.index.compat');
         Route::get('/new/{group}', fn (Request $request, int $group) => redirect()->route('group.events.new', ['group' => $group] + $request->query()))

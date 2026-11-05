@@ -35,6 +35,7 @@ class GroupEventLegacyUrlRedirectTest extends TestCase
             "/communityEvent/deleteConfirm/{$eventId}" => "/events/{$eventId}/delete",
             "/communityEvent/{$eventId}/memberList" => "/events/{$eventId}/members",
             "/communityEvent/comment/deleteConfirm/{$comment->getKey()}" => "/events/comments/{$comment->getKey()}/delete",
+            '/communityEvent/recentlyEventList' => '/events',
         ];
 
         foreach ($cases as $legacy => $canonical) {
@@ -54,6 +55,7 @@ class GroupEventLegacyUrlRedirectTest extends TestCase
 
         $cases = [
             "/communityEvent/listCommunity/{$groupId}?page=3" => "/groups/{$groupId}/events?page=3",
+            '/communityEvent/recentlyEventList?page=3' => '/events?page=3',
             "/communityEvent/{$eventId}?page=2&order=asc" => "/events/{$eventId}?page=2&order=asc",
             "/communityEvent/{$eventId}/memberList?page=4" => "/events/{$eventId}/members?page=4",
             // A stray ?event= is consumed by the path parameter (the real id wins), page survives.

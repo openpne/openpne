@@ -9,6 +9,7 @@ use App\Features\GroupTopic\Actions\DeleteTopic;
 use App\Features\GroupTopic\Actions\UpdateTopic;
 use App\Features\GroupTopic\Exceptions\GroupTopicActionException;
 use App\Features\GroupTopic\Queries\ListGroupTopics;
+use App\Features\GroupTopic\Queries\ListJoinedGroupTopics;
 use App\Features\GroupTopic\Queries\ShowTopic;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
@@ -43,6 +44,16 @@ use Inertia\Response as InertiaResponse;
 class GroupTopicController extends Controller
 {
     use RespondsWithSurface;
+
+    public function recent(Request $request, ListJoinedGroupTopics $query): View|RedirectResponse
+    {
+        // Modern has no paged site-wide board yet, so its viewer lands on the 30-row activity page.
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
+            return redirect()->route('group.recent');
+        }
+
+        return $this->classic('group-topic.recent', ['topics' => $query($this->viewer())]);
+    }
 
     public function index(Request $request, Group $group, ListGroupTopics $query): View|InertiaResponse
     {

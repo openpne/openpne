@@ -10,6 +10,15 @@ Talk is the third thing inside a group and has its own document
 ([group-talk.md](group-talk.md)); what all three share is the group's two access columns
 `topic_read_access` and `topic_post_authority`, described there under "Access".
 
+## Site-wide recent lists
+
+`/topics` and `/events` list the viewer's joined groups' threads newest-first, 50 a page: OpenPNE 3's
+`recentlyTopicList` / `recentlyEventList`, the "More" of the home recent-list gadgets. The set is
+membership, not `topic_read_access`, so no block filter applies. Classic renders them
+([`ListJoinedGroupTopics`](../../app/Features/GroupTopic/Queries/ListJoinedGroupTopics.php) reads the
+page's ids first, see [ordering.md](ordering.md) "Counts after the cut"); a Modern viewer is sent to
+`/groups/recent`, which shows the most recent 30 of that set merged and unpaged.
+
 ## The group row is the lock
 
 Every action that changes a member's role or the pending-admin nominee opens a `DB::transaction`,
