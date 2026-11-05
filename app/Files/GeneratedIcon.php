@@ -29,13 +29,13 @@ class GeneratedIcon
     public function svg(): string
     {
         $color = $this->color();
-        $initial = Initial::of(sns_name());
+        $initial = self::xmlText(Initial::of(sns_name()));
         $fontSize = mb_strlen($initial) === 1 ? 34 : 28;
 
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
             .'<rect width="64" height="64" rx="12" fill="'.$color.'"/>'
             .'<text x="32" y="32" dy=".36em" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="'.$fontSize.'" fill="'.BrandColor::readableForeground($color).'">'
-            .htmlspecialchars(self::xmlText($initial), ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            .htmlspecialchars($initial, ENT_XML1 | ENT_QUOTES, 'UTF-8')
             .'</text></svg>';
     }
 
