@@ -135,7 +135,7 @@ who no longer exists — into the `withdrawn_member` term for every locale, sinc
 one value to every reader. The OpenPNE 3 default `-` is not copied: OpenPNE 4 keeps its own default
 (`lang/{locale}/terms.php`) there, and a NULL row read as that default in OpenPNE 3. The comparison is
 binary, so a full-width or space-padded dash is a site value. Unlike the `sns_term` rows, an empty
-value is not carried either: `/admin/term-settings` cannot hold one (a blank field means the
+or whitespace-only value is not carried either: `/admin/term-settings` cannot hold one (a blank field means the
 default), and an empty name leaves page titles and "Message from" lines hanging.
 
 ## Source preflight
