@@ -76,14 +76,18 @@ class TermOverrideUpgradeSqlTest extends UpgradeSqlTestCase
         );
     }
 
-    public function test_an_empty_or_null_value_is_carried_as_empty(): void
+    /** The admin page cannot hold an empty override (a blank field means the default). */
+    public function test_an_empty_whitespace_only_or_null_value_is_not_carried(): void
     {
         $this->seedTerm('my_friend', ['ja_JP' => '', 'en' => null]);
+        $this->seedTerm('friend', ['ja_JP' => '  ', 'en' => 'buddy']);
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('term_overrides', ['name' => 'my_friend', 'locale' => 'ja', 'value' => '']);
-        $this->assertDatabaseHas('term_overrides', ['name' => 'my_friend', 'locale' => 'en', 'value' => '']);
+        $this->assertSame(
+            [['name' => 'friend', 'locale' => 'en', 'value' => 'buddy']],
+            DB::table('term_overrides')->get()->map(static fn (object $r): array => (array) $r)->all(),
+        );
     }
 
     private function runUpgrade(): void

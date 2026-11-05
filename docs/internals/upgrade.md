@@ -124,8 +124,9 @@ who wants the new defaults clears the rows on `/admin/term-settings`. That holds
 fills the same slot on both sides; `post_activity` is the posting button's label (a verb on a fresh
 OpenPNE 3 install), so OpenPNE 4 must not spend it in a noun slot ("%activity% post" is the noun;
 `I18nTermLiteralTest` pins `lang/ja.json` to that). The mobile application's rows (half-width kana)
-and unrecognised names are not migrated, the latter reported by the unknown-name scan; an empty or
-NULL value is carried as empty (OpenPNE 3 rendered both as nothing). `lang` folds to the locale
+and unrecognised names are not migrated, the latter reported by the unknown-name scan. Neither is
+an empty, whitespace-only or NULL value: OpenPNE 3 rendered it as nothing, but `/admin/term-settings`
+cannot hold one (a blank field means the default), so the default stands in. `lang` folds to the locale
 slug by `SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to
 neither `ja` nor `en` is inserted verbatim and never read, and the admin page does not list it.
 
@@ -134,9 +135,8 @@ neither `ja` nor `en` is inserted verbatim and never read, and the admin page do
 who no longer exists — into the `withdrawn_member` term for every locale, since OpenPNE 3 showed the
 one value to every reader. The OpenPNE 3 default `-` is not copied: OpenPNE 4 keeps its own default
 (`lang/{locale}/terms.php`) there, and a NULL row read as that default in OpenPNE 3. The comparison is
-binary, so a full-width or space-padded dash is a site value. Unlike the `sns_term` rows, an empty
-or whitespace-only value is not carried either: `/admin/term-settings` cannot hold one (a blank field means the
-default), and an empty name leaves page titles and "Message from" lines hanging.
+binary, so a full-width or space-padded dash is a site value. An empty, whitespace-only or NULL value
+is not carried, as above.
 
 ## Source preflight
 
