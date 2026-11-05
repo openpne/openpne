@@ -365,7 +365,7 @@ final class UpgradeRunner
         }
     }
 
-    /** Insert-if-absent after the settings step, so a copied or operator-set row stands (SnsSettingUpgrade::stampedTargetRows counts these for verify). */
+    /** Insert-if-absent after the settings step, so a copied or operator-set row stands. */
     private function stampOp3FormDefaults(): void
     {
         foreach ((new SnsSettingUpgrade)->op3FormDefaults() as $key => $value) {

@@ -45,7 +45,7 @@ class SnsSettingUpgrade extends UpgradeStep
     /**
      * The rows this step owns in a target it shares with the feature-flag steps. surface_mode falls
      * outside by construction: it is not migrated, the runner stamps it after the walk; the form-default
-     * stamps fall inside and are counted through stampedTargetRows().
+     * stamps fall inside.
      */
     public function targetFilter(): ?string
     {
