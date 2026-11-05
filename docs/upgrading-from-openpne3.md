@@ -116,8 +116,9 @@ $ php artisan openpne:upgrade-from-3 --dry-run
 Writes nothing. It prints the SQL each step would run, and — the part worth reading — what its
 **preflight** found: a read-only inspection of your source that runs before anything is written.
 
-The lines to act on start with one of these words, apart from the two unprefixed instructions a
-first completion ends with (the surface switch, and warming the pictures: §5); the rest is the
+The lines to act on start with one of these words, apart from the unprefixed instructions a
+first completion ends with (the surface switch and warming the pictures: §5; the tab icon: "What the
+upgrade changed"); the rest is the
 `Site timezone` line to check, the dry run's `PLAN` lines and their SQL, progress, `Reset:` under
 `--force-restart`, and the closing `Finished in …`:
 
@@ -317,6 +318,9 @@ change from a problem when you go through it.
   after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the
   Modern surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover
   below starts with the Modern branding.
+- **Browser-tab icon** — none, as in OpenPNE 3. This version otherwise shows a generated icon
+  (the brand color with the site name's initial); choose it, or upload your own, on the Branding
+  page.
 - **Site settings** — an `sns_config` value is copied only where this version has a matching
   setting, and **the security settings are never copied**: CAPTCHA starts on and registration starts
   invite-only whatever the OpenPNE 3 site had, so set them yourself before the cutover

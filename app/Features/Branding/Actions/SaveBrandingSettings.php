@@ -7,6 +7,7 @@ namespace App\Features\Branding\Actions;
 use App\Files\FileUploader;
 use App\Models\File;
 use App\Services\SnsSettingService;
+use App\Support\FaviconFallback;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use Illuminate\Http\UploadedFile;
@@ -31,8 +32,9 @@ class SaveBrandingSettings
      * @param  array<string, UploadedFile|null>  $files  keyed by the file setting's stored key: an
      *                                                   UploadedFile replaces it, null clears it, an
      *                                                   absent key keeps the stored token.
+     * @param  ?FaviconFallback  $fallback  null keeps the stored value
      */
-    public function __invoke(string $brandColor, array $files = []): void
+    public function __invoke(string $brandColor, array $files = [], ?FaviconFallback $fallback = null): void
     {
         // Reject unknown keys before storing anything: persist() would silently drop them and the
         // uploaded file would outlive the save as an orphan.
@@ -58,7 +60,7 @@ class SaveBrandingSettings
                 $tokens[$key] = $file->name;
             }
 
-            $superseded = DB::transaction(fn (): array => $this->persist($brandColor, $tokens));
+            $superseded = DB::transaction(fn (): array => $this->persist($brandColor, $tokens, $fallback));
         } catch (Throwable $e) {
             foreach ($stored as $file) {
                 $file->delete();
@@ -85,11 +87,17 @@ class SaveBrandingSettings
      * @param  array<string, string>  $tokens
      * @return list<string> the file tokens this save superseded
      */
-    private function persist(string $brandColor, array $tokens): array
+    private function persist(string $brandColor, array $tokens, ?FaviconFallback $fallback): array
     {
         $superseded = [];
 
         foreach (SnsSettingKey::inGroup(SettingGroup::Branding) as $key) {
+            if ($key === SnsSettingKey::BrandFaviconFallback) {
+                $this->persistFallback($fallback);
+
+                continue;
+            }
+
             if ($key === SnsSettingKey::BrandColor) {
                 $value = $brandColor;
             } else {
@@ -112,6 +120,28 @@ class SaveBrandingSettings
         }
 
         return $superseded;
+    }
+
+    /**
+     * Written only when it changes the effective value: the admin form sends the default on every
+     * save, and a row holding the default would stop the upgrade's insert-if-absent stamp
+     * (App\Upgrade\Runner\UpgradeRunner) from marking a migrated site.
+     */
+    private function persistFallback(?FaviconFallback $fallback): void
+    {
+        $key = SnsSettingKey::BrandFaviconFallback;
+
+        if ($fallback === null) {
+            return;
+        }
+
+        $stored = DB::table('sns_settings')->where('key', $key->value)->lockForUpdate()->value('value');
+
+        if ($key->decode($stored === null ? null : (string) $stored) === $fallback) {
+            return;
+        }
+
+        DB::table('sns_settings')->updateOrInsert(['key' => $key->value], ['value' => $key->encode($fallback)]);
     }
 
     /** Only this page's own ownerless public uploads are purged: a setting corrupted into pointing at a member's file must not take it down. */

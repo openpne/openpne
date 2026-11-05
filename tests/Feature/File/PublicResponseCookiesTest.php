@@ -9,6 +9,8 @@ use App\Files\FileUploader;
 use App\Models\BannerImage;
 use App\Models\File;
 use App\Models\Member;
+use App\Support\FaviconFallback;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +37,17 @@ class PublicResponseCookiesTest extends TestCase
 
         $response->assertOk();
         $this->assertPublicAndCookieFree($response);
+    }
+
+    public function test_the_site_icons_are_served_without_session_cookies(): void
+    {
+        // /favicon.ico is what a browser asks for on every page of a site that links no icon.
+        foreach (['/favicon.ico', '/favicon.svg', '/site-icon/192.png'] as $path) {
+            $this->assertPublicAndCookieFree($this->get($path)->assertOk());
+        }
+
+        $this->setSnsSetting(SnsSettingKey::BrandFaviconFallback, FaviconFallback::None);
+        $this->assertPublicAndCookieFree($this->get('/favicon.ico')->assertNotFound());
     }
 
     public function test_a_banner_image_is_served_without_session_cookies(): void

@@ -48,6 +48,35 @@ class SurfaceModeUpgradeTest extends UpgradeSqlTestCase
         $this->assertDatabaseMissing('sns_settings', ['key' => 'surface_mode', 'value' => 'classic_default']);
     }
 
+    public function test_a_full_run_stamps_no_tab_icon_even_when_the_surface_was_set_first(): void
+    {
+        // The surface stamp returns false here; the favicon stamp must not hang off it.
+        DB::table('sns_settings')->insert(['key' => 'surface_mode', 'value' => 'modern_only']);
+        $this->seedGraph();
+
+        $lines = [];
+        $this->assertTrue($this->runner()->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'brand_favicon_fallback', 'value' => 'none']);
+        $this->assertStringContainsString('No browser-tab icon', implode("\n", $lines));
+    }
+
+    public function test_the_tab_icon_stamp_is_insert_if_absent(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'brand_favicon_fallback', 'value' => 'generated']);
+        $this->seedGraph();
+
+        $lines = [];
+        $this->assertTrue($this->runner()->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'brand_favicon_fallback', 'value' => 'generated']);
+        $this->assertStringNotContainsString('No browser-tab icon', implode("\n", $lines));
+    }
+
     public function test_a_dry_run_does_not_stamp(): void
     {
         $this->seedGraph();
@@ -59,7 +88,9 @@ class SurfaceModeUpgradeTest extends UpgradeSqlTestCase
 
         $this->assertTrue($ok);
         $this->assertStringContainsString('surface_mode=classic_default', implode("\n", $lines));
+        $this->assertStringContainsString('brand_favicon_fallback=none', implode("\n", $lines));
         $this->assertDatabaseMissing('sns_settings', ['key' => 'surface_mode']);
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'brand_favicon_fallback']);
     }
 
     private function runner(): UpgradeRunner

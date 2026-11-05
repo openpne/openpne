@@ -3,8 +3,10 @@
 namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
+use App\Files\GeneratedIcon;
 use App\Models\File;
 use App\Models\Member;
+use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -30,7 +32,21 @@ class WebAppManifestTest extends TestCase
             ])
             ->assertJsonCount(2, 'icons')
             ->assertJson(['theme_color' => '#2563eb'])
-            ->assertJson(['icons' => [['src' => asset('icon-192x192.png')], ['src' => asset('icon-512x512.png')]]]);
+            ->assertJson(['icons' => [['src' => $this->tileUrl(192)], ['src' => $this->tileUrl(512)]]]);
+    }
+
+    public function test_a_site_set_to_no_icon_still_offers_the_brand_tile_to_the_home_screen(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::BrandFaviconFallback, FaviconFallback::None);
+
+        $this->get('/manifest.webmanifest')
+            ->assertOk()
+            ->assertJson(['icons' => [['src' => $this->tileUrl(192)], ['src' => $this->tileUrl(512)]]]);
+    }
+
+    private function tileUrl(int $size): string
+    {
+        return route('site_icon', ['size' => $size, 'v' => app(GeneratedIcon::class)->version()]);
     }
 
     public function test_the_manifest_icons_follow_the_branding_favicon(): void

@@ -4,6 +4,7 @@ namespace Tests\Unit\Support;
 
 use App\Features\GroupTalk\GroupTalkNotifyMode;
 use App\Features\Profile\ProfileVisibilityPolicy;
+use App\Support\FaviconFallback;
 use App\Support\Look;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -226,6 +227,20 @@ class SnsSettingKeyTest extends TestCase
             $this->assertSame('', $key->default(), $key->value);
             $this->assertSame('#0088aa', $key->decode('#0088aa'), $key->value);
         }
+    }
+
+    public function test_the_favicon_fallback_is_generated_by_default_and_fails_back_to_it(): void
+    {
+        $key = SnsSettingKey::BrandFaviconFallback;
+
+        $this->assertSame(SettingGroup::Branding, $key->group());
+        $this->assertNull($key->op3SourceName());
+        $this->assertFalse($key->isMigratedFromOp3());
+        $this->assertSame(FaviconFallback::Generated, $key->default());
+        $this->assertSame(FaviconFallback::None, $key->decode('none'));
+        $this->assertSame(FaviconFallback::Generated, $key->decode('garbage'));
+        $this->assertSame('none', $key->encode($key->coerce(' none ')));
+        $this->assertSame('none', $key->encode(FaviconFallback::None));
     }
 
     public function test_the_posting_and_search_switches_are_on_by_default_and_read_as_openpne3_truthy(): void

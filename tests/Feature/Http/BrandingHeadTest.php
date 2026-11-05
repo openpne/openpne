@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
+use App\Files\GeneratedIcon;
 use App\Models\File;
 use App\Models\Member;
+use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,7 +58,7 @@ class BrandingHeadTest extends TestCase
         return $this->get('/login')->assertOk();
     }
 
-    public function test_an_unbranded_install_keeps_the_built_in_head(): void
+    public function test_an_unbranded_install_links_the_generated_icon(): void
     {
         $response = $this->modern();
 
@@ -67,10 +69,25 @@ class BrandingHeadTest extends TestCase
         $response
             ->assertSee('data-theme-color-light="#2563eb"', false)
             ->assertSee('<meta name="theme-color" content="#2563eb">', false)
-            ->assertSee(asset('favicon-32x32.png'), false)
-            ->assertSee(asset('apple-touch-icon.png'), false)
+            ->assertSee('<link rel="icon" href="'.$this->generatedUrl('favicon.ico').'" sizes="32x32">', false)
+            ->assertSee('<link rel="icon" href="'.$this->generatedUrl('favicon.svg').'" type="image/svg+xml">', false)
+            ->assertSee('<link rel="apple-touch-icon" href="'.$this->generatedUrl('site_icon', 180).'">', false)
             // No inline override, so --primary stays whatever the stylesheet declares per theme.
             ->assertDontSee('--primary:', false);
+    }
+
+    public function test_a_site_set_to_no_icon_links_no_tab_icon_on_either_surface(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::BrandFaviconFallback, FaviconFallback::None);
+
+        // Classic first: modern() logs a member in, and that session would bounce the guest login page.
+        foreach ([$this->classic(), $this->modern()] as $response) {
+            $response
+                ->assertDontSee('rel="icon"', false)
+                // The home-screen icon is outside the decision: it stays the brand tile.
+                ->assertSee('<link rel="apple-touch-icon" href="'.$this->generatedUrl('site_icon', 180).'">', false)
+                ->assertSee(route('webmanifest'), false);
+        }
     }
 
     public function test_a_brand_color_overrides_only_the_primary_variables(): void
@@ -101,7 +118,7 @@ class BrandingHeadTest extends TestCase
 
         $this->modern()
             ->assertSee('<link rel="icon" type="image/png" href="'.$url.'">', false)
-            ->assertDontSee('favicon-32x32.png', false)
+            ->assertDontSee('favicon.svg', false)
             ->assertDontSee('/favicon.ico', false)
             // The home-screen icon is derived from the same upload, not the shipped asset.
             ->assertSee('<link rel="apple-touch-icon" href="'.$this->appIconUrl(180).'">', false);
@@ -113,16 +130,23 @@ class BrandingHeadTest extends TestCase
 
         $this->classic()
             ->assertSee('<link rel="icon" type="image/png" href="'.$url.'">', false)
-            ->assertDontSee('favicon-32x32.png', false)
+            ->assertDontSee('favicon.svg', false)
             ->assertSee('<link rel="apple-touch-icon" href="'.$this->appIconUrl(180).'">', false);
     }
 
-    public function test_classic_keeps_the_shipped_icons_when_no_favicon_is_set(): void
+    public function test_classic_links_the_generated_icon_when_no_favicon_is_set(): void
     {
         $this->classic()
-            ->assertSee(asset('favicon-32x32.png'), false)
-            ->assertSee(asset('apple-touch-icon.png'), false)
+            ->assertSee('<link rel="icon" href="'.$this->generatedUrl('favicon.svg').'" type="image/svg+xml">', false)
+            ->assertSee('<link rel="apple-touch-icon" href="'.$this->generatedUrl('site_icon', 180).'">', false)
             // The brand color is Modern-only; Classic is styled by its skin.
             ->assertDontSee('--primary:', false);
+    }
+
+    private function generatedUrl(string $route, ?int $size = null): string
+    {
+        $parameters = ['v' => app(GeneratedIcon::class)->version()];
+
+        return route($route, $size === null ? $parameters : ['size' => $size] + $parameters);
     }
 }

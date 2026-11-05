@@ -314,7 +314,9 @@ contracts:
 - `next_steps` carries a line only when it applied to this run: the surface-mode and
   picture-warming lines are recorded by the run that first completed the site (the one that
   inserted `surface_mode`), so a re-run has an empty list, and an operator who set the mode
-  before the first completion never sees the picture line (the guide's §5 says the same).
+  before the first completion never sees the picture line (the guide's §5 says the same). The
+  tab-icon line is recorded by the run that inserted `brand_favicon_fallback`, whatever the
+  surface stamp did.
 - `steps[]` lists the walk steps, the passes and the three `file_bin` keys by their checkpoint
   `step_key`; `elapsed_ms` is measured by the report between `started()` and `done()` /
   `failed()`, and is `null` for a failure recorded without a start (the emoji charset refusal).
@@ -346,7 +348,7 @@ contracts:
 ## Post-walk passes
 
 Work an `INSERT ... SELECT` cannot express runs after the walk, in this order, each under its own
-checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_state` row:
+checkpoint except the two settings stamps, which write no `openpne4_upgrade_state` row:
 
 | Pass | Why after the walk | Resume model |
 |---|---|---|
@@ -359,6 +361,7 @@ checkpoint except the `surface_mode` stamp, which writes no `openpne4_upgrade_st
 | `ClassicThemeSelection` | the skin OpenPNE 3 showed is a function of two source tables at once — the `opSkin*` rows of `plugin` (the two bundled skins count as enabled without a row, and only the theme plugin as the one enabled skin dressed the site; an activation written in `plugin.yml` is not visible here, and a row left by a skin plugin since removed from disk still counts) and `sns_config.Theme_used`, which a site that never saved the theme page lacks (OpenPNE 3 then wore the first package on its disk, which the run cannot see: the default skin is written with a WARN naming the choice to make) — which no `INSERT ... SELECT` over one of them expresses; writes `sns_settings.classic_theme` ([classic-compatibility.md](classic-compatibility.md#themes)), and a `Theme_used` naming a package not vendored here is written as it was with a WARN, so `ClassicThemeCheck` fails until the package is copied in | a function of the source rows, so a rescan writes the same value; the write and the COMPLETED checkpoint commit in one transaction |
 | `FileBinMigration` move + rewire | `files` must exist for the FK | `information_schema` state (source table presence, FK target) |
 | `surface_mode` stamp | no OpenPNE 3 source column | insert-if-absent, only after full success |
+| `brand_favicon_fallback` stamp | no OpenPNE 3 source column; OpenPNE 3 showed no browser-tab icon ([site-icon.md](site-icon.md)) | insert-if-absent, only after full success, independent of the surface stamp |
 
 `PasswordWrap` writes `bcrypt(md5hex)` at cost 10 with `password_scheme = md5_bcrypt`; login
 verifies `Hash::check(md5($attempt), $hash)` and rehashes to plain bcrypt on the first success.

@@ -158,6 +158,7 @@ class PreviousUrlTest extends TestCase
             'image.show' => $avatar->thumbnailUrl(120, 120, square: true),
             'banner.image' => $this->bannerImageUrl(),
             'webmanifest' => route('webmanifest'),
+            'favicon.svg' => route('favicon.svg'),
             'design.customizing_css' => route('design.customizing_css'),
         ];
 

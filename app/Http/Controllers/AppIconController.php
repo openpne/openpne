@@ -7,8 +7,8 @@ use Illuminate\Http\Response;
 
 /**
  * Public, like the manifest that names it: an installable app's icon has to resolve for a guest.
- * Only an install with an uploaded favicon links here (an unbranded shell points at the shipped
- * asset), so a missing favicon is a 404 rather than a redirect back to it.
+ * Only an install with an uploaded favicon links here (a shell without one points at the generated
+ * tile), so a missing favicon is a 404 rather than a redirect back to it.
  */
 class AppIconController extends Controller
 {
@@ -23,8 +23,8 @@ class AppIconController extends Controller
         return response($icons->bytes($source, $size), 200, [
             'Content-Type' => 'image/png',
             'X-Content-Type-Options' => 'nosniff',
-            // Not immutable: a source too small to fill this size answers with the shipped icon,
-            // which an upgrade may replace under the same URL.
+            // Not immutable: a source too small to fill this size answers with the brand tile, which
+            // a changed brand color repaints under the same URL.
             'Cache-Control' => 'public, max-age=86400',
         ]);
     }

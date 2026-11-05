@@ -6,9 +6,11 @@ namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\BrandingSettings;
 use App\Files\FileUploader;
+use App\Files\GeneratedIcon;
 use App\Models\AdminUser;
 use App\Models\File;
 use App\Services\SnsSettingService;
+use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
 use Filament\Facades\Filament;
@@ -81,12 +83,27 @@ class BrandingSettingsTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'brand_color', 'value' => '']);
         $this->assertDatabaseHas('sns_settings', ['key' => 'brand_logo_file', 'value' => '']);
         $this->assertDatabaseHas('sns_settings', ['key' => 'brand_favicon_file', 'value' => '']);
+        // The fallback is the one key written only when it changes: the form sent its default.
         $this->assertSame(3, DB::table('sns_settings')->count());
     }
 
-    public function test_the_admin_panel_favicon_follows_the_uploaded_one(): void
+    public function test_choosing_no_icon_is_stored_and_read_back(): void
     {
-        $this->assertSame(asset('favicon-32x32.png'), Filament::getCurrentPanel()->getFavicon());
+        Livewire::test(BrandingSettings::class)
+            ->set('data.brand_favicon_fallback', 'none')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'brand_favicon_fallback', 'value' => 'none']);
+        $this->assertSame('none', Livewire::test(BrandingSettings::class)->get('data')['brand_favicon_fallback']);
+    }
+
+    public function test_the_admin_panel_favicon_follows_the_site_icon(): void
+    {
+        $this->assertSame(route('favicon.svg', ['v' => app(GeneratedIcon::class)->version()]), Filament::getCurrentPanel()->getFavicon());
+
+        $this->setSnsSetting(SnsSettingKey::BrandFaviconFallback, FaviconFallback::None);
+        $this->assertNull(Filament::getCurrentPanel()->getFavicon());
 
         $file = app(FileUploader::class)->store(
             UploadedFile::fake()->image('icon.png', 32, 32),
@@ -106,6 +123,7 @@ class BrandingSettingsTest extends TestCase
 
         $expected = [
             SnsSettingKey::BrandColor->value,
+            SnsSettingKey::BrandFaviconFallback->value,
             SnsSettingKey::BrandFaviconFile->value,
             SnsSettingKey::BrandLogoFile->value,
             'remove_brand_favicon',
