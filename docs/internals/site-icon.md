@@ -31,8 +31,8 @@ built-in one when unset) and the initial of the site name, by the same rule as t
 forms — the ICO and the home-screen PNGs — are drawn by an administrator's browser: a body-end hook on
 every admin page (`resources/views/filament/site-icon-raster.blade.php`) draws the SVG onto a canvas
 in each size with the fonts of that administrator's machine and posts the PNGs to
-`/admin/site-icon/raster` (a browser that guards canvas reads against fingerprinting draws noise,
-which the page detects, does not send, and does not retry for the session), which [`GeneratedIconRaster`](../../app/Files/GeneratedIconRaster.php)
+`/admin/site-icon/raster` (once per browser session; a browser that guards canvas reads against
+fingerprinting draws noise, which the page detects and does not send), which [`GeneratedIconRaster`](../../app/Files/GeneratedIconRaster.php)
 keeps on the image cache disk under the icon's version (the 32 px one keeps the rounded corners, the
 larger ones are square: iOS rounds the apple-touch-icon itself). Until a raster for the current color and name exists — a
 fresh install before its first admin visit, a renamed site until the next — the routes answer with a

@@ -16,8 +16,10 @@ use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -154,6 +156,17 @@ class SiteIconRasterTest extends TestCase
         $this->freshRequestState();
         $this->assertFalse(app(GeneratedIcon::class)->hasRaster());
         Storage::disk('image_cache')->assertMissing('_site-icon/'.app(GeneratedIcon::class)->version().'/complete');
+    }
+
+    public function test_a_raster_that_cannot_be_discarded_does_not_fail_the_save(): void
+    {
+        Exceptions::fake();
+        $this->mock(GeneratedIconRaster::class, fn ($mock) => $mock->shouldReceive('prune')->once()->andThrow(new RuntimeException('disk')));
+
+        app(SaveBrandingSettings::class)('#112233');
+
+        $this->assertSame('#112233', brand_color());
+        Exceptions::assertReported(RuntimeException::class);
     }
 
     public function test_the_admin_panel_asks_the_browser_to_draw_only_when_it_is_wanted(): void
