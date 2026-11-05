@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * A fleet host keeps every site's spool under one tree the sidecar reads and points the site's
- * `storage/app/image-spool` at it with a symlink (docs/internals/images.md, "Processing").
+ * The spool is a symlink into the tree one sidecar reads for several sites (docs/internals/images.md, "Processing").
  */
 class ImageSpoolSymlinkTest extends TestCase
 {

@@ -323,9 +323,10 @@ write. No route of this app serves stored bytes to the sidecar, so it needs no p
 `IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file,
 and `<site>/` where one sidecar serves several sites from a root that holds a directory per site.
 The spool directory itself may be a symbolic link to such a place: the app writes, lists and deletes
-through the path as configured and resolves nothing (`ImageSpoolSymlinkTest`). Spooled files are
-world-readable, so the directory's own permissions are what keep one site's spool from another's
-listing.
+through the path as configured (`ImageSpoolSymlinkTest`). A spooled file is world-readable, so
+what keeps one site's spool from another's is the directory: no read bit for other users (the
+sidecar's user needs only the execute bit), and the 32-character random name a file lives under
+for a few seconds.
 A sidecar of the operator's own needs three settings besides the key and salt:
 `IMGPROXY_LOCAL_FILESYSTEM_ROOT`, `IMGPROXY_ALLOWED_SOURCES=local://` and
 `IMGPROXY_ALLOW_SECURITY_OPTIONS=true` — the last because every request states its own frame budget

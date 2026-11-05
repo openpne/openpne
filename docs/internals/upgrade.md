@@ -214,7 +214,8 @@ is in the site's own database (its `openpne4_upgrade_state`, its targets, the em
 absent optional source tables created and dropped in its source schema) or in its own session
 (`FOREIGN_KEY_CHECKS`, the transaction); the tool takes no named lock, sets no global variable,
 creates no `TEMPORARY` table and qualifies every `information_schema` read by schema
-(`UpgradeServerStateTest`). What two runs still share is the server's own capacity — connections,
+(`UpgradeServerStateTest`). The caches it clears at the end live in the cache store, the site's own
+database by default; sites pointed at one shared store must keep their `CACHE_PREFIX` apart. What two runs still share is the server's own capacity — connections,
 `table_definition_cache` for the two schemas' tables — which is the operator's sizing, not a
 contract of the tool.
 
