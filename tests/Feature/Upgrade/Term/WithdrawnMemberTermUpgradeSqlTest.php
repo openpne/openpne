@@ -36,10 +36,10 @@ class WithdrawnMemberTermUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertSame('退会したメンバー', TermService::defaults('ja')['withdrawn_member'], 'the default itself is untouched');
     }
 
-    /** OpenPNE 3 read a NULL row as its default, like no row; the OpenPNE 4 default stands in. */
-    public function test_the_source_default_a_null_and_no_row_write_nothing(): void
+    /** OpenPNE 3 read a NULL row as its default, like no row; an empty one the admin page could not keep. */
+    public function test_the_source_default_a_null_an_empty_value_and_no_row_write_nothing(): void
     {
-        foreach ([WithdrawnMemberTermUpgrade::SOURCE_DEFAULT, null] as $value) {
+        foreach ([WithdrawnMemberTermUpgrade::SOURCE_DEFAULT, null, ''] as $value) {
             DB::table('sns_config')->delete();
             $this->seedConfig($value);
 
@@ -53,14 +53,21 @@ class WithdrawnMemberTermUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertSame(0, DB::table('term_overrides')->count());
     }
 
-    /** OpenPNE 3 rendered an empty value as nothing, so it is a site value, not the default. */
-    public function test_an_empty_value_is_carried_as_empty(): void
+    /** The column's collation equates these with `-`; a site that typed them keeps them. */
+    public function test_a_dash_the_collation_equates_with_the_default_is_a_site_value(): void
     {
-        $this->seedConfig('');
+        foreach (['－', '- '] as $value) {
+            DB::table('sns_config')->delete();
+            DB::table('term_overrides')->delete();
+            $this->seedConfig($value);
 
-        $this->runUpgrade();
+            $this->runUpgrade();
 
-        $this->assertDatabaseHas('term_overrides', ['name' => 'withdrawn_member', 'locale' => 'ja', 'value' => '']);
+            $this->assertSame(
+                ['en' => $value, 'ja' => $value],
+                DB::table('term_overrides')->orderBy('locale')->pluck('value', 'locale')->all(),
+            );
+        }
     }
 
     public function test_another_setting_is_not_read(): void

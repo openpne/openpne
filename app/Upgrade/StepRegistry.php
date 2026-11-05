@@ -155,7 +155,7 @@ final class StepRegistry
             SnsSettingUpgrade::class,
             // term_overrides is independent too; the PC sns_term rows, name for name.
             TermOverrideUpgrade::class,
-            // Same target: the withdrawn-member nickname of sns_config, one row per locale.
+            // term_overrides again: the withdrawn-member nickname of sns_config, one row per locale.
             WithdrawnMemberTermJaUpgrade::class,
             WithdrawnMemberTermEnUpgrade::class,
             // Same target, also FK-free: OpenPNE 3's feature availability (`plugin`, plus sns_config's
