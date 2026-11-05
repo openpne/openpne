@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Features\Branding\Actions;
 
 use App\Files\FileUploader;
+use App\Files\GeneratedIconRaster;
 use App\Models\File;
 use App\Services\SnsSettingService;
 use App\Support\FaviconFallback;
@@ -26,6 +27,7 @@ class SaveBrandingSettings
     public function __construct(
         private readonly FileUploader $uploader,
         private readonly SnsSettingService $settings,
+        private readonly GeneratedIconRaster $raster,
     ) {}
 
     /**
@@ -72,6 +74,13 @@ class SaveBrandingSettings
         // Before the deletes: a request that reads the old token from a stale cache would otherwise
         // be handed a file that is already gone.
         $this->settings->clearCache();
+
+        // A save is the operator's one way to have the generated icon drawn again.
+        try {
+            $this->raster->prune('');
+        } catch (Throwable $e) {
+            report($e);
+        }
 
         // After the commit: a disk backend's byte deletion cannot be rolled back.
         foreach ($superseded as $token) {

@@ -63,8 +63,8 @@ class AppIcon
             return $hit;
         }
 
-        // Only the verdict (too small, or refused by the processor) is cached, never the tile, so a
-        // changed brand color shows.
+        // Only the verdict (too small, or refused by the processor) is cached, never the generated
+        // icon, so a changed brand color or a later draw shows.
         if ($disk->exists($tooSmall) || $disk->exists($refused)) {
             return $this->generated->png($size);
         }
@@ -76,7 +76,7 @@ class AppIcon
 
             return $this->generated->png($size);
         } catch (ImageProcessorUnavailableException) {
-            // An outage is not a verdict: the tile now, the uploaded icon when the processor is back.
+            // An outage is not a verdict: the generated icon now, the uploaded one when the processor is back.
             return $this->generated->png($size);
         }
 

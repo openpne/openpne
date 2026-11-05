@@ -31,7 +31,7 @@ class SiteIcon
     {
         return match ($this->state()) {
             SiteIconState::Uploaded => brand_favicon_url(),
-            SiteIconState::Generated => route('favicon.svg', ['v' => $this->generated->version()]),
+            SiteIconState::Generated => route('favicon.svg', ['v' => $this->generated->urlVersion()]),
             SiteIconState::None => null,
         };
     }
@@ -41,12 +41,12 @@ class SiteIcon
         $token = (string) $this->settings->get(SnsSettingKey::BrandFaviconFile);
 
         return $token === ''
-            ? route('site_icon', ['size' => $size, 'v' => $this->generated->version()])
+            ? route('site_icon', ['size' => $size, 'v' => $this->generated->urlVersion()])
             : route('app_icon', ['token' => $token, 'size' => $size]);
     }
 
     public function version(): string
     {
-        return $this->generated->version();
+        return $this->generated->urlVersion();
     }
 }

@@ -121,6 +121,10 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_END,
                 fn (): View => view('filament.components.image-lightbox'),
             )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): View => view('filament.site-icon-raster'),
+            )
             ->authMiddleware([
                 Authenticate::class,
             ]);

@@ -7,58 +7,102 @@ namespace App\Files;
 use App\Support\BrandColor;
 use App\Support\Initial;
 
-/**
- * The raster forms are built byte by byte, not through GD, which is optional on an imgproxy install
- * (docs/internals/site-icon.md, "The generated icon").
- */
+/** See docs/internals/site-icon.md, "The generated icon". */
 class GeneratedIcon
 {
     private const ICO_HEADER_BYTES = 22;
+
+    /** Bumped when svg() changes shape, so rasters drawn from the old look are drawn again. */
+    private const DESIGN = '1';
+
+    public function __construct(private readonly GeneratedIconRaster $raster) {}
 
     public function color(): string
     {
         return brand_color() ?? BrandColor::DEFAULT;
     }
 
-    /** Changes with the color or the name, so a URL carrying it is re-fetched by an installed app. */
+    /** What a posted raster is checked against: the design, the color and the name it was drawn from. */
     public function version(): string
     {
-        return substr(sha1($this->color().'|'.sns_name()), 0, 8);
+        return substr(sha1(self::DESIGN.'|'.$this->color().'|'.sns_name()), 0, 8);
     }
 
-    public function svg(): string
+    /** Changes when the raster lands too, so a URL carrying it is re-fetched by an installed app. */
+    public function urlVersion(): string
+    {
+        $version = $this->version();
+
+        return $this->raster->has($version) ? $version.'-r' : $version;
+    }
+
+    public function hasRaster(): bool
+    {
+        return $this->raster->has($this->version());
+    }
+
+    /** Firefox draws an SVG onto a canvas only when its root declares width and height. */
+    public function svg(bool $rounded = true): string
     {
         $color = $this->color();
         $initial = self::xmlText(Initial::of(sns_name()));
         $fontSize = mb_strlen($initial) === 1 ? 34 : 28;
 
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
-            .'<rect width="64" height="64" rx="12" fill="'.$color.'"/>'
-            .'<text x="32" y="32" dy=".36em" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="'.$fontSize.'" fill="'.BrandColor::readableForeground($color).'">'
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">'
+            .'<rect width="64" height="64"'.($rounded ? ' rx="12"' : '').' fill="'.$color.'"/>'
+            .'<text x="32" y="32" dy=".36em" text-anchor="middle" font-family="system-ui, -apple-system, \'Helvetica Neue\', Arial, sans-serif" font-weight="700" font-size="'.$fontSize.'" fill="'.BrandColor::readableForeground($color).'">'
             .htmlspecialchars($initial, ENT_XML1 | ENT_QUOTES, 'UTF-8')
             .'</text></svg>';
     }
 
-    /** A square of the brand color, with no letter: a raster letter needs a font, and none is shipped. */
+    public function raster(int $size): ?string
+    {
+        return $this->raster->bytes($this->version(), $size);
+    }
+
     public function png(int $size): string
+    {
+        return $this->raster($size) ?? $this->tile($size);
+    }
+
+    /**
+     * A square of the brand color with no letter, built byte by byte: a raster letter needs a font,
+     * and neither one nor GD (optional on an imgproxy install) is shipped.
+     */
+    public function tile(int $size): string
     {
         [$r, $g, $b] = sscanf($this->color(), '#%02x%02x%02x');
         $row = "\0".str_repeat(chr($r).chr($g).chr($b)."\xff", $size);
 
-        // Opaque RGBA (color type 6): the 32 bits per pixel the ICO entry declares.
         return "\x89PNG\r\n\x1a\n"
             .self::chunk('IHDR', pack('NNCCCCC', $size, $size, 8, 6, 0, 0, 0))
             .self::chunk('IDAT', (string) gzcompress(str_repeat($row, $size), 9))
             .self::chunk('IEND', '');
     }
 
-    public function ico(): string
+    /** @param  ?string  $png  the 32px entry; the best one available when null */
+    public function ico(?string $png = null): string
     {
-        $png = $this->png(32);
+        $png ??= $this->png(32);
 
         return pack('vvv', 0, 1, 1)
-            .pack('CCCCvvVV', 32, 32, 0, 0, 1, 32, strlen($png), self::ICO_HEADER_BYTES)
+            .pack('CCCCvvVV', 32, 32, 0, 0, 1, self::bitsPerPixel($png), strlen($png), self::ICO_HEADER_BYTES)
             .$png;
+    }
+
+    /** Read off the IHDR, since a browser's PNG encoder may write an opaque image without an alpha channel. */
+    private static function bitsPerPixel(string $png): int
+    {
+        $depth = ord($png[24] ?? "\x08");
+        $channels = match (ord($png[25] ?? "\x06")) {
+            0 => 1,
+            2 => 3,
+            3 => 1,
+            4 => 2,
+            default => 4,
+        };
+
+        return $depth * $channels;
     }
 
     /** Control characters have no place in XML text, however the name was saved. */

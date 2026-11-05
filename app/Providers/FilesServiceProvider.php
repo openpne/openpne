@@ -6,6 +6,7 @@ use App\Files\DbBlobFileStorage;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\GdImageProcessor;
+use App\Files\GeneratedIconRaster;
 use App\Files\ImageProcessor;
 use App\Files\Imgproxy\ImgproxyImageProcessor;
 use App\Files\Imgproxy\ImgproxyUrl;
@@ -35,6 +36,9 @@ class FilesServiceProvider extends ServiceProvider
         // Livewire's own temporary-upload rule (12288 KB) would otherwise cap the admin forms above
         // it, and setting it after the package's shallow mergeConfigFrom keeps the sibling keys.
         config(['livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.UploadLimit::kilobytes()]]);
+
+        // Scoped: one per request, so the raster's existence is read once however many URLs a page builds.
+        $this->app->scoped(GeneratedIconRaster::class);
 
         // Bound (not singleton) so each resolution reflects the current
         // openpne.files.disk; the implementations are stateless and cheap to build.

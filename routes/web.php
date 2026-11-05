@@ -45,6 +45,7 @@ use App\Features\Timeline\TimelineController;
 use App\Features\Timeline\TimelineReactionController;
 use App\Files\AppIcon;
 use App\Http\Controllers\Admin\AdminFileController;
+use App\Http\Controllers\Admin\SiteIconRasterController;
 use App\Http\Controllers\AppIconController;
 use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
@@ -119,6 +120,9 @@ Route::post('/admin/locale/session', function (Request $request) {
 
     return response()->noContent();
 })->name('locale.switch.session');
+
+// Under /admin for the same reason; the admin guard is checked in the action.
+Route::post('/admin/site-icon/raster', [SiteIconRasterController::class, 'store'])->middleware('auth.session')->name('admin.site_icon.raster');
 
 // Public, yet auth.session: without it a session whose password hash is stale keeps a non-null
 // viewer here, and every gate downstream reads that viewer's clearance.
