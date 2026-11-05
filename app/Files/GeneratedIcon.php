@@ -12,6 +12,9 @@ class GeneratedIcon
 {
     private const ICO_HEADER_BYTES = 22;
 
+    /** Bumped when svg() changes shape, so rasters drawn from the old look are drawn again. */
+    private const DESIGN = '1';
+
     public function __construct(private readonly GeneratedIconRaster $raster) {}
 
     public function color(): string
@@ -22,7 +25,7 @@ class GeneratedIcon
     /** What a posted raster is checked against: the color and the name it was drawn from. */
     public function version(): string
     {
-        return substr(sha1($this->color().'|'.sns_name()), 0, 8);
+        return substr(sha1(self::DESIGN.'|'.$this->color().'|'.sns_name()), 0, 8);
     }
 
     /** Changes when the raster lands too, so a URL carrying it is re-fetched by an installed app. */
@@ -57,7 +60,6 @@ class GeneratedIcon
         return $this->raster->bytes($this->version(), $size);
     }
 
-    /** The best raster at $size: the drawn one when an administrator's browser has sent it, else the tile. */
     public function png(int $size): string
     {
         return $this->raster($size) ?? $this->tile($size);
@@ -78,9 +80,10 @@ class GeneratedIcon
             .self::chunk('IEND', '');
     }
 
-    public function ico(): string
+    /** @param  ?string  $png  the 32px entry; the best one available when null */
+    public function ico(?string $png = null): string
     {
-        $png = $this->png(32);
+        $png ??= $this->png(32);
 
         return pack('vvv', 0, 1, 1)
             .pack('CCCCvvVV', 32, 32, 0, 0, 1, self::bitsPerPixel($png), strlen($png), self::ICO_HEADER_BYTES)

@@ -30,10 +30,11 @@ built-in one when unset) and the initial of the site name, by the same rule as t
 `resources/js/lib/identity-mark.ts`). A raster letter needs a font, and none is shipped, so the raster
 forms — the ICO and the home-screen PNGs — are drawn by an administrator's browser: a body-end hook on
 every admin page (`resources/views/filament/site-icon-raster.blade.php`) draws the SVG onto a canvas
-in each size with the fonts of that administrator's machine and posts the PNGs once per browser
-session to `/admin/site-icon/raster`, which [`GeneratedIconRaster`](../../app/Files/GeneratedIconRaster.php)
+in each size with the fonts of that administrator's machine and posts the PNGs to
+`/admin/site-icon/raster` (once per browser session once accepted; a browser that guards canvas reads
+against fingerprinting draws noise, which the page detects and does not send), which [`GeneratedIconRaster`](../../app/Files/GeneratedIconRaster.php)
 keeps on the image cache disk under the icon's version (the 32 px one keeps the rounded corners, the
-larger ones are square for the OS to mask). Until a raster for the current color and name exists — a
+larger ones are square: iOS rounds the apple-touch-icon itself). Until a raster for the current color and name exists — a
 fresh install before its first admin visit, a renamed site until the next — the routes answer with a
 square of the brand color and no letter, built byte by byte rather than through GD (optional on an
 imgproxy install), and cached for minutes rather than a day. The `none` state draws too: its home
@@ -43,5 +44,7 @@ Every generated URL carries `v`, a hash of the color and the name with `-r` appe
 exists, because an installed app re-fetches its icon off a changed URL, not off new bytes at an
 unchanged one. The one exception is
 an upload that cannot fill a size (too small, refused, or the processor down), which answers with
-the tile under the upload's own URL for the day it is cached; a changed brand color repaints it in
-place.
+the generated icon under the upload's own URL for the day it is cached; a changed brand color or a
+later draw replaces it in place. The hook does not run while a favicon is uploaded, so that generated
+icon has a letter only if one was drawn before the upload. Saving the Branding page discards the
+stored raster, so the next admin page load draws it again.

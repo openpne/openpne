@@ -748,7 +748,7 @@
     "Issuing or revoking a token asks for your password.": "トークンの発行と削除にはパスワードの確認が必要です。",
     "It appears on this site as a member marked AI. It cannot sign in — you speak for it.": "AIマークの付いたメンバーとしてサイトに表示されます。ログインはできず、あなたが代わりに操作します。",
     "It disappears from your screen only. The other person keeps their copy.": "自分の画面から消えるだけで、相手側には残ります。",
-    "It is the home-screen icon too: upload at least 512×512, or a brand-color tile is used at the sizes it cannot fill. Transparent areas are filled with white.": "ホーム画面のアイコンにも使われます。512×512 以上を推奨で、足りないサイズはブランドカラーの単色タイルになります。透明部分は白で塗りつぶされます。",
+    "It is the home-screen icon too: upload at least 512×512, or the generated icon is used at the sizes it cannot fill. Transparent areas are filled with white.": "ホーム画面のアイコンにも使われます。512×512 以上を推奨で、足りないサイズは自動生成アイコンになります。透明部分は白で塗りつぶされます。",
     "Italic": "斜体",
     "Join": "参加",
     "Join :name?": ":nameに参加しますか？",

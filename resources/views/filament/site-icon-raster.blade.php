@@ -11,6 +11,7 @@
     hidden
     data-site-icon-raster
     data-version="{{ $generated->version() }}"
+    data-color="{{ $generated->color() }}"
     data-url="{{ route('admin.site_icon.raster') }}"
     data-token="{{ csrf_token() }}"
     data-sizes="{{ implode(',', \App\Files\GeneratedIconRaster::SIZES) }}"
@@ -34,12 +35,25 @@
             });
         }
 
+        var color = el.dataset.color;
+        var brand = [1, 3, 5].map(function (i) { return parseInt(color.substr(i, 2), 16); });
+
+        // A browser that guards against canvas fingerprinting hands back noise instead of the
+        // drawing: a pixel that must be the brand color is checked before anything is sent.
+        function isBrand(ctx, x, y) {
+            var p = ctx.getImageData(x, y, 1, 1).data;
+            return p[3] === 255 && Math.abs(p[0] - brand[0]) <= 4 && Math.abs(p[1] - brand[1]) <= 4 && Math.abs(p[2] - brand[2]) <= 4;
+        }
+
         function draw(img, size) {
             return new Promise(function (resolve, reject) {
                 var canvas = document.createElement('canvas');
                 canvas.width = size;
                 canvas.height = size;
-                canvas.getContext('2d').drawImage(img, 0, 0, size, size);
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, size, size);
+                // The 32px icon is rounded: (3, 16) is inside its left edge; the square sizes check a corner.
+                if (!(size === 32 ? isBrand(ctx, 3, 16) : isBrand(ctx, 2, 2))) return reject(new Error('canvas-noise'));
                 canvas.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error('png')); }, 'image/png');
             });
         }
@@ -63,6 +77,8 @@
             // 409 is a draw for a name or color since changed: the next page load draws the new one.
             if (response.status === 204 || response.status === 409) sessionStorage.setItem(key, '1');
         }).catch(function (error) {
+            // This browser cannot draw it; another administrator's may.
+            if (error && error.message === 'canvas-noise') sessionStorage.setItem(key, '1');
             if (window.console && console.debug) console.debug('site icon raster', error);
         });
     })();

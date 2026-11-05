@@ -23,8 +23,8 @@ class AppIconController extends Controller
         return response($icons->bytes($source, $size), 200, [
             'Content-Type' => 'image/png',
             'X-Content-Type-Options' => 'nosniff',
-            // Not immutable: a source too small to fill this size answers with the brand tile, which
-            // a changed brand color repaints under the same URL.
+            // Not immutable: a source too small to fill this size answers with the generated icon,
+            // which a changed brand color or a later draw replaces under the same URL.
             'Cache-Control' => 'public, max-age=86400',
         ]);
     }

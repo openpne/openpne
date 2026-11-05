@@ -18,14 +18,17 @@ class GeneratedIconRaster
 
     public const MAX_BYTES = 262144;
 
-    /** Leading underscore: a file token is alphanumeric, so no file's directory can be this one. */
+    /** Leading underscore: FileUploader's tokens are alphanumeric, so no file's cache directory is this one. */
     private const PREFIX = '_site-icon';
+
+    /** @var array<string, bool> per-request memo (the class is scoped), since every page's head asks */
+    private array $known = [];
 
     public function __construct(private readonly ImageCache $cache) {}
 
     public function has(string $version): bool
     {
-        return $this->disk()->exists(self::PREFIX."/{$version}/complete");
+        return $this->known[$version] ??= $this->disk()->exists(self::PREFIX."/{$version}/complete");
     }
 
     public function bytes(string $version, int $size): ?string
@@ -40,8 +43,8 @@ class GeneratedIconRaster
     }
 
     /**
-     * Validated in full before anything is written; the new version is published before any other is
-     * deleted, so a late write for an old version never removes a newer one.
+     * Validated in full before anything is written, and nothing else is deleted here: prune() is a
+     * separate call, so the caller decides which version survives.
      *
      * @param  array<int, string>  $pngs  keyed by size, one per SIZES entry
      *
@@ -69,10 +72,16 @@ class GeneratedIconRaster
         }
 
         $this->cache->publish(self::PREFIX."/{$version}/complete", '');
+        $this->known[$version] = true;
+    }
 
+    /** Deletes every version but $keep ('' for all), read by the caller after its own write so a late write for an old version never removes a newer one. */
+    public function prune(string $keep): void
+    {
         foreach ($this->disk()->directories(self::PREFIX) as $directory) {
-            if (basename($directory) !== $version) {
+            if (basename($directory) !== $keep) {
                 $this->disk()->deleteDirectory($directory);
+                unset($this->known[basename($directory)]);
             }
         }
     }

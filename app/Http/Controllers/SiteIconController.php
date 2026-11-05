@@ -29,11 +29,21 @@ class SiteIconController extends Controller
     {
         return match ($icon->state()) {
             SiteIconState::Uploaded => redirect((string) brand_favicon_url()),
-            SiteIconState::Generated => $this->bytes($generated->ico(), 'image/x-icon', $generated->hasRaster() ? self::CACHE : self::CACHE_TILE),
+            SiteIconState::Generated => $this->ico32($generated),
             // A bare 404, not the error page: browsers ask for this path on every page of a site
             // that links no icon.
             SiteIconState::None => response('', 404, ['Cache-Control' => self::CACHE]),
         };
+    }
+
+    /** The raster is read once, so the cache lifetime describes the bytes actually sent. */
+    private function ico32(GeneratedIcon $generated): Response
+    {
+        $raster = $generated->raster(32);
+
+        return $raster === null
+            ? $this->bytes($generated->ico($generated->tile(32)), 'image/x-icon', self::CACHE_TILE)
+            : $this->bytes($generated->ico($raster), 'image/x-icon', self::CACHE);
     }
 
     public function png(int $size, GeneratedIcon $generated): Response

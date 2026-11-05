@@ -124,7 +124,7 @@ class BrandingSettings extends Page
                     self::surfaceScoped(
                         __('Shown in the browser tab on both surfaces and in the admin panel. PNG only, square.'),
                         __('Shown in the browser tab and in the admin panel. PNG only, square.'),
-                    ).' '.__('It is the home-screen icon too: upload at least 512×512, or a brand-color tile is used at the sizes it cannot fill. Transparent areas are filled with white.'),
+                    ).' '.__('It is the home-screen icon too: upload at least 512×512, or the generated icon is used at the sizes it cannot fill. Transparent areas are filled with white.'),
                     FileUpload::make(SnsSettingKey::BrandFaviconFile->value)
                         ->label(__('Upload a new favicon'))
                         ->image()

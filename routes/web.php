@@ -122,7 +122,7 @@ Route::post('/admin/locale/session', function (Request $request) {
 })->name('locale.switch.session');
 
 // Under /admin for the same reason; the admin guard is checked in the action.
-Route::post('/admin/site-icon/raster', [SiteIconRasterController::class, 'store'])->name('admin.site_icon.raster');
+Route::post('/admin/site-icon/raster', [SiteIconRasterController::class, 'store'])->middleware('auth.session')->name('admin.site_icon.raster');
 
 // Public, yet auth.session: without it a session whose password hash is stale keeps a non-null
 // viewer here, and every gate downstream reads that viewer's clearance.

@@ -38,6 +38,9 @@ class SiteIconRasterController extends Controller
             abort(422, $e->getMessage());
         }
 
+        // The version is read again: a rename while this draw was in flight must keep its own, newer raster.
+        $raster->prune($icon->version());
+
         return response()->noContent();
     }
 }

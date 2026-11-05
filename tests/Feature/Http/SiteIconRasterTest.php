@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http;
 
+use App\Features\Branding\Actions\SaveBrandingSettings;
 use App\Files\FileUploader;
 use App\Files\GeneratedIcon;
 use App\Files\GeneratedIconRaster;
@@ -121,6 +122,37 @@ class SiteIconRasterTest extends TestCase
         // A draw for the old name that arrives late is refused, and the new raster is untouched.
         $this->send(version: $old)->assertStatus(409);
         Storage::disk('image_cache')->assertExists("_site-icon/{$new}/complete");
+    }
+
+    public function test_a_write_for_an_old_version_that_lands_late_keeps_the_newer_raster(): void
+    {
+        $raster = app(GeneratedIconRaster::class);
+        $pngs = [];
+        foreach (GeneratedIconRaster::SIZES as $size) {
+            $pngs[$size] = (string) $this->png($size)->get();
+        }
+
+        // The controller re-reads the version after its write: the old draw prunes against the new one.
+        $raster->store('newer000', $pngs);
+        $raster->store('older000', $pngs);
+        $raster->prune('newer000');
+
+        Storage::disk('image_cache')->assertExists('_site-icon/newer000/complete');
+        Storage::disk('image_cache')->assertMissing('_site-icon/older000/complete');
+        $this->assertTrue($raster->has('newer000'));
+        $this->assertFalse($raster->has('older000'));
+    }
+
+    public function test_saving_the_branding_page_discards_the_raster_so_it_is_drawn_again(): void
+    {
+        $this->send()->assertNoContent();
+        $this->assertTrue(app(GeneratedIcon::class)->hasRaster());
+
+        app(SaveBrandingSettings::class)('');
+
+        $this->freshRequestState();
+        $this->assertFalse(app(GeneratedIcon::class)->hasRaster());
+        Storage::disk('image_cache')->assertMissing('_site-icon/'.app(GeneratedIcon::class)->version().'/complete');
     }
 
     public function test_the_admin_panel_asks_the_browser_to_draw_only_when_it_is_wanted(): void
