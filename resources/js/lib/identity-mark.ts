@@ -11,10 +11,7 @@ export function markedName(name: string, isAi: boolean, t: (key: string, replace
     return isAi ? t(':name (AI)', { name }) : name;
 }
 
-/**
- * A leading CJK character stands alone; otherwise the first word's first two letters, uppercased
- * ("My SNS" -> "MY", "Acme" -> "AC"). Empty name falls back to "??".
- */
+/** A leading CJK character stands alone, else the first word's first two code points uppercased; App\Support\Initial must compute the same. */
 export function computeInitial(name: string): string {
     const trimmed = name.trim();
     if (trimmed === '') return '??';
@@ -23,7 +20,7 @@ export function computeInitial(name: string): string {
     if (isCjk(first)) return first;
 
     const firstWord = trimmed.split(/\s+/)[0] ?? '';
-    return firstWord.slice(0, 2).toUpperCase();
+    return Array.from(firstWord).slice(0, 2).join('').toUpperCase();
 }
 
 function isCjk(ch: string): boolean {

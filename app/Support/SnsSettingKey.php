@@ -132,6 +132,8 @@ enum SnsSettingKey: string
 
     case BrandFaviconFile = 'brand_favicon_file';
 
+    case BrandFaviconFallback = 'brand_favicon_fallback';
+
     /** Markdown rendered through the member-body sanitizer, never emitted as operator HTML. */
     case LoginMessage = 'login_message';
 
@@ -190,7 +192,7 @@ enum SnsSettingKey: string
             self::FeatureMcpEnabled => SettingGroup::Features,
             self::LinkCardEnabled => SettingGroup::LinkCard,
             self::AiAccountsEnabled, self::AiAccountLimit => SettingGroup::Ai,
-            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
+            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
             self::DefaultLook, self::SelectableLooks => SettingGroup::Look,
@@ -255,6 +257,8 @@ enum SnsSettingKey: string
             self::FeatureMcpEnabled => null,
             self::AiAccountsEnabled, self::AiAccountLimit => null,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => null,
+            // Not a copied value: the upgrade stamps `none` for a migrated site (App\Upgrade\Runner\UpgradeRunner).
+            self::BrandFaviconFallback => null,
             // OpenPNE 4-native: OpenPNE 3 put this kind of copy on the login page through the login
             // gadgets (freeArea), which upgrade as gadgets — there is no sns_config column behind it.
             self::LoginMessage => null,
@@ -374,8 +378,9 @@ enum SnsSettingKey: string
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
             self::FeatureMcpEnabled => true,
             // Unbranded until an administrator sets it: the Modern shell keeps its built-in color and
-            // both surfaces keep the shipped favicon.
+            // both surfaces show the generated icon.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => '',
+            self::BrandFaviconFallback => FaviconFallback::Generated,
             // No message until an administrator writes one; the login screen then shows nothing extra.
             self::LoginMessage => '',
             // Unwritten until an administrator writes them; the pages stay reachable and say so
@@ -423,6 +428,7 @@ enum SnsSettingKey: string
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value : (ProfileVisibilityPolicy::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             self::DefaultLook => $value instanceof Look ? $value : (Look::tryFrom(trim((string) $value)) ?? $this->default()),
+            self::BrandFaviconFallback => $value instanceof FaviconFallback ? $value : (FaviconFallback::tryFrom(trim((string) $value)) ?? $this->default()),
             // The one key whose value is a list: an explicit arm because the default one casts to
             // string, which an array cannot be.
             self::SelectableLooks => self::lookSet($value),
@@ -448,6 +454,7 @@ enum SnsSettingKey: string
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value->value : (string) $value,
             self::DefaultLook => $value instanceof Look ? $value->value : (string) $value,
+            self::BrandFaviconFallback => $value instanceof FaviconFallback ? $value->value : (string) $value,
             // Same reason as coerce()'s arm: the list is stored as CSV, and (string) on an array fatals.
             self::SelectableLooks => implode(',', array_column(self::lookSet($value), 'value')),
             default => (string) $value,
@@ -469,6 +476,7 @@ enum SnsSettingKey: string
             // Same for the look: a value no registered look answers to is corruption, and lands on
             // the layout the site shipped with rather than on an experiment.
             self::DefaultLook => Look::tryFrom($value) ?? $this->default(),
+            self::BrandFaviconFallback => FaviconFallback::tryFrom($value) ?? $this->default(),
             // Stored CSV → typed looks; an id no registered look answers to drops out of the set
             // rather than taking the whole row down with it.
             self::SelectableLooks => self::lookSet($value),
@@ -552,6 +560,7 @@ enum SnsSettingKey: string
             self::BrandColor => __('Brand color'),
             self::BrandLogoFile => __('Logo'),
             self::BrandFaviconFile => __('Favicon'),
+            self::BrandFaviconFallback => __('Browser-tab icon when no favicon is uploaded'),
             self::LoginMessage => __('Login screen message'),
             self::UserAgreement => __('Terms of service'),
             self::PrivacyPolicy => __('Privacy policy'),
@@ -582,7 +591,7 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
-            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
+            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback,
             self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks,
             self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply,
             self::ImageUploadBrowserShrink, self::ClassicTheme,

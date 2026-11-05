@@ -54,6 +54,7 @@ use App\Http\Controllers\LegacyUploadFileController;
 use App\Http\Controllers\LinkCardImageController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PublicFileController;
+use App\Http\Controllers\SiteIconController;
 use App\Http\Middleware\AsBackgroundFetch;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureMemberInviteAllowed;
@@ -255,6 +256,11 @@ Route::get('/manifest.webmanifest', fn () => response()->json([
 Route::get('/app-icon/{token}/{size}.png', [AppIconController::class, 'show'])
     ->where(['token' => '[A-Za-z0-9_.-]+', 'size' => implode('|', AppIcon::SIZES)])
     ->name('app_icon');
+Route::get('/site-icon/{size}.png', [SiteIconController::class, 'png'])
+    ->where('size', implode('|', AppIcon::SIZES))
+    ->name('site_icon');
+Route::get('/favicon.svg', [SiteIconController::class, 'svg'])->name('favicon.svg');
+Route::get('/favicon.ico', [SiteIconController::class, 'ico'])->name('favicon.ico');
 
 // OpenPNE 3 /cache/css/customizing.css, served from the database rather than a written cache file.
 Route::get('/cache/css/customizing.css', [CustomizingCssController::class, 'show'])->name('design.customizing_css');

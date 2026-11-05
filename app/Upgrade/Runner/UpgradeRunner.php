@@ -8,6 +8,7 @@ use App\Services\GadgetService;
 use App\Services\NavigationService;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
+use App\Support\FaviconFallback;
 use App\Support\ReleaseMarker;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
@@ -208,6 +209,7 @@ final class UpgradeRunner
                 (new ClassicThemeSelection)->plan($report);
             }
             $report->line('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
+            $report->line('PLAN would set brand_favicon_fallback=none if unset (no browser-tab icon, as in OpenPNE 3).');
 
             return $this->walk($options, $report);
         }
@@ -290,6 +292,12 @@ final class UpgradeRunner
                 $report->nextStep('Each migrated picture is made on its first view; `php artisan openpne:image-cache warm --limit N` makes the newest ones ahead of time, run as often as wanted.');
             }
 
+            // Not in the chain above: a site whose operator set the surface before the first
+            // completion still gets this stamp.
+            if ($walked) {
+                $this->stampFaviconFallback($report);
+            }
+
             return $walked;
         } finally {
             $preflight->drop($created, $options->sourcePrefix, $options->sourceDatabase);
@@ -331,6 +339,21 @@ final class UpgradeRunner
         }
 
         return $inserted > 0;
+    }
+
+    /** Insert-if-absent like the surface stamp: OpenPNE 3 showed no browser-tab icon, and the operator's later choice stands. */
+    private function stampFaviconFallback(RunReport $report): void
+    {
+        $inserted = DB::table('sns_settings')->insertOrIgnore([
+            'key' => SnsSettingKey::BrandFaviconFallback->value,
+            'value' => SnsSettingKey::BrandFaviconFallback->encode(FaviconFallback::None),
+        ]);
+
+        app(SnsSettingService::class)->clearCache();
+
+        if ($inserted > 0) {
+            $report->nextStep('No browser-tab icon, as in OpenPNE 3; choose the generated icon or upload one on the Branding page.');
+        }
     }
 
     /**

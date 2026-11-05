@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Compat\PluginStylesheets;
 use App\Compat\RouteParityRegistry;
-use App\Files\AppIcon;
 use App\Files\ImageProcessor;
+use App\Files\SiteIcon;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
@@ -66,7 +66,7 @@ if (! function_exists('brand_logo_url')) {
 }
 
 if (! function_exists('brand_favicon_url')) {
-    /** Public URL of the uploaded favicon, or null when none is set (both surfaces keep the shipped icons). */
+    /** Public URL of the uploaded favicon, or null when none is set. */
     function brand_favicon_url(): ?string
     {
         $token = (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandFaviconFile);
@@ -77,16 +77,12 @@ if (! function_exists('brand_favicon_url')) {
 
 if (! function_exists('app_icon_url')) {
     /**
-     * The favicon's token is in the URL because an installed app updates its icon off a changed URL,
-     * not off new bytes at an unchanged one.
+     * The favicon's token (or the generated icon's version) is in the URL because an installed app
+     * updates its icon off a changed URL, not off new bytes at an unchanged one.
      */
     function app_icon_url(int $size): string
     {
-        $token = (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandFaviconFile);
-
-        return $token === ''
-            ? asset(AppIcon::shippedAsset($size))
-            : route('app_icon', ['token' => $token, 'size' => $size]);
+        return app(SiteIcon::class)->appIconUrl($size);
     }
 }
 

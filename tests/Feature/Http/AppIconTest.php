@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
+use App\Files\GeneratedIcon;
 use App\Files\ImageIntake;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
@@ -124,12 +125,12 @@ class AppIconTest extends TestCase
         $this->assertSame([192, 192], $this->dimensionsOf($response->getContent()));
     }
 
-    public function test_a_tab_sized_favicon_keeps_the_shipped_icon_instead_of_upscaling(): void
+    public function test_a_tab_sized_favicon_gets_the_brand_tile_instead_of_upscaling(): void
     {
         $this->setFavicon(32);
 
         $this->assertSame(
-            file_get_contents(public_path('icon-512x512.png')),
+            app(GeneratedIcon::class)->png(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
     }
@@ -140,7 +141,7 @@ class AppIconTest extends TestCase
 
         $this->assertSame([192, 192], $this->dimensionsOf($this->get($this->url(192))->getContent()));
         $this->assertSame(
-            file_get_contents(public_path('icon-512x512.png')),
+            app(GeneratedIcon::class)->png(512),
             $this->get($this->url(512))->getContent(),
         );
     }
@@ -167,12 +168,12 @@ class AppIconTest extends TestCase
         $this->setFavicon(32);
 
         $this->assertSame(
-            file_get_contents(public_path('icon-192x192.png')),
+            app(GeneratedIcon::class)->png(192),
             $this->get($this->url(192))->getContent(),
         );
     }
 
-    public function test_a_favicon_the_processor_refuses_keeps_the_shipped_icon_and_remembers_that(): void
+    public function test_a_favicon_the_processor_refuses_gets_the_brand_tile_and_remembers_that(): void
     {
         // Stored before the limit moved, as an OpenPNE 3 row or a tightened setting leaves it.
         $file = $this->setFavicon(512);
@@ -183,14 +184,14 @@ class AppIconTest extends TestCase
         config(['openpne.images.max_source_pixels' => 64 * 64]);
 
         $this->assertSame(
-            file_get_contents(public_path('icon-512x512.png')),
+            app(GeneratedIcon::class)->png(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
         Storage::disk('image_cache')->assertExists(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
     }
 
-    public function test_a_processor_outage_serves_the_shipped_icon_without_remembering_a_verdict(): void
+    public function test_a_processor_outage_serves_the_brand_tile_without_remembering_a_verdict(): void
     {
         // The cache is emptied first so the canonical itself, not only the icon, has to go to the processor.
         $file = $this->setFavicon(512);
@@ -198,27 +199,27 @@ class AppIconTest extends TestCase
         $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
 
         $this->assertSame(
-            file_get_contents(public_path('icon-512x512.png')),
+            app(GeneratedIcon::class)->png(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.png');
     }
 
-    public function test_a_processor_outage_after_the_canonical_was_warmed_serves_the_shipped_icon_too(): void
+    public function test_a_processor_outage_after_the_canonical_was_warmed_serves_the_brand_tile_too(): void
     {
         // The canonical is a hit, so the icon's own cover is the only call that reaches the processor.
         $file = $this->setFavicon(512);
         $this->app->instance(ImageProcessor::class, $this->processorThatIsDown());
 
         $this->assertSame(
-            file_get_contents(public_path('icon-512x512.png')),
+            app(GeneratedIcon::class)->png(512),
             $this->get($this->url(512))->assertOk()->getContent(),
         );
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-512.refused');
     }
 
-    public function test_a_cache_disk_that_cannot_be_written_still_serves_the_generated_icon(): void
+    public function test_a_cache_disk_that_cannot_be_written_still_serves_the_derived_icon(): void
     {
         $this->skipUnlessModeBitsBind();
 
@@ -234,7 +235,7 @@ class AppIconTest extends TestCase
         }
 
         $this->assertSame([192, 192], $this->dimensionsOf($response->getContent()));
-        $this->assertNotSame(file_get_contents(public_path('icon-192x192.png')), $response->getContent(), 'The shipped icon was served instead of the generated one.');
+        $this->assertNotSame(app(GeneratedIcon::class)->png(192), $response->getContent(), 'The brand tile was served instead of the derived icon.');
         Storage::disk('image_cache')->assertMissing(ImageTransform::encoderPrefix($file->name).'/app-icon-192.png');
     }
 

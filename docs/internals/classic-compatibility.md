@@ -323,9 +323,8 @@ images it shows (picked from that shared pool), and any HTML are set on the
 Modern does not apply the same CSS/HTML. It offers its own migration targets
 (logo, primary color, header image, footer/free area, a scoped safe-HTML slot).
 The logo and the brand color are set on the
-[`BrandingSettings`](../../app/Filament/Pages/BrandingSettings.php) page; the favicon set there is
-the one exception that applies to both surfaces (and to the admin panel). Both shells also derive
-their home-screen icon from it ([`AppIcon`](../../app/Files/AppIcon.php)).
+[`BrandingSettings`](../../app/Filament/Pages/BrandingSettings.php) page; the site icon set there is
+the one exception that applies to both surfaces (and to the admin panel) ([site-icon.md](site-icon.md)).
 The login screen's slot is the message on the
 [`LoginScreenSettings`](../../app/Filament/Pages/LoginScreenSettings.php) page, which Classic
 instead carries in its login gadgets. It is Markdown rendered through the member-body sanitizer
@@ -340,7 +339,7 @@ not mention surfaces at all:
 ```text
 classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / banners / theme / legacy gadget layout / navigation menu settings / the topic and event comment reply link
 modern only:   Modern logo / color / header image / modern layout / login screen message
-both:          SNS name / terms / basic navigation labels / policy URLs / favicon
+both:          SNS name / terms / basic navigation labels / policy URLs / site icon
 ```
 
 The Classic-only settings — custom CSS, HTML insertion, banners, the theme, the gadget layout, the

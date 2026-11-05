@@ -8,6 +8,7 @@ use App\Features\Branding\Actions\SaveBrandingSettings;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Models\File;
+use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -95,6 +96,30 @@ class SaveBrandingSettingsTest extends TestCase
         $this->assertNotNull(File::find($current->getKey()));
         // Save-all: every branding key gets a row, the blank ones included.
         $this->assertSame('', $this->storedValue(SnsSettingKey::BrandFaviconFile));
+    }
+
+    public function test_the_fallback_is_written_only_when_it_changes_the_effective_value(): void
+    {
+        app(SaveBrandingSettings::class)('');
+        $this->assertDatabaseMissing('sns_settings', ['key' => SnsSettingKey::BrandFaviconFallback->value]);
+
+        // The default, sent as the form does: no row, so a later upgrade stamp can still land.
+        app(SaveBrandingSettings::class)('', [], FaviconFallback::Generated);
+        $this->assertDatabaseMissing('sns_settings', ['key' => SnsSettingKey::BrandFaviconFallback->value]);
+
+        app(SaveBrandingSettings::class)('', [], FaviconFallback::None);
+        $this->assertSame('none', $this->storedValue(SnsSettingKey::BrandFaviconFallback));
+
+        // A stored choice is kept by a save that says nothing about it, and the fallback never
+        // takes the file branch: no File row is touched by switching it back.
+        $current = $this->storeCurrent(SnsSettingKey::BrandFaviconFile);
+        app(SaveBrandingSettings::class)('');
+        $this->assertSame('none', $this->storedValue(SnsSettingKey::BrandFaviconFallback));
+
+        app(SaveBrandingSettings::class)('', [], FaviconFallback::Generated);
+        $this->assertSame('generated', $this->storedValue(SnsSettingKey::BrandFaviconFallback));
+        $this->assertSame($current->name, $this->storedValue(SnsSettingKey::BrandFaviconFile));
+        $this->assertNotNull(File::find($current->getKey()));
     }
 
     public function test_an_unknown_file_key_is_rejected_before_anything_is_stored(): void

@@ -11,6 +11,7 @@ use App\Files\ImageProcessorUnavailableException;
 use App\Files\UploadLimit;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
+use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
 use BackedEnum;
@@ -18,6 +19,7 @@ use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -122,7 +124,7 @@ class BrandingSettings extends Page
                     self::surfaceScoped(
                         __('Shown in the browser tab on both surfaces and in the admin panel. PNG only, square.'),
                         __('Shown in the browser tab and in the admin panel. PNG only, square.'),
-                    ).' '.__('It is the home-screen icon too: upload at least 512×512, or the built-in icon is kept at the sizes it cannot fill. Transparent areas are filled with white.'),
+                    ).' '.__('It is the home-screen icon too: upload at least 512×512, or a brand-color tile is used at the sizes it cannot fill. Transparent areas are filled with white.'),
                     FileUpload::make(SnsSettingKey::BrandFaviconFile->value)
                         ->label(__('Upload a new favicon'))
                         ->image()
@@ -134,6 +136,19 @@ class BrandingSettings extends Page
                         ->storeFiles(false),
                     'remove_brand_favicon',
                     __('Remove the current favicon'),
+                    [
+                        Radio::make(SnsSettingKey::BrandFaviconFallback->value)
+                            ->label(SnsSettingKey::BrandFaviconFallback->label())
+                            ->options([
+                                FaviconFallback::Generated->value => __('Generated icon'),
+                                FaviconFallback::None->value => __('None'),
+                            ])
+                            ->descriptions([
+                                FaviconFallback::Generated->value => __('The brand color with the first letters of the site name.'),
+                                FaviconFallback::None->value => __('The browser shows its own default, as OpenPNE 3 did. The home-screen icon stays a brand-color tile.'),
+                            ])
+                            ->required(),
+                    ],
                 ),
             ])
             ->statePath('data');
@@ -168,6 +183,7 @@ class BrandingSettings extends Page
             app(SaveBrandingSettings::class)(
                 is_string($brandColor) ? trim($brandColor) : '',
                 $this->fileIntents($data),
+                FaviconFallback::tryFrom((string) ($data[SnsSettingKey::BrandFaviconFallback->value] ?? '')),
             );
         } catch (ImageProcessingException|ImageProcessorUnavailableException $e) {
             // Don't 500 the panel on a refused picture: notify and halt the save.
@@ -221,6 +237,7 @@ class BrandingSettings extends Page
     {
         return [
             SnsSettingKey::BrandColor->value => (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandColor),
+            SnsSettingKey::BrandFaviconFallback->value => app(SnsSettingService::class)->get(SnsSettingKey::BrandFaviconFallback)->value,
             'remove_brand_logo' => false,
             'remove_brand_favicon' => false,
         ];
@@ -231,8 +248,9 @@ class BrandingSettings extends Page
      * schema, and the preview must show what was just stored.
      *
      * @param  Closure(): ?string  $currentUrl
+     * @param  list<Component>  $after  fields that follow the upload controls
      */
-    private function fileSection(SnsSettingKey $key, Closure $currentUrl, string $description, FileUpload $upload, string $removeField, string $removeLabel): Section
+    private function fileSection(SnsSettingKey $key, Closure $currentUrl, string $description, FileUpload $upload, string $removeField, string $removeLabel, array $after = []): Section
     {
         return Section::make($key->label())
             ->description($description)
@@ -246,6 +264,8 @@ class BrandingSettings extends Page
                 Toggle::make($removeField)
                     ->label($removeLabel)
                     ->visible(fn (): bool => $currentUrl() !== null),
+
+                ...$after,
             ]);
     }
 

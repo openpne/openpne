@@ -40,6 +40,7 @@ class GuestBounceSweepTest extends TestCase
     /** Site assets and pages that render without a viewer. */
     private const SITE_PUBLIC = [
         'policy.terms', 'policy.privacy', 'webmanifest', 'altcha.challenge', 'app_icon',
+        'site_icon', 'favicon.svg', 'favicon.ico',
         'design.customizing_css', 'banner.image', 'file.public', 'locale.switch',
     ];
 

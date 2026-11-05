@@ -6,6 +6,7 @@ use App\Auth\AdminAppAuthentication;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\SecuritySettings;
 use App\Filament\Support\InitialsAvatarProvider;
+use App\Files\SiteIcon;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
@@ -42,7 +43,7 @@ class AdminPanelProvider extends PanelProvider
             // table sns_name() reads exists.
             ->brandName(fn (): string => sns_name().' '.__('Admin panel'))
             // Closure for the same reason as brandName.
-            ->favicon(fn (): string => brand_favicon_url() ?? asset('favicon-32x32.png'))
+            ->favicon(fn (): ?string => app(SiteIcon::class)->faviconUrl())
             // Separate `admin` guard, entirely independent of the member-facing
             // guard: a logged-in member is never treated as an administrator
             // and vice versa.
