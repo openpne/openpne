@@ -2,7 +2,7 @@
 @props(['config' => [], 'subject' => null, 'partId' => null])
 @if ($subject)
     @php($avatar = $subject->avatar?->file)
-    {{-- OpenPNE 3's Member::getNameAndCount(): "%s (%d)" while the %friend% feature is on, the bare name otherwise. --}}
+    {{-- OpenPNE 3's Member::getNameAndCount(). --}}
     @php($text = \App\Support\Feature::Friend->enabled() ? sprintf('%s (%d)', $subject->name, $subject->friendships()->count()) : $subject->name)
     <x-classic.parts :id="$partId" name="memberImageBox">
         <div class="sortHandle">

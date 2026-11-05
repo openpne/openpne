@@ -46,6 +46,23 @@ class ClassicProfileGadgetTest extends TestCase
             ->assertDontSee('id="member_profile"', false); // the fixed fallback box is gone
     }
 
+    public function test_member_image_box_counts_the_profile_owner_friends_not_the_viewer(): void
+    {
+        $owner = Member::factory()->create(['name' => 'Owner']);
+        $viewer = Member::factory()->create();
+        foreach (Member::factory()->count(2)->create() as $friend) {
+            DB::table('friendships')->insert([
+                ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+                ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey(), 'created_at' => now()],
+            ]);
+        }
+        $this->makeGadget('sideMenu', 'memberImageBox');
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('<p class="text">Owner (2)', false);
+    }
+
     public function test_the_notice_box_stays_in_the_top_slot_when_gadgets_drive_the_page(): void
     {
         $owner = Member::factory()->create();
