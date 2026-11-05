@@ -50,8 +50,6 @@ final class Warning
         NicePreflight::W_GONE_TARGET => self::DROPPED,
         NicePreflight::W_UNINSTALLED_TARGET => self::DROPPED,
         NicePreflight::W_UNKNOWN_TABLE => self::UNKNOWN,
-        MessageTypePreflight::W_NOTIFICATION_TYPE => self::DROPPED,
-        MessageTypePreflight::W_UNKNOWN_TYPE => self::UNKNOWN,
         UploadFileOwnerPreflight::W_OWNERLESS => self::REVIEW,
         ActivityTemplateTransform::W_KEPT_UNKNOWN => self::REVIEW,
         ActivityTemplateTransform::W_KEPT_BAD_PARAMS => self::REVIEW,

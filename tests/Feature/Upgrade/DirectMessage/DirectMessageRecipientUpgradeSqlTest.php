@@ -107,7 +107,7 @@ class DirectMessageRecipientUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseHas('direct_message_recipients', ['id' => 922, 'recipient_id' => $c->id, 'recipient_deleted_at' => '2018-03-03 00:00:00', 'recipient_purged_at' => null]);
     }
 
-    public function test_a_notification_parent_send_list_is_skipped(): void
+    public function test_a_request_letters_receipt_migrates_like_any_other(): void
     {
         $sender = Member::factory()->create();
         $recipient = Member::factory()->create();
@@ -116,7 +116,7 @@ class DirectMessageRecipientUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->runUpgrade();
 
-        $this->assertDatabaseMissing('direct_message_recipients', ['id' => 930]);
+        $this->assertDatabaseHas('direct_message_recipients', ['id' => 930, 'direct_message_id' => 700, 'recipient_id' => $recipient->id]);
     }
 
     public function test_a_trashed_recipient_sets_deleted_at_from_the_pointer(): void

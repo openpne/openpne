@@ -63,7 +63,6 @@ final class ActiveMember
             'community_event.member_id' => ['treatment' => self::REFUSE],
             'community_event_comment.member_id' => ['treatment' => self::REFUSE],
             'community_event_member.member_id' => ['treatment' => self::REFUSE],
-            // DirectMessageUpgrade's own filter scopes this to the message types it migrates.
             'message.member_id' => ['treatment' => self::REFUSE],
             // Scoped to both paths out of this table (every receipt of a sent message, and the one
             // send-list row folded onto a draft), not the FROM step's sent-only filter.
@@ -98,7 +97,7 @@ final class ActiveMember
     }
 
     /**
-     * Send-list rows whose member id reaches a target column: every row of a sent migrated message,
+     * Send-list rows whose member id reaches a target column: every row of a sent message,
      * and the selected row of a draft. Both `is_send` values are tested, not one inferred from the
      * other: the column is a bare tinyint with no CHECK, so a third value reaches neither target
      * column.
@@ -107,7 +106,6 @@ final class ActiveMember
     {
         return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `parent` '
             .'WHERE `parent`.`id` = `message_send_list`.`message_id` '
-            .'AND '.DirectMessageUpgrade::isMailboxMessage('parent')
-            .' AND (`parent`.`is_send` = 1 OR (`parent`.`is_send` = 0 AND '.DirectMessageUpgrade::draftRecipientRowSelector().')))';
+            .'AND (`parent`.`is_send` = 1 OR (`parent`.`is_send` = 0 AND '.DirectMessageUpgrade::draftRecipientRowSelector().')))';
     }
 }

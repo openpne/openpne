@@ -103,14 +103,12 @@ class KnownConfigNamesTest extends TestCase
         }
     }
 
-    public function test_member_config_names_hold_no_family(): void
+    public function test_the_community_message_opt_out_family_is_documented_but_not_a_literal_name(): void
     {
         $family = StepRegistry::MEMBER_CONFIG_COMMUNITY_MESSAGE_UNSUBSCRIBE_PREFIX.'*';
-        $this->assertArrayHasKey($family, StepRegistry::memberConfigDispositions());
 
-        foreach (StepRegistry::knownMemberConfigNames() as $name) {
-            $this->assertStringNotContainsString('*', $name, "`{$name}` is a family, not a name the source can hold");
-        }
+        $this->assertArrayHasKey($family, StepRegistry::memberConfigDispositions());
+        $this->assertNotContains($family, StepRegistry::knownMemberConfigNames());
     }
 
     /**

@@ -65,8 +65,7 @@ class FileUpgrade extends UpgradeStep
             'community_topic_comment_image.file_id' => ['type' => 'groupTopicComment', 'table' => 'community_topic_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_event_image.file_id' => ['type' => 'groupEvent', 'table' => 'community_event_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_event_comment_image.file_id' => ['type' => 'groupEventComment', 'table' => 'community_event_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
-            // Only a message of a migrated type owns its attachment; the notification types are not migrated.
-            'message_file.file_id' => ['type' => 'directMessage', 'table' => 'message_file', 'file' => 'file_id', 'id' => 'message_id', 'extra' => $this->mailboxMessageExtra()],
+            'message_file.file_id' => ['type' => 'directMessage', 'table' => 'message_file', 'file' => 'file_id', 'id' => 'message_id', 'extra' => ' AND '.DirectMessageUpgrade::parentExists('message_file', 'message_id')],
             // The banner image row itself is the owner (groups/messages own by the parent id;
             // banners own through the banner_image pool, mirroring how the app stores them).
             'banner_image.file_id' => ['type' => 'bannerImage', 'table' => 'banner_image', 'file' => 'file_id', 'id' => 'id'],
@@ -191,12 +190,5 @@ class FileUpgrade extends UpgradeStep
             '(SELECT `%2$s`.`%3$s` FROM %1$s AS `%2$s` WHERE `%2$s`.`%4$s` = `file`.`id`%5$s ORDER BY `%2$s`.`id` LIMIT 1)',
             SourceRef::table($reference['table']), $reference['table'], $reference['id'], $reference['file'], $reference['extra'] ?? '',
         );
-    }
-
-    /** Restricts a message attachment to one whose parent is of a migrated type. */
-    private function mailboxMessageExtra(): string
-    {
-        return ' AND EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `p` WHERE `p`.`id` = `message_file`.`message_id` '
-            .'AND '.DirectMessageUpgrade::isMailboxMessage('p').')';
     }
 }

@@ -69,8 +69,8 @@ use App\Upgrade\Steps\TimelineReplyUpgrade;
 final class StepRegistry
 {
     /**
-     * The one memberConfigDispositions() key naming a family rather than a literal config name.
-     * Its members are the registered NotificationKind × NotificationChannel keys.
+     * A memberConfigDispositions() key naming a family rather than a literal config name; its
+     * members are the registered NotificationKind × NotificationChannel keys.
      */
     public const MEMBER_CONFIG_NOTIFICATION_FAMILY = 'is_send_*_mail / is_send_*_web';
 
@@ -204,8 +204,8 @@ final class StepRegistry
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: GroupMemberUpgrade flattens admin/sub_admin onto group_members.role and GroupUpgrade reads admin_confirm into groups.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped: OpenPNE 4 has no nomination handshake.',
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: DirectMessageUpgrade / DirectMessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the direct_messages.sender_* / direct_message_recipients.recipient_* soft-delete columns via correlated subquery.',
-            'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the mailbox types (DirectMessageUpgrade::MIGRATED_TYPES); not migrated as a table — OpenPNE 4 has no message-type concept (the other types were notification letters whose outcome the member / community steps carry; MessageTypePreflight counts them).',
-            'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the mailbox types are carried over and their labels are not used in OpenPNE 4.',
+            'message_type' => 'OpenPNE 3 message-type registry. Not read: every `message` row is a letter and migrates whatever its type (DirectMessageUpgrade gaps `message_type_id`), and OpenPNE 4 has no message-type concept.',
+            'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: the letters carry their stored subject and body, and OpenPNE 4 has no per-type template.',
             'sns_term' => 'OpenPNE 3 term registry (name, application). Read by TermOverrideUpgrade\'s subqueries for the PC rows of TermOverrideUpgrade::SOURCE_NAMES; the values live in sns_term_translation, the step\'s FROM.',
             'community_config' => 'OpenPNE 3 community KV settings. Read by GroupUpgrade\'s correlated subqueries one name at a time; communityConfigDispositions() is the per-name coverage.',
             // File-owning tables whose rows are not migrated; their binaries still migrate with a null owner.
@@ -238,7 +238,7 @@ final class StepRegistry
             ],
             'opMessagePlugin' => [
                 'floor' => '0.8.2',
-                'tables' => ['message', 'message_file', 'message_send_list', 'message_type', 'deleted_message'],
+                'tables' => ['message', 'message_file', 'message_send_list', 'deleted_message'],
             ],
             'opLikePlugin' => [
                 'floor' => '0.9.0',

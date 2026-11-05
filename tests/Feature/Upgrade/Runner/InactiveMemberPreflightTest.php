@@ -200,22 +200,6 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);
     }
 
-    public function test_a_rows_own_step_filter_scopes_the_count(): void
-    {
-        // The notification message types are not migrated, so counting every `message` row would
-        // abort on data the upgrade never reads.
-        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
-        $this->seedMember(1, isActive: 0);
-        $this->seedMessageType(1, 'message');
-        $this->seedMessageType(2, 'friend_link');
-        $this->seedMessage(10, memberId: 1, typeId: 2); // notification, not migrated
-
-        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
-
-        $this->assertTrue($ok, $output);
-        $this->assertStringNotContainsString('message.member_id', $output);
-    }
-
     public function test_a_personal_message_from_an_inactive_sender_still_aborts(): void
     {
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
@@ -229,12 +213,13 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message.member_id', 1), $output);
     }
 
-    public function test_a_community_message_from_an_inactive_sender_aborts_like_a_personal_one(): void
+    public function test_a_request_letter_from_an_inactive_sender_aborts_like_a_personal_one(): void
     {
+        // Every message type migrates, so none is out of the count's scope.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
         $this->seedMember(1, isActive: 0);
-        $this->seedMessageType(3, 'community_message');
-        $this->seedMessage(10, memberId: 1, typeId: 3);
+        $this->seedMessageType(2, 'friend_link');
+        $this->seedMessage(10, memberId: 1, typeId: 2);
 
         [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 

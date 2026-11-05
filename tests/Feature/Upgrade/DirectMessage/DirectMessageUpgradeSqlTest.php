@@ -20,7 +20,7 @@ class DirectMessageUpgradeSqlTest extends UpgradeSqlTestCase
     {
         parent::setUp();
 
-        // The two mailbox types (migrated) and a notification type (skipped by the filter).
+        // A personal message, a request letter and a community message: every type migrates.
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
         $this->seedType(3, 'community_message');
@@ -55,18 +55,20 @@ class DirectMessageUpgradeSqlTest extends UpgradeSqlTestCase
         ]);
     }
 
-    public function test_only_the_mailbox_types_migrate(): void
+    public function test_every_message_type_migrates_as_a_letter(): void
     {
         $sender = Member::factory()->create();
         $this->seedMessage(600, $sender->id, ['is_send' => 1, 'message_type_id' => 1]);
-        $this->seedMessage(601, $sender->id, ['is_send' => 1, 'message_type_id' => 2]); // friend_link
+        $this->seedMessage(601, $sender->id, ['is_send' => 1, 'message_type_id' => 2, 'foreign_id' => 3, 'subject' => 'Friend link request', 'body' => 'A note']); // friend_link
         $this->seedMessage(602, $sender->id, ['is_send' => 1, 'message_type_id' => 3, 'foreign_id' => 7]); // community_message
+        $this->seedMessage(603, $sender->id, ['is_send' => 1, 'message_type_id' => 99]); // a type no message_type row names
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('direct_messages', ['id' => 600]);
-        $this->assertDatabaseMissing('direct_messages', ['id' => 601]);
+        $this->assertDatabaseHas('direct_messages', ['id' => 601, 'subject' => 'Friend link request', 'body' => 'A note', 'is_draft' => 0]);
         $this->assertDatabaseHas('direct_messages', ['id' => 602, 'sender_id' => $sender->id, 'is_draft' => 0, 'draft_recipient_id' => null]);
+        $this->assertDatabaseHas('direct_messages', ['id' => 603]);
     }
 
     public function test_a_reply_to_a_community_message_keeps_its_parent(): void
@@ -131,7 +133,7 @@ class DirectMessageUpgradeSqlTest extends UpgradeSqlTestCase
         $this->seedMessage(901, $sender->id, ['is_send' => 1, 'return_message_id' => 900, 'thread_message_id' => 900]);
         // return points outside the migrated set (dangling); thread is the OpenPNE 3 default 0.
         $this->seedMessage(902, $sender->id, ['is_send' => 1, 'return_message_id' => 99999, 'thread_message_id' => 0]);
-        // a reply whose parent is a non-personal (friend_link) message → null, not a broken self-FK.
+        // a reply to a friend_link letter keeps its parent: every type is a letter now.
         $this->seedMessage(903, $sender->id, ['is_send' => 1, 'message_type_id' => 2]);
         $this->seedMessage(904, $sender->id, ['is_send' => 1, 'return_message_id' => 903, 'thread_message_id' => 903]);
 
@@ -139,7 +141,7 @@ class DirectMessageUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->assertDatabaseHas('direct_messages', ['id' => 901, 'parent_id' => 900, 'thread_id' => 900]);
         $this->assertDatabaseHas('direct_messages', ['id' => 902, 'parent_id' => null, 'thread_id' => null]);
-        $this->assertDatabaseHas('direct_messages', ['id' => 904, 'parent_id' => null, 'thread_id' => null]);
+        $this->assertDatabaseHas('direct_messages', ['id' => 904, 'parent_id' => 903, 'thread_id' => 903]);
     }
 
     public function test_a_trashed_sender_message_sets_deleted_at_from_the_pointer(): void

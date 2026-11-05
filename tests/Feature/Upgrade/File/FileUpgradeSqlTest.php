@@ -41,7 +41,7 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
     {
         parent::setUp();
 
-        // The mailbox types (own their attachment) and a notification type (does not).
+        // Every message type owns its attachment.
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
         $this->seedType(3, 'community_message');
@@ -200,15 +200,25 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseHas('files', ['id' => 42, 'related_entity_type' => 'directMessage', 'related_entity_id' => 502]);
     }
 
-    public function test_a_notification_message_attachment_is_migrated_ownerless(): void
+    public function test_owns_a_request_letter_attachment(): void
     {
         $this->seedFile(41);
-        $this->seedMessage(501, messageTypeId: 2); // friend_link notification, not migrated
+        $this->seedMessage(501, messageTypeId: 2); // friend_link
         DB::table('message_file')->insert(['id' => 1, 'message_id' => 501, 'file_id' => 41, 'created_at' => '2017-01-01 00:00:00', 'updated_at' => '2017-01-01 00:00:00']);
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('files', ['id' => 41, 'related_entity_type' => null, 'related_entity_id' => null]);
+        $this->assertDatabaseHas('files', ['id' => 41, 'related_entity_type' => 'directMessage', 'related_entity_id' => 501]);
+    }
+
+    public function test_an_attachment_whose_message_is_gone_is_migrated_ownerless(): void
+    {
+        $this->seedFile(43);
+        DB::table('message_file')->insert(['id' => 1, 'message_id' => 999, 'file_id' => 43, 'created_at' => '2017-01-01 00:00:00', 'updated_at' => '2017-01-01 00:00:00']);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 43, 'related_entity_type' => null, 'related_entity_id' => null]);
     }
 
     public function test_an_activity_image_is_owned_by_where_its_thread_lands(): void
