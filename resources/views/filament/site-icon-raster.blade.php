@@ -73,9 +73,10 @@
                     credentials: 'same-origin',
                 });
             });
-        }).then(function () {
-            // Answered, accepted or not: a refusal is tried again by the next browser session.
-            sessionStorage.setItem(key, '1');
+        }).then(function (response) {
+            // A refusal is tried again by the next browser session; an accepted draw needs no mark, since
+            // the server stops rendering this hook, and a save that discards the raster must redraw here.
+            if (!response.ok) sessionStorage.setItem(key, '1');
         }).catch(function (error) {
             // This browser cannot draw it; another administrator's may.
             if (error && error.message === 'canvas-noise') sessionStorage.setItem(key, '1');
