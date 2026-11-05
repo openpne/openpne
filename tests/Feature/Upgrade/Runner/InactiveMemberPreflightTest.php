@@ -200,28 +200,26 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('nice.member_id', 1), $output);
     }
 
-    public function test_a_rows_own_step_filter_scopes_the_count(): void
-    {
-        // The friend/community message types are not migrated, so counting every `message` row would
-        // abort on data the upgrade never reads.
-        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
-        $this->seedMember(1, isActive: 0);
-        $this->seedMessageType(1, 'message');
-        $this->seedMessageType(2, 'friend_link');
-        $this->seedMessage(10, memberId: 1, typeId: 2); // notification, not migrated
-
-        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
-
-        $this->assertTrue($ok, $output);
-        $this->assertStringNotContainsString('message.member_id', $output);
-    }
-
     public function test_a_personal_message_from_an_inactive_sender_still_aborts(): void
     {
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
         $this->seedMember(1, isActive: 0);
         $this->seedMessageType(1, 'message');
         $this->seedMessage(10, memberId: 1, typeId: 1);
+
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message.member_id', 1), $output);
+    }
+
+    public function test_a_request_letter_from_an_inactive_sender_aborts_like_a_personal_one(): void
+    {
+        // Every message type migrates, so none is out of the count's scope.
+        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
+        $this->seedMember(1, isActive: 0);
+        $this->seedMessageType(2, 'friend_link');
+        $this->seedMessage(10, memberId: 1, typeId: 2);
 
         [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 
@@ -240,6 +238,22 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedMessage(10, memberId: 1, typeId: 1, isSend: 0); // a draft
         DB::table('message_send_list')->insert(['id' => 1, 'message_id' => 10, 'member_id' => 2, 'is_read' => 0,
             'is_deleted' => 0, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
+
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message_send_list.member_id', 1), $output);
+    }
+
+    public function test_an_inactive_recipient_of_a_request_letter_aborts(): void
+    {
+        // The scope and DirectMessageRecipientUpgrade's filter must cover the same rows whatever the type.
+        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        $this->seedMessageType(2, 'friend_link');
+        $this->seedMessage(10, memberId: 1, typeId: 2);
+        $this->seedSendListRow(1, messageId: 10, memberId: 2);
 
         [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 

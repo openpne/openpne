@@ -28,7 +28,6 @@ class SourcePreflightTest extends TestCase
 
         $this->assertContains('message_send_list', $tables); // FROM
         $this->assertContains('message', $tables);           // filter() subquery
-        $this->assertContains('message_type', $tables);      // filter() subquery
         $this->assertContains('deleted_message', $tables);   // expr subquery
     }
 

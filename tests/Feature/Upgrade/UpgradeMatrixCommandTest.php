@@ -20,6 +20,7 @@ class UpgradeMatrixCommandTest extends TestCase
             // expectsOutputToContain matches each line to a single expectation, so overlapping
             // substrings on the same row would starve each other).
             ->expectsOutputToContain("'pc_address'") // email row's member_config subquery
+            ->expectsOutputToContain('`community_message_unsubscribe_*` — Dropped:')
             ->expectsOutputToContain('`password`')   // password is a mapped column, not pending
             ->expectsOutputToContain('Accepted gaps:')
             // Source tables not driven by a standalone step must stay visible too.
@@ -42,6 +43,7 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('`topic_authority`')
             // The admin-invited family is listed under its prefix, since the matrix is where a dropped name is explained.
             ->expectsOutputToContain('`community_admin_invited_*` — Dropped:')
+            ->expectsOutputToContain('`send_message_permission` — Dropped:')
             ->expectsOutputToContain('`community_member_position`');
     }
 

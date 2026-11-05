@@ -24,28 +24,36 @@ class DirectMessageFileUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
+        $this->seedType(3, 'community_message');
     }
 
-    public function test_synthesizes_slot_numbers_and_drops_non_personal_attachments(): void
+    public function test_synthesizes_slot_numbers_and_drops_an_attachment_whose_message_is_gone(): void
     {
         $member = Member::factory()->create();
-        $this->seedMessage(500, $member->id, messageTypeId: 1); // personal, migrated
-        $this->seedMessage(501, $member->id, messageTypeId: 2); // friend_link, not migrated
+        $this->seedMessage(500, $member->id, messageTypeId: 1); // personal
+        $this->seedMessage(501, $member->id, messageTypeId: 2); // friend_link, a letter too
+        $this->seedMessage(502, $member->id, messageTypeId: 3); // community_message
         $this->runUpgrade(new DirectMessageUpgrade);
 
         $this->seedFile(10);
         $this->seedFile(11);
         $this->seedFile(12);
+        $this->seedFile(13);
+        $this->seedFile(14);
         $this->seedMessageFile(1, 500, 10);
         $this->seedMessageFile(2, 500, 11);
-        $this->seedMessageFile(3, 501, 12); // parent not personal → dropped
+        $this->seedMessageFile(3, 501, 12);
+        $this->seedMessageFile(4, 502, 13);
+        $this->seedMessageFile(5, 999, 14); // no such message → dropped (the FK could not hold it)
 
         $this->runUpgrade(new DirectMessageFileUpgrade);
 
-        $this->assertDatabaseCount('direct_message_files', 2);
+        $this->assertDatabaseCount('direct_message_files', 4);
         $this->assertDatabaseHas('direct_message_files', ['id' => 1, 'direct_message_id' => 500, 'file_id' => 10, 'number' => 1]);
         $this->assertDatabaseHas('direct_message_files', ['id' => 2, 'direct_message_id' => 500, 'file_id' => 11, 'number' => 2]);
-        $this->assertDatabaseMissing('direct_message_files', ['file_id' => 12]);
+        $this->assertDatabaseHas('direct_message_files', ['id' => 3, 'direct_message_id' => 501, 'file_id' => 12, 'number' => 1]);
+        $this->assertDatabaseHas('direct_message_files', ['id' => 4, 'direct_message_id' => 502, 'file_id' => 13, 'number' => 1]);
+        $this->assertDatabaseMissing('direct_message_files', ['file_id' => 14]);
     }
 
     private function runUpgrade(UpgradeStep $step): void

@@ -69,8 +69,8 @@ use App\Upgrade\Steps\TimelineReplyUpgrade;
 final class StepRegistry
 {
     /**
-     * The one memberConfigDispositions() key naming a family rather than a literal config name.
-     * Its members are the registered NotificationKind × NotificationChannel keys.
+     * A memberConfigDispositions() key naming a family rather than a literal config name; its
+     * members are the registered NotificationKind × NotificationChannel keys.
      */
     public const MEMBER_CONFIG_NOTIFICATION_FAMILY = 'is_send_*_mail / is_send_*_web';
 
@@ -86,6 +86,9 @@ final class StepRegistry
      * recognised by prefix since the suffix is a member id.
      */
     public const COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX = 'community_admin_invited_';
+
+    /** The member_config family opMessagePlugin writes per community a member opted out of (`community_message_unsubscribe_<community_id>`). */
+    public const MEMBER_CONFIG_COMMUNITY_MESSAGE_UNSUBSCRIBE_PREFIX = 'community_message_unsubscribe_';
 
     /** @return list<class-string<UpgradeStep>> */
     public static function classes(): array
@@ -201,8 +204,8 @@ final class StepRegistry
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: GroupMemberUpgrade flattens admin/sub_admin onto group_members.role and GroupUpgrade reads admin_confirm into groups.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped: OpenPNE 4 has no nomination handshake.',
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: DirectMessageUpgrade / DirectMessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the direct_messages.sender_* / direct_message_recipients.recipient_* soft-delete columns via correlated subquery.',
-            'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
-            'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
+            'message_type' => 'OpenPNE 3 message-type registry. Not read: every `message` row is a letter and migrates whatever its type (DirectMessageUpgrade gaps `message_type_id`), and OpenPNE 4 has no message-type concept.',
+            'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: the letters carry their stored subject and body, and OpenPNE 4 has no per-type template.',
             'sns_term' => 'OpenPNE 3 term registry (name, application). Read by TermOverrideUpgrade\'s subqueries for the PC rows of TermOverrideUpgrade::SOURCE_NAMES; the values live in sns_term_translation, the step\'s FROM.',
             'community_config' => 'OpenPNE 3 community KV settings. Read by GroupUpgrade\'s correlated subqueries one name at a time; communityConfigDispositions() is the per-name coverage.',
             // File-owning tables whose rows are not migrated; their binaries still migrate with a null owner.
@@ -235,7 +238,7 @@ final class StepRegistry
             ],
             'opMessagePlugin' => [
                 'floor' => '0.8.2',
-                'tables' => ['message', 'message_file', 'message_send_list', 'message_type', 'deleted_message'],
+                'tables' => ['message', 'message_file', 'message_send_list', 'deleted_message'],
             ],
             'opLikePlugin' => [
                 'floor' => '0.9.0',
@@ -306,6 +309,7 @@ final class StepRegistry
             'notification_center' => 'Dropped: OpenPNE 3 stored each member\'s notification-center items as one serialized value; OpenPNE 4 notifications are written by OpenPNE 4 events, so the list starts empty.',
             'password_recovery_token' => 'Dropped: opAuthMailAddressPlugin\'s pending password-recovery token, transient; OpenPNE 4 issues its own reset links.',
             'is_send_pc_friendLinkRequest_mail' => 'Dropped: OpenPNE 3\'s mail-settings form wrote it for the friendLinkRequest template, but the friend-request mail read `is_send_pc_friendLinkConfirm_mail` (migrated as friend_link_confirm), so it never took effect.',
+            self::MEMBER_CONFIG_COMMUNITY_MESSAGE_UNSUBSCRIBE_PREFIX.'*' => 'Dropped: opMessagePlugin\'s per-community opt-out from community messages; only past letters are carried, so there is nothing left to opt out of.',
         ];
     }
 
@@ -320,7 +324,8 @@ final class StepRegistry
     {
         $names = array_values(array_filter(
             array_keys(self::memberConfigDispositions()),
-            static fn (string $name): bool => $name !== self::MEMBER_CONFIG_NOTIFICATION_FAMILY,
+            static fn (string $name): bool => $name !== self::MEMBER_CONFIG_NOTIFICATION_FAMILY
+                && $name !== self::MEMBER_CONFIG_COMMUNITY_MESSAGE_UNSUBSCRIBE_PREFIX.'*',
         ));
 
         foreach (PreferenceKey::upgradableCases() as $key) {
@@ -370,6 +375,7 @@ final class StepRegistry
             'is_send_pc_joinCommunity_mail' => 'groups.is_join_notification_enabled (KV "0"→false, missing/else→true), GroupUpgrade.',
             // Dropped: the mobile (feature-phone) frontend is out of scope.
             'is_send_mobile_joinCommunity_mail' => 'Dropped: mobile join-notification opt-in — the mobile frontend is out of scope.',
+            'send_message_permission' => 'Dropped: opMessagePlugin\'s rule for who may message every member of a community (admin / sub-admin / any member); OpenPNE 4 has no send-to-all-members action for it to gate.',
             self::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX.'*' => 'Dropped: opMessagePlugin\'s pass letting an admin-invited member join an approval-required community without approval, deleted on join; a member invited but not yet joined needs approval again.',
         ];
     }

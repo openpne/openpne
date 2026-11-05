@@ -28,6 +28,7 @@ class DirectMessageRecipientUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->seedType(1, 'message');
         $this->seedType(2, 'friend_link');
+        $this->seedType(3, 'community_message');
     }
 
     public function test_migrates_a_delivered_receipt_preserving_id_and_timestamps(): void
@@ -89,7 +90,24 @@ class DirectMessageRecipientUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseMissing('direct_message_recipients', ['id' => 920]);
     }
 
-    public function test_a_non_personal_parent_send_list_is_skipped(): void
+    public function test_a_community_message_delivers_one_receipt_per_member(): void
+    {
+        $admin = Member::factory()->create();
+        [$a, $b, $c] = Member::factory()->count(3)->create();
+        $this->seedMessage(690, $admin->id, ['is_send' => 1, 'message_type_id' => 3, 'foreign_id' => 7]);
+        $this->seedSendList(920, $a->id, 690, ['is_read' => 1, 'updated_at' => '2018-02-02 00:00:00']);
+        $this->seedSendList(921, $b->id, 690);
+        $this->seedSendList(922, $c->id, 690, ['is_deleted' => 1]);
+        $this->seedDeletedMessage(50, $c->id, 690, 922, 0, '2018-03-03 00:00:00');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('direct_message_recipients', ['id' => 920, 'direct_message_id' => 690, 'recipient_id' => $a->id, 'read_at' => '2018-02-02 00:00:00']);
+        $this->assertDatabaseHas('direct_message_recipients', ['id' => 921, 'recipient_id' => $b->id, 'read_at' => null, 'recipient_deleted_at' => null]);
+        $this->assertDatabaseHas('direct_message_recipients', ['id' => 922, 'recipient_id' => $c->id, 'recipient_deleted_at' => '2018-03-03 00:00:00', 'recipient_purged_at' => null]);
+    }
+
+    public function test_a_request_letters_receipt_migrates_like_any_other(): void
     {
         $sender = Member::factory()->create();
         $recipient = Member::factory()->create();
@@ -98,7 +116,7 @@ class DirectMessageRecipientUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->runUpgrade();
 
-        $this->assertDatabaseMissing('direct_message_recipients', ['id' => 930]);
+        $this->assertDatabaseHas('direct_message_recipients', ['id' => 930, 'direct_message_id' => 700, 'recipient_id' => $recipient->id]);
     }
 
     public function test_a_trashed_recipient_sets_deleted_at_from_the_pointer(): void

@@ -7,11 +7,11 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `message` (opMessagePlugin) → OpenPNE 4 `direct_messages`, personal messages only: the
- * friend/community message types were OpenPNE 3's notification mechanism. A draft's recipient is
- * folded from its message_send_list row onto draft_recipient_id, and OpenPNE 3's trash
- * (message.is_deleted plus a deleted_message pointer whose own is_deleted marks the purge) onto
- * sender_deleted_at / sender_purged_at.
+ * OpenPNE 3 `message` (opMessagePlugin) → OpenPNE 4 `direct_messages`, every message type: each
+ * type is one sender's letter (subject, body) to the members listed in message_send_list, the
+ * request and invitation types included. A draft's recipient is folded from its message_send_list
+ * row onto draft_recipient_id, and OpenPNE 3's trash (message.is_deleted plus a deleted_message
+ * pointer whose own is_deleted marks the purge) onto sender_deleted_at / sender_purged_at.
  */
 class DirectMessageUpgrade extends UpgradeStep
 {
@@ -38,27 +38,18 @@ class DirectMessageUpgrade extends UpgradeStep
         ];
     }
 
-    public function filter(): ?string
-    {
-        return self::isPersonalMessage('message');
-    }
-
-    public function filterColumns(): array
-    {
-        return ['message_type_id'];
-    }
-
     public function gaps(): array
     {
         return [
-            'foreign_id' => 'OpenPNE 3 foreign-table identifier for non-`message` message-types (friend/community notifications); those types are not migrated, so on a personal message foreign_id is always 0.',
+            'message_type_id' => 'OpenPNE 3 letter kind (personal message, community message, friend / join / take-over / sub-admin request, community / event invitation, or a third-party type). Every kind is a letter with a subject and body, so all migrate alike with the stored text; OpenPNE 3 wrapped the non-personal kinds in a per-type template naming the sender and the community or event, and gave them an accept button — neither is carried, and a nomination or community invitation still open is lost with it (community_member_position / community_admin_invited_* dispositions).',
+            'foreign_id' => 'What the letter was about: 0 on a personal message, the community on a community message (shown by OpenPNE 3 as "<community> 参加者" in place of the recipient list), the request, community or event on the other kinds. Not carried: OpenPNE 4 keeps the letter as text and shows the sender and the recipients.',
         ];
     }
 
-    /** SQL boolean: the `<table>` row is a personal message (message_type.type_name = 'message'). */
-    public static function isPersonalMessage(string $table): string
+    /** SQL boolean: the `<table>` row names an existing `message` as `<column>` (a missing parent would break the FK). */
+    public static function parentExists(string $table, string $column): string
     {
-        return "`{$table}`.`message_type_id` IN (SELECT `id` FROM ".SourceRef::table('message_type')." WHERE `type_name` = 'message')";
+        return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message')." `p` WHERE `p`.`id` = `{$table}`.`{$column}`)";
     }
 
     /**
@@ -81,14 +72,10 @@ class DirectMessageUpgrade extends UpgradeStep
             .'ELSE NULL END';
     }
 
-    /** Keep a self reference only when it is non-zero and points at a migrated personal message. */
+    /** Keep a self reference only when it is non-zero and points at a message that exists. */
     private function portedRefExpr(string $column): string
     {
-        return "CASE WHEN `{$column}` <> 0 AND EXISTS ("
-            .'SELECT 1 FROM '.SourceRef::table('message').' `p` '
-            ."WHERE `p`.`id` = `message`.`{$column}` AND "
-            .self::isPersonalMessage('p')
-            .") THEN `{$column}` ELSE NULL END";
+        return "CASE WHEN `{$column}` <> 0 AND ".self::parentExists('message', $column)." THEN `{$column}` ELSE NULL END";
     }
 
     /**

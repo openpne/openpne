@@ -52,7 +52,7 @@ final class SourcePreflight
      * the names in a `name IN (…)` filter, so an unrecognised name is just as invisible per step.
      */
     private const NAME_SCAN_TABLES = [
-        'member_config' => [],
+        'member_config' => [StepRegistry::MEMBER_CONFIG_COMMUNITY_MESSAGE_UNSUBSCRIBE_PREFIX],
         'community_config' => [StepRegistry::COMMUNITY_CONFIG_ADMIN_INVITED_PREFIX],
         'notification_mail' => [StepRegistry::NOTIFICATION_MAIL_MOBILE_PREFIX],
         'sns_term' => [],
