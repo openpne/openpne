@@ -17,8 +17,10 @@ the same partial (`resources/views/partials/site-icons.blade.php`), and the admi
 | none | no token, fallback `none` | no link | a bare 404, cacheable | the brand-color tile |
 
 `none` reaches only the tab icon: it keeps what OpenPNE 3 showed, which had no manifest or push
-icon to keep. The upgrade stamps it for a migrated site ([upgrade.md](upgrade.md), "After the
-walk"); a fresh install starts on `generated`.
+icon to keep. The upgrade stamps it for a migrated site ([upgrade.md](upgrade.md), "Post-walk
+passes"); a fresh install starts on `generated`. A `public/favicon.ico` left over from an earlier
+release shadows the route under `try_files`, so a deploy that overlays a release must remove it, and a
+web-server rule that answers `/favicon.ico` or image extensions itself hides the routes the same way.
 
 ## The generated icon
 
@@ -31,5 +33,6 @@ byte by byte rather than through GD, which an imgproxy install may not have.
 
 Every generated URL carries `v`, a hash of the color and the name, because an installed app
 re-fetches its icon off a changed URL, not off new bytes at an unchanged one. The one exception is
-an upload too small for a size, which answers with the tile under the upload's own URL; a changed
-brand color repaints it in place.
+an upload that cannot fill a size (too small, refused, or the processor down), which answers with
+the tile under the upload's own URL for the day it is cached; a changed brand color repaints it in
+place.

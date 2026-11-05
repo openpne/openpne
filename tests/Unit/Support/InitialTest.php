@@ -22,6 +22,9 @@ class InitialTest extends TestCase
             ["\u{3000}全角空白先頭", '全'],
             ['🎉party', '🎉P'],
             ['a', 'A'],
+            ["\u{FEFF}Acme", 'AC'],
+            ["\u{0085}Acme", "\u{0085}A"],
+            ["\u{180E}Acme", "\u{180E}A"],
         ];
     }
 

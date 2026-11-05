@@ -8,7 +8,7 @@ use App\Services\SnsSettingService;
 use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
 
-/** Which icon the site shows, and where each shell finds it (docs/internals/site-icon.md). */
+/** See docs/internals/site-icon.md, "Three states". */
 class SiteIcon
 {
     public function __construct(
@@ -27,7 +27,6 @@ class SiteIcon
             : SiteIconState::Generated;
     }
 
-    /** The single tab icon URL for a shell that links one, or null when the site shows none. */
     public function faviconUrl(): ?string
     {
         return match ($this->state()) {
@@ -37,7 +36,6 @@ class SiteIcon
         };
     }
 
-    /** The home-screen icon at $size: derived from the upload when there is one, else the brand tile. */
     public function appIconUrl(int $size): string
     {
         $token = (string) $this->settings->get(SnsSettingKey::BrandFaviconFile);

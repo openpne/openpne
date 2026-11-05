@@ -42,6 +42,9 @@ test('the initial is computed in code points, the same way the server does', () 
         ['\u3000全角空白先頭', '全'],
         ['🎉party', '🎉P'],
         ['a', 'A'],
+        ['\uFEFFAcme', 'AC'],
+        ['\u0085Acme', '\u0085A'],
+        ['\u180EAcme', '\u180EA'],
     ];
     for (const [name, initial] of table) {
         assert.equal(computeInitial(name), initial, JSON.stringify(name));

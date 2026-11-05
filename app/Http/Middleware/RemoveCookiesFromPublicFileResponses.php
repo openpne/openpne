@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 class RemoveCookiesFromPublicFileResponses
 {
     /** The delivery routes. Named rather than sniffed so a new route is an explicit decision. */
-    private const ROUTES = ['file.show', 'image.show', 'banner.image', 'file.public'];
+    private const ROUTES = ['file.show', 'image.show', 'banner.image', 'file.public', 'favicon.ico', 'favicon.svg', 'site_icon'];
 
     public function handle(Request $request, Closure $next): Response
     {

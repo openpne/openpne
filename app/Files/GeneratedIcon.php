@@ -8,9 +8,8 @@ use App\Support\BrandColor;
 use App\Support\Initial;
 
 /**
- * The icon a site shows when nothing is uploaded, drawn from the brand color and the site name
- * (docs/internals/site-icon.md). The raster forms are built byte by byte, not through GD, which is
- * optional on an imgproxy install.
+ * The raster forms are built byte by byte, not through GD, which is optional on an imgproxy install
+ * (docs/internals/site-icon.md, "The generated icon").
  */
 class GeneratedIcon
 {
@@ -36,7 +35,7 @@ class GeneratedIcon
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
             .'<rect width="64" height="64" rx="12" fill="'.$color.'"/>'
             .'<text x="32" y="32" dy=".36em" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="'.$fontSize.'" fill="'.BrandColor::readableForeground($color).'">'
-            .htmlspecialchars($initial, ENT_XML1 | ENT_QUOTES, 'UTF-8')
+            .htmlspecialchars(self::xmlText($initial), ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             .'</text></svg>';
     }
 
@@ -44,10 +43,11 @@ class GeneratedIcon
     public function png(int $size): string
     {
         [$r, $g, $b] = sscanf($this->color(), '#%02x%02x%02x');
-        $row = "\0".str_repeat(chr($r).chr($g).chr($b), $size);
+        $row = "\0".str_repeat(chr($r).chr($g).chr($b)."\xff", $size);
 
+        // Opaque RGBA (color type 6): the 32 bits per pixel the ICO entry declares.
         return "\x89PNG\r\n\x1a\n"
-            .self::chunk('IHDR', pack('NNCCCCC', $size, $size, 8, 2, 0, 0, 0))
+            .self::chunk('IHDR', pack('NNCCCCC', $size, $size, 8, 6, 0, 0, 0))
             .self::chunk('IDAT', (string) gzcompress(str_repeat($row, $size), 9))
             .self::chunk('IEND', '');
     }
@@ -59,6 +59,12 @@ class GeneratedIcon
         return pack('vvv', 0, 1, 1)
             .pack('CCCCvvVV', 32, 32, 0, 0, 1, 32, strlen($png), self::ICO_HEADER_BYTES)
             .$png;
+    }
+
+    /** Control characters have no place in XML text, however the name was saved. */
+    private static function xmlText(string $text): string
+    {
+        return (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x{FFFE}\x{FFFF}]/u', '', $text);
     }
 
     private static function chunk(string $type, string $data): string
