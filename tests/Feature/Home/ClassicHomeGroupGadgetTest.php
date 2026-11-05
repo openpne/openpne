@@ -186,6 +186,6 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $this->actingAs($viewer)->get('/')
             ->assertOk()
             ->assertSee('グループ最新書き込み')
-            ->assertSee('もっと見る');
+            ->assertSee('<a href="'.route('group.topics.recent').'">もっと見る</a>', false);
     }
 }

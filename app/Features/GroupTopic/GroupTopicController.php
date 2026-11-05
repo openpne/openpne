@@ -47,7 +47,7 @@ class GroupTopicController extends Controller
 
     public function recent(Request $request, ListJoinedGroupTopics $query): View|RedirectResponse
     {
-        // Modern has no paged site-wide board yet, so its viewer lands on the 30-row activity page.
+        // Modern's face of the joined groups' recent threads is the activity page, which is not paged.
         if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('group.recent');
         }

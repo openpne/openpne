@@ -49,13 +49,15 @@ class ListJoinedGroupTopicsTest extends TestCase
             $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => "T{$i}"]);
             DB::table('group_topics')->where('id', $topic->getKey())->update(['bumped_at' => now()->subMinutes(100 - $i)]);
         }
+        // The oldest row gets the newest activity: a comment lifts a thread above younger ones.
+        DB::table('group_topics')->where('name', 'T1')->update(['bumped_at' => now()]);
 
         $page = (new ListJoinedGroupTopics)($viewer);
 
         $this->assertSame(51, $page->total());
         $this->assertCount(50, $page);
-        $this->assertSame('T51', $page->first()->name);
-        $this->assertSame('T2', $page->last()->name);
+        $this->assertSame(['T1', 'T51'], $page->take(2)->pluck('name')->all());
+        $this->assertSame('T3', $page->last()->name);
     }
 
     public function test_loads_the_comment_count_and_the_group(): void

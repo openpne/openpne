@@ -82,7 +82,7 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('community name after the link', L::Two, S::Ported, "recentlyTopicListSuccess.php sprintf('%s (%s)', link, \$topic->getCommunity()->getName())"),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, "op_include_pager_navigation(\$pager, '@communityTopic_recently_topic_list?page=%d')"),
                 new ScreenElement('box heading', L::Three, S::Ported, 'recentlyTopicListSuccess.php <h3>Recently Posted %Community% Topics</h3>', 'the gadget heading key, Recently Posted %Community% %Topics%'),
-                new ScreenElement('empty state', L::Three, S::Partial, 'recentlyTopicListSuccess.php if ($pager->getNbResults()) around the whole box', 'the box stays with "No %topics% to show.", as the board does; OpenPNE 3 rendered no box at all'),
+                new ScreenElement('empty state', L::Three, S::Partial, 'recentlyTopicListSuccess.php if ($pager->getNbResults()) around the whole box', 'the box stays with "No %topics% to show." (also on a page past the end), as the board does; OpenPNE 3 rendered no box at all'),
             ],
             // showSuccess.php + communityTopicComment/_list.php → group-topic/show.blade.php.
             'show' => [
