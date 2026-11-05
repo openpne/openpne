@@ -41,9 +41,11 @@
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
     @inertiaHead
+    {!! layout_hook(\App\Support\LayoutHook::ModernHead) !!}
 </head>
 {{-- dvh, not vh: 100vh would keep the document taller than the visible viewport on mobile. --}}
 <body class="min-h-dvh bg-background font-sans text-foreground antialiased">
     @inertia
+    {!! layout_hook(\App\Support\LayoutHook::ModernBodyEnd) !!}
 </body>
 </html>

@@ -1,3 +1,4 @@
+@use('App\Support\LayoutHook')
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -45,6 +46,7 @@
     <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[data-new-tab-notice]::before{content:' ' attr(data-new-tab-notice)}</style>
     {{-- Operator HTML insertion in <head>; admin-trusted, output raw. --}}
     {!! classic_html_slot('head') !!}
+    {!! layout_hook(LayoutHook::ClassicHead) !!}
 </head>
 <body id="{{ $pageId ?? '' }}" class="{{ $pageClass ?? 'secure_page' }}">
 {{-- Operator HTML insertion just inside <body>. --}}
@@ -59,6 +61,7 @@
                 <div class="container">
                     @include('layouts.partials.theme-header')
                 </div>
+                {!! layout_hook(LayoutHook::ClassicHeaderEnd) !!}
             </div><!-- HeaderContainer -->
         </div><!-- Header -->
         @else
@@ -70,6 +73,7 @@
                 @include('layouts.partials.global-nav')
                 {{-- Operator banner shown above the content, by login state. --}}
                 <div id="topBanner">{!! classic_top_banner() !!}</div>
+                {!! layout_hook(LayoutHook::ClassicHeaderEnd) !!}
             </div><!-- HeaderContainer -->
         </div><!-- Header -->
         @endif
@@ -90,6 +94,7 @@
                      to layoutC. --}}
                 @php($layout = $layout ?? classic_layout())
                 <div id="Layout{{ $layout }}" class="Layout">
+                    {!! layout_hook(LayoutHook::ClassicLayoutStart) !!}
                     {{-- OpenPNE 3's two flash slots, as its `alertBox` parts (`#flashError` /
                          `#flashNotice` are customization ids skins and customer CSS target). The
                          icon cell is decorative — the message text is what a screen reader gets,
@@ -115,11 +120,13 @@
                     @hasSection('sidemenu')
                         <div id="Left">
                             @yield('sidemenu')
+                            {!! layout_hook(LayoutHook::ClassicLeftEnd) !!}
                         </div><!-- Left -->
                     @endif
 
                     <div id="Center">
                         @yield('content')
+                        {!! layout_hook(LayoutHook::ClassicCenterEnd) !!}
                     </div><!-- Center -->
 
                     @hasSection('bottom')
@@ -127,6 +134,7 @@
                             @yield('bottom')
                         </div><!-- Bottom -->
                     @endif
+                    {!! layout_hook(LayoutHook::ClassicLayoutEnd) !!}
                 </div><!-- Layout -->
 
                 @include('layouts.partials.side-banner')
@@ -148,6 +156,7 @@
                     <a href="{{ route('policy.terms') }}" target="_blank" rel="noopener">{{ __('Terms of service') }}</a>
                     {!! $footerHtml !!}
                 </p>
+                {!! layout_hook(LayoutHook::ClassicFooterEnd) !!}
             </div>
         </div><!-- Footer -->
 
@@ -157,5 +166,6 @@
     {{-- Operator HTML insertion before #Body closes. --}}
     {!! classic_html_slot('bottom') !!}
 </div><!-- Body -->
+{!! layout_hook(LayoutHook::ClassicBodyEnd) !!}
 </body>
 </html>

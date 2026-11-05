@@ -3,6 +3,7 @@ import { LogIn, Pencil } from 'lucide-react';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
+import { LayoutHook } from '@/components/layout-hook';
 import { NavItems } from '@/components/nav-items';
 import { ActionLink } from '@/components/ui/action-link';
 import { useT } from '@/lib/i18n';
@@ -50,6 +51,7 @@ export function LeftNav() {
                     </Link>
                 </nav>
             )}
+            <LayoutHook name="modern.left_nav_end" />
         </aside>
     );
 }

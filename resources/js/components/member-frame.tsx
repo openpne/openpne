@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { ContextHeader } from '@/components/context-header';
 import { FlashMessage } from '@/components/flash-message';
+import { LayoutHook } from '@/components/layout-hook';
 import { PageHeading } from '@/components/page-heading';
 import { PageTabs } from '@/components/page-tabs';
 import { PlaceBar } from '@/components/place-bar';
@@ -24,7 +25,7 @@ const GAP: Record<Chrome['gap'], string> = {
  */
 export function MemberFrame({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     const t = useT();
-    const { props } = usePage<PageProps>();
+    const { props, url } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
     const look = lookSpec(props.look);
     // Frame-level gate: hub actions target member-only routes, so a guest (a web-public profile is
@@ -101,7 +102,11 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             )}
             {props.flash.status && <FlashMessage>{props.flash.status}</FlashMessage>}
             {props.flash.error && <FlashMessage variant="error">{props.flash.error}</FlashMessage>}
+            {/* Keyed on the URL: the frame persists across visits, and these two follow the page the
+                way an OpenPNE 3 page load did. */}
+            <LayoutHook key={`start:${url}`} name="modern.main_start" />
             {children}
+            <LayoutHook key={`end:${url}`} name="modern.main_end" />
         </main>
     );
 }

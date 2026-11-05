@@ -14,6 +14,7 @@ use App\Services\TermService;
 use App\Support\Autoplay;
 use App\Support\BrandColor;
 use App\Support\Feature;
+use App\Support\LayoutHooks;
 use App\Support\LookResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -65,6 +66,7 @@ class HandleInertiaRequests extends Middleware
             // A plain closure, not Inertia::optional: the rail shows on first render, so the prop must
             // be present then.
             'rightRail' => $user ? fn () => $this->rightRail($user) : null,
+            'layoutHooks' => fn () => app(LayoutHooks::class)->clientMap(),
             // Null rather than an empty list for a guest or while talk is off; the nav renders no room
             // section on null.
             'talkNavRooms' => $user !== null && Feature::GroupTalk->enabled()

@@ -9,7 +9,7 @@ import type { AuthUser, FeatureKey } from '@/types';
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
-const inertia = vi.hoisted(() => ({ page: {} as { component: string; props: Record<string, unknown> } }));
+const inertia = vi.hoisted(() => ({ page: {} as { component: string; url?: string; props: Record<string, unknown> } }));
 
 vi.mock('@inertiajs/react', () => ({
     usePage: () => inertia.page,
@@ -115,4 +115,38 @@ test.each(['dashboard', 'notifications/index'])('%s is inside nothing, so no pla
     arrive(component, { look: 'tabbed' });
 
     expect(placeBar()).toBeNull();
+});
+
+/**
+ * The frame outlives the page under Inertia's persistent layout, so without the key a package's slot
+ * would be written once per full load, not once per page as the OpenPNE 3 layout drew it.
+ */
+test('the main hooks follow the URL: a new page gets fresh nodes, the same page keeps them', () => {
+    const page = (url: string) => {
+        inertia.page = {
+            component: 'notifications/index',
+            url,
+            props: {
+                auth: { user },
+                enabledFeatures: allOn,
+                look: 'standard',
+                unread: null,
+                flash: { status: null, error: null },
+                layoutHooks: { 'modern.main_start': '<b>top</b>', 'modern.main_end': '<b>foot</b>' },
+            },
+        };
+        return <MemberFrame chrome={resolveChrome('notifications/index', inertia.page.props)}>{null}</MemberFrame>;
+    };
+    const { container, rerender } = render(page('/notifications'));
+    const start = container.querySelector('[data-layout-hook="modern.main_start"]');
+    const end = container.querySelector('[data-layout-hook="modern.main_end"]');
+    expect(start?.innerHTML).toBe('<b>top</b>');
+    expect(end?.innerHTML).toBe('<b>foot</b>');
+
+    rerender(page('/notifications'));
+    expect(container.querySelector('[data-layout-hook="modern.main_start"]')).toBe(start);
+
+    rerender(page('/notifications?page=2'));
+    expect(container.querySelector('[data-layout-hook="modern.main_start"]')).not.toBe(start);
+    expect(container.querySelector('[data-layout-hook="modern.main_end"]')).not.toBe(end);
 });

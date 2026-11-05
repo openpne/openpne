@@ -1,5 +1,6 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent, type ReactNode } from 'react';
+import { LayoutHook } from '@/components/layout-hook';
 import { NineTable } from '@/components/nine-table';
 import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Heading } from '@/components/ui/heading';
@@ -13,23 +14,25 @@ import type { PageProps } from '@/types';
  */
 export function RightRail() {
     const t = useT();
-    const { auth, rightRail } = usePage<PageProps>().props;
+    const { auth, rightRail, layoutHooks } = usePage<PageProps>().props;
+    // A guest has no rail of their own; the column still stands when a package put something at its end.
+    const memberRail = auth.user ? rightRail : null;
 
-    if (!auth.user || !rightRail) {
+    if (!memberRail && layoutHooks?.['modern.right_rail_end'] === undefined) {
         return null;
     }
 
-    const people = rightRail.people;
-    const friends = people.kind === 'friends';
+    const people = memberRail?.people;
+    const friends = people?.kind === 'friends';
 
     return (
         <aside
             aria-label={t('Right rail')}
             className="sticky top-0 hidden h-dvh w-80 shrink-0 flex-col gap-6 overflow-y-auto border-l border-border px-4 py-4 pt-safe-4 pb-safe-4 xl:flex"
         >
-            <SearchBox />
+            {memberRail && <SearchBox />}
 
-            {people.items.length > 0 && (
+            {people && people.items.length > 0 && (
                 <RailSection
                     title={friends ? t('%Friends%') : t('Members')}
                     viewAllHref={friends ? '/friend/list' : '/member/search'}
@@ -37,6 +40,7 @@ export function RightRail() {
                     <NineTable items={people.items} shape="round" />
                 </RailSection>
             )}
+            <LayoutHook name="modern.right_rail_end" />
         </aside>
     );
 }

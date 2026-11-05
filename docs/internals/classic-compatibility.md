@@ -307,6 +307,8 @@ the footer (`footer_before` / `footer_after`) are stored in `sns_settings` (the 
 [`DesignSettings`](../../app/Filament/Pages/DesignSettings.php) page, carried over verbatim by
 [`SnsSettingUpgrade`](../../app/Upgrade/Steps/SnsSettingUpgrade.php), and emitted raw as trusted
 operator HTML/CSS — stored without trimming so a stylesheet's leading `@charset` survives.
+HTML a package draws into the shell, which the operator cannot edit, is a layout hook instead
+([layout-hooks.md](layout-hooks.md)).
 
 A banner (OpenPNE 3 `op_banner`) shows operator HTML or one of a pool of images at random, by login
 state. The top placements render in `#topBanner` above the content (`top_after` when signed in, else
