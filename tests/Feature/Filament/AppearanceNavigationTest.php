@@ -82,15 +82,16 @@ class AppearanceNavigationTest extends TestCase
             ->values()
             ->all();
 
-        // Every group matched under ja — a lazy label that resolved in the wrong locale would drop its
-        // group out of the registered order.
-        $this->assertSame([
+        $registered = [
             __('Members'),
             __('Content'),
             __('Settings'),
             __('Appearance (Classic)'),
             __('System'),
-        ], $order);
+        ];
+
+        // Compared as a subsequence: a group a package adds may sit anywhere among the five.
+        $this->assertSame($registered, array_values(array_intersect($order, $registered)));
     }
 
     public function test_gadget_form_shows_field_helper_text(): void

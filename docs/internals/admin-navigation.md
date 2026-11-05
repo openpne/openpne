@@ -32,10 +32,14 @@ Every entry declares its group and an explicit `$navigationSort`. An omitted sor
 discovery order, which tracks the filesystem rather than any intent.
 
 [`AdminNavigationConventionsTest`](../../tests/Feature/Filament/AdminNavigationConventionsTest.php)
-enforces the group, sort and label rules. It builds its set from the pages and resources the panel
-registers — deliberately not from `getNavigation()`, which returns only what the current request
-may see: `InviteMembers` hides itself on a closed registration mode and the Appearance screens hide
-themselves on `modern_only`, so a request-derived set would let exactly those screens drift.
+enforces the group, sort and label rules over the `App\Filament` screens. It builds its set from
+the pages and resources the panel registers — deliberately not from `getNavigation()`, which returns
+only what the current request may see: `InviteMembers` hides itself on a closed registration mode
+and the Appearance screens hide themselves on `modern_only`, so a request-derived set would let
+exactly those screens drift.
+
+A composer package may add its own groups and screens to the panel through `Panel::configureUsing()`.
+Those are the package's to place and label; the five groups keep their relative order around them.
 
 ## Adding to the navigation
 
@@ -59,7 +63,8 @@ themselves on `modern_only`, so a request-derived set would let exactly those sc
 
 ## Key invariants
 
-1. Every navigable screen sits in one of the five registered groups and declares an explicit
-   `$navigationSort`, unique within its group.
-2. No two navigable screens render the same navigation label in any locale.
-3. Settings-group labels end in "settings" (`設定` in Japanese).
+1. Every navigable `App\Filament` screen sits in one of the five registered groups and declares an
+   explicit `$navigationSort`, unique within its group. A package's screens and groups are allowed
+   beside them.
+2. No two navigable `App\Filament` screens render the same navigation label in any locale.
+3. `App\Filament` Settings-group labels end in "settings" (`設定` in Japanese).
