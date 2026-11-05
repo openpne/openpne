@@ -320,7 +320,12 @@ cap for a canonical, twice it for a variant, whose top rung may be a plain re-en
 spooled file; leftovers of a request that died are swept an hour later on the next
 write. No route of this app serves stored bytes to the sidecar, so it needs no path back to the app.
 `OPENPNE_IMGPROXY_SOURCE_PREFIX` is the spool directory's path under the sidecar's
-`IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file.
+`IMGPROXY_LOCAL_FILESYSTEM_ROOT`, blank when that root is the spool itself as in the compose file,
+and `<site>/` where one sidecar serves several sites from a root that holds a directory per site.
+The spool directory itself may be a symbolic link to such a place: the app writes, lists and deletes
+through the path as configured and resolves nothing (`ImageSpoolSymlinkTest`). Spooled files are
+world-readable, so the directory's own permissions are what keep one site's spool from another's
+listing.
 A sidecar of the operator's own needs three settings besides the key and salt:
 `IMGPROXY_LOCAL_FILESYSTEM_ROOT`, `IMGPROXY_ALLOWED_SOURCES=local://` and
 `IMGPROXY_ALLOW_SECURITY_OPTIONS=true` — the last because every request states its own frame budget
@@ -344,8 +349,9 @@ sidecar's defaults for those do not matter either, and the app dials nothing but
 libvips is more tolerant than GD: a truncated JPEG, a PNG with a bad CRC or with garbage pixel data
 decodes to *something* rather than being refused, so what GD refuses and imgproxy accepts differs at
 the edges; the contract test pins only what both refuse. An outage on the upload path is shown to the
-member as a temporary failure; on a read it is a 503 with `Retry-After`, and every canonical already
-made keeps being served. A canonical that keeps its frames can outgrow the source cap where a GD still
+member as a temporary failure; on a read it is a 503 with `Retry-After: 30`
+([`bootstrap/app.php`](../../bootstrap/app.php)), the sidecar's 429 under `IMGPROXY_REQUESTS_QUEUE_SIZE`
+included, and every canonical already made keeps being served. A canonical that keeps its frames can outgrow the source cap where a GD still
 would not, and is then refused like any other over it.
 
 ## Classic is not part of this
