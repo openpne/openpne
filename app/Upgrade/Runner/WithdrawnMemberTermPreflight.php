@@ -6,6 +6,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceRef;
 use App\Upgrade\Steps\WithdrawnMemberTermJaUpgrade;
 use App\Upgrade\Steps\WithdrawnMemberTermUpgrade;
+use App\Upgrade\TermValue;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,7 +22,7 @@ final class WithdrawnMemberTermPreflight
     public function inspect(string $sourcePrefix, ?string $sourceDatabase): array
     {
         $sql = sprintf(
-            'SELECT MAX(CHAR_LENGTH(`value`)) AS `width` FROM %s AS `sns_config` WHERE %s',
+            'SELECT MAX(CHAR_LENGTH('.TermValue::trimmedExpr('`value`').')) AS `width` FROM %s AS `sns_config` WHERE %s',
             SourceRef::table('sns_config'),
             (new WithdrawnMemberTermJaUpgrade)->effectiveFilter(),
         );

@@ -76,17 +76,18 @@ class TermOverrideUpgradeSqlTest extends UpgradeSqlTestCase
         );
     }
 
-    /** The admin page cannot hold an empty override (a blank field means the default). */
-    public function test_an_empty_whitespace_only_or_null_value_is_not_carried(): void
+    /** U+3000 is a value the admin page keeps, though the source collation reads it as padding. */
+    public function test_a_blank_value_is_not_carried_and_the_rest_is_trimmed_as_the_admin_page_would(): void
     {
         $this->seedTerm('my_friend', ['ja_JP' => '', 'en' => null]);
-        $this->seedTerm('friend', ['ja_JP' => '  ', 'en' => 'buddy']);
+        $this->seedTerm('friend', ['ja_JP' => "\t \n", 'en' => " bud{x}\t"]); // x, { } : the class's own letters
+        $this->seedTerm('nickname', ['ja_JP' => "\u{3000}"]);
 
         $this->runUpgrade();
 
         $this->assertSame(
-            [['name' => 'friend', 'locale' => 'en', 'value' => 'buddy']],
-            DB::table('term_overrides')->get()->map(static fn (object $r): array => (array) $r)->all(),
+            [['name' => 'friend', 'locale' => 'en', 'value' => 'bud{x}'], ['name' => 'nickname', 'locale' => 'ja', 'value' => "\u{3000}"]],
+            DB::table('term_overrides')->orderBy('name')->get()->map(static fn (object $r): array => (array) $r)->all(),
         );
     }
 

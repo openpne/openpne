@@ -112,6 +112,16 @@ class TermOverridePreflightTest extends TestCase
         $this->assertStringContainsString(TermOverridePreflight::collisionMessage('friend', 'ja', 2), $output);
     }
 
+    public function test_a_blank_duplicate_does_not_count(): void
+    {
+        $this->seedTerm('community', ['ja_JP' => 'コミュニティ']);
+        $this->seedTerm('community', ['ja_JP' => ' ']);
+
+        [$ok, $output] = $this->preflight();
+
+        $this->assertTrue($ok, $output);
+    }
+
     public function test_a_mobile_duplicate_does_not_count(): void
     {
         $this->seedTerm('community', ['ja_JP' => 'コミュニティ']);

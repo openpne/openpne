@@ -6,6 +6,7 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceLocale;
 use App\Upgrade\SourceRef;
 use App\Upgrade\Steps\TermOverrideUpgrade;
+use App\Upgrade\TermValue;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -39,7 +40,7 @@ final class TermOverridePreflight
     private function rows(string $sourcePrefix, ?string $sourceDatabase): array
     {
         $sql = sprintf(
-            'SELECT %s AS `name`, %s AS `locale`, COUNT(*) AS `rows`, MAX(CHAR_LENGTH(`value`)) AS `width`'
+            'SELECT %s AS `name`, %s AS `locale`, COUNT(*) AS `rows`, MAX(CHAR_LENGTH('.TermValue::trimmedExpr('`value`').')) AS `width`'
             .' FROM %s AS `sns_term_translation` WHERE %s GROUP BY `name`, `locale` ORDER BY `name`, `locale`',
             TermOverrideUpgrade::nameSelect(),
             SourceLocale::foldExpr(),
