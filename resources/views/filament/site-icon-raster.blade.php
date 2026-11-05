@@ -73,11 +73,9 @@
                     credentials: 'same-origin',
                 });
             });
-        }).then(function (response) {
-            // 409 is a draw for a name or color since changed: the next page load draws the new one.
-            if (response.status === 204 || response.status === 409) sessionStorage.setItem(key, '1');
         }).catch(function (error) {
-            // This browser cannot draw it; another administrator's may.
+            // Only this is remembered: a browser that cannot draw it stays quiet for the session, while an
+            // accepted draw takes this hook off the page and a stale one gets a new version on the next.
             if (error && error.message === 'canvas-noise') sessionStorage.setItem(key, '1');
             if (window.console && console.debug) console.debug('site icon raster', error);
         });

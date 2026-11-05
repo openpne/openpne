@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Files\GeneratedIcon;
 use App\Files\GeneratedIconRaster;
 use App\Http\Controllers\Controller;
+use App\Services\SnsSettingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
@@ -19,7 +20,7 @@ use InvalidArgumentException;
  */
 class SiteIconRasterController extends Controller
 {
-    public function store(Request $request, GeneratedIcon $icon, GeneratedIconRaster $raster): Response
+    public function store(Request $request, GeneratedIcon $icon, GeneratedIconRaster $raster, SnsSettingService $settings): Response
     {
         abort_unless(Auth::guard('admin')->check(), 404);
 
@@ -38,7 +39,9 @@ class SiteIconRasterController extends Controller
             abort(422, $e->getMessage());
         }
 
-        // The version is read again: a rename while this draw was in flight must keep its own, newer raster.
+        // The version is read again off the rows, past this request's memo: a rename while this draw
+        // was in flight must keep its own, newer raster.
+        $settings->clearCache();
         $raster->prune($icon->version());
 
         return response()->noContent();

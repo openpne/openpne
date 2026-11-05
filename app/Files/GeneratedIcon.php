@@ -22,7 +22,7 @@ class GeneratedIcon
         return brand_color() ?? BrandColor::DEFAULT;
     }
 
-    /** What a posted raster is checked against: the color and the name it was drawn from. */
+    /** What a posted raster is checked against: the design, the color and the name it was drawn from. */
     public function version(): string
     {
         return substr(sha1(self::DESIGN.'|'.$this->color().'|'.sns_name()), 0, 8);

@@ -76,7 +76,11 @@ class SaveBrandingSettings
         $this->settings->clearCache();
 
         // A save is the operator's one way to have the generated icon drawn again.
-        $this->raster->prune('');
+        try {
+            $this->raster->prune('');
+        } catch (Throwable $e) {
+            report($e);
+        }
 
         // After the commit: a disk backend's byte deletion cannot be rolled back.
         foreach ($superseded as $token) {

@@ -15,6 +15,7 @@ use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -126,21 +127,21 @@ class SiteIconRasterTest extends TestCase
 
     public function test_a_write_for_an_old_version_that_lands_late_keeps_the_newer_raster(): void
     {
-        $raster = app(GeneratedIconRaster::class);
-        $pngs = [];
-        foreach (GeneratedIconRaster::SIZES as $size) {
-            $pngs[$size] = (string) $this->png($size)->get();
-        }
+        $this->setSnsSetting(SnsSettingKey::SnsName, 'Alpha');
+        $old = app(GeneratedIcon::class)->version();
+        $this->setSnsSetting(SnsSettingKey::SnsName, 'Beta');
+        $this->send()->assertNoContent();
+        $new = app(GeneratedIcon::class)->version();
 
-        // The controller re-reads the version after its write: the old draw prunes against the new one.
-        $raster->store('newer000', $pngs);
-        $raster->store('older000', $pngs);
-        $raster->prune('newer000');
+        // The late request read Alpha before the rename landed in the rows: its memo still says so.
+        $this->setSnsSetting(SnsSettingKey::SnsName, 'Alpha');
+        $this->assertSame($old, app(GeneratedIcon::class)->version());
+        DB::table('sns_settings')->where('key', SnsSettingKey::SnsName->value)->update(['value' => 'Beta']);
 
-        Storage::disk('image_cache')->assertExists('_site-icon/newer000/complete');
-        Storage::disk('image_cache')->assertMissing('_site-icon/older000/complete');
-        $this->assertTrue($raster->has('newer000'));
-        $this->assertFalse($raster->has('older000'));
+        $this->send(version: $old)->assertNoContent();
+
+        Storage::disk('image_cache')->assertExists("_site-icon/{$new}/complete");
+        Storage::disk('image_cache')->assertMissing("_site-icon/{$old}/complete");
     }
 
     public function test_saving_the_branding_page_discards_the_raster_so_it_is_drawn_again(): void
@@ -179,6 +180,31 @@ class SiteIconRasterTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::BrandFaviconFile, $file->name);
         $this->setSnsSetting(SnsSettingKey::SnsName, 'Renamed');
         $this->actingAs($admin, 'admin')->get('/admin')->assertOk()->assertDontSee('data-site-icon-raster', false);
+    }
+
+    public function test_a_session_whose_password_changed_is_sent_to_log_in_again(): void
+    {
+        $admin = AdminUser::factory()->create();
+
+        $this->actingAs($admin, 'admin')
+            ->withSession(['password_hash_admin' => 'stale'])
+            ->post('/admin/site-icon/raster', ['version' => app(GeneratedIcon::class)->version(), 'icon' => array_map(fn (int $size) => $this->png($size), array_combine(GeneratedIconRaster::SIZES, GeneratedIconRaster::SIZES))])
+            ->assertRedirect();
+
+        Storage::disk('image_cache')->assertDirectoryEmpty('');
+    }
+
+    public function test_the_existence_memo_lasts_one_request(): void
+    {
+        $this->send()->assertNoContent();
+        $version = app(GeneratedIcon::class)->version();
+        $this->assertTrue(app(GeneratedIconRaster::class)->has($version));
+
+        Storage::disk('image_cache')->delete("_site-icon/{$version}/complete");
+        $this->assertTrue(app(GeneratedIconRaster::class)->has($version));
+
+        $this->app->forgetScopedInstances();
+        $this->assertFalse(app(GeneratedIconRaster::class)->has($version));
     }
 
     /** @param  array<int, UploadedFile|null>  $override */
