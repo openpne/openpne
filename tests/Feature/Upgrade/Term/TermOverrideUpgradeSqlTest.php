@@ -81,13 +81,13 @@ class TermOverrideUpgradeSqlTest extends UpgradeSqlTestCase
     {
         $this->seedTerm('my_friend', ['ja_JP' => '', 'en' => null]);
         $this->seedTerm('friend', ['ja_JP' => "\t \n", 'en' => " bud{x}\t"]); // x, { } : the class's own letters
-        $this->seedTerm('nickname', ['ja_JP' => "\u{3000}"]);
+        $this->seedTerm('nickname', ['ja_JP' => "\u{3000}", 'en' => "x \f"]); // \f: a line terminator to ICU's `$`, not blank to trim()
 
         $this->runUpgrade();
 
         $this->assertSame(
-            [['name' => 'friend', 'locale' => 'en', 'value' => 'bud{x}'], ['name' => 'nickname', 'locale' => 'ja', 'value' => "\u{3000}"]],
-            DB::table('term_overrides')->orderBy('name')->get()->map(static fn (object $r): array => (array) $r)->all(),
+            [['name' => 'friend', 'locale' => 'en', 'value' => 'bud{x}'], ['name' => 'nickname', 'locale' => 'en', 'value' => "x \f"], ['name' => 'nickname', 'locale' => 'ja', 'value' => "\u{3000}"]],
+            DB::table('term_overrides')->orderBy('name')->orderBy('locale')->get()->map(static fn (object $r): array => (array) $r)->all(),
         );
     }
 
