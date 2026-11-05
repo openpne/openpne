@@ -373,8 +373,11 @@ change from a problem when you go through it.
   recipient keeping their own read and trash state: personal messages, community messages (a letter
   to a community's members), and the letters a member wrote with a friend request, a join request,
   an admin hand-over or sub-admin nomination, or a community or event invitation. The request and
-  invitation letters lose their accept button — what they asked for was settled in OpenPNE 3, and a
-  nomination or community invitation still open there has to be made again. A letter sent to many
+  invitation letters arrive as their stored subject and the note the member typed: the accept button
+  and the frame OpenPNE 3 drew around them naming the community or event are not carried, what they
+  asked for was settled in OpenPNE 3, and a nomination or community invitation still open there has
+  to be made again. A letter of a type some other plugin defined arrives the same way, as its stored
+  text. A letter sent to many
   stays one letter with many recipients: in the Modern surface the sender sees it once per recipient
   (as OpenPNE 3's phone view did), deleting it from one of those conversations removes it from all
   of them, and the "<community> 参加者" line OpenPNE 3 showed in place of the names is not carried.

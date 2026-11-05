@@ -41,8 +41,8 @@ class DirectMessageUpgrade extends UpgradeStep
     public function gaps(): array
     {
         return [
-            'message_type_id' => 'OpenPNE 3 letter kind (personal message, community message, friend / join / take-over / sub-admin request, community / event invitation). Every kind is a letter with a subject and body, so all migrate alike; the request and invitation kinds lose only their accept button, whose outcome the member and community steps carry.',
-            'foreign_id' => 'What the letter was about: 0 on a personal message, the community on a community message (shown by OpenPNE 3 as "<community> 参加者" in place of the recipient list), the request or event on the other kinds. OpenPNE 4 keeps the letter as text and shows the sender and the recipients.',
+            'message_type_id' => 'OpenPNE 3 letter kind (personal message, community message, friend / join / take-over / sub-admin request, community / event invitation, or a third-party type). Every kind is a letter with a subject and body, so all migrate alike with the stored text; OpenPNE 3 wrapped the non-personal kinds in a per-type template naming the sender and the community or event, and gave them an accept button — neither is carried, and a nomination or community invitation still open is lost with it (community_member_position / community_admin_invited_* dispositions).',
+            'foreign_id' => 'What the letter was about: 0 on a personal message, the community on a community message (shown by OpenPNE 3 as "<community> 参加者" in place of the recipient list), the request, community or event on the other kinds. Not carried: OpenPNE 4 keeps the letter as text and shows the sender and the recipients.',
         ];
     }
 

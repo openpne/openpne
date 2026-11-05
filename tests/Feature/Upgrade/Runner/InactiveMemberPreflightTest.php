@@ -245,6 +245,22 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message_send_list.member_id', 1), $output);
     }
 
+    public function test_an_inactive_recipient_of_a_request_letter_aborts(): void
+    {
+        // The scope and DirectMessageRecipientUpgrade's filter must cover the same rows whatever the type.
+        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        $this->seedMessageType(2, 'friend_link');
+        $this->seedMessage(10, memberId: 1, typeId: 2);
+        $this->seedSendListRow(1, messageId: 10, memberId: 2);
+
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message_send_list.member_id', 1), $output);
+    }
+
     public function test_only_the_position_row_that_becomes_a_target_column_is_counted(): void
     {
         // community_member_position feeds groups.pending_admin_member_id from its admin_confirm
