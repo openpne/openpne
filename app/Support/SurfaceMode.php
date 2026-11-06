@@ -40,7 +40,7 @@ enum SurfaceMode: string
         return $this->classicAvailable() && $this->modernAvailable();
     }
 
-    /** The surface an undecided viewer gets on a canonical route (irrelevant under a single-surface mode). */
+    /** The surface an undecided viewer gets on a canonical route; under a single-surface mode, that mode's one surface. */
     public function defaultSurface(): Surface
     {
         return $this->modernAvailable() && $this !== self::ClassicDefault ? Surface::Modern : Surface::Classic;

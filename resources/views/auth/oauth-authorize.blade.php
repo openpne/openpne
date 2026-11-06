@@ -33,9 +33,11 @@
                         </td>
                     </tr>
                 @else
-                    <input type="hidden" name="actor" value="self">
                     <tr>
-                        <td colspan="2">{{ __('Reads and writes under your name. What the AI writes is yours.') }}</td>
+                        <td colspan="2">
+                            <input type="hidden" name="actor" value="self">
+                            {{ __('Reads and writes under your name. What the AI writes is yours.') }}
+                        </td>
                     </tr>
                 @endif
                 <tr>

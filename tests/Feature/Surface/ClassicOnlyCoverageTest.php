@@ -5,6 +5,8 @@ namespace Tests\Feature\Surface;
 use App\Models\Group;
 use App\Models\Member;
 use App\Support\ClassicOnlyResponseFactory;
+use App\Support\Look;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
@@ -28,6 +30,7 @@ class ClassicOnlyCoverageTest extends TestCase
         'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
         'member.config.mfa.edit', 'member.config.passkeys.edit', 'member.config.notifications.edit', 'member.config.ai',
+        'member.config.look.edit',
     ];
 
     /** Same set as ModernOnlyCoverageTest: fetched by a shell's or a form's own script, not pages. */
@@ -42,7 +45,10 @@ class ClassicOnlyCoverageTest extends TestCase
         'member.config.passkeys.options',
     ];
 
-    /** Canonical GET route names asserted to render Classic below (a redirect's landing included). */
+    /**
+     * Parameterless canonical GET route names asserted to render Classic: by classicPages(), or by
+     * test_query_parameterized_pages_render_classic() for the ones that need an ?id=.
+     */
     private const CLASSIC = [
         'home',
         'diary.list', 'diary.list_friend', 'diary.search', 'diary.new', 'diary.comment.history',
@@ -50,10 +56,7 @@ class ClassicOnlyCoverageTest extends TestCase
         'friend.list', 'friend.manage', 'friend.requests', 'friend.link.show',
         'block.list', 'block.add.show',
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
-        'member.config.look.edit',
-        'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
-        'group.join.show', 'group.quit.show',
-        'group.members.appoint.show', 'group.members.demote.show', 'group.members.drop.show', 'group.members.transfer.show',
+        'group.search', 'group.list_mine', 'group.edit',
         'group.topics.recent', 'group.events.recent',
         'message.index', 'message.index_compat', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
         'member.invite',
@@ -102,8 +105,6 @@ class ClassicOnlyCoverageTest extends TestCase
             'member config' => ['/member/config'],
             'member profile edit' => ['/member/edit/profile'],
             'member avatar' => ['/member/avatar'],
-            // A site offering one look sends this to the settings page, which renders Classic here.
-            'layout picker' => ['/member/config/look'],
             'community search' => ['/groups'],
             'community joined' => ['/groups/mine'],
             'recent topics' => ['/topics'],
@@ -148,6 +149,31 @@ class ClassicOnlyCoverageTest extends TestCase
             'notifications edit' => ['/member/config/notifications'],
             'ai accounts' => ['/member/config/ai'],
         ];
+    }
+
+    /** Parameterless in the route table but 404 without their ?id=, so outside classicPages(). */
+    public function test_query_parameterized_pages_render_classic(): void
+    {
+        [$viewer, $target] = Member::factory()->count(2)->create();
+
+        foreach ([
+            "/friend/link?id={$target->getKey()}",
+            "/block/add?id={$target->getKey()}",
+            "/message/sendToFriend?id={$target->getKey()}",
+        ] as $uri) {
+            self::assertClassic($this->actingAs($viewer)->get($uri));
+        }
+    }
+
+    /** With one look the picker redirects to the settings page; with two it is a Modern-only page. */
+    public function test_the_look_picker_is_not_there_once_it_has_a_choice(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get('/member/config/look')->assertRedirect(route('member.config'));
+
+        $this->setSnsSetting(SnsSettingKey::SelectableLooks, [Look::Unified]);
+        $this->actingAs($viewer)->get('/member/config/look')->assertNotFound();
     }
 
     /** The classification guard covers only parameterless routes, so representative parameterized ones are asserted here. */

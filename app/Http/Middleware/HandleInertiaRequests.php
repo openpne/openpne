@@ -32,7 +32,7 @@ class HandleInertiaRequests extends Middleware
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->hasHeader('X-Inertia') && ! SurfaceResolver::modernAvailable()) {
-            // Not through parent::handle(): its asset-version check would swap in its own reload, and a 409 needs no shared props.
+            // Not through parent::handle(): its shared props and asset-version check are for a page response, which this is not.
             $response = Inertia::location($request->isMethod('GET') ? $request->fullUrl() : route('home'));
             $response->headers->set('Vary', 'X-Inertia');
 
