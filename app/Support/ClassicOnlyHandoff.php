@@ -22,6 +22,12 @@ final class ClassicOnlyHandoff
             return null;
         }
 
+        // This response is one request of the session's own: without a reflash the flash a stale tab's
+        // POST just wrote (errors, status) would be aged away before the reload reads it.
+        if ($request->hasSession()) {
+            $request->session()->reflash();
+        }
+
         $response = Inertia::location($request->fullUrl());
         $response->headers->set('Vary', 'X-Inertia');
 

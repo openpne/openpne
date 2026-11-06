@@ -29,7 +29,7 @@ class HandleInertiaRequests extends Middleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Not through parent::handle(): its shared props and asset-version check are for a page response, which this is not.
+        // Not through parent::handle(): its asset-version branch swaps in its own location response, which drops Vary.
         return ClassicOnlyHandoff::for($request) ?? parent::handle($request, $next);
     }
 

@@ -4,10 +4,12 @@ namespace Tests\Feature\Surface;
 
 use App\Models\Group;
 use App\Models\Member;
+use App\Support\ClassicOnlyHandoff;
 use App\Support\ClassicOnlyResponseFactory;
 use App\Support\Look;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Inertia\ResponseFactory;
@@ -234,6 +236,25 @@ class ClassicOnlyCoverageTest extends TestCase
         $this->get('/login', ['X-Inertia' => 'true'])
             ->assertStatus(409)
             ->assertHeader('X-Inertia-Location', url('/login'));
+    }
+
+    /** The 409 is a request of its own, so the POST's flash has to survive it for the reload to show it. */
+    public function test_the_flash_a_handed_off_post_wrote_survives_the_reload(): void
+    {
+        $session = app('session.store');
+        $session->flash('status', 'Settings updated.');
+        // The POST's request ends: its flash is now "old", gone after one more request.
+        $session->ageFlashData();
+
+        $request = Request::create('/member/config', 'GET', server: ['HTTP_X_INERTIA' => 'true']);
+        $request->setLaravelSession($session);
+        // Inertia::location() reads the bound request to decide between a 409 and a plain redirect.
+        $this->app->instance('request', $request);
+        $this->assertSame(409, ClassicOnlyHandoff::for($request)?->getStatusCode());
+
+        // The 409's request ends; the reload that follows still reads the flash.
+        $session->ageFlashData();
+        $this->assertSame('Settings updated.', $session->get('status'));
     }
 
     public function test_allowlisted_names_are_registered_routes(): void
