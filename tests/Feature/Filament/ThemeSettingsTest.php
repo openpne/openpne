@@ -36,12 +36,17 @@ class ThemeSettingsTest extends TestCase
             ->assertSet('data.'.SnsSettingKey::ClassicTheme->value, '');
     }
 
-    public function test_the_copy_drops_the_phone_sentence_under_classic_only(): void
+    public function test_the_copy_names_the_phone_surface_while_modern_is_served(): void
     {
         config(['openpne.surface_mode' => 'classic_default']);
-        Livewire::test(ThemeSettings::class)->assertSee('スマートフォンの訪問者はモダン画面を見ます');
 
+        Livewire::test(ThemeSettings::class)->assertSee('スマートフォンの訪問者はモダン画面を見ます');
+    }
+
+    public function test_the_copy_drops_the_phone_sentence_under_classic_only(): void
+    {
         config(['openpne.surface_mode' => 'classic_only']);
+
         Livewire::test(ThemeSettings::class)
             ->assertSee('Google Fonts')
             ->assertDontSee('モダン');

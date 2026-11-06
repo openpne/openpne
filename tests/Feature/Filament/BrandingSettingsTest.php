@@ -172,8 +172,9 @@ class BrandingSettingsTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::SurfaceMode, SurfaceMode::ClassicOnly);
         $this->setSnsSetting(SnsSettingKey::BrandLogoFile, 'kept-logo-token');
 
+        // The hidden remove switch set anyway: a hidden section's state must not reach the save.
         Livewire::test(BrandingSettings::class)
-            ->fillForm([SnsSettingKey::BrandColor->value => '#2563eb'])
+            ->fillForm([SnsSettingKey::BrandColor->value => '#2563eb', 'remove_brand_logo' => true])
             ->call('save')
             ->assertHasNoErrors();
 

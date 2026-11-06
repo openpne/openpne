@@ -15,10 +15,6 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Each Modern-only admin screen listed below must be hidden and URL-blocked under classic_only, the
- * mirror of AppearanceClassicModernOnlyTest; the Classic screens stay reachable there.
- */
 class ModernScreensClassicOnlyTest extends TestCase
 {
     use RefreshDatabase;

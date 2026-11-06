@@ -129,8 +129,7 @@ class GroupSettings extends Page
     }
 
     /**
-     * The keys this page edits. The board switches drive Classic markup only and talk is a Modern
-     * screen, so on a single-surface install the other side is neither shown nor rewritten (a stored value survives a later surface change).
+     * On a single-surface install the other surface's keys are neither shown nor rewritten, so a stored value survives a later mode change.
      *
      * @return list<SnsSettingKey>
      */
