@@ -327,7 +327,8 @@ Three switches, at three scopes:
   moves the row. The store is capped at 10 devices per member, oldest pruned. An endpoint the push
   service reports as 404/410 is deleted by the package's report handler, so expiry needs no wiring.
 
-The subscribe UI is Modern-only, but **ownership reconciliation runs on every authenticated surface**:
+The subscribe UI is Modern-only (so under `surface_mode=classic_only` no one subscribes), but
+**ownership reconciliation runs on every authenticated surface**:
 the Modern shell (`UnreadSync`) and the Classic header (a gated partial loading `push-reconcile.js`)
 both re-POST the browser's existing subscription to reclaim the row for whoever is signed in now (this
 also heals a cap-pruned row) so a shared browser cannot keep delivering the previous member's pushes —

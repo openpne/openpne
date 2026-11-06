@@ -64,6 +64,20 @@ class ClassicTalkEntranceTest extends TalkTestCase
             ->assertSee($this->talkLink($group->getKey()), false);
     }
 
+    public function test_the_link_disappears_under_classic_only(): void
+    {
+        // The unit's row is explicitly on: the entrance goes with the surface, not the feature-off default.
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, true);
+        config(['openpne.surface_mode' => 'classic_only']);
+        $group = $this->group();
+        $member = $this->memberOf($group);
+
+        $this->actingAs($member)->get(route('group.show', $group))
+            ->assertOk()
+            ->assertDontSee($this->talkLink($group->getKey()), false);
+        $this->actingAs($member)->get($this->talkLink($group->getKey()))->assertNotFound();
+    }
+
     public function test_the_link_disappears_with_the_talk_unit(): void
     {
         $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);

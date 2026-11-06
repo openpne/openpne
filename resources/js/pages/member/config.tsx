@@ -43,7 +43,7 @@ interface ConfigForm {
     ai?: { count: number };
     // Absent while nothing is connected over OAuth.
     connections?: { items: Connection[]; requiresPassword: boolean };
-    // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
+    // Absent under modern_only and classic_only — the picker is only served while both surfaces are.
     surface?: { value: string; description: string; options: Option[] };
     // Absent while the image processor drops frames (GD): nothing animates for the switch to stop.
     autoplayAnimations?: { value: string; options: Option[] };

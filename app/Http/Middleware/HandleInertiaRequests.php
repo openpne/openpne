@@ -16,13 +16,31 @@ use App\Support\BrandColor;
 use App\Support\Feature;
 use App\Support\LayoutHooks;
 use App\Support\LookResolver;
+use App\Support\SurfaceResolver;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
+
+    /** Under classic_only an Inertia navigation can only come from a stale Modern tab: a 409 location reloads it into Classic. */
+    public function handle(Request $request, Closure $next): Response
+    {
+        if ($request->hasHeader('X-Inertia') && ! SurfaceResolver::modernAvailable()) {
+            // Not through parent::handle(): its asset-version check would swap in its own reload, and a 409 needs no shared props.
+            $response = Inertia::location($request->isMethod('GET') ? $request->fullUrl() : route('home'));
+            $response->headers->set('Vary', 'X-Inertia');
+
+            return $response;
+        }
+
+        return parent::handle($request, $next);
+    }
 
     /**
      * @return array<string, mixed>

@@ -58,11 +58,24 @@ enum Feature: string
     }
 
     /**
+     * Whether the unit has Modern screens only, so it is off wherever Modern is not served; interim
+     * until group talk has a Classic screen (docs/internals/feature-toggles.md, "Dependencies").
+     */
+    public function requiresModern(): bool
+    {
+        return $this === self::GroupTalk;
+    }
+
+    /**
      * This unit's flag AND every ancestor's: a topic board is unreachable while groups are off,
      * whatever its own flag says, so the dependency is resolved here rather than at each call site.
      */
     public function enabled(): bool
     {
+        if ($this->requiresModern() && ! SurfaceResolver::modernAvailable()) {
+            return false;
+        }
+
         $settings = app(SnsSettingService::class);
 
         for ($feature = $this; $feature !== null; $feature = $feature->parent()) {

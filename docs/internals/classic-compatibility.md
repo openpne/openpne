@@ -40,11 +40,11 @@ change when the surface does.
 ## Response selection
 
 `SurfaceResolver::resolve()` chooses Classic or Modern for a canonical route in
-priority order: the feature's `modern_status` → an Inertia navigation (the
+priority order: the feature's `modern_status` → the install's
+[`surface_mode`](../../app/Support/SurfaceMode.php) when `classic_only` → an Inertia navigation (the
 `X-Inertia` header: it can only come from the Modern SPA, which cannot consume
-Classic Blade, so it is always served Modern) → the install's
-[`surface_mode`](../../app/Support/SurfaceMode.php) when `modern_only` → a member's
-durable surface choice → the `surface_mode` default surface. The URL carries no
+Classic Blade, so it is always served Modern) → the `surface_mode` when `modern_only` → a phone
+client → a member's durable surface choice → the `surface_mode` default surface. The URL carries no
 surface. The full chain is documented in
 [feature-modules.md](feature-modules.md#surface-selection). `surface_mode` is
 DB-authoritative (`SnsSettingKey::SurfaceMode`, config as the absent-row fallback): a
@@ -54,7 +54,10 @@ migrated site keeps its Classic look.
 
 Under `modern_only` the Classic surface is never served, so its operator configuration
 (the "Appearance (Classic)" admin settings) and the member config page's surface picker
-are hidden — no one is shown a Classic option they cannot use.
+are hidden — no one is shown a Classic option they cannot use. `classic_only` is the mirror: the
+Modern surface is never served, a phone client included, the picker is hidden the same way, and a
+page with no Classic twin answers 404
+([feature-modules.md](feature-modules.md#classic-only)).
 
 The root (`/`) is the canonical OpenPNE 3 `member/home`: the same resolver renders the
 Classic home or the Modern front page ([home-issues.md](home-issues.md)), and it is where
@@ -217,7 +220,7 @@ layout, the Classic shell declares no viewport meta, so a narrow screen scales t
 than overflowing it; the `#SmtSwitch`
 smartphone-view toggle is not ported — a phone client is served Modern
 ([feature-modules.md](feature-modules.md#surface-selection)) and the browser's desktop-site mode
-is the way back; the notification center's badges count unread notification rows rather than OpenPNE
+is the way back, or the site is `classic_only` and a phone gets the scaled skin like everyone; the notification center's badges count unread notification rows rather than OpenPNE
 3's `member_config` event store, so they are clamped at `99+` with the number kept in the title, and
 its panel answers a decision by replacing the buttons with the outcome rather than OpenPNE 3's
 hardcoded Japanese; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
@@ -344,8 +347,9 @@ both:          SNS name / terms / basic navigation labels / policy URLs / site i
 
 The Classic-only settings — custom CSS, HTML insertion, banners, the theme, the gadget layout, the
 navigation menu, the comment reply link — never reach a phone client, which is served Modern
-whatever the member chose ([feature-modules.md](feature-modules.md#surface-selection)), as in
-OpenPNE 3, whose smartphone layout carried none of the PC skin's customization. A migrated site's
+whatever the member chose ([feature-modules.md](feature-modules.md#surface-selection)) unless the
+site is `classic_only`, as in OpenPNE 3, whose smartphone layout carried none of the PC skin's
+customization. A migrated site's
 phone visitors therefore see its Modern-only settings, defaults included; the brand color, logo
 and login-message helper texts say so ("which every phone visitor gets"), so a `classic_default`
 operator meets it in-product on those three.

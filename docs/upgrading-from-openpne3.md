@@ -317,7 +317,11 @@ change from a problem when you go through it.
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
   after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the
   Modern surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover
-  below starts with the Modern branding.
+  below starts with the Modern branding. If your OpenPNE 3 site had its smartphone layout switched
+  off (a free-area script setting `disable_smt`, say) and phones should keep seeing the PC layout,
+  choose `php artisan openpne:surface-mode classic_only` instead: nothing Modern is shown, members
+  cannot switch, and the community timeline posts the upgrade brought over are not readable until a
+  Classic screen for them ships.
 - **Browser-tab icon** — none, as in OpenPNE 3. This version otherwise shows a generated icon
   (the brand color with the site name's initial); choose it, or upload your own, on the Branding
   page.
@@ -434,8 +438,8 @@ order; its `js/` is not loaded. What the package carries is yours to check befor
 Rehearse until the dry run holds no surprises and verification passes. Set what phone visitors
 will see, since they get the Modern surface and none of the Classic-only customisations (custom CSS
 and HTML, gadgets, navigation, banners, theme): the brand color and logo under *Branding settings*,
-the login message under *Login page settings*. Then migrate the data people will actually keep
-using:
+the login message under *Login page settings* (not needed on a `classic_only` site, where phones
+get the PC layout). Then migrate the data people will actually keep using:
 
 1. Stop writes to OpenPNE 3 — maintenance mode, or however that site takes traffic. From here on,
    nothing new is being written that the dump could miss.

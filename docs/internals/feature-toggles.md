@@ -50,6 +50,12 @@ settings cache is cleared; the nav and gadget row caches never embed feature sta
 switching groups off takes the topic board, events and talk with it whatever their own rows say. The
 dependency is resolved in the registry, never re-stated at a call site.
 
+`groupTalk` also depends on the Modern surface (`Feature::requiresModern()`): its only screen is
+Modern, so under `surface_mode=classic_only` it is off whatever its row says, and everything that
+reads `enabled()` — the route gate, the Classic group home's talk link, the nav rooms, the
+notifications, the MCP tools — follows. Interim until talk has a Classic screen, when the dependency
+goes ([feature-modules.md](feature-modules.md#classic-only)).
+
 ## Enforcement
 
 [`EnsureFeatureEnabled`](../../app/Http/Middleware/EnsureFeatureEnabled.php) answers 404 for a

@@ -44,6 +44,7 @@ use App\Rules\NotCommonPassword;
 use App\Rules\NotContextWord;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
+use App\Support\ClassicOnlyResponseFactory;
 use App\Support\SiteTimezone;
 use App\Support\ViewerRelations;
 use App\Translation\TermTranslator;
@@ -64,6 +65,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Rules\Password;
+use Inertia\ResponseFactory as InertiaResponseFactory;
 use InvalidArgumentException;
 use Laravel\Mcp\Server\Registrar;
 use Laravel\Passport\AccessToken;
@@ -81,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TermService::class);
+        // Rebinds the package singleton: app providers register after package ones.
+        $this->app->singleton(InertiaResponseFactory::class, ClassicOnlyResponseFactory::class);
 
         // Before Passport boots: its routes are replaced by the subset in routes/ai.php and
         // routes/web.php (docs/internals/mcp.md, "Signing in from a client").

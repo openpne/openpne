@@ -93,9 +93,9 @@ class MemberConfigSerializer
             ];
         }
 
-        // Omitted under `modern_only`, since a member is never offered a surface they cannot get; the
-        // client hides the section when the key is absent.
-        if (SurfaceResolver::classicAvailable()) {
+        // Omitted under a single-surface mode, since a member is never offered a surface they cannot
+        // get; the client hides the section when the key is absent.
+        if (SurfaceResolver::coexists()) {
             $form['surface'] = [
                 'value' => $currentSurface->value,
                 'description' => Surface::pickerNote(),

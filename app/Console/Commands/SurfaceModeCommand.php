@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 /** See docs/internals/feature-modules.md, "Surface selection". */
 class SurfaceModeCommand extends Command
 {
-    protected $signature = 'openpne:surface-mode {mode? : modern_only|classic_default|modern_default}';
+    protected $signature = 'openpne:surface-mode {mode? : modern_only|classic_only|classic_default|modern_default}';
 
     protected $description = 'Show or set the install surface mode (Classic / Modern)';
 

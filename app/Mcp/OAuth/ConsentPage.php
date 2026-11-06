@@ -7,10 +7,11 @@ namespace App\Mcp\OAuth;
 use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Member;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
 use Laravel\Passport\Client;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The screen names the host the code will be sent to, which league has already matched against the
@@ -24,10 +25,11 @@ final class ConsentPage
     public function render(array $params): Response
     {
         $client = $params['client'];
-        $redirect = (string) ($params['request']->query('redirect_uri') ?: ($client->redirect_uris[0] ?? ''));
+        $request = $params['request'];
+        $redirect = (string) ($request->query('redirect_uri') ?: ($client->redirect_uris[0] ?? ''));
         $accounts = $params['user']->aiAccounts()->with('avatar.file')->orderBy('id')->get();
 
-        return Inertia::render('auth/oauth-authorize', [
+        $props = [
             'client' => [
                 'name' => $client->name,
                 'host' => (string) parse_url($redirect, PHP_URL_HOST),
@@ -37,10 +39,16 @@ final class ConsentPage
                 'canCreate' => $this->settings->canCreate($accounts->count()),
             ],
             'authToken' => $params['authToken'],
-            'requiresPassword' => ! ConsentReauth::isFresh($params['request']->session()),
+            'requiresPassword' => ! ConsentReauth::isFresh($request->session()),
             // A plain form, not an Inertia visit: the approval answers with a redirect to the client,
             // which an XHR could not follow.
             'csrfToken' => csrf_token(),
-        ]);
+        ];
+
+        if (SurfaceResolver::resolve($request, 'mcp') === SurfaceResolver::CLASSIC) {
+            return response()->view('auth.oauth-authorize', $props);
+        }
+
+        return Inertia::render('auth/oauth-authorize', $props)->toResponse($request);
     }
 }

@@ -68,6 +68,37 @@ class PhoneSurfaceTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('friend/list'));
     }
 
+    public function test_classic_only_serves_classic_to_a_phone_and_over_a_modern_choice(): void
+    {
+        config(['openpne.surface_mode' => 'classic_only']);
+        $member = Member::factory()->create();
+        $member->setPreferredSurface(Surface::Modern);
+
+        $this->actingAs($member)->get('/friend/list', self::PHONE)
+            ->assertOk()->assertSee('id="page_friend_list"', false);
+        $this->actingAs($member)->get('/friend/list', self::DESKTOP)
+            ->assertOk()->assertSee('id="page_friend_list"', false);
+    }
+
+    public function test_classic_only_serves_the_classic_login_screen_to_a_phone_guest(): void
+    {
+        config(['openpne.surface_mode' => 'classic_only']);
+
+        $this->get('/login', self::PHONE)
+            ->assertOk()
+            ->assertSee('id="page_member_login"', false)
+            ->assertDontSee('name="viewport"', false);
+    }
+
+    public function test_classic_only_renders_the_classic_error_page_on_a_phone(): void
+    {
+        config(['openpne.surface_mode' => 'classic_only']);
+
+        $this->actingAs(Member::factory()->create())->get('/diary/999999', self::PHONE)
+            ->assertNotFound()
+            ->assertSee('id="page_default_error"', false);
+    }
+
     public function test_the_picker_on_a_phone_shows_the_desktop_surface_with_the_caption(): void
     {
         $member = Member::factory()->create();

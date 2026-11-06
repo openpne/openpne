@@ -107,9 +107,9 @@ out of the write path.
   (`Inertia::location`): the just-written preference resolves the chosen surface there, and the
   full load re-renders the whole shell — an XHR redirect would keep the Modern SPA alive on a
   Classic choice (an Inertia navigation is always served Modern); from a phone that landing
-  resolves Modern and ignores the Classic `?category=`. Under `modern_only` the section is not served at all —
-  the serializer omits it and `updateSurface()` 403s a crafted POST — so no latent Classic
-  preference can be pinned while Classic is unavailable.
+  resolves Modern and ignores the Classic `?category=`. Under `modern_only` and `classic_only` the section is not served at all —
+  the serializer omits it, the Classic config page drops its category and `updateSurface()` 403s a
+  crafted POST — so no latent preference can be pinned while only one surface is served.
 
 - **Autoplay animated pictures** is Modern-only too (Classic's 120px thumbnail is always a still) and
   is served only while the image processor keeps frames — under GD nothing animates, so the row is

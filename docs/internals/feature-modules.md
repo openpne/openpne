@@ -86,18 +86,20 @@ return $this->respondWith($request, [
    note this is the one documented exception to "`modern_only` never serves
    Classic"; today it is a dormant seam with no `config/features.php`, revisit the
    interaction if that config materializes);
-2. an Inertia navigation (the `X-Inertia` header): it can only originate from the
+2. the install's [`surface_mode`](../../app/Support/SurfaceMode.php) when it is `classic_only`
+   (Modern is not served, see "Classic only" below);
+3. an Inertia navigation (the `X-Inertia` header): it can only originate from the
    Modern SPA, which cannot consume Classic Blade, so it is always served Modern —
    a Modern session sticks across links; a deliberate Modern→Classic handoff (the
    surface picker) goes through `Inertia::location`, a full page load;
-3. the install's [`surface_mode`](../../app/Support/SurfaceMode.php) when it is `modern_only` (Classic is not served);
-4. a **phone client** ([`PhoneClient`](../../app/Support/PhoneClient.php)): Modern. The
+4. the `surface_mode` when it is `modern_only` (Classic is not served);
+5. a **phone client** ([`PhoneClient`](../../app/Support/PhoneClient.php)): Modern. The
    fixed-width Classic skin is not a phone UI, and OpenPNE 3 likewise never showed phones its PC
    layout by default (it served a separate smartphone layout);
-5. a member's **durable** surface choice
+6. a member's **durable** surface choice
    ([`PreferenceKey::PreferredSurface`](../../app/Support/PreferenceKey.php), see
    [member-preferences.md](member-preferences.md));
-6. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
+7. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
 
 A phone client is decided server-side — there is no client-side surface switch, so the first
 response must already be right — from `Sec-CH-UA-Mobile` when the browser sends it (Chromium
@@ -121,8 +123,8 @@ desktop. No `Vary` header accompanies the gate: HTML responses carry Symfony's d
 cache added later must revisit this.
 
 `surface_mode` is a single [`SurfaceMode`](../../app/Support/SurfaceMode.php) value
-(`modern_only` | `classic_default` | `modern_default`) that folds "is Classic served?"
-and "which surface is the default?" into one setting. It is **DB-authoritative**:
+(`modern_only` | `classic_only` | `classic_default` | `modern_default`) that folds "which surfaces
+are served?" and "which surface is the default?" into one setting. It is **DB-authoritative**:
 [`SnsSettingKey::SurfaceMode`](../../app/Support/SnsSettingKey.php) in `sns_settings`,
 read through [`SnsSettingService`](../../app/Services/SnsSettingService.php), with
 `config('openpne.surface_mode')` as the absent-row fallback only (not a competing env
@@ -131,11 +133,44 @@ upgrade writes a `classic_default` row so a migrated site keeps its Classic look
 ([`UpgradeRunner`](../../app/Upgrade/Runner/UpgradeRunner.php)), and `openpne:surface-mode`
 switches a live site.
 
+### Classic only
+
+`classic_only` is the mirror of `modern_only` for a site that keeps its OpenPNE 3 look everywhere:
+Classic is the only surface, a phone client included (it gets the fixed-width skin scaled, as the
+OpenPNE 3 PC layout was when a site switched its smartphone layout off), and there is no per-member
+way out (there is no `#SmtSwitch`). A member's stored surface choice is not read and
+the surface picker is not served, as under `modern_only`; the `preferred_surface` rows stay for a
+later mode change.
+
+Modern is never rendered. The two chokepoints are
+[`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php), which answers an
+`X-Inertia` request — only a stale Modern tab can send one — with the 409 location reload that
+Inertia's client follows as a full page load (a GET reloads its own URL, anything else lands on the
+home page without being executed), and
+[`ClassicOnlyResponseFactory`](../../app/Support/ClassicOnlyResponseFactory.php), the bound
+`Inertia::render()` factory, which answers 404 — so a **Modern-only page** (one with no Classic
+twin: the dashboard, the home issues and their month and day pages, `/groups/recent`, the chat
+conversations, the Modern-only member config detail pages, the look picker) is not there, and a new
+one is covered without naming the gate. Classic is the OpenPNE 3 surface, and a feature OpenPNE 3
+never had needs no Classic screen while Classic's own pages cover the ground; a feature OpenPNE 3
+*did* have gets a Classic screen even where OpenPNE 3 had no such page. Group talk, which took in the
+OpenPNE 3 community timeline, is the one still waiting for its Classic screen, so until then it is a
+switched-off unit under `classic_only` ([feature-toggles.md](feature-toggles.md#dependencies)).
+The JSON endpoints a Modern page fetches (reactions, unread counts, the compose preview, the
+Modern-only preference POSTs) are not gated: nothing Classic calls them, and they render no surface.
+The push subscribe UI is Modern-only, so no one subscribes under `classic_only` (the Classic header
+still reconciles an existing subscription, [notifications.md](notifications.md)).
+
+[`ClassicOnlyCoverageTest`](../../tests/Feature/Surface/ClassicOnlyCoverageTest.php) classifies every
+parameterless member GET as Classic-rendered or Modern-only (404), the way
+[`ModernOnlyCoverageTest`](../../tests/Feature/Modern/ModernOnlyCoverageTest.php) does for
+`modern_only`.
+
 The selection logic is wired into every dual-surface controller. There is no
 `config/features.php`, so `modern_status` defaults to `native`. Whether a feature is served
 **at all** is a separate, DB-authoritative mechanism — the `sns_settings` feature toggles
 ([feature-toggles.md](feature-toggles.md)) — which does not use this config. The durable member
-choice (5) is writable — the member config page sets it — so a member can opt into
+choice (6) is writable — the member config page sets it — so a member can opt into
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 

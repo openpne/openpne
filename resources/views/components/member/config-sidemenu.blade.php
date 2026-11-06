@@ -1,7 +1,8 @@
 {{-- The settings categories, the current one rendered as plain text, the rest linked to
      ?category=. The privacy category is offered only while it has something to set (an age to
      gate, or a profile-page choice the policy allows), the diary category only while the unit is
-     switched on, and the AI category to a member the site offers them to or who already owns one. --}}
+     switched on, the AI category to a member the site offers them to or who already owns one, and
+     the general category (the surface picker) only while both surfaces are served. --}}
 @props(['current' => null, 'publicFlagAvailable' => null, 'aiAvailable' => null])
 @php($publicFlagAvailable ??= \App\Features\Profile\ProfilePageVisibility::privacyCategoryAvailable())
 @php($aiAvailable ??= app(\App\Features\AiAccount\AiAccountSettings::class)->availableTo(auth()->user()))
@@ -11,6 +12,7 @@
             @continue($category === \App\Features\Member\MemberConfigCategory::PublicFlag && ! $publicFlagAvailable)
             @continue($category === \App\Features\Member\MemberConfigCategory::Diary && ! \App\Support\Feature::Diary->enabled())
             @continue($category === \App\Features\Member\MemberConfigCategory::Ai && ! $aiAvailable)
+            @continue($category === \App\Features\Member\MemberConfigCategory::General && ! \App\Support\SurfaceResolver::coexists())
             <li @class(['current' => $current === $category])>
                 @if ($current === $category)
                     {{ $category->caption() }}
