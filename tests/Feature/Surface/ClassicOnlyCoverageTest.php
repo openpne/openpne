@@ -207,10 +207,33 @@ class ClassicOnlyCoverageTest extends TestCase
             ->assertStatus(409)
             ->assertHeader('X-Inertia-Location', url('/friend/list?page=2'))
             ->assertHeader('Vary', 'X-Inertia');
+    }
 
-        $this->actingAs($member)->post('/member/config/diary', ['diary_default' => 'public'], ['X-Inertia' => 'true'])
+    /** A route middleware's abort (here the talk unit's gate) never reaches HandleInertiaRequests, so the error renderer hands off too. */
+    public function test_an_inertia_navigation_refused_by_a_route_middleware_is_handed_off_as_well(): void
+    {
+        $member = Member::factory()->create();
+        $group = Group::factory()->create();
+
+        $this->actingAs($member)->get("/groups/{$group->getKey()}/talk", ['X-Inertia' => 'true'])
             ->assertStatus(409)
-            ->assertHeader('X-Inertia-Location', route('home'));
+            ->assertHeader('X-Inertia-Location', url("/groups/{$group->getKey()}/talk"));
+        $this->actingAs($member)->get('/diary/999999', ['X-Inertia' => 'true'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', url('/diary/999999'));
+    }
+
+    /** A stale tab's POST runs (its author meant it) and the redirect it answers with is what gets handed off. */
+    public function test_an_inertia_post_runs_and_its_landing_is_handed_off(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/logout', [], ['X-Inertia' => 'true'])->assertRedirect();
+        $this->assertGuest('member');
+
+        $this->get('/login', ['X-Inertia' => 'true'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', url('/login'));
     }
 
     public function test_allowlisted_names_are_registered_routes(): void

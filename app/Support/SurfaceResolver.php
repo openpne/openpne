@@ -23,7 +23,7 @@ class SurfaceResolver
         }
 
         // The Modern client rejects a Blade response, so an Inertia navigation stays Modern whatever the
-        // viewer resolves to; under classic_only HandleInertiaRequests hands it off (Inertia::location) before any route.
+        // viewer resolves to; under classic_only ClassicOnlyHandoff reloads a GET into Classic before any controller.
         if ($request->hasHeader('X-Inertia') && self::modernAvailable()) {
             return self::MODERN;
         }

@@ -143,10 +143,12 @@ the surface picker is not served, as under `modern_only`; the `preferred_surface
 later mode change.
 
 Modern is never rendered. The two chokepoints are
-[`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php), which answers an
-`X-Inertia` request — only a stale Modern tab can send one — with the 409 location reload that
-Inertia's client follows as a full page load (a GET reloads its own URL, anything else lands on the
-home page without being executed), and
+[`ClassicOnlyHandoff`](../../app/Support/ClassicOnlyHandoff.php), which answers an `X-Inertia`
+GET — only a stale Modern tab can send one — with the 409 location reload that Inertia's client
+follows as a full page load of the same URL (from `HandleInertiaRequests`, and from the error
+renderer for a route middleware's own 403 / 404 / 429, which never reach the middleware; a stale
+tab's POST runs, since its author meant it, and the redirect it answers with is what gets handed
+off), and
 [`ClassicOnlyResponseFactory`](../../app/Support/ClassicOnlyResponseFactory.php), the bound
 `Inertia::render()` factory, which answers 404 — so a **Modern-only page** (one with no Classic
 twin: the dashboard, the home issues and their month and day pages, `/groups/recent`, the chat
