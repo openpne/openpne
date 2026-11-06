@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\HiddenWhenClassicOnly;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -34,6 +35,8 @@ use Illuminate\Support\Facades\DB;
  */
 class LoginScreenSettings extends Page
 {
+    use HiddenWhenClassicOnly;
+
     protected static ?int $navigationSort = 7;
 
     /**

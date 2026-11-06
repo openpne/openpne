@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\HiddenWhenClassicOnly;
 use App\Services\SnsSettingService;
 use App\Support\Look;
 use App\Support\LookResolver;
@@ -35,6 +36,8 @@ use Illuminate\Support\Facades\DB;
  */
 class LookSettings extends Page
 {
+    use HiddenWhenClassicOnly;
+
     protected static ?int $navigationSort = 16;
 
     /**

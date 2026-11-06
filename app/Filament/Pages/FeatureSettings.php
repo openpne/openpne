@@ -6,8 +6,8 @@ namespace App\Filament\Pages;
 
 use App\Services\SnsSettingService;
 use App\Support\Feature;
-use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
+use App\Support\SurfaceResolver;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Toggle;
@@ -96,7 +96,7 @@ class FeatureSettings extends Page
         $data = $this->form->getState();
 
         DB::transaction(function () use ($data): void {
-            foreach (SnsSettingKey::inGroup(SettingGroup::Features) as $key) {
+            foreach ($this->keys() as $key) {
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? $key->default()))],
@@ -122,11 +122,29 @@ class FeatureSettings extends Page
     private function currentValues(): array
     {
         $values = [];
-        foreach (SnsSettingKey::inGroup(SettingGroup::Features) as $key) {
+        foreach ($this->keys() as $key) {
             $values[$key->value] = app(SnsSettingService::class)->get($key);
         }
 
         return $values;
+    }
+
+    /**
+     * The keys this page edits: a unit that needs Modern is neither shown nor rewritten where Modern
+     * is not served (a stored value survives a later surface change).
+     *
+     * @return list<SnsSettingKey>
+     */
+    private function keys(): array
+    {
+        $keys = [];
+        foreach (Feature::cases() as $feature) {
+            if (SurfaceResolver::modernAvailable() || ! $feature->requiresModern()) {
+                $keys[] = $feature->settingKey();
+            }
+        }
+
+        return $keys;
     }
 
     private function buildSection(): Section
@@ -140,6 +158,10 @@ class FeatureSettings extends Page
 
         $fields = [];
         foreach (Feature::cases() as $feature) {
+            if ($feature->requiresModern() && ! SurfaceResolver::modernAvailable()) {
+                continue;
+            }
+
             $toggle = Toggle::make($feature->settingKey()->value)
                 ->label($feature->label());
 

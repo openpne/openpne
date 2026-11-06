@@ -336,8 +336,13 @@ Classic slots above.
 Its navigation is component-driven, so the `navigations` table is Classic-only.
 The admin UI MUST label which scope a setting affects so an operator is never
 misled that a Classic-only custom CSS applies to Modern — except on a
-modern_only install, where the operator never sees Classic and the copy must
-not mention surfaces at all:
+single-surface install (`modern_only`, `classic_only`), where the operator never sees the other
+surface and the copy must not mention surfaces at all; there the other surface's screens are hidden
+too ([`HiddenWhenModernOnly`](../../app/Filament/Concerns/HiddenWhenModernOnly.php) on the
+Appearance (Classic) screens, [`HiddenWhenClassicOnly`](../../app/Filament/Concerns/HiddenWhenClassicOnly.php)
+on the UI layout, login page and image upload settings), a Modern-only section or switch (the logo,
+the talk settings, the group talk unit) is absent, and its stored value is neither shown nor
+rewritten:
 
 ```text
 classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / banners / theme / legacy gadget layout / navigation menu settings / the topic and event comment reply link

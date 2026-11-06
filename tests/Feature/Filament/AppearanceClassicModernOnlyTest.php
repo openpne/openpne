@@ -7,6 +7,7 @@ namespace Tests\Feature\Filament;
 use App\Filament\Pages\BannerSettings;
 use App\Filament\Pages\DesignSettings;
 use App\Filament\Pages\GadgetLayoutSettings;
+use App\Filament\Pages\ThemeSettings;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Navigations\NavigationResource;
@@ -23,7 +24,7 @@ class AppearanceClassicModernOnlyTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const PAGES = [DesignSettings::class, BannerSettings::class, GadgetLayoutSettings::class];
+    private const PAGES = [DesignSettings::class, BannerSettings::class, GadgetLayoutSettings::class, ThemeSettings::class];
 
     private const RESOURCES = [GadgetResource::class, NavigationResource::class, BannerImageResource::class];
 
@@ -60,6 +61,7 @@ class AppearanceClassicModernOnlyTest extends TestCase
         $this->get(DesignSettings::getUrl())->assertForbidden();
         $this->get(BannerSettings::getUrl())->assertForbidden();
         $this->get(GadgetLayoutSettings::getUrl())->assertForbidden();
+        $this->get(ThemeSettings::getUrl())->assertForbidden();
     }
 
     public function test_resource_urls_are_forbidden_under_modern_only(): void

@@ -35,7 +35,7 @@ discovery order, which tracks the filesystem rather than any intent.
 enforces the group, sort and label rules over the `App\Filament` screens. It builds its set from
 the pages and resources the panel registers — deliberately not from `getNavigation()`, which returns
 only what the current request may see: `InviteMembers` hides itself on a closed registration mode
-and the Appearance screens hide themselves on `modern_only`, so a request-derived set would let
+and the Appearance screens hide themselves on `modern_only` (the Modern-only screens on `classic_only`), so a request-derived set would let
 exactly those screens drift.
 
 A composer package may add its own groups and screens to the panel through `Panel::configureUsing()`.

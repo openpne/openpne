@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\HiddenWhenClassicOnly;
 use App\Files\ImageUploadPolicy;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
@@ -28,6 +29,9 @@ use Illuminate\Support\Facades\DB;
  */
 class ImageSettings extends Page
 {
+    // Its one switch drives the Modern upload form only.
+    use HiddenWhenClassicOnly;
+
     protected static ?int $navigationSort = 18;
 
     /**

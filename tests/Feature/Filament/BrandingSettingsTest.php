@@ -156,6 +156,30 @@ class BrandingSettingsTest extends TestCase
             ->assertDontSee('モダン');
     }
 
+    public function test_under_classic_only_the_logo_is_absent_and_the_color_copy_names_the_icon(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::SurfaceMode, SurfaceMode::ClassicOnly);
+
+        Livewire::test(BrandingSettings::class)
+            ->assertFormFieldHidden(SnsSettingKey::BrandLogoFile->value)
+            ->assertSee('自動生成のサイトアイコン')
+            ->assertDontSee('クラシック')
+            ->assertDontSee('モダン');
+    }
+
+    public function test_saving_under_classic_only_keeps_a_stored_logo(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::SurfaceMode, SurfaceMode::ClassicOnly);
+        $this->setSnsSetting(SnsSettingKey::BrandLogoFile, 'kept-logo-token');
+
+        Livewire::test(BrandingSettings::class)
+            ->fillForm([SnsSettingKey::BrandColor->value => '#2563eb'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => SnsSettingKey::BrandLogoFile->value, 'value' => 'kept-logo-token']);
+    }
+
     public function test_the_upload_fields_follow_the_configured_cap(): void
     {
         config()->set('openpne.images.max_upload_kilobytes', 123);

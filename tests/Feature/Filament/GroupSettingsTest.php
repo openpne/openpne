@@ -108,6 +108,28 @@ class GroupSettingsTest extends TestCase
             ->assertFormFieldHidden('group_event_comment_reply');
     }
 
+    public function test_the_talk_section_exists_only_where_modern_is_served(): void
+    {
+        config(['openpne.surface_mode' => 'classic_only']);
+        Livewire::test(GroupSettings::class)
+            ->assertFormFieldHidden('group_talk_notify_default')
+            ->assertFormFieldExists('group_topic_comment_reply')
+            ->assertDontSee('クラシックのみ');
+    }
+
+    public function test_saving_on_a_classic_only_install_leaves_the_stored_talk_default_alone(): void
+    {
+        config(['openpne.surface_mode' => 'classic_only']);
+        $this->setSnsSetting(SnsSettingKey::GroupTalkNotifyDefault, GroupTalkNotifyMode::All->value);
+
+        Livewire::test(GroupSettings::class)
+            ->fillForm(['group_topic_comment_reply' => true])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'group_talk_notify_default', 'value' => GroupTalkNotifyMode::All->value]);
+    }
+
     public function test_saving_on_a_modern_only_install_leaves_a_stored_board_switch_alone(): void
     {
         config(['openpne.surface_mode' => 'modern_only']);
