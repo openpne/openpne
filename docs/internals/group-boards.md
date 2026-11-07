@@ -14,10 +14,11 @@ Talk is the third thing inside a group and has its own document
 
 `/topics` and `/events` list the viewer's joined groups' threads newest-first, 50 a page: OpenPNE 3's
 `recentlyTopicList` / `recentlyEventList`, the "More" of the joined-group recent-list gadgets. The set is
-membership, not `topic_read_access`, so no block filter applies. Classic renders them
-([`ListJoinedGroupTopics`](../../app/Features/GroupTopic/Queries/ListJoinedGroupTopics.php) reads the
-page's ids first, see [ordering.md](ordering.md) "Counts after the cut"); a Modern viewer is sent to
-`/groups/recent`, which shows the head of that set merged and unpaged.
+membership, not `topic_read_access`, so no block filter applies. Both surfaces render them from one
+query ([`ListJoinedGroupTopics`](../../app/Features/GroupTopic/Queries/ListJoinedGroupTopics.php)
+reads the page's ids first, see [ordering.md](ordering.md) "Counts after the cut"); Modern shows them
+as the two board tabs of the group hub, each present while its unit is on. `/groups/recent`, the
+dashboard digest's full list, is the head of both sets merged and unpaged, and stays Modern-only.
 
 ## The group row is the lock
 

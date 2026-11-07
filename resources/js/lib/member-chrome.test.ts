@@ -136,11 +136,26 @@ test("the owner's diary archive carries the same tab strip", () => {
 });
 
 test('the group hub leads with the joined list on every tab', () => {
-    const joinedFirst = ['/groups/mine', '/groups', '/groups/recent'];
+    const joinedFirst = ['/groups/mine', '/groups', '/topics', '/events'];
 
     assert.deepEqual(tabHrefs('community/list', allOn, { owner, isOwner: true }), joinedFirst);
     assert.deepEqual(tabHrefs('community/search', allOn, {}), joinedFirst);
-    assert.deepEqual(tabHrefs('community/recent', allOn, {}), joinedFirst);
+    assert.deepEqual(tabHrefs('group/topic/recent', allOn, {}), joinedFirst);
+    assert.deepEqual(tabHrefs('group/event/recent', allOn, {}), joinedFirst);
+});
+
+test('each board tab goes with its own unit while the hub stays', () => {
+    assert.deepEqual(tabHrefs('community/search', { ...allOn, groupTopic: false }, {}), ['/groups/mine', '/groups', '/events']);
+    assert.deepEqual(tabHrefs('community/search', { ...allOn, groupEvent: false }, {}), ['/groups/mine', '/groups', '/topics']);
+    assert.deepEqual(tabHrefs('community/search', { ...allOn, groupTopic: false, groupEvent: false }, {}), ['/groups/mine', '/groups']);
+});
+
+test("the mixed activity page is the digest's full list, not a hub tab", () => {
+    const recent = resolveChrome('community/recent', { enabledFeatures: allOn });
+
+    assert.equal(recent.mode, 'contextual');
+    assert.equal(recent.tabs, undefined);
+    assert.deepEqual(recent.context?.map((crumb) => crumb.href), ['/dashboard']);
 });
 
 const chrome = (component: string, props: Record<string, unknown>) =>
@@ -152,7 +167,7 @@ test('the joined tab carries the unread-talk count', () => {
 
     assert.deepEqual(
         tabs.map((tab) => tab.badge?.count),
-        ['groupTalks', undefined, undefined],
+        ['groupTalks', undefined, undefined, undefined],
     );
     // This phrase, with the live count, is the link's only announcement of the number — the digits
     // the pill prints are hidden — so it must exist and must be the nav's own wording.

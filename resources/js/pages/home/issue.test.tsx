@@ -210,6 +210,7 @@ const brief = (kind: 'topic' | 'event', id: number): CommunityActivityEntry => (
     name: `${kind} ${id}`,
     commentCount: 2,
     participantCount: kind === 'event' ? 4 : null,
+    openDate: kind === 'event' ? '2030-04-05' : null,
     group,
     bumpedAt: '2026-08-27T11:00:00+09:00',
 });

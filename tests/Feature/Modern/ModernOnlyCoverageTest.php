@@ -68,8 +68,6 @@ class ModernOnlyCoverageTest extends TestCase
         'group.members.demote.show',
         'group.members.drop.show',
         'group.members.transfer.show',
-        'group.topics.recent',
-        'group.events.recent',
         // The mailbox's reading pages: Modern reads the same store as chat, so each lands in the
         // conversation list or in one conversation.
         'message.index',
@@ -93,7 +91,7 @@ class ModernOnlyCoverageTest extends TestCase
         'member.config.mfa.edit', 'member.config.passkeys.edit', 'member.config.notifications.edit', 'member.config.ai',
         'member.config.look.edit',
         'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
-        'group.recent',
+        'group.recent', 'group.topics.recent', 'group.events.recent',
         'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
         'member.invite',
         'notifications.index',
@@ -143,8 +141,8 @@ class ModernOnlyCoverageTest extends TestCase
             'community search' => ['/groups'],
             'community joined' => ['/groups/mine'],
             'community recent activity' => ['/groups/recent'],
-            'recent topics (redirects to the group activity)' => ['/topics'],
-            'recent events (redirects to the group activity)' => ['/events'],
+            'recent topics' => ['/topics'],
+            'recent events' => ['/events'],
             'notification feed' => ['/notifications'],
             'community create form' => ['/groups/edit'],
             'invite' => ['/invite'],
