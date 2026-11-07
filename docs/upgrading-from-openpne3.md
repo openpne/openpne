@@ -61,9 +61,13 @@ Set the `MAIL_*` lines in the same pass. With `MAIL_FROM_ADDRESS` set, OpenPNE 4
 from that address and puts the administrator's address in Reply-To; left at the placeholder, it sends
 from the administrator's address as OpenPNE 3 did.
 
-Create the file first (`cp .env.example .env`) and edit it, then install. Both paths create the
-schema as part of that — `php artisan migrate` on the host, or the first container start with the
-Docker setup, which also installs dependencies and generates `APP_KEY`.
+Create the file first (`cp .env.example .env`) and edit it, then install — but create the schema
+with `php artisan migrate` alone, **not `openpne:install`**: the install command also seeds the
+navigation, gadgets, profile fields and banner slots of a new site, and the upgrade brings those from
+OpenPNE 3 and refuses a schema that already holds them (`--force-restart` empties it if it happens).
+The first container start with the Docker setup runs the migrations itself, after installing
+dependencies and generating `APP_KEY`; on the host, run `php artisan migrate`. Skip
+`openpne:admin:create` too: the administrators arrive with the data.
 
 Compose ships no database of its own, so with Docker `DB_HOST` has to name a MySQL server the
 *container* can reach: `127.0.0.1` there means the container itself, not your machine.
@@ -148,6 +152,9 @@ diary or comment twice (OpenPNE 4 keeps one 👍 per member), or a date column h
 (or a zero month or day) on a row the upgrade copies — MySQL's strict mode, which OpenPNE 4 runs
 under, refuses the value, so the line names the table, the column, the count and the first ids;
 set a real time there (or NULL where the column allows it). Fix the source and dry-run again.
+One `ERROR` is about the OpenPNE 4 side instead: a `navigations`, `gadgets`, `profiles` or
+`banners` table that already holds rows, from `openpne:install` or a visit to the admin Banner page.
+Restore the empty schema, or rerun with `--force-restart`.
 
 **`WARN` never stops the run**; its code says what happened to the row. Each line is
 `WARN <code>: …`, and the JSON entry carries the `code`, its `category` and a `count` in the

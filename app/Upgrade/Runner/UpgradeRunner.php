@@ -41,6 +41,9 @@ final class UpgradeRunner
     /** The `step_key` the epoch marker occupies. Not a step: no registry entry ever bears this name. */
     public const EPOCH_KEY = 'naming_epoch';
 
+    /** The tables a new-site install (`openpne:install`, `openpne:admin:create`) writes, which the walk fills from OpenPNE 3 instead. */
+    public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'admin_users'];
+
     /** The `step_key` of the completion marker, written once on the first full success; not a step either. */
     public const RUN_KEY = 'upgrade_completed';
 
@@ -107,6 +110,19 @@ final class UpgradeRunner
             $report->abort((string) $verdict->reason, RunReport::OUTCOME_BLOCKED);
 
             return false;
+        }
+
+        // Not under --force-restart: reset() empties these tables, so a restart is the recovery the refusal names.
+        if ($verdict->verdict === ResumeVerdict::FRESH && ! $options->forceRestart) {
+            $installed = $this->installedTargetTables();
+            foreach ($installed as $table) {
+                $report->error(self::installedTargetMessage($table));
+            }
+            if ($installed !== []) {
+                $report->abort('the OpenPNE 4 schema is not empty; nothing was migrated.');
+
+                return false;
+            }
         }
 
         $preflight = new SourcePreflight($this->steps(), SourceSchema::default());
@@ -638,6 +654,24 @@ final class UpgradeRunner
         }
 
         return $errors;
+    }
+
+    /**
+     * The install-written tables among this run's targets that already hold rows (docs/internals/upgrade.md, "Source preflight").
+     *
+     * @return list<string>
+     */
+    public function installedTargetTables(): array
+    {
+        return array_values(array_filter(
+            array_intersect(self::INSTALL_TABLES, $this->targetTables()),
+            static fn (string $table): bool => DB::table($table)->exists(),
+        ));
+    }
+
+    public static function installedTargetMessage(string $table): string
+    {
+        return "OpenPNE 4 table `{$table}` already holds rows (a new-site install writes them: openpne:install, openpne:admin:create, or opening the admin Banner page); the upgrade needs the schema `php artisan migrate` alone creates. Restore it fresh, or rerun with --force-restart, which empties every target table first.";
     }
 
     /** @return list<string> distinct step target tables in reverse run order (FK-safe delete order). */

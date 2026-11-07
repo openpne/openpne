@@ -175,6 +175,18 @@ Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
 operator running many sites on one host gets them together and has no lever here
 to stagger them.
 
+## Initial data
+
+`php artisan openpne:install` runs the migrations and then `Database\Seeders\InstallSeeder`, which
+writes the default profile fields, navigation, gadget layout and banner slots a new site starts with.
+The seeder runs once: when `navigations`, `gadgets` or `profiles` already has a row it writes nothing
+and says so, because rows there are an administrator's work (or an upgrade's) and reseeding would
+restore what they removed. `banners` does not count — opening the admin Banner page creates its rows.
+The seeders it calls are an implementation detail; a deployment runs `openpne:install` (or
+`db:seed --class=Database\Seeders\InstallSeeder`) and `openpne:admin:create`, not the seeders by name.
+A site being upgraded from OpenPNE 3 is not installed this way: the upgrade brings those rows from
+the source and refuses a schema that already holds them ([upgrade.md](upgrade.md#source-preflight)).
+
 ## Release marker
 
 A deployment may place a `RELEASE` file at the app root, `key=value` lines, one per line.
