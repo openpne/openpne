@@ -12,6 +12,7 @@ use App\Features\GroupTopic\Queries\ListGroupTopics;
 use App\Features\GroupTopic\Queries\ListJoinedGroupTopics;
 use App\Features\GroupTopic\Queries\ShowTopic;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
+use App\Features\Home\Serializers\HomeSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
 use App\Features\Reactions\Queries\ReactionAggregates;
@@ -45,14 +46,18 @@ class GroupTopicController extends Controller
 {
     use RespondsWithSurface;
 
-    public function recent(Request $request, ListJoinedGroupTopics $query): View|RedirectResponse
+    public function recent(Request $request, ListJoinedGroupTopics $query): View|InertiaResponse
     {
-        // Modern's face of the joined groups' recent threads is the activity page, which is not paged.
-        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
-            return redirect()->route('group.recent');
-        }
+        $topics = $query($this->viewer());
 
-        return $this->classic('group-topic.recent', ['topics' => $query($this->viewer())]);
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => fn () => view('group-topic.recent', ['topics' => $topics]),
+            SurfaceResolver::MODERN => function () use ($topics) {
+                $topics->getCollection()->load('group.image');
+
+                return Inertia::render('group/topic/recent', ['topics' => HomeSerializer::activityPaginator($topics)]);
+            },
+        ]);
     }
 
     public function index(Request $request, Group $group, ListGroupTopics $query): View|InertiaResponse

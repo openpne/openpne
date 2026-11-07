@@ -60,14 +60,6 @@ class GroupTopicRecentListTest extends TestCase
             ->assertDontSee('pagerRelative');
     }
 
-    public function test_a_modern_viewer_lands_on_the_group_activity_page(): void
-    {
-        config()->set('openpne.surface_mode', 'modern_only');
-
-        $this->actingAs(Member::factory()->create())->get('/topics')
-            ->assertRedirect(route('group.recent'));
-    }
-
     public function test_a_disabled_topic_unit_hides_the_list(): void
     {
         $viewer = $this->joined(Group::factory()->create());

@@ -1,5 +1,6 @@
 import { EntryRow } from '@/components/entry-row';
-import { BoardStamp } from './board-stamp';
+import { CivilDate } from '@/components/timestamp';
+import { BoardStamp, EventBoardStamp } from './board-stamp';
 import { useT } from '@/lib/i18n';
 
 export interface CommunityActivityEntry {
@@ -8,6 +9,7 @@ export interface CommunityActivityEntry {
     name: string;
     commentCount: number;
     participantCount: number | null; // event roster size; null on topics (no roster)
+    openDate: string | null; // Y-m-d on events; null on topics
     group: { id: number; name: string; imageUrl: string | null };
     bumpedAt: string;
 }
@@ -21,8 +23,19 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
             href={entry.kind === 'topic' ? `/topics/${entry.id}` : `/events/${entry.id}`}
             group={entry.group}
             content={entry.name}
-            bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
-            date={<BoardStamp commentCount={entry.commentCount} bumpedAt={entry.bumpedAt} />}
+            // An event's open date names its kind; a note and a weekday beside it would push the
+            // group name out of a phone-wide byline.
+            bylineNote={entry.kind === 'topic' ? t('%Topic%') : undefined}
+            date={
+                entry.openDate === null ? (
+                    <BoardStamp commentCount={entry.commentCount} bumpedAt={entry.bumpedAt} />
+                ) : (
+                    <>
+                        {t('Open date')}: <CivilDate value={entry.openDate} />
+                        <EventBoardStamp commentCount={entry.commentCount} bumpedAt={entry.bumpedAt} />
+                    </>
+                )
+            }
             commentCount={entry.commentCount}
             participantCount={entry.participantCount ?? 0}
         />

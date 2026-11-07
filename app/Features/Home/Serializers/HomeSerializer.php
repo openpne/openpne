@@ -12,6 +12,7 @@ use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 /**
@@ -67,7 +68,7 @@ class HomeSerializer
      * One group activity row — a topic or an event — flattened for the digest, with `kind` driving
      * the client's byline note and its link target. Callers eager-load the owning group's image.
      *
-     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, group: array{id: int, name: string, imageUrl: string|null}, bumpedAt: string}
+     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, openDate: string|null, group: array{id: int, name: string, imageUrl: string|null}, bumpedAt: string}
      */
     public static function activityEntry(GroupTopic|GroupEvent $row): array
     {
@@ -78,6 +79,7 @@ class HomeSerializer
             'commentCount' => $row->comments_count ?? $row->loadCount('comments')->comments_count,
             // Topics have no roster; only events carry a participant count (null suppresses the badge).
             'participantCount' => $row instanceof GroupEvent ? ($row->participants_count ?? 0) : null,
+            'openDate' => $row instanceof GroupEvent ? $row->open_date->format('Y-m-d') : null,
             'group' => [
                 'id' => $row->group->getKey(),
                 'name' => $row->group->name,
@@ -86,6 +88,23 @@ class HomeSerializer
                 'imageUrl' => $row->group->image?->thumbnailUrl(120, 120, square: true),
             ],
             'bumpedAt' => $row->bumped_at->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @param  LengthAwarePaginator<int, GroupTopic|GroupEvent>  $paginator
+     * @return array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     */
+    public static function activityPaginator(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'data' => array_map([self::class, 'activityEntry'], $paginator->items()),
+            'meta' => [
+                'currentPage' => $paginator->currentPage(),
+                'lastPage' => $paginator->lastPage(),
+                'perPage' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
         ];
     }
 }

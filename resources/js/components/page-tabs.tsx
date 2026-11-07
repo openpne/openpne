@@ -19,7 +19,7 @@ export type TabItem = {
  */
 export function PageTabs({ ariaLabel, items }: { ariaLabel: string; items: TabItem[] }) {
     return (
-        <nav className="flex gap-1 border-b border-border" aria-label={ariaLabel}>
+        <nav className="flex gap-1 overflow-x-auto border-b border-border" aria-label={ariaLabel}>
             {items.map((item) => (
                 <Link
                     key={item.href}

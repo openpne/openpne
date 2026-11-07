@@ -13,6 +13,7 @@ use App\Features\GroupEvent\Queries\ListGroupEvents;
 use App\Features\GroupEvent\Queries\ListJoinedGroupEvents;
 use App\Features\GroupEvent\Queries\ShowEvent;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
+use App\Features\Home\Serializers\HomeSerializer;
 use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
 use App\Features\Reactions\Queries\ReactionAggregates;
@@ -48,14 +49,19 @@ class GroupEventController extends Controller
 {
     use RespondsWithSurface;
 
-    public function recent(Request $request, ListJoinedGroupEvents $query): View|RedirectResponse
+    public function recent(Request $request, ListJoinedGroupEvents $query): View|InertiaResponse
     {
-        // Modern's face of the joined groups' recent threads is the activity page, which is not paged.
-        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
-            return redirect()->route('group.recent');
-        }
+        $events = $query($this->viewer());
 
-        return $this->classic('group-event.recent', ['events' => $query($this->viewer())]);
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => fn () => view('group-event.recent', ['events' => $events]),
+            SurfaceResolver::MODERN => function () use ($events) {
+                // Loaded here, not in the shared query: the Classic list draws neither.
+                $events->getCollection()->load('group.image')->loadCount('participants');
+
+                return Inertia::render('group/event/recent', ['events' => HomeSerializer::activityPaginator($events)]);
+            },
+        ]);
     }
 
     public function index(Request $request, Group $group, ListGroupEvents $query): View|InertiaResponse

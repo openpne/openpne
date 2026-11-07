@@ -335,8 +335,8 @@ const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeT
     { href: '/diary/listMember', label: t('My %diaries%'), active: active === 'mine' },
 ];
 
-// Joined leads because it is where the nav lands.
-const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
+// Joined leads because it is where the nav lands; each board tab goes with its unit while the hub stays.
+const communityTabs = (active: 'browse' | 'joined' | 'topics' | 'events', units: { topic: boolean; event: boolean }): ChromeTab[] => [
     {
         href: '/groups/mine',
         label: t('Joined'),
@@ -345,8 +345,11 @@ const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
         badge: GROUPS_SECTION.badge,
     },
     { href: '/groups', label: t('All'), active: active === 'browse' },
-    { href: '/groups/recent', label: t('Recent activity'), active: active === 'recent' },
+    ...(units.topic ? [{ href: '/topics', label: t('%Topics%'), active: active === 'topics' }] : []),
+    ...(units.event ? [{ href: '/events', label: t('Events'), active: active === 'events' }] : []),
 ];
+
+const boardUnits = (props: Record<string, unknown>) => ({ topic: enabled(props, 'groupTopic'), event: enabled(props, 'groupEvent') });
 
 const friendTabs = (active: 'list' | 'requests'): ChromeTab[] => [
     { href: '/friend/list', label: FRIENDS, active: active === 'list' },
@@ -466,15 +469,15 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { diary } = props as unknown as { diary: { id: number; title: string } };
         return { form: true, compose: true, context: [{ href: `/diary/${diary.id}`, label: diary.title }] };
     },
-    'community/search': () => ({
+    'community/search': (props) => ({
         mode: 'section',
         title: COMMUNITIES,
         tabsLabel: COMMUNITIES,
-        tabs: communityTabs('browse'),
+        tabs: communityTabs('browse', boardUnits(props)),
         action: CREATE_COMMUNITY,
     }),
-    // The three group tabs are one hub: same h1 and create action on every tab, so switching tabs
-    // never shifts the header.
+    // The group tabs are one hub: same h1 and create action on every tab, so switching tabs never
+    // shifts the header.
     'community/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
@@ -482,17 +485,30 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   mode: 'section',
                   title: COMMUNITIES,
                   tabsLabel: COMMUNITIES,
-                  tabs: communityTabs('joined'),
+                  tabs: communityTabs('joined', boardUnits(props)),
                   action: CREATE_COMMUNITY,
               }
             : { mode: 'contextual', title: COMMUNITIES, context: memberContext(owner), scope: memberScope(owner) };
     },
-    'community/recent': () => ({
+    'group/topic/recent': (props) => ({
         mode: 'section',
         title: COMMUNITIES,
         tabsLabel: COMMUNITIES,
-        tabs: communityTabs('recent'),
+        tabs: communityTabs('topics', boardUnits(props)),
         action: CREATE_COMMUNITY,
+    }),
+    'group/event/recent': (props) => ({
+        mode: 'section',
+        title: COMMUNITIES,
+        tabsLabel: COMMUNITIES,
+        tabs: communityTabs('events', boardUnits(props)),
+        action: CREATE_COMMUNITY,
+    }),
+    // The dashboard digest's full list, not a hub tab: the set it shows is the digest's, mixed.
+    'community/recent': () => ({
+        mode: 'contextual',
+        title: t('Recent %community% activity'),
+        context: [{ href: '/dashboard', label: WHATS_NEW }],
     }),
     // A board index keeps a short h1 so a long group name never wraps the heading.
     'group/topic/index': (props) => {
@@ -695,7 +711,8 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'home/issue',
     'diary/feed',
     'community/search',
-    'community/recent',
+    'group/topic/recent',
+    'group/event/recent',
     'community/show',
     'unified/group',
     'timeline/index',

@@ -374,11 +374,7 @@ final class HomeIssueSerializer
         /** @var GroupEvent $event */
         $event = $hydrated->source;
 
-        return [
-            ...HomeSerializer::activityEntry($event),
-            // Y-m-d, no instant: an open date is a civil date and the row draws it as one.
-            'openDate' => $event->open_date->format('Y-m-d'),
-        ];
+        return HomeSerializer::activityEntry($event);
     }
 
     /**

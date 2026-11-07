@@ -24,6 +24,7 @@ const entry = (commentCount: number): CommunityActivityEntry => ({
     name: 'Reading list',
     commentCount,
     participantCount: null,
+    openDate: null,
     group: { id: 5, name: 'Book club', imageUrl: null },
     bumpedAt: '2026-08-27T11:00:00+09:00',
 });
@@ -37,4 +38,13 @@ test('the stamp says what it is: the last comment when there is one, the post ot
     renderWithProviders(<ActivityRow entry={entry(0)} />);
     expect(screen.getByText(/Posted:/)).toBeTruthy();
     expect(screen.queryByText(/Last comment:/)).toBeNull();
+});
+
+test('an event row leads with its open date; a topic row has none', () => {
+    renderWithProviders(<ActivityRow entry={{ ...entry(0), kind: 'event', participantCount: 4, openDate: '2030-04-05' }} />);
+    expect(screen.getByText(/Open date:/)).toBeTruthy();
+
+    cleanup();
+    renderWithProviders(<ActivityRow entry={entry(0)} />);
+    expect(screen.queryByText(/Open date:/)).toBeNull();
 });

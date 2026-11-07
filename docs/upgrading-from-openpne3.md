@@ -317,7 +317,9 @@ change from a problem when you go through it.
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
   after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the
   Modern surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover
-  below starts with the Modern branding. If your OpenPNE 3 site had its smartphone layout switched
+  below starts with the Modern branding. There, the joined communities' topics and events are the
+  two tabs after *Joined* and *All* under the communities entry, as the recent-list gadgets' "More"
+  was on the PC layout. If your OpenPNE 3 site had its smartphone layout switched
   off (a free-area script setting `disable_smt`, say) and phones should keep seeing the PC layout,
   choose `php artisan openpne:surface-mode classic_only` instead: nothing Modern is shown, members
   cannot switch, and the community timeline posts the upgrade brought over are not readable until a
