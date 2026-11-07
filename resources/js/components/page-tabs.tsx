@@ -26,7 +26,7 @@ export function PageTabs({ ariaLabel, items }: { ariaLabel: string; items: TabIt
                     href={item.href}
                     aria-current={item.active ? 'page' : undefined}
                     className={
-                        'inline-flex min-h-11 items-center gap-1.5 border-b-2 px-4 py-2 text-sm transition-colors ' +
+                        'inline-flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-4 py-2 text-sm whitespace-nowrap transition-colors ' +
                         (item.active
                             ? 'border-foreground text-foreground'
                             : 'border-transparent text-muted-foreground hover:text-foreground')
