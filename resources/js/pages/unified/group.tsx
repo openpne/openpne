@@ -177,7 +177,7 @@ export default function UnifiedGroup() {
             )}
 
             {recentTopics !== null && (
-                <HomeSection title={t('Recent %topics%')} icon={MessageSquareText} viewAll={{ label: t('See all %topics%'), href: `/groups/${group.id}/topics` }}>
+                <HomeSection title={t('Recent %topics%')} icon={MessageSquareText} viewAll={{ label: t('View all'), href: `/groups/${group.id}/topics` }}>
                     {recentTopics.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
                     ) : (
@@ -204,7 +204,7 @@ export default function UnifiedGroup() {
             )}
 
             {recentEvents !== null && (
-                <HomeSection title={t('Recent events')} icon={CalendarDays} viewAll={{ label: t('See all events'), href: `/groups/${group.id}/events` }}>
+                <HomeSection title={t('Recent events')} icon={CalendarDays} viewAll={{ label: t('View all'), href: `/groups/${group.id}/events` }}>
                     {recentEvents.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
                     ) : (
