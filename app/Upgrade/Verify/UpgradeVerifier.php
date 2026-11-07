@@ -3,6 +3,7 @@
 namespace App\Upgrade\Verify;
 
 use App\Auth\PasswordScheme;
+use App\Models\File;
 use App\Models\UpgradeState;
 use App\Support\ReleaseMarker;
 use App\Upgrade\InsertSelectCompiler;
@@ -12,6 +13,7 @@ use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\FileUpgrade;
 use App\Upgrade\UpgradeStep;
 use Closure;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +75,7 @@ final class UpgradeVerifier
         // file_bin is no step's target, so its check is gated on this run migrating files.
         if (in_array('files', $this->targetTables(), true)) {
             $this->verifyFileBin($report, $out);
+            $this->verifyAdminImages($report, $out);
         }
 
         $record = fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail);
@@ -238,6 +241,16 @@ final class UpgradeVerifier
         $rewired = ($ref->referenced_table ?? null) === 'files';
         $this->record($report, $out, 'file_bin:fk', $rewired,
             $rewired ? 'file_id references files' : 'file_id FK is not rewired onto files');
+    }
+
+    private function verifyAdminImages(VerifyReport $report, Closure $out): void
+    {
+        $closed = (int) DB::table('files')
+            ->whereRaw(FileUpgrade::adminImage('`name`'))
+            ->where(fn ($q) => $q->whereNull('explicit_visibility')->orWhere('explicit_visibility', '!=', File::VISIBILITY_PUBLIC))
+            ->count();
+        $this->record($report, $out, 'files:admin_images', $closed === 0,
+            $closed === 0 ? 'every OpenPNE 3 admin image is public' : "{$closed} OpenPNE 3 admin images are not public");
     }
 
     private function record(VerifyReport $report, Closure $out, string $name, bool $pass, string $detail): void

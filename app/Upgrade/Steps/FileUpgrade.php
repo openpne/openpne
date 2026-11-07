@@ -11,7 +11,7 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 `file` → OpenPNE 4 `files`, id and `name` (the storage/URL token) verbatim so file_bin
  * and every owning row resolve by id. OpenPNE 3 has no owner column, so the owner is resolved by
  * correlated subquery over ownedFileReferences(), then from the name for namePrefixOwners(); a file
- * no owner claims keeps a null owner, which FilePolicy resolves as private.
+ * no owner claims stays ownerless, private unless adminImage().
  */
 class FileUpgrade extends UpgradeStep
 {
@@ -29,6 +29,7 @@ class FileUpgrade extends UpgradeStep
             'byte_size' => Column::source('filesize'),
             'related_entity_type' => Column::expr($this->ownerTypeExpr(), uses: ['id', 'name']),
             'related_entity_id' => Column::expr($this->ownerIdExpr(), uses: ['id', 'name']),
+            'explicit_visibility' => Column::expr('CASE WHEN '.self::adminImage('`file`.`name`')." THEN 'public' ELSE NULL END", uses: ['name']),
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
@@ -36,9 +37,17 @@ class FileUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // A null explicit_visibility inherits from the owner; OpenPNE 3 records neither image dimensions
-        // nor animation, so width/height/animated arrive null (docs/internals/images.md, "files.width / files.height").
-        return ['explicit_visibility', 'width', 'height', 'animated'];
+        // OpenPNE 3 records neither image dimensions nor animation, so width/height/animated arrive null (docs/internals/images.md, "files.width / files.height").
+        return ['width', 'height', 'animated'];
+    }
+
+    /**
+     * SQL boolean: the name is one OpenPNE 3's admin image manager wrote (`admin_{imageName}_{time}`), an
+     * asset custom HTML and CSS reference by URL without a login (docs/internals/upgrade.md, "OpenPNE 3 admin images").
+     */
+    public static function adminImage(string $nameColumn): string
+    {
+        return "REGEXP_LIKE({$nameColumn}, '^admin_', 'c')";
     }
 
     /**
