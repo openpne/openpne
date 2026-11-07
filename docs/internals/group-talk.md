@@ -9,7 +9,7 @@ answers who may read it.
 Talk is a dual-surface screen: [`GroupTalkController::show`](../../app/Features/GroupTalk/GroupTalkController.php)
 resolves the viewer's surface like every other member page, so a Classic viewer — and every viewer
 under `surface_mode=classic_only` — gets the screen described under "The Classic screen" below, at
-the same URL and with the same reads and writes.
+the same URL and through the same endpoints.
 
 ## The Classic screen
 
@@ -20,7 +20,8 @@ client-side from its API) server-side, in the shape the Classic timeline screens
 beside the list and `classic-timeline-more.js` appending the next page from `group.talk.rows`. A
 `?m=` anchor opens with that message at the **top** of its page (the rows up to and including it),
 since a newest-first page has nowhere else to put it that a reader would see without scrolling; an
-anchor or cursor that does not resolve is the head page. The head page, and only the head page, marks
+anchor or cursor that does not resolve is the head page, and so is an anchor with nothing newer than it
+(a mention notification links to its message, which is usually the newest). The head page, and only the head page, marks
 the room read as far as it rendered: the newest row's id goes to `MarkTalkRead`, which is the
 "last message actually displayed" the Modern client sends, resolved server-side because Classic has
 no scroll signal.

@@ -77,7 +77,7 @@ class GroupTalkController extends Controller
         $linkCards->ensureAll($page->messages);
         $messages = $page->messages->reverse()->values();
 
-        $isHead = $anchor === null && $before === null;
+        $isHead = $before === null && ! $page->hasNewer;
         if ($isHead && $permissions->canPost && $messages->isNotEmpty()) {
             try {
                 $markRead($viewer, $group, (int) $messages->first()->getKey());
@@ -153,7 +153,7 @@ class GroupTalkController extends Controller
         return GroupMessage::query()->where('group_id', $group->getKey())->with('author')->find((int) $id);
     }
 
-    /** A page of Classic rows for classic-timeline-more.js, the next page named in a Link header. */
+    /** A page of Classic rows, the next page named in a Link header. */
     public function rows(Request $request, Group $group, GroupTalkMessages $query, ReplyReferences $replies, LinkCardSync $linkCards): Response
     {
         $viewer = $this->viewer();

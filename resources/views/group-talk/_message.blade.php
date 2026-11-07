@@ -1,6 +1,6 @@
-{{-- One talk message in OpenPNE 3's timelineTemplate shape (timeline/_post.blade.php for the
-     timeline's own rows). No visibility span: a message carries no audience. The reply line is the
-     lineage OpenPNE 3's comments became; the conversation itself stays linear. --}}
+{{-- One talk message in OpenPNE 3's timelineTemplate shape, without the visibility span: a message
+     carries no audience. The reply line is the lineage OpenPNE 3's comments became; the conversation
+     itself stays linear. --}}
 @php($author = $message->author)
 @php($canDelete = $permissions->canDelete($message))
 <div class="timeline-post" data-timeline-id="{{ $message->getKey() }}">

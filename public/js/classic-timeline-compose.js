@@ -4,8 +4,8 @@
  * count down from the form's limit, gate the submit, and proxy the offscreen file input through
  * the camera button. Every lookup is scoped to one form — the OpenPNE 3 ids repeat when two home
  * gadgets both render a compose box — and the reveal comes last, so a failure anywhere leaves
- * the hidden form and the working link. A form that is never hidden (the talk box) drops its
- * `timeline-nojs` class instead, which is what shows its controls without the script.
+ * the hidden form and the working link, while a form that is never hidden drops its `timeline-nojs`
+ * class instead.
  */
 (function () {
   'use strict';
@@ -19,8 +19,6 @@
     return Array.from(value.replace(/\r\n?/g, '\n')).length;
   }
 
-  // The form's own limit and whether a picture alone may go: the timeline (140, words required)
-  // and talk (5,000, words or an attachment) share this script and differ only here.
   function limits(form) {
     var max = parseInt(form.getAttribute('data-max-length') || '', 10);
 

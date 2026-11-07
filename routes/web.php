@@ -803,7 +803,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // The OpenPNE 3 community timeline URLs reach this screen through the compat redirects above.
     Route::middleware(EnsureFeatureEnabled::class.':groupTalk')->controller(GroupTalkController::class)->group(function () {
         Route::get('/groups/{group}/talk', 'show')->whereNumber('group')->name('group.talk.show');
-        // The Classic page's older rows as a fragment (classic-timeline-more.js).
         Route::get('/groups/{group}/talk/rows', 'rows')->whereNumber('group')->name('group.talk.rows');
         // One page either side of a cursor the client was handed: `after` for the poll, `before`
         // for "load older".

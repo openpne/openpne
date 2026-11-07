@@ -6,6 +6,7 @@ namespace Tests\Feature\GroupTalk;
 
 use App\Features\GroupTalk\GroupTalkController;
 use App\Features\GroupTalk\GroupTalkCursor;
+use App\Features\GroupTalk\TalkBody;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
 use App\Models\GroupMessage;
@@ -334,13 +335,43 @@ class ClassicTalkScreenTest extends TalkTestCase
         $messages = $this->seedMessages($group, $author, 3);
         $this->assertSame(0, (int) $this->cursorOf($group, $reader)->talk_read_message_id);
 
-        // An older page and an anchor page move nothing.
+        // An older page and an anchor with newer rows above it move nothing.
         $this->actingAs($reader)->get($this->talk($group, ['before' => (string) GroupTalkCursor::of($messages[2])]))->assertOk();
         $this->actingAs($reader)->get($this->talk($group, ['m' => $messages[1]->getKey()]))->assertOk();
         $this->assertSame(0, (int) $this->cursorOf($group, $reader)->talk_read_message_id);
 
         $this->actingAs($reader)->get($this->talk($group, ['reply' => $messages[0]->getKey()]))->assertOk();
         $this->assertSame((int) $messages[2]->getKey(), (int) $this->cursorOf($group, $reader)->talk_read_message_id);
+
+        // The anchor a mention notification links to is the newest row: that page is the head page.
+        $newest = GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $author->getKey(),
+            'created_at' => Carbon::parse('2026-11-01 10:01:00'),
+        ]);
+        $this->actingAs($reader)->get($this->talk($group, ['m' => $newest->getKey()]))
+            ->assertOk()
+            ->assertDontSee('class="pagerRelative"', false);
+        $this->assertSame((int) $newest->getKey(), (int) $this->cursorOf($group, $reader)->talk_read_message_id);
+    }
+
+    public function test_a_failed_post_carries_the_picker_rows_back_into_the_box(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $named = $this->memberOf($group);
+
+        $this->actingAs($member)
+            ->post(route('group.talk.store', $group), [
+                'body' => str_repeat('a', TalkBody::MAX + 1),
+                'mentions' => [['member_id' => $named->getKey(), 'offset' => 0, 'length' => 5]],
+            ])
+            ->assertRedirect($this->talk($group));
+
+        $this->actingAs($member)->get($this->talk($group))
+            ->assertOk()
+            ->assertSee('name="mentions[0][member_id]" value="'.$named->getKey().'"', false)
+            ->assertSee('name="mentions[0][offset]" value="0"', false);
     }
 
     public function test_an_empty_head_page_and_a_non_member_leave_cursors_alone(): void

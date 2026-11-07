@@ -42,7 +42,9 @@ class GroupTalkMessages
     /** The page that ends at $cursor, the row at it included: a newest-first screen opens an anchor at its top. */
     public function upTo(Group $group, GroupTalkCursor $cursor, int $limit = self::PER_PAGE): GroupTalkPage
     {
-        return $this->backwardsFrom($group, $cursor, $limit, inclusive: true);
+        $page = $this->backwardsFrom($group, $cursor, $limit, inclusive: true);
+
+        return new GroupTalkPage($page->messages, $page->hasOlder, hasNewer: $this->forwardFrom($group, $cursor)->isNotEmpty());
     }
 
     public function after(Group $group, GroupTalkCursor $cursor): GroupTalkPage

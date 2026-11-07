@@ -16,9 +16,9 @@
         <p class="timeline-post-reply-to">{{ __('Replying to :name', ['name' => $replyTo->author?->name ?? __('%Withdrawn_member%')]) }} <a href="{{ route('group.talk.show', $group) }}#timeline-textarea">{{ __('Cancel') }}</a></p>
     @endif
     <div class="timeline-postform well">
-        <textarea id="timeline-textarea" name="body" class="input-xlarge" rows="1" placeholder="{{ __('What are you doing?') }}" aria-label="{{ __('Post') }}">{{ old('body') }}</textarea>
-        @if ($errors->has('body') || $errors->has('reply_to_message_id'))
-            <div id="timeline-submit-error" style="display: block;">{{ $errors->first('body') ?: $errors->first('reply_to_message_id') }}</div>
+        <textarea id="timeline-textarea" name="body" class="input-xlarge" rows="1" placeholder="{{ __('What are you doing?') }}" aria-label="{{ __('Message') }}">{{ old('body') }}</textarea>
+        @if ($errors->any() && ! $errors->has('image'))
+            <div id="timeline-submit-error" style="display: block;">{{ $errors->first() }}</div>
         @endif
         @if ($errors->has('image'))
             <div id="timeline-upload-error" style="display: block;">{{ $errors->first('image') }}</div>
