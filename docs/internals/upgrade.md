@@ -142,11 +142,10 @@ default. The value is carried, or not, by the same `TermValue` rule as above.
 
 ## Source preflight
 
-Runs before any write, on the dry run too. The first check is of the target, not the source: a fresh
-run (no checkpoints, not `--force-restart`) refuses when any of `UpgradeRunner::INSTALL_SEEDED` among
-its own targets already holds rows, because the walk inserts OpenPNE 3's rows under their own ids and
-`banners.name` is unique; it comes before the source reads so a mis-installed site learns this without
-a reachable source, and yields to `--force-restart`, whose `reset()` empties those tables after the
+Runs before any write, on the dry run too. The first check is of the target: a fresh run (no
+checkpoints, not `--force-restart`) refuses when any of `UpgradeRunner::INSTALL_TABLES` among its own
+targets already holds rows, since the walk inserts OpenPNE 3's rows under their own ids. It runs before
+the source is read, and not under `--force-restart`, whose `reset()` empties those tables once the
 source has passed. Introspection goes through `information_schema`
 qualified by the source database and prefix, because `Schema::hasTable()` sees only the
 connection's own database. A missing core table or consumed FROM column, or a partially present

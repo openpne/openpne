@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Services\GadgetService;
+use App\Services\NavigationService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -34,5 +36,9 @@ class InstallSeeder extends Seeder
         DB::transaction(function (): void {
             $this->call(self::SEEDERS);
         });
+
+        // A request served during the transaction may have cached the empty tables.
+        app(NavigationService::class)->clearCache();
+        app(GadgetService::class)->clearCache();
     }
 }

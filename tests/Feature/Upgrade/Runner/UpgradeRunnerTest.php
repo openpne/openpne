@@ -246,15 +246,16 @@ class UpgradeRunnerTest extends TestCase
         $this->assertFalse($ok);
         $this->assertSame(RunReport::OUTCOME_PRECHECK_ERROR, $report->outcome());
         $this->assertStringContainsString('`navigations` already holds rows', implode("\n", $lines));
-        $this->assertStringNotContainsString('`members`', implode("\n", $lines));
+        // The source preflight names a missing source table; it did not get to run.
+        $this->assertStringNotContainsString('source table', implode("\n", $lines));
     }
 
-    public function test_the_seeded_target_check_sees_only_this_runs_targets_and_yields_to_a_restart(): void
+    public function test_the_installed_target_check_sees_only_this_runs_targets_and_yields_to_a_restart(): void
     {
         $this->seed(NavigationSeeder::class);
 
-        $this->assertSame(['navigations'], (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->seededTargetTables());
-        $this->assertSame([], (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->seededTargetTables());
+        $this->assertSame(['navigations'], (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->installedTargetTables());
+        $this->assertSame([], (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->installedTargetTables());
 
         // --force-restart empties the targets after the source preflight, so it must not be refused here.
         $lines = [];
