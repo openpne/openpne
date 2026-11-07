@@ -129,15 +129,14 @@ class GroupSettings extends Page
     }
 
     /**
-     * The keys this page edits. The board switches drive Classic markup only, so on a modern_only
-     * install they are neither shown nor rewritten (a stored value survives a later surface change).
+     * On a single-surface install the other surface's keys are neither shown nor rewritten, so a stored value survives a later mode change.
      *
      * @return list<SnsSettingKey>
      */
     private function keys(): array
     {
         return [
-            ...SnsSettingKey::inGroup(SettingGroup::GroupTalk),
+            ...(SurfaceResolver::modernAvailable() ? SnsSettingKey::inGroup(SettingGroup::GroupTalk) : []),
             ...(SurfaceResolver::classicAvailable() ? SnsSettingKey::inGroup(SettingGroup::GroupBoard) : []),
         ];
     }
@@ -146,9 +145,10 @@ class GroupSettings extends Page
     {
         $reply = static fn (SnsSettingKey $key): Toggle => Toggle::make($key->value)
             ->label($key->label())
-            // Classic-only, and the copy says so (docs/internals/classic-compatibility.md); the
-            // section is absent altogether where Classic is never served.
-            ->helperText(__('Classic only: each comment gets a Reply link that quotes its number and author into the comment box.'));
+            // Classic-only, and the copy says so only where Modern is served too (docs/internals/classic-compatibility.md).
+            ->helperText(SurfaceResolver::coexists()
+                ? __('Classic only: each comment gets a Reply link that quotes its number and author into the comment box.')
+                : __('Each comment gets a Reply link that quotes its number and author into the comment box.'));
 
         return Section::make(__('%Topics% and events'))
             ->hidden(static fn (): bool => ! SurfaceResolver::classicAvailable())
@@ -160,6 +160,7 @@ class GroupSettings extends Page
         $modes = GroupTalkNotifyMode::cases();
 
         return Section::make(__('Talk'))
+            ->hidden(static fn (): bool => ! SurfaceResolver::modernAvailable())
             ->schema([
                 Radio::make(SnsSettingKey::GroupTalkNotifyDefault->value)
                     ->label(SnsSettingKey::GroupTalkNotifyDefault->label())

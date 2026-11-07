@@ -83,10 +83,11 @@ class BrandingSettings extends Page
                     ->schema([
                         ColorPicker::make(SnsSettingKey::BrandColor->value)
                             ->label(SnsSettingKey::BrandColor->label())
-                            ->helperText(self::surfaceScoped(
+                            // Under classic_only the color still paints the generated site icon and the home-screen app.
+                            ->helperText(SurfaceResolver::modernAvailable() ? self::surfaceScoped(
                                 __('Applies to the Modern member screens, which every phone visitor gets, and the browser chrome. Leave it blank for the built-in color.'),
                                 __('Applies to the member screens and the browser chrome. Leave it blank for the built-in color.'),
-                            ))
+                            ) : __('Used by the generated site icon and as the color of the home-screen app. Leave it blank for the built-in color.'))
                             // Blank means unbranded; the no-arg factory makes Filament pass the closure
                             // through as a validation rule instead of injecting its arguments.
                             ->rules([
@@ -116,7 +117,7 @@ class BrandingSettings extends Page
                         ->storeFiles(false),
                     'remove_brand_logo',
                     __('Remove the current logo'),
-                ),
+                )->hidden(static fn (): bool => ! SurfaceResolver::modernAvailable()),
 
                 $this->fileSection(
                     SnsSettingKey::BrandFaviconFile,
@@ -275,12 +276,12 @@ class BrandingSettings extends Page
     }
 
     /**
-     * Surface-scope wording. With Classic available the copy must label which surface a setting
-     * affects (docs/internals/classic-compatibility.md); on a modern_only install the operator never
-     * sees Classic, so the copy must not mention surfaces at all.
+     * Surface-scope wording. With both surfaces served the copy must label which one a setting
+     * affects (docs/internals/classic-compatibility.md); on a single-surface install the operator
+     * never sees the other, so the copy must not mention surfaces at all.
      */
-    private static function surfaceScoped(string $withClassic, string $modernOnly): string
+    private static function surfaceScoped(string $withBoth, string $single): string
     {
-        return SurfaceResolver::classicAvailable() ? $withClassic : $modernOnly;
+        return SurfaceResolver::coexists() ? $withBoth : $single;
     }
 }
