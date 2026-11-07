@@ -12,7 +12,7 @@ import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityRoleSlug, EventSummary, TopicSummary } from '../community/types';
 import { BoardCards } from './board-cards';
 import { GroupGrid, type HomeGroup } from './group-grid';
-import { HOME_CARD, HomeSection, SubSection } from './home-section';
+import { HOME_CARD, HomeSection } from './home-section';
 import { PeopleGrid } from './people-grid';
 import { type HomePhoto, PhotoGrid } from './photo-grid';
 import { ProfileHeader, type UnifiedProfile } from './profile-header';
@@ -65,7 +65,6 @@ export default function UnifiedGroup() {
 
     const memberListHref = `/groups/${group.id}/members`;
     const hasActions = isPending || canJoin || canLeave || canManage;
-    const hasMoments = recentPhotos.length > 0 || recentTopics !== null || recentEvents !== null;
 
     return (
         <>
@@ -177,6 +176,66 @@ export default function UnifiedGroup() {
                 </HomeSection>
             )}
 
+            {recentTopics !== null && (
+                <HomeSection title={t('Recent %topics%')} icon={MessageSquareText} viewAll={{ label: t('View all'), href: `/groups/${group.id}/topics` }}>
+                    {recentTopics.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
+                    ) : (
+                        <BoardCards
+                            icon={MessageSquareText}
+                            rows={recentTopics.map((topic) => ({
+                                id: topic.id,
+                                href: `/topics/${topic.id}`,
+                                name: topic.name,
+                                date: <BoardStamp commentCount={topic.commentCount} bumpedAt={topic.bumpedAt} />,
+                                commentCount: topic.commentCount,
+                            }))}
+                        />
+                    )}
+                    {canPostTopic && (
+                        <div className="mt-3">
+                            <ActionLink href={`/groups/${group.id}/topics/new`} variant="outline" size="sm">
+                                <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Create a %topic%')}
+                            </ActionLink>
+                        </div>
+                    )}
+                </HomeSection>
+            )}
+
+            {recentEvents !== null && (
+                <HomeSection title={t('Recent events')} icon={CalendarDays} viewAll={{ label: t('View all'), href: `/groups/${group.id}/events` }}>
+                    {recentEvents.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
+                    ) : (
+                        <BoardCards
+                            icon={CalendarDays}
+                            rows={recentEvents.map((event) => ({
+                                id: event.id,
+                                href: `/events/${event.id}`,
+                                name: event.name,
+                                date: (
+                                    <>
+                                        {t('Open date')}: <CivilDate value={event.openDate} weekday />
+                                        <EventBoardStamp commentCount={event.commentCount} bumpedAt={event.bumpedAt} />
+                                    </>
+                                ),
+                                commentCount: event.commentCount,
+                                participantCount: event.participantCount,
+                            }))}
+                        />
+                    )}
+                    {canPostEvent && (
+                        <div className="mt-3">
+                            <ActionLink href={`/groups/${group.id}/events/new`} variant="outline" size="sm">
+                                <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Create an event')}
+                            </ActionLink>
+                        </div>
+                    )}
+                </HomeSection>
+            )}
+
             {members.length > 0 && (
                 <HomeSection title={t('Members')} icon={UserCircle2} viewAll={{ label: t('View all'), href: memberListHref }}>
                     <PeopleGrid people={members} />
@@ -196,89 +255,12 @@ export default function UnifiedGroup() {
                 </HomeSection>
             )}
 
-            {hasMoments && (
-                <HomeSection title={t('Recent moments')} icon={Activity} bodyClassName="space-y-5">
-                    {recentPhotos.length > 0 && (
-                        <SubSection title={t('Recent photos')}>
-                            <PhotoGrid photos={recentPhotos} />
-                        </SubSection>
-                    )}
-
-                    {recentTopics !== null && (
-                        <SubSection
-                            title={t('Recent %topics%')}
-                            right={
-                                canPostTopic && (
-                                    <ActionLink href={`/groups/${group.id}/topics/new`} variant="outline" size="sm">
-                                        <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                        {t('Create a %topic%')}
-                                    </ActionLink>
-                                )
-                            }
-                        >
-                            {recentTopics.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
-                            ) : (
-                                <BoardCards
-                                    icon={MessageSquareText}
-                                    rows={recentTopics.map((topic) => ({
-                                        id: topic.id,
-                                        href: `/topics/${topic.id}`,
-                                        name: topic.name,
-                                        date: <BoardStamp commentCount={topic.commentCount} bumpedAt={topic.bumpedAt} />,
-                                        commentCount: topic.commentCount,
-                                    }))}
-                                />
-                            )}
-                            <SeeAll href={`/groups/${group.id}/topics`} label={t('See all %topics%')} />
-                        </SubSection>
-                    )}
-
-                    {recentEvents !== null && (
-                        <SubSection
-                            title={t('Recent events')}
-                            right={
-                                canPostEvent && (
-                                    <ActionLink href={`/groups/${group.id}/events/new`} variant="outline" size="sm">
-                                        <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                        {t('Create an event')}
-                                    </ActionLink>
-                                )
-                            }
-                        >
-                            {recentEvents.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
-                            ) : (
-                                <BoardCards
-                                    icon={CalendarDays}
-                                    rows={recentEvents.map((event) => ({
-                                        id: event.id,
-                                        href: `/events/${event.id}`,
-                                        name: event.name,
-                                        date: (
-                                            <>
-                                                {t('Open date')}: <CivilDate value={event.openDate} weekday />
-                                                <EventBoardStamp commentCount={event.commentCount} bumpedAt={event.bumpedAt} />
-                                            </>
-                                        ),
-                                        commentCount: event.commentCount,
-                                        participantCount: event.participantCount,
-                                    }))}
-                                />
-                            )}
-                            <SeeAll href={`/groups/${group.id}/events`} label={t('See all events')} />
-                        </SubSection>
-                    )}
+            {recentPhotos.length > 0 && (
+                <HomeSection title={t('Recent photos')} icon={Activity}>
+                    <PhotoGrid photos={recentPhotos} />
                 </HomeSection>
             )}
         </>
     );
 }
 
-function SeeAll({ href, label }: { href: string; label: string }) {
-    return (
-        <Link href={href} className="mt-2 inline-block text-sm text-link hover:underline">
-            {label}
-        </Link>
-    );
-}
