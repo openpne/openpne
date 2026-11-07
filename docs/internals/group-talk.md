@@ -831,7 +831,7 @@ role once per request and the serializer asks it per row.
     then asks for the newest messages has ordered the page, not the membership.
 13. A link may name a message (`?m=`), and naming one is neither a permission nor a reading: the
     group's gate still answers first, an unusable id falls back to the newest page, and the cursor
-    only moves from the foot of the live window.
+    only moves from the foot of the live window (which the Classic head page is, anchor or not).
 14. A reaction is not a message. It writes no `group_messages` row and no unread read looks at a
     version, so cursors, badges and the room list's order cannot move because of one — and nothing
     notifies, since the room's badge is what says something happened here.

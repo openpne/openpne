@@ -17,8 +17,9 @@
     @endif
     <div class="timeline-postform well">
         <textarea id="timeline-textarea" name="body" class="input-xlarge" rows="1" placeholder="{{ __('What are you doing?') }}" aria-label="{{ __('Message') }}">{{ old('body') }}</textarea>
-        @if ($errors->any() && ! $errors->has('image'))
-            <div id="timeline-submit-error" style="display: block;">{{ $errors->first() }}</div>
+        @php($submitError = $errors->first('body') ?: $errors->first('reply_to_message_id') ?: collect($errors->keys())->diff(['image'])->map(fn (string $key) => $errors->first($key))->first())
+        @if ($submitError)
+            <div id="timeline-submit-error" style="display: block;">{{ $submitError }}</div>
         @endif
         @if ($errors->has('image'))
             <div id="timeline-upload-error" style="display: block;">{{ $errors->first('image') }}</div>

@@ -44,7 +44,7 @@ class GroupTalkMessages
     {
         $page = $this->backwardsFrom($group, $cursor, $limit, inclusive: true);
 
-        return new GroupTalkPage($page->messages, $page->hasOlder, hasNewer: $this->forwardFrom($group, $cursor)->isNotEmpty());
+        return new GroupTalkPage($page->messages, $page->hasOlder, hasNewer: $this->newerThan($group, $cursor)->exists());
     }
 
     public function after(Group $group, GroupTalkCursor $cursor): GroupTalkPage
@@ -93,16 +93,22 @@ class GroupTalkMessages
      */
     private function forwardFrom(Group $group, GroupTalkCursor $cursor): Collection
     {
+        return $this->newerThan($group, $cursor)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->limit(self::PER_PAGE + 1)
+            ->get();
+    }
+
+    /** @return Builder<GroupMessage> */
+    private function newerThan(Group $group, GroupTalkCursor $cursor): Builder
+    {
         return $this->query($group)
             ->where(fn (Builder $q) => $q
                 ->where('created_at', '>', $cursor->at)
                 ->orWhere(fn (Builder $tie) => $tie
                     ->where('created_at', '=', $cursor->at)
-                    ->where('id', '>', $cursor->id)))
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->limit(self::PER_PAGE + 1)
-            ->get();
+                    ->where('id', '>', $cursor->id)));
     }
 
     private function backwardsFrom(Group $group, ?GroupTalkCursor $cursor, int $limit, bool $inclusive = false): GroupTalkPage

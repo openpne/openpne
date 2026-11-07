@@ -355,7 +355,7 @@ class GroupTalkController extends Controller
 
         $this->markLocalNavGroup($group);
 
-        return view('group-talk.delete', ['group' => $group, 'message' => $message->load('author.avatar.file', 'mentions')]);
+        return view('group-talk.delete', ['group' => $group, 'message' => $message->load('author.avatar.file', 'mentions', 'images.file')]);
     }
 
     public function delete(Request $request, Group $group, GroupMessage $message, DeleteGroupMessage $action): JsonResponse|RedirectResponse
