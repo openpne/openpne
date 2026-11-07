@@ -15,7 +15,13 @@ bin/dev-up                # http://localhost:8080  (caught mail: http://localhos
 On first start the `app` container runs `composer install`, generates
 `APP_KEY`, and runs migrations; the `vite` sidecar runs `npm ci` and starts
 the Vite dev server on `:5173`. Source is bind-mounted so code changes are
-reflected without a rebuild. SQLite is used by default.
+reflected without a rebuild. SQLite is used by default. The site's initial
+data and its first administrator are one step more:
+
+```bash
+docker compose exec app php artisan openpne:install
+docker compose exec app php artisan openpne:admin:create admin   # then sign in at /admin
+```
 
 Day-to-day commands run inside the containers:
 
@@ -65,7 +71,8 @@ npm install
 cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
-php artisan migrate
+php artisan openpne:install              # schema + the initial data of a new site
+php artisan openpne:admin:create admin   # the first administrator, for /admin
 php artisan passport:keys  # optional: lets AI clients sign in to the MCP server
 
 php artisan serve         # http://localhost:8000

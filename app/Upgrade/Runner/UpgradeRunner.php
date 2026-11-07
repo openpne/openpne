@@ -41,6 +41,9 @@ final class UpgradeRunner
     /** The `step_key` the epoch marker occupies. Not a step: no registry entry ever bears this name. */
     public const EPOCH_KEY = 'naming_epoch';
 
+    /** The tables `Database\Seeders\InstallSeeder` fills, which the walk fills from OpenPNE 3 instead. */
+    public const INSTALL_SEEDED = ['navigations', 'gadgets', 'profiles', 'banners'];
+
     /** The `step_key` of the completion marker, written once on the first full success; not a step either. */
     public const RUN_KEY = 'upgrade_completed';
 
@@ -107,6 +110,18 @@ final class UpgradeRunner
             $report->abort((string) $verdict->reason, RunReport::OUTCOME_BLOCKED);
 
             return false;
+        }
+
+        // Not under --force-restart: reset() empties these tables, so a restart is the recovery the refusal names.
+        if ($verdict->verdict === ResumeVerdict::FRESH && ! $options->forceRestart) {
+            foreach ($this->seededTargetTables() as $table) {
+                $report->error(self::seededTargetMessage($table));
+            }
+            if ($this->seededTargetTables() !== []) {
+                $report->abort('the OpenPNE 4 schema is not empty; nothing was migrated.');
+
+                return false;
+            }
         }
 
         $preflight = new SourcePreflight($this->steps(), SourceSchema::default());
@@ -638,6 +653,24 @@ final class UpgradeRunner
         }
 
         return $errors;
+    }
+
+    /**
+     * The install-seeded tables among this run's targets that already hold rows (docs/internals/upgrade.md, "Source preflight").
+     *
+     * @return list<string>
+     */
+    public function seededTargetTables(): array
+    {
+        return array_values(array_filter(
+            array_intersect(self::INSTALL_SEEDED, $this->targetTables()),
+            static fn (string $table): bool => DB::table($table)->exists(),
+        ));
+    }
+
+    public static function seededTargetMessage(string $table): string
+    {
+        return "OpenPNE 4 table `{$table}` already holds rows (openpne:install seeds it, as does opening the admin Banner page); the upgrade needs the schema `php artisan migrate` alone creates. Restore it fresh, or rerun with --force-restart, which empties every target table first.";
     }
 
     /** @return list<string> distinct step target tables in reverse run order (FK-safe delete order). */

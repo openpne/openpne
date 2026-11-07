@@ -12,10 +12,7 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $this->call(PresetProfileSeeder::class);
-        $this->call(NavigationSeeder::class);
-        $this->call(GadgetSeeder::class);
-        $this->call(BannerSeeder::class);
+        $this->call(InstallSeeder::class);
 
         Member::factory()->create([
             'name' => 'Test Member',
