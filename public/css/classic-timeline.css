@@ -86,6 +86,11 @@ dialog.timeline-lightbox form {
     display: none;
 }
 
+.timeline-nojs .timeline-submit {
+    position: static;
+    float: none;
+}
+
 .timeline-post-reply-to {
     color: #666;
 }

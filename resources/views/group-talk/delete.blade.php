@@ -9,6 +9,7 @@
         <div class="block">
             <p>{{ __('Delete this message?') }}</p>
             <div class="timeline-post-body"><x-group-talk-body :message="$message" /></div>
+            @include('group-talk._picture', ['message' => $message])
             <form method="POST" action="{{ route('group.talk.delete', ['group' => $group, 'message' => $message]) }}">
                 @csrf
                 <div class="operation">

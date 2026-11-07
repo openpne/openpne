@@ -10,6 +10,7 @@ use App\Features\GroupTalk\TalkBody;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageImage;
 use App\Models\Member;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -250,7 +251,15 @@ class ClassicTalkScreenTest extends TalkTestCase
         $this->assertDatabaseHas('group_messages', ['body' => 'second', 'in_reply_to_id' => $parent->getKey()]);
         $this->actingAs($member)->get($this->talk($group))
             ->assertSee('Hanako: first')
-            ->assertSee('#timeline-'.$parent->getKey().'"', false);
+            ->assertSee('href="'.$this->talk($group, ['m' => $parent->getKey()]).'#timeline-'.$parent->getKey().'"', false);
+
+        // A reply that fails validation comes back still a reply.
+        $this->actingAs($member)
+            ->post(route('group.talk.store', $group), ['body' => str_repeat('a', TalkBody::MAX + 1), 'reply_to_message_id' => $parent->getKey()])
+            ->assertRedirect($this->talk($group));
+        $this->actingAs($member)->get($this->talk($group))
+            ->assertSee(__('Replying to :name', ['name' => 'Hanako']))
+            ->assertSee('name="reply_to_message_id" value="'.$parent->getKey().'"', false);
     }
 
     public function test_a_reply_id_from_elsewhere_or_gone_offers_no_reply(): void
@@ -308,6 +317,7 @@ class ClassicTalkScreenTest extends TalkTestCase
             ->withHeader('Accept', 'application/json')
             ->post(route('group.talk.delete', ['group' => $group, 'message' => $theirs]))
             ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertExactJson(['ok' => true]);
         $this->assertDatabaseMissing('group_messages', ['id' => $theirs->getKey()]);
     }
@@ -399,6 +409,110 @@ class ClassicTalkScreenTest extends TalkTestCase
             ->assertSessionHas('status', __('Muted.'));
         $this->assertDatabaseHas('group_members', ['group_id' => $group->getKey(), 'member_id' => $member->getKey(), 'is_talk_muted' => true]);
         $this->actingAs($member)->get($this->talk($group))->assertSee('value="'.__('Unmute').'"', false);
+    }
+
+    public function test_the_rendered_mute_form_is_what_toggles(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $muted = fn (): bool => (bool) DB::table('group_members')
+            ->where('group_id', $group->getKey())->where('member_id', $member->getKey())->value('is_talk_muted');
+
+        foreach ([true, false] as $expected) {
+            $form = $this->form($this->actingAs($member)->get($this->talk($group))->getContent(), route('group.talk.mute', $group));
+            $this->actingAs($member)->post($form->getAttribute('action'), $this->fieldsOf($form))->assertRedirect($this->talk($group));
+            $this->assertSame($expected, $muted());
+        }
+    }
+
+    public function test_the_rendered_compose_form_is_what_the_request_reads(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+
+        $form = $this->form($this->actingAs($member)->get($this->talk($group))->getContent(), route('group.talk.store', $group));
+        $this->assertSame('multipart/form-data', $form->getAttribute('enctype'));
+        $this->assertStringContainsString('timeline-nojs', $form->getAttribute('class'));
+        $this->assertSame((string) TalkBody::MAX, $form->getAttribute('data-max-length'));
+        $this->assertTrue($form->hasAttribute('data-allow-image-only'));
+        $this->assertTrue($form->hasAttribute('data-timeline-mention'));
+        $file = (new \DOMXPath($form->ownerDocument))->query('.//input[@type="file"]', $form)->item(0);
+        $this->assertNotNull($file);
+
+        $this->actingAs($member)
+            ->post($form->getAttribute('action'), $this->fieldsOf($form) + [$file->getAttribute('name') => UploadedFile::fake()->image('shot.png', 40, 40)])
+            ->assertRedirect($this->talk($group));
+        $this->assertDatabaseCount('group_message_images', 1);
+    }
+
+    public function test_the_hooks_the_classic_scripts_take_hold_of_are_in_the_markup(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $this->actingAs($member)
+            ->post(route('group.talk.store', $group), ['image' => UploadedFile::fake()->image('shot.png', 40, 40)])
+            ->assertRedirect();
+        $image = GroupMessageImage::query()->firstOrFail();
+        $message = $image->groupMessage;
+
+        $this->actingAs($member)->get($this->talk($group))
+            ->assertOk()
+            ->assertSee('<div class="timeline" data-timeline-container>', false)
+            ->assertSee('<div data-timeline-pager>', false)
+            ->assertSee('data-dialog="timeline-post-delete-confirm-'.$message->getKey().'"', false)
+            ->assertSee('<form method="POST" action="'.route('group.talk.delete', ['group' => $group, 'message' => $message]).'" data-timeline-delete', false)
+            ->assertSee('<a href="'.$image->file->url().'" rel="lightbox"', false);
+    }
+
+    public function test_another_groups_message_is_not_reachable_through_this_groups_urls(): void
+    {
+        $mine = $this->group();
+        $admin = $this->adminOf($mine);
+        $theirs = $this->group(TopicReadAccess::MembersOnly);
+        $message = GroupMessage::factory()->create(['group_id' => $theirs->getKey(), 'member_id' => $this->memberOf($theirs)->getKey(), 'body' => 'kept apart']);
+
+        $this->actingAs($admin)->get(route('group.talk.delete.show', ['group' => $mine, 'message' => $message]))->assertNotFound();
+        $this->actingAs($admin)->post(route('group.talk.delete', ['group' => $mine, 'message' => $message]))->assertNotFound();
+        $this->assertDatabaseHas('group_messages', ['id' => $message->getKey()]);
+    }
+
+    public function test_the_fragment_is_capped_like_the_page(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $messages = $this->seedMessages($group, $member, GroupTalkController::CLASSIC_PAGE * 2 + 1);
+        $rows = fn (string $html): int => substr_count($html, 'class="timeline-post"');
+
+        $first = $this->actingAs($member)->get(route('group.talk.rows', $group))->assertOk();
+        $this->assertSame(GroupTalkController::CLASSIC_PAGE, $rows($first->getContent()));
+        $second = $this->actingAs($member)->get(route('group.talk.rows', ['group' => $group, 'before' => (string) GroupTalkCursor::of($messages[GroupTalkController::CLASSIC_PAGE + 1])]))->assertOk();
+        $this->assertSame(GroupTalkController::CLASSIC_PAGE, $rows($second->getContent()));
+        $second->assertHeader('Link', '<'.route('group.talk.rows', ['group' => $group, 'before' => (string) GroupTalkCursor::of($messages[1])]).'>; rel="next"');
+    }
+
+    private function form(string $html, string $action): \DOMElement
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
+        foreach ($dom->getElementsByTagName('form') as $form) {
+            if ($form->getAttribute('action') === $action) {
+                return $form;
+            }
+        }
+        $this->fail("No form posts to {$action}.");
+    }
+
+    /** @return array<string, string> what a browser would post from the form, the file input aside */
+    private function fieldsOf(\DOMElement $form): array
+    {
+        $fields = [];
+        foreach ((new \DOMXPath($form->ownerDocument))->query('.//input[@name]|.//textarea[@name]', $form) as $field) {
+            if ($field->getAttribute('type') !== 'file') {
+                $fields[$field->getAttribute('name')] = $field->tagName === 'textarea' ? $field->textContent : $field->getAttribute('value');
+            }
+        }
+
+        return $fields;
     }
 
     public function test_a_withdrawn_author_keeps_their_row(): void

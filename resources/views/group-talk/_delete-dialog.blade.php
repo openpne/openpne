@@ -10,6 +10,7 @@
             <div class="timeline-post-content">
                 <div class="timeline-member-name"><span class="screen-name">{{ $author?->name ?? __('%Withdrawn_member%') }}</span></div>
                 <div class="timeline-post-body"><x-group-talk-body :message="$message" /></div>
+                @include('group-talk._picture', ['message' => $message])
             </div>
             <div class="timeline-post-delete">
                 <form method="POST" action="{{ route('group.talk.delete', ['group' => $message->group_id, 'message' => $message]) }}" data-timeline-delete data-error-text="{{ __('Failed to delete.') }}">
