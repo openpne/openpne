@@ -8,7 +8,9 @@ answers who may read it.
 
 Modern only — talk has no OpenPNE 3 counterpart, so there is no Classic screen to be compatible
 with. [`GroupTalkController`](../../app/Features/GroupTalk/GroupTalkController.php) renders Inertia
-directly, as `/groups/recent` does.
+directly, as `/groups/recent` does. Under `surface_mode=classic_only` the unit is therefore off
+([feature-toggles.md](feature-toggles.md#dependencies)): the messages the upgrade took in from the
+OpenPNE 3 community timeline are kept but not readable there until talk has a Classic screen.
 
 The room is a chrome registry **conversation** screen
 ([feature-modules.md](feature-modules.md)): below lg it carries no bottom tab bar and its chrome does

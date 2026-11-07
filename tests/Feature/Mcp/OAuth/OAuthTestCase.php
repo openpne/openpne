@@ -18,6 +18,8 @@ abstract class OAuthTestCase extends McpTestCase
 
         // Registration is capped per IP; the flows here register once per test and the cap has a test of its own.
         config(['openpne.throttle.oauth_register_ip' => 0]);
+        // The consent screen follows the viewer's surface; these flows read its Modern props (ClassicConsentTest reads the Classic form).
+        config(['openpne.surface_mode' => 'modern_default']);
     }
 
     /** @return array<string, mixed> the registration response */

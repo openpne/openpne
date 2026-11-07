@@ -73,6 +73,19 @@ class HomeIssueRoutesTest extends TestCase
         ];
     }
 
+    /** classic_only serves no Modern page, and an issue has no Classic twin, so the pages are not there. */
+    public function test_classic_only_answers_not_found_and_keeps_the_classic_home(): void
+    {
+        config(['openpne.surface_mode' => 'classic_only']);
+        $this->publish();
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/home/issues')->assertNotFound();
+        $this->actingAs($member)->get('/home/2026/08')->assertNotFound();
+        $this->actingAs($member)->get('/home/2026/08/27')->assertNotFound();
+        $this->actingAs($member)->get('/')->assertOk()->assertSee('id="page_member_home"', false);
+    }
+
     /** The unified look swaps the page a screen draws, never the route or the payload. */
     public function test_the_unified_look_still_renders_the_issue_page(): void
     {

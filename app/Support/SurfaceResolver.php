@@ -23,8 +23,8 @@ class SurfaceResolver
         }
 
         // The Modern client rejects a Blade response, so an Inertia navigation stays Modern whatever the
-        // viewer resolves to; a handoff to Classic is a full page load (Inertia::location).
-        if ($request->hasHeader('X-Inertia')) {
+        // viewer resolves to; under classic_only ClassicOnlyHandoff reloads a GET into Classic before any controller.
+        if ($request->hasHeader('X-Inertia') && self::modernAvailable()) {
             return self::MODERN;
         }
 
@@ -52,8 +52,8 @@ class SurfaceResolver
         }
 
         $mode = self::surfaceMode();
-        if (! $mode->classicAvailable()) {
-            return self::MODERN;
+        if (! $mode->coexists()) {
+            return $mode->defaultSurface()->value;
         }
 
         return self::preferredOrDefault($request, $mode);
@@ -66,7 +66,7 @@ class SurfaceResolver
     public static function forError(Request $request): string
     {
         // Same reason as resolve(): the Modern client cannot consume Classic Blade.
-        if ($request->hasHeader('X-Inertia')) {
+        if ($request->hasHeader('X-Inertia') && self::modernAvailable()) {
             return self::MODERN;
         }
 
@@ -74,14 +74,14 @@ class SurfaceResolver
     }
 
     /**
-     * The viewer's own surface, with no feature gate: modern_only, else Modern for a phone client,
-     * else the member's durable choice (member_preferences), else the mode's default surface.
+     * The viewer's own surface, with no feature gate: a single-surface mode's one surface, else Modern
+     * for a phone client, else the member's durable choice (member_preferences), else the mode's default.
      */
     private static function viewerSurface(Request $request): string
     {
         $mode = self::surfaceMode();
-        if (! $mode->classicAvailable()) {
-            return self::MODERN;
+        if (! $mode->coexists()) {
+            return $mode->defaultSurface()->value;
         }
 
         if (PhoneClient::matches($request)) {
@@ -105,6 +105,18 @@ class SurfaceResolver
     public static function classicAvailable(): bool
     {
         return self::surfaceMode()->classicAvailable();
+    }
+
+    /** Whether the Modern surface is served on this install (false only under classic_only). */
+    public static function modernAvailable(): bool
+    {
+        return self::surfaceMode()->modernAvailable();
+    }
+
+    /** Whether both surfaces are served, so a member has a surface to choose. */
+    public static function coexists(): bool
+    {
+        return self::surfaceMode()->coexists();
     }
 
     /** The install's surface mode — DB-authoritative (sns_settings), config as the absent-row fallback. */

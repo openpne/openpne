@@ -358,7 +358,8 @@ date, a row per published day.
 `/` is the latest issue under a Modern surface — the front page is the newest one, whatever day it
 covers, and its pager only goes back. `/home/issues` is the month of the latest issue,
 `/home/{y}/{m}` any month's and `/home/{y}/{m}/{d}` one day's, all Modern-only: OpenPNE 3 had no such
-page, so they render Inertia whatever surface the reader is on. The day is validated before it is
+page, so they render Inertia whatever surface the reader is on, and answer 404 under
+`surface_mode=classic_only` ([feature-modules.md](feature-modules.md#classic-only)). The day is validated before it is
 looked for — a route pattern admits `2026/02/30`, and a day that never happened must read as nothing
 rather than as a query.
 

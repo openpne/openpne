@@ -193,6 +193,26 @@ class MemberConfigPreferencesTest extends TestCase
         ]);
     }
 
+    public function test_classic_only_hides_the_general_category_and_rejects_a_posted_choice(): void
+    {
+        config(['openpne.surface_mode' => 'classic_only']);
+        $member = Member::factory()->create();
+
+        // Neither the nav link nor the form at its URL: the category folds into the landing.
+        $this->actingAs($member)->get('/member/config?category=general')
+            ->assertOk()
+            ->assertDontSee('href="'.route('member.config', ['category' => 'general']).'"', false)
+            ->assertDontSee('id="generalForm"', false)
+            ->assertSee('Please select the item');
+
+        $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'modern'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->id, 'key' => 'preferred_surface',
+        ]);
+    }
+
     public function test_saving_the_current_surface_is_a_no_op_so_an_unset_member_stays_unset(): void
     {
         // The default is Modern here, so an unset member saving Modern stays unset and keeps

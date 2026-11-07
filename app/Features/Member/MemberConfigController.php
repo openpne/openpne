@@ -98,6 +98,11 @@ class MemberConfigController extends Controller
                     $category = null;
                 }
 
+                // The general category holds only the surface picker, which a single-surface mode has no use for.
+                if ($category === MemberConfigCategory::General && ! SurfaceResolver::coexists()) {
+                    $category = null;
+                }
+
                 // The category also carries the OAuth connections, which a member may hold with
                 // AI accounts switched off, so it stays reachable while one exists.
                 $connections = Connections::listFor($viewer);
@@ -278,9 +283,9 @@ class MemberConfigController extends Controller
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
     {
-        // Hard gate, not just a hidden picker: a crafted POST under `modern_only` would write a latent
-        // `preferred_surface=classic` that fires if the site later allows Classic.
-        abort_unless(SurfaceResolver::classicAvailable(), 403);
+        // Hard gate, not just a hidden picker: a crafted POST under a single-surface mode would write a
+        // latent preference that fires if the site later serves both surfaces.
+        abort_unless(SurfaceResolver::coexists(), 403);
 
         $chosen = Surface::from($request->validated('preferred_surface'));
         $viewer = $this->viewer();

@@ -100,6 +100,8 @@ return [
     |
     |   modern_only     Modern only; the Classic surface and its admin / member
     |                   settings are hidden.
+    |   classic_only    Classic only, phone clients included; the Modern surface
+    |                   and its admin / member settings are hidden.
     |   classic_default Classic and Modern coexist; an undecided viewer (and the
     |                   root landing) gets Classic — the OpenPNE 3 -> 4 default.
     |   modern_default  Classic and Modern coexist; an undecided viewer gets Modern.
@@ -113,7 +115,7 @@ return [
     |
     */
 
-    'surface_mode' => env('OPENPNE_SURFACE_MODE', 'modern_only'), // modern_only | classic_default | modern_default
+    'surface_mode' => env('OPENPNE_SURFACE_MODE', 'modern_only'), // modern_only | classic_only | classic_default | modern_default
 
     // The diary and timeline web-public switches are admin settings
     // (SnsSettingKey::DiaryAllowWebPublic / TimelineAllowWebPublic), not env flags.

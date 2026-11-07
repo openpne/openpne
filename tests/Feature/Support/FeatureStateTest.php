@@ -40,6 +40,23 @@ class FeatureStateTest extends TestCase
         $this->assertFalse(Feature::GroupTalk->enabled());
     }
 
+    public function test_group_talk_is_off_under_classic_only_whatever_its_row_says(): void
+    {
+        // Explicitly on, so the gate is the surface and not the feature-off default path.
+        $this->setSnsSetting(Feature::GroupTalk->settingKey(), true);
+        config(['openpne.surface_mode' => 'classic_only']);
+
+        $this->assertFalse(Feature::GroupTalk->enabled());
+        foreach (Feature::cases() as $feature) {
+            if ($feature !== Feature::GroupTalk) {
+                $this->assertTrue($feature->enabled(), "{$feature->value} is off under classic_only");
+            }
+        }
+
+        config(['openpne.surface_mode' => 'classic_default']);
+        $this->assertTrue(Feature::GroupTalk->enabled());
+    }
+
     public function test_a_disabled_community_takes_the_board_and_the_calendar_with_it(): void
     {
         $this->setSnsSetting(Feature::Group->settingKey(), false);

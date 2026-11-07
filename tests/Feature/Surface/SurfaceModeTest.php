@@ -22,10 +22,22 @@ class SurfaceModeTest extends TestCase
     public function test_enum_derives_availability_and_default_surface(): void
     {
         $this->assertFalse(SurfaceMode::ModernOnly->classicAvailable());
+        $this->assertTrue(SurfaceMode::ClassicOnly->classicAvailable());
         $this->assertTrue(SurfaceMode::ClassicDefault->classicAvailable());
         $this->assertTrue(SurfaceMode::ModernDefault->classicAvailable());
 
+        $this->assertTrue(SurfaceMode::ModernOnly->modernAvailable());
+        $this->assertFalse(SurfaceMode::ClassicOnly->modernAvailable());
+        $this->assertTrue(SurfaceMode::ClassicDefault->modernAvailable());
+        $this->assertTrue(SurfaceMode::ModernDefault->modernAvailable());
+
+        $this->assertFalse(SurfaceMode::ModernOnly->coexists());
+        $this->assertFalse(SurfaceMode::ClassicOnly->coexists());
+        $this->assertTrue(SurfaceMode::ClassicDefault->coexists());
+        $this->assertTrue(SurfaceMode::ModernDefault->coexists());
+
         $this->assertSame('classic', SurfaceMode::ClassicDefault->defaultSurface()->value);
+        $this->assertSame('classic', SurfaceMode::ClassicOnly->defaultSurface()->value);
         $this->assertSame('modern', SurfaceMode::ModernDefault->defaultSurface()->value);
         $this->assertSame('modern', SurfaceMode::ModernOnly->defaultSurface()->value);
     }
@@ -68,6 +80,15 @@ class SurfaceModeTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'surface_mode', 'value' => 'modern_only']);
         // The stored row is authoritative over the config default (still classic_default here).
         $this->assertFalse(SurfaceResolver::classicAvailable());
+    }
+
+    public function test_command_accepts_classic_only(): void
+    {
+        $this->artisan('openpne:surface-mode', ['mode' => 'classic_only'])->assertSuccessful();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'surface_mode', 'value' => 'classic_only']);
+        $this->assertFalse(SurfaceResolver::modernAvailable());
+        $this->assertTrue(SurfaceResolver::classicAvailable());
     }
 
     public function test_command_rejects_an_invalid_mode_without_writing(): void

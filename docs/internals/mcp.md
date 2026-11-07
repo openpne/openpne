@@ -20,7 +20,8 @@ anything else. A signed-in browser session does not reach it either — `config/
 pins `guard` to an empty list, so a bearer token is the only credential the guard accepts. The
 token endpoint and the client registration under `/oauth` and the `/.well-known` metadata belong to
 this realm too; only the consent screen (`/oauth/authorize`) is a member page, since a person has to
-be signed in to answer it.
+be signed in to answer it. It is a dual-surface page like any other member page
+([`ConsentPage`](../../app/Mcp/OAuth/ConsentPage.php)): the Classic form posts the same fields.
 
 ## Tokens and abilities
 

@@ -13,16 +13,25 @@ use App\Notifications\Push\WebPushConfig;
 use App\Services\TermService;
 use App\Support\Autoplay;
 use App\Support\BrandColor;
+use App\Support\ClassicOnlyHandoff;
 use App\Support\Feature;
 use App\Support\LayoutHooks;
 use App\Support\LookResolver;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        // Not through parent::handle(): its asset-version branch swaps in its own location response, which drops Vary.
+        return ClassicOnlyHandoff::for($request) ?? parent::handle($request, $next);
+    }
 
     /**
      * @return array<string, mixed>

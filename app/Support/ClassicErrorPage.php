@@ -25,6 +25,11 @@ final class ClassicErrorPage
      */
     public static function render(Request $request, HttpExceptionInterface $e): ?Response
     {
+        // A route middleware's abort (the feature gate, a binding) runs before HandleInertiaRequests, so the handoff is repeated here.
+        if (($handoff = ClassicOnlyHandoff::for($request)) !== null) {
+            return $handoff;
+        }
+
         $status = $e->getStatusCode();
 
         // Only routes in the web group get the shell: a system route never ran the session/locale
