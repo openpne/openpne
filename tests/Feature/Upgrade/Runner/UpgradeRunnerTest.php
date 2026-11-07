@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade\Runner;
 
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\RunReport;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\StepRegistry;
@@ -12,8 +13,10 @@ use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\NavigationUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
+use Database\Seeders\NavigationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -227,6 +230,41 @@ class UpgradeRunnerTest extends TestCase
             static fn (object $step): string => class_basename($step),
             StepRegistry::all(),
         ));
+    }
+
+    public function test_a_seeded_target_refuses_a_fresh_run_before_the_source_is_read(): void
+    {
+        $this->seed(NavigationSeeder::class);
+        $runner = new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade, new MemberUpgrade]);
+
+        $lines = [];
+        $report = new RunReport(function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }, dryRun: true);
+        $ok = $runner->run(new RunOptions(dryRun: true), report: $report);
+
+        $this->assertFalse($ok);
+        $this->assertSame(RunReport::OUTCOME_PRECHECK_ERROR, $report->outcome());
+        $this->assertStringContainsString('`navigations` already holds rows', implode("\n", $lines));
+        // The source preflight names a missing source table; it did not get to run.
+        $this->assertStringNotContainsString('source table', implode("\n", $lines));
+    }
+
+    public function test_the_installed_target_check_sees_only_this_runs_targets_and_yields_to_a_restart(): void
+    {
+        $this->seed(NavigationSeeder::class);
+
+        $this->assertSame(['navigations'], (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->installedTargetTables());
+        $this->assertSame([], (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->installedTargetTables());
+
+        // --force-restart empties the targets after the source preflight, so it must not be refused here.
+        $lines = [];
+        $report = new RunReport(function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }, dryRun: true);
+        (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->run(new RunOptions(dryRun: true, forceRestart: true), report: $report);
+
+        $this->assertStringNotContainsString('already holds rows', implode("\n", $lines));
     }
 
     public function test_target_tables_are_distinct_in_reverse_run_order(): void
