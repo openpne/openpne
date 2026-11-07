@@ -50,6 +50,51 @@ class ClassicDesignRenderTest extends TestCase
         $this->assertStringContainsString('<div id="op-bottom"></div>', $html);
     }
 
+    /** @return array<string, string> setting key => the stored fragment, a script and an iframe */
+    private function storeScriptAndIframeInEverySlot(): array
+    {
+        $stored = [];
+        foreach ([
+            'head' => SnsSettingKey::PcHtmlHead, 'top2' => SnsSettingKey::PcHtmlTop2, 'top' => SnsSettingKey::PcHtmlTop,
+            'bottom2' => SnsSettingKey::PcHtmlBottom2, 'bottom' => SnsSettingKey::PcHtmlBottom,
+            'footer_before' => SnsSettingKey::FooterBefore, 'footer_after' => SnsSettingKey::FooterAfter,
+        ] as $slot => $key) {
+            $stored[$slot] = '<script>window.opSlot_'.$slot.' = 1;</script><iframe src="https://example.com/'.$slot.'" title="opSlot_'.$slot.'"></iframe>';
+            $this->setSnsSetting($key, $stored[$slot]);
+        }
+
+        return $stored;
+    }
+
+    public function test_slots_and_footer_pass_script_and_iframe_through_unescaped(): void
+    {
+        $stored = $this->storeScriptAndIframeInEverySlot();
+
+        $guest = $this->get('/login')->assertOk()->getContent();
+        $member = $this->actingAs(Member::factory()->create())->get('/')->assertOk()->getContent();
+
+        foreach ($stored as $slot => $fragment) {
+            if ($slot !== 'footer_after') {
+                $this->assertStringContainsString($fragment, $guest, "{$slot} on a guest page");
+            }
+            if ($slot !== 'footer_before') {
+                $this->assertStringContainsString($fragment, $member, "{$slot} on a member page");
+            }
+        }
+    }
+
+    public function test_modern_pages_emit_none_of_the_classic_slots(): void
+    {
+        $this->storeScriptAndIframeInEverySlot();
+        config()->set('openpne.surface_mode', 'modern_default');
+
+        $guest = $this->get('/login')->assertOk()->getContent();
+        $member = $this->actingAs(Member::factory()->create())->get('/')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('opSlot_', $guest);
+        $this->assertStringNotContainsString('opSlot_', $member);
+    }
+
     public function test_head_slot_is_in_head_and_top_slot_after_body(): void
     {
         $this->setSnsSetting(SnsSettingKey::PcHtmlHead, '<meta name="op-head" content="1">');
