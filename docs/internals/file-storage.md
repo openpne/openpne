@@ -55,3 +55,15 @@ space. A write that spans several files inside a wider transaction needs
 [`PostImages`](../../app/Files/PostImages.php), whose `compensating()` owns that transaction and
 tracks every file it stored, deleting their bytes and purging their cache when it fails
 ([group-talk.md](group-talk.md)).
+
+## Ownerless files
+
+A `files` row with no `related_entity_type` and no `explicit_visibility` is readable by nobody:
+`FilePolicy` fails closed on it. Such rows come from an upgrade (an
+upload-plugin file whose owner the upgrade does not carry, [upgrade.md](upgrade.md#openpne-3-upload-files))
+and from a member's deletion, which leaves their files rather than deleting them. `php artisan
+openpne:prune-ownerless-files` deletes them, bytes and image cache included, through the model so the
+observer runs; `--dry-run` prints the row count and the byte total first. The grace (`--days`, 7 by
+default) is for an upload whose owning record is still being written. An ownerless file marked
+`public` is an operator asset (branding, custom-HTML images) and is never touched. The sweep is not
+scheduled: it is a decision an operator takes, typically once after a cutover.
