@@ -68,3 +68,24 @@ dialog.timeline-lightbox form {
     text-align: center;
     margin-top: 8px;
 }
+
+/* A compose box that is never hidden (talk) shows its controls until classic-timeline-compose.js
+   takes over: the vendored timeline.css keeps the submit area closed and the file input offscreen
+   behind the camera button, which only the script wires. */
+.timeline-nojs #timeline-submit-area {
+    display: inline;
+}
+
+.timeline-nojs #timeline-submit-upload {
+    position: static;
+    display: inline;
+}
+
+.timeline-nojs #timeline-upload-photo-button,
+.timeline-nojs #photo-remove {
+    display: none;
+}
+
+.timeline-post-reply-to {
+    color: #666;
+}

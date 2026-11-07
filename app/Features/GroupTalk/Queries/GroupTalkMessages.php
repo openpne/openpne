@@ -29,14 +29,20 @@ class GroupTalkMessages
 
     public const CONTEXT = 10;
 
-    public function latest(Group $group): GroupTalkPage
+    public function latest(Group $group, int $limit = self::PER_PAGE): GroupTalkPage
     {
-        return $this->backwardsFrom($group, null);
+        return $this->backwardsFrom($group, null, $limit);
     }
 
-    public function before(Group $group, GroupTalkCursor $cursor): GroupTalkPage
+    public function before(Group $group, GroupTalkCursor $cursor, int $limit = self::PER_PAGE): GroupTalkPage
     {
-        return $this->backwardsFrom($group, $cursor);
+        return $this->backwardsFrom($group, $cursor, $limit);
+    }
+
+    /** The page that ends at $cursor, the row at it included: a newest-first screen opens an anchor at its top. */
+    public function upTo(Group $group, GroupTalkCursor $cursor, int $limit = self::PER_PAGE): GroupTalkPage
+    {
+        return $this->backwardsFrom($group, $cursor, $limit, inclusive: true);
     }
 
     public function after(Group $group, GroupTalkCursor $cursor): GroupTalkPage
@@ -97,7 +103,7 @@ class GroupTalkMessages
             ->get();
     }
 
-    private function backwardsFrom(Group $group, ?GroupTalkCursor $cursor): GroupTalkPage
+    private function backwardsFrom(Group $group, ?GroupTalkCursor $cursor, int $limit, bool $inclusive = false): GroupTalkPage
     {
         $query = $this->query($group);
 
@@ -106,18 +112,18 @@ class GroupTalkMessages
                 ->where('created_at', '<', $cursor->at)
                 ->orWhere(fn (Builder $tie) => $tie
                     ->where('created_at', '=', $cursor->at)
-                    ->where('id', '<', $cursor->id)));
+                    ->where('id', $inclusive ? '<=' : '<', $cursor->id)));
         }
 
         $rows = $query
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->limit(self::PER_PAGE + 1)
+            ->limit($limit + 1)
             ->get();
 
-        $hasOlder = $rows->count() > self::PER_PAGE;
+        $hasOlder = $rows->count() > $limit;
 
-        return new GroupTalkPage($rows->take(self::PER_PAGE)->reverse()->values(), $hasOlder);
+        return new GroupTalkPage($rows->take($limit)->reverse()->values(), $hasOlder);
     }
 
     /** @return Builder<GroupMessage> */

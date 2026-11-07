@@ -41,7 +41,7 @@ class ClassicOnlyCoverageTest extends TestCase
         'unread.counts',
         'timeline.mention_candidates',
         'timeline.index.rows', 'timeline.member.rows', 'timeline.tag.rows',
-        'group.talk.mention_candidates',
+        'group.talk.mention_candidates', 'group.talk.rows',
         'message.chat.recipients',
         'message.chat.withdrawn.messages',
         'member.config.passkeys.options',
@@ -189,10 +189,10 @@ class ClassicOnlyCoverageTest extends TestCase
         $this->actingAs($viewer)->get('/home/2026/08')->assertNotFound();
         $this->actingAs($viewer)->get('/home/2026/08/27')->assertNotFound();
         $this->actingAs($viewer)->get("/messages/{$other->getKey()}")->assertNotFound();
-        $this->actingAs($viewer)->get("/groups/{$group->getKey()}/talk")->assertNotFound();
 
         self::assertClassic($this->actingAs($viewer)->get("/member/config/ai/{$aiAccount->getKey()}"));
         self::assertClassic($this->actingAs($viewer)->get("/groups/{$group->getKey()}"));
+        self::assertClassic($this->actingAs($viewer)->get("/groups/{$group->getKey()}/talk"));
     }
 
     public function test_the_render_gate_is_the_bound_inertia_factory(): void
@@ -211,9 +211,10 @@ class ClassicOnlyCoverageTest extends TestCase
             ->assertHeader('Vary', 'X-Inertia');
     }
 
-    /** A route middleware's abort (here the talk unit's gate) never reaches HandleInertiaRequests, so the error renderer hands off too. */
+    /** A route middleware's abort (here the talk unit's gate, the unit switched off) never reaches HandleInertiaRequests, so the error renderer hands off too. */
     public function test_an_inertia_navigation_refused_by_a_route_middleware_is_handed_off_as_well(): void
     {
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);
         $member = Member::factory()->create();
         $group = Group::factory()->create();
 

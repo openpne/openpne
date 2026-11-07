@@ -68,6 +68,7 @@ class ClassicPartsFrameGuardTest extends TestCase
             'group-event/index' => 1,
             'group-event/recent' => 1,
             'group-event/show' => 2,
+            'group-talk/index' => 1,
             'group-topic/index' => 1,
             'group-topic/recent' => 1,
             'group-topic/show' => 2,

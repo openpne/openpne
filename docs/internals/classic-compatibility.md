@@ -225,8 +225,9 @@ is the way back, or the site is `classic_only` and a phone gets the scaled skin 
 its panel answers a decision by replacing the buttons with the outcome rather than OpenPNE 3's
 hardcoded Japanese; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
 no per-entry comment read state); and the group talk that replaced the OpenPNE 3 community timeline
-is Modern-only ([group-talk.md](group-talk.md)) — the Classic group home offers it as a link box,
-and the OpenPNE 3 timeline URLs redirect into the Modern surface even for a Classic viewer.
+is reached from a link box on the Classic group home rather than drawn inline on it — the OpenPNE 3
+timeline URLs land on the talk screen, which draws the timeline box
+([group-talk.md](group-talk.md#the-classic-screen)).
 
 ### Themes
 
@@ -341,9 +342,8 @@ surface and helper copy must not mention surfaces at all (the *Appearance (Class
 the one fixed anchor, since the upgrade guide and the upgrade runner's messages point at it); there
 the other surface's screens are hidden too ([`HiddenWhenModernOnly`](../../app/Filament/Concerns/HiddenWhenModernOnly.php) on the
 Appearance (Classic) screens, [`HiddenWhenClassicOnly`](../../app/Filament/Concerns/HiddenWhenClassicOnly.php)
-on the UI layout, login page and image upload settings), a Modern-only section or switch (the logo,
-the talk settings, the group talk unit) is absent, and its stored value is neither shown nor
-rewritten:
+on the UI layout, login page and image upload settings), a Modern-only section or switch (the logo)
+is absent, and its stored value is neither shown nor rewritten:
 
 ```text
 classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / banners / theme / legacy gadget layout / navigation menu settings / the topic and event comment reply link

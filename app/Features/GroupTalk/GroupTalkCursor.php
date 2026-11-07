@@ -20,9 +20,9 @@ final readonly class GroupTalkCursor
         return new self(CarbonImmutable::instance($message->created_at), $message->getKey());
     }
 
-    public static function tryParse(?string $value): ?self
+    public static function tryParse(mixed $value): ?self
     {
-        if ($value === null || ! str_contains($value, '|')) {
+        if (! is_string($value) || ! str_contains($value, '|')) {
             return null;
         }
 

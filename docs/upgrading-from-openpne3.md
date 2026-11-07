@@ -321,9 +321,9 @@ change from a problem when you go through it.
   two tabs after *Joined* and *All* under the communities entry, as the recent-list gadgets' "More"
   was on the PC layout. If your OpenPNE 3 site had its smartphone layout switched
   off (a free-area script setting `disable_smt`, say) and phones should keep seeing the PC layout,
-  choose `php artisan openpne:surface-mode classic_only` instead: nothing Modern is shown, members
-  cannot switch, and the community timeline posts the upgrade brought over are not readable until a
-  Classic screen for them ships.
+  choose `php artisan openpne:surface-mode classic_only` instead: nothing Modern is shown and members
+  cannot switch; the community timeline posts the upgrade brought over are read and written on the
+  group's talk screen, drawn in the OpenPNE 3 timeline box.
 - **Browser-tab icon** — none, as in OpenPNE 3. This version otherwise shows a generated icon
   (the brand color with the site name's initial); choose it, or upload your own, on the Branding
   page.

@@ -217,8 +217,8 @@ class TalkReactionTest extends TalkReactionTestCase
         $this->react($this->memberOf($group), $group, $message)->assertOk();
 
         $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
-            ->assertNoContent();
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
+            ->assertOk()->assertExactJson(['ok' => true]);
 
         $this->assertDatabaseCount('group_messages', 0);
         $this->assertDatabaseCount('reactions', 0);

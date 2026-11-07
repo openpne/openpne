@@ -800,9 +800,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('topic')->name('group.topics.show.compat');
     });
 
-    // Modern-only, with no OpenPNE 3 equivalent and so no compat block.
+    // The OpenPNE 3 community timeline URLs reach this screen through the compat redirects above.
     Route::middleware(EnsureFeatureEnabled::class.':groupTalk')->controller(GroupTalkController::class)->group(function () {
         Route::get('/groups/{group}/talk', 'show')->whereNumber('group')->name('group.talk.show');
+        // The Classic page's older rows as a fragment (classic-timeline-more.js).
+        Route::get('/groups/{group}/talk/rows', 'rows')->whereNumber('group')->name('group.talk.rows');
         // One page either side of a cursor the client was handed: `after` for the poll, `before`
         // for "load older".
         Route::get('/groups/{group}/talk/messages', 'messages')->whereNumber('group')->name('group.talk.messages');
@@ -815,6 +817,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/groups/{group}/talk/mute', 'mute')->whereNumber('group')->name('group.talk.mute');
         // POST delete on its own URL, as the boards do; the path carries the group as well as the
         // message so the two can be checked against each other.
+        Route::get('/groups/{group}/talk/messages/{message}/delete', 'showDelete')
+            ->whereNumber(['group', 'message'])->name('group.talk.delete.show');
         Route::post('/groups/{group}/talk/messages/{message}/delete', 'delete')
             ->whereNumber(['group', 'message'])->name('group.talk.delete');
     });
