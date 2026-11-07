@@ -60,6 +60,20 @@ class VerifierFileBinTest extends TestCase
         $this->assertStringContainsString('PASS file_bin:byte_size', $out);
         $this->assertStringContainsString('PASS file_bin:orphans', $out);
         $this->assertStringContainsString('PASS file_bin:fk', $out);
+        $this->assertStringContainsString('PASS files:admin_images', $out);
+    }
+
+    public function test_an_admin_image_that_is_not_public_fails(): void
+    {
+        $ids = $this->seedConsistent();
+        DB::table('files')->where('id', $ids[0])->update(['name' => 'admin_logo_1699000000', 'explicit_visibility' => null]);
+        DB::table('files')->where('id', $ids[1])->update(['name' => 'admin_bg_1699000000', 'explicit_visibility' => File::VISIBILITY_PUBLIC]);
+
+        [$report, $out] = $this->verify();
+
+        $this->assertTrue($report->failed());
+        $this->assertStringContainsString('FAIL files:admin_images', $out);
+        $this->assertStringContainsString('1 OpenPNE 3 admin images are not public', $out);
     }
 
     public function test_a_bytes_row_without_a_file_fails_even_when_the_counts_agree(): void

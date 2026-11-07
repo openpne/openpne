@@ -385,7 +385,16 @@ where the download required a login and nothing else: a group-owned file is read
 member (the group arm), and `FilePolicy` opens a member-owned file to a guest only when it is the
 member's avatar, so an upload is readable by any signed-in member the owner does not block; the same
 holds for an OpenPNE 3 `member_image` row that was not the primary, which `MemberImageUpgrade` does not
-carry as an avatar. A member's deletion leaves such files behind with their owner type, not ownerless. The ownerless ones, and the remains of deleted diaries, activities and banners that arrive the same way, are what `openpne:prune-ownerless-files` collects ([file-storage.md](file-storage.md#ownerless-files)).
+carry as an avatar. A member's deletion leaves such files behind with their owner type, not ownerless. The ownerless ones, and the remains of deleted diaries, activities and banners that arrive the same way, are what `openpne:prune-ownerless-files` collects ([file-storage.md](file-storage.md#ownerless-files)), admin images aside.
+
+## OpenPNE 3 admin images
+
+OpenPNE 3's admin image manager stored an upload as `admin_{imageName}_{time}` with no owning row, and
+operators reference it by URL from custom HTML and CSS, which OpenPNE 3 served to guests.
+`FileUpgrade` writes `explicit_visibility = 'public'` on every file whose name starts with `admin_`
+(case-sensitive, as OpenPNE 3 wrote it), whatever owner arm claims it, so the reference keeps
+resolving for guests; verify's
+`files:admin_images` re-checks it.
 
 ## file_bin
 
@@ -445,7 +454,7 @@ reads status, not verify.
   `public/opSkinThemePlugin`; it consults no checkpoint.
 - **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, no `file_bin`
   row is without its `files` row (`file_bin:orphans` — the rewire validates none), and the FK is
-  rewired.
+  rewired; every `admin_*` file is public (`files:admin_images`).
 - **Check C**: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and no unknown
   scheme exists.
 

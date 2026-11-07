@@ -312,6 +312,22 @@ class FileUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseHas('files', ['id' => 50, 'related_entity_type' => 'diary', 'related_entity_id' => 88]);
     }
 
+    public function test_an_admin_image_manager_file_is_public(): void
+    {
+        $this->seedFile(60, ['name' => 'admin_logo_1699000000']);
+        $resembling = ['Admin_logo_1699000001', 'xadmin_logo_1', 'admin-logo_1', 'adminlogo'];
+        foreach ($resembling as $i => $name) {
+            $this->seedFile(61 + $i, ['name' => $name]);
+        }
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 60, 'explicit_visibility' => 'public', 'related_entity_type' => null]);
+        foreach ($resembling as $i => $name) {
+            $this->assertDatabaseHas('files', ['id' => 61 + $i, 'explicit_visibility' => null]);
+        }
+    }
+
     public function test_the_preflight_warns_about_uploads_whose_owner_is_not_carried(): void
     {
         $this->seedSourceMember(5, isActive: 1);
