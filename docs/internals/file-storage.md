@@ -59,11 +59,14 @@ tracks every file it stored, deleting their bytes and purging their cache when i
 ## Ownerless files
 
 A `files` row with no `related_entity_type` and no `explicit_visibility` is readable by nobody:
-`FilePolicy` fails closed on it. Such rows come from an upgrade (an
-upload-plugin file whose owner the upgrade does not carry, [upgrade.md](upgrade.md#openpne-3-upload-files))
-and from a member's deletion, which leaves their files rather than deleting them. `php artisan
-openpne:prune-ownerless-files` deletes them, bytes and image cache included, through the model so the
-observer runs; `--dry-run` prints the row count and the byte total first. The grace (`--days`, 7 by
-default) is for an upload whose owning record is still being written. An ownerless file marked
-`public` is an operator asset (branding, custom-HTML images) and is never touched. The sweep is not
-scheduled: it is a decision an operator takes, typically once after a cutover.
+`FilePolicy` fails closed on it. Such rows come from an upgrade: an upload-plugin file whose owner the
+upgrade does not carry, and the remains of a deleted diary, activity or banner
+([upgrade.md](upgrade.md#openpne-3-upload-files)). Nothing in this version writes one — every upload
+names its owner in the same INSERT, or is marked `public`. `php artisan openpne:prune-ownerless-files`
+deletes them, bytes and image cache included, through the model so the observer runs; `--dry-run`
+prints the row count and the byte total first. Two kinds are never touched: an ownerless file marked
+`public` (an operator asset: branding, custom-HTML images) and a file named `admin_*`, which the
+OpenPNE 3 admin image manager wrote for custom HTML and CSS to reference by URL. A file whose owner
+row is gone (a withdrawn member's upload, say) keeps its owner type and is not an ownerless file;
+the sweep leaves it. The sweep is not scheduled: it is a decision an operator takes, typically once
+after a cutover.
