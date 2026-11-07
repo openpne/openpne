@@ -122,7 +122,6 @@ class GroupController extends Controller
                     'canPostTopic' => $canPostTopic,
                     'recentEvents' => $events,
                     'canPostEvent' => $canPostEvent,
-                    // The talk screen is Modern for every member, so Classic gets a link box.
                     'canViewTalk' => $canViewTalk,
                 ]);
             },

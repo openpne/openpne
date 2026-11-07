@@ -6,11 +6,36 @@ timeline, and the structural difference from it is that a message carries **no a
 A timeline post holds a `visibility`; a talk message holds nothing, because the group already
 answers who may read it.
 
-Modern only — talk has no OpenPNE 3 counterpart, so there is no Classic screen to be compatible
-with. [`GroupTalkController`](../../app/Features/GroupTalk/GroupTalkController.php) renders Inertia
-directly, as `/groups/recent` does. Under `surface_mode=classic_only` the unit is therefore off
-([feature-toggles.md](feature-toggles.md#dependencies)): the messages the upgrade took in from the
-OpenPNE 3 community timeline are kept but not readable there until talk has a Classic screen.
+Talk is a dual-surface screen: [`GroupTalkController::show`](../../app/Features/GroupTalk/GroupTalkController.php)
+resolves the viewer's surface like every other member page, so a Classic viewer — and every viewer
+under `surface_mode=classic_only` — gets the screen described under "The Classic screen" below, at
+the same URL and through the same endpoints.
+
+## The Classic screen
+
+Classic draws the OpenPNE 3 community timeline box (`_timelineCommunity.php`, which OpenPNE 3 filled
+client-side from its API) server-side, in the shape the Classic timeline screens already use
+([timeline.md](timeline.md#classic-inline-replies)): `#communityTimeline` with the compose box, then
+`#timeline-list`, **newest first**, 20 rows a page, keyset on `(created_at, id)` with the stream pager
+beside the list and `classic-timeline-more.js` appending the next page from `group.talk.rows`. A
+`?m=` anchor opens with that message at the **top** of its page (the rows up to and including it),
+since a newest-first page has nowhere else to put it that a reader would see without scrolling; an
+anchor or cursor that does not resolve is the head page, and so is an anchor with nothing newer than it
+(a mention notification links to its message, which is usually the newest). The head page, and only the head page, marks
+the room read as far as it rendered: the newest row's id goes to `MarkTalkRead`, which is the
+"last message actually displayed" the Modern client sends, resolved server-side because Classic has
+no scroll signal.
+
+The compose box is the single `image` wire (one picture, as OpenPNE 3 took) and the mention picker;
+it is never hidden, because talk has no standalone compose page to fall back to, and a picture may
+go alone, as on the Modern composer. コメントする on a row opens the box in reply to it (`?reply=`,
+resolved only against this group's live messages — a foreign or deleted id offers no reply and names
+no author), and a message answering another carries a one-line reference to it. Delete is the
+`<dialog>` the Classic timeline uses, answered with `{ok: true}` JSON, and the confirm page without
+the script; a Classic POST to store, delete or mute returns to the conversation with a flash where
+the Modern client gets JSON. The screen draws no reactions, no unread divider or digest, and does
+not poll; the route inventory records each
+([`TimelineRouteParity`](../../app/Compat/Parities/TimelineRouteParity.php), `community`).
 
 The room is a chrome registry **conversation** screen
 ([feature-modules.md](feature-modules.md)): below lg it carries no bottom tab bar and its chrome does
@@ -806,7 +831,8 @@ role once per request and the serializer asks it per row.
     then asks for the newest messages has ordered the page, not the membership.
 13. A link may name a message (`?m=`), and naming one is neither a permission nor a reading: the
     group's gate still answers first, an unusable id falls back to the newest page, and the cursor
-    only moves from the foot of the live window.
+    only moves from the foot of the live window (which the Classic head page is, including an
+    anchor with nothing newer).
 14. A reaction is not a message. It writes no `group_messages` row and no unread read looks at a
     version, so cursors, badges and the room list's order cannot move because of one — and nothing
     notifies, since the room's badge is what says something happened here.

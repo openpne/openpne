@@ -136,7 +136,7 @@ class GroupSettings extends Page
     private function keys(): array
     {
         return [
-            ...(SurfaceResolver::modernAvailable() ? SnsSettingKey::inGroup(SettingGroup::GroupTalk) : []),
+            ...SnsSettingKey::inGroup(SettingGroup::GroupTalk),
             ...(SurfaceResolver::classicAvailable() ? SnsSettingKey::inGroup(SettingGroup::GroupBoard) : []),
         ];
     }
@@ -160,7 +160,6 @@ class GroupSettings extends Page
         $modes = GroupTalkNotifyMode::cases();
 
         return Section::make(__('Talk'))
-            ->hidden(static fn (): bool => ! SurfaceResolver::modernAvailable())
             ->schema([
                 Radio::make(SnsSettingKey::GroupTalkNotifyDefault->value)
                     ->label(SnsSettingKey::GroupTalkNotifyDefault->label())

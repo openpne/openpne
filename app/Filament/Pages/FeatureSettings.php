@@ -7,7 +7,6 @@ namespace App\Filament\Pages;
 use App\Services\SnsSettingService;
 use App\Support\Feature;
 use App\Support\SnsSettingKey;
-use App\Support\SurfaceResolver;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Toggle;
@@ -129,22 +128,10 @@ class FeatureSettings extends Page
         return $values;
     }
 
-    /**
-     * The keys this page edits: a unit that needs Modern is neither shown nor rewritten where Modern
-     * is not served (a stored value survives a later surface change).
-     *
-     * @return list<SnsSettingKey>
-     */
+    /** @return list<SnsSettingKey> */
     private function keys(): array
     {
-        $keys = [];
-        foreach (Feature::cases() as $feature) {
-            if (SurfaceResolver::modernAvailable() || ! $feature->requiresModern()) {
-                $keys[] = $feature->settingKey();
-            }
-        }
-
-        return $keys;
+        return array_map(static fn (Feature $feature): SnsSettingKey => $feature->settingKey(), Feature::cases());
     }
 
     private function buildSection(): Section
@@ -158,10 +145,6 @@ class FeatureSettings extends Page
 
         $fields = [];
         foreach (Feature::cases() as $feature) {
-            if ($feature->requiresModern() && ! SurfaceResolver::modernAvailable()) {
-                continue;
-            }
-
             $toggle = Toggle::make($feature->settingKey()->value)
                 ->label($feature->label());
 

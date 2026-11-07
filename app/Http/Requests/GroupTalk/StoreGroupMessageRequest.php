@@ -46,6 +46,12 @@ class StoreGroupMessageRequest extends FormRequest
         ];
     }
 
+    /** The Classic form lands back on its conversation rather than wherever the Referer points. */
+    protected function getRedirectUrl(): string
+    {
+        return route('group.talk.show', ['group' => $this->route('group')]);
+    }
+
     /** @return array<string, string> */
     public function attributes(): array
     {

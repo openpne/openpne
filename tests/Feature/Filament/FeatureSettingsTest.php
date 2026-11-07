@@ -58,20 +58,19 @@ class FeatureSettingsTest extends TestCase
         $this->assertTrue(Feature::GroupTalk->enabled());
     }
 
-    public function test_under_classic_only_the_talk_toggle_is_absent_and_its_stored_value_survives_a_save(): void
+    public function test_under_classic_only_the_talk_toggle_is_offered_like_every_other_unit(): void
     {
         config(['openpne.surface_mode' => 'classic_only']);
         $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);
 
         Livewire::test(FeatureSettings::class)
             ->assertOk()
-            ->assertFormFieldDoesNotExist('feature_group_talk_enabled')
-            ->fillForm(['feature_diary_enabled' => false])
+            ->assertSet('data.feature_group_talk_enabled', false)
+            ->fillForm(['feature_group_talk_enabled' => true])
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_talk_enabled', 'value' => '0']);
-        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_diary_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_talk_enabled', 'value' => '1']);
     }
 
     public function test_a_stored_value_round_trips_into_the_form(): void

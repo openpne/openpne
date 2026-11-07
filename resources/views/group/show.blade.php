@@ -57,9 +57,8 @@
 
 @section('content')
     {{-- The slot the community timeline's box used to fill (OpenPNE 3's plugin view customize
-         injected it before the communityHome part). Talk inherits it as a plain link box: the talk
-         screen renders Modern for every member, so the link is Classic's whole surface. Gated on
-         the same read answer the Modern card uses. --}}
+         injected it before the communityHome part): a link box into the talk screen, which draws the
+         box itself. Gated on the same read answer the Modern card uses. --}}
     @if ($canViewTalk)
         <x-classic.parts id="groupTalk" name="groupTalk" :hand-written="true" :title="__('Talk')">
             <p><a href="{{ route('group.talk.show', ['group' => $group]) }}">{{ __('Go to talk') }}</a></p>

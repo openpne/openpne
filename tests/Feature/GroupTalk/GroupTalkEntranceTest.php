@@ -108,7 +108,7 @@ class GroupTalkEntranceTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->image('shot.png', 40, 40)]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->image('shot.png', 40, 40)]])
             ->assertCreated();
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}")

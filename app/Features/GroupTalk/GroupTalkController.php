@@ -18,30 +18,93 @@ use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Reactions\Queries\ReactionAggregates;
 use App\Features\Reactions\ReactionVocabulary;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GroupTalk\MarkTalkReadRequest;
 use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
 use App\LinkCard\LinkCardSync;
 use App\Models\Group;
 use App\Models\GroupMessage;
+use App\Models\Member;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 class GroupTalkController extends Controller
 {
-    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, ReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies, LinkCardSync $linkCards): InertiaResponse
+    use RespondsWithSurface;
+
+    /** The Classic page, OpenPNE 3's community timeline count; Modern keeps GroupTalkMessages::PER_PAGE. */
+    public const CLASSIC_PAGE = 20;
+
+    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread, ReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies, LinkCardSync $linkCards, MarkTalkRead $markRead): View|InertiaResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
         $permissions = GroupTalkPermissions::for($group, $viewer);
         // Resolved after the gate, so a link into a conversation the viewer may not read changes
         // nothing about the refusal.
-        $anchor = $this->anchor($group, $request->query('m'));
+        $anchor = $this->liveMessage($group, $request->query('m'));
+
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => fn (): View => $this->classicScreen($request, $group, $viewer, $permissions, $anchor, $query, $replies, $linkCards, $markRead),
+            SurfaceResolver::MODERN => fn (): InertiaResponse => $this->modernScreen($group, $viewer, $permissions, $anchor, $query, $unread, $reactions, $digest, $replies, $linkCards),
+        ]);
+    }
+
+    /**
+     * OpenPNE 3's community timeline, newest first: an anchor opens at the top of its page, and the
+     * head page is what the member has now seen, so it is marked read as far as it rendered
+     * (docs/internals/group-talk.md, "The Classic screen").
+     */
+    private function classicScreen(Request $request, Group $group, Member $viewer, GroupTalkPermissions $permissions, ?GroupMessage $anchor, GroupTalkMessages $query, ReplyReferences $replies, LinkCardSync $linkCards, MarkTalkRead $markRead): View
+    {
+        $this->markLocalNavGroup($group);
+
+        $before = GroupTalkCursor::tryParse($request->query('before'));
+        $page = match (true) {
+            $anchor !== null => $query->upTo($group, GroupTalkCursor::of($anchor), self::CLASSIC_PAGE),
+            $before !== null => $query->before($group, $before, self::CLASSIC_PAGE),
+            default => $query->latest($group, self::CLASSIC_PAGE),
+        };
+        $linkCards->ensureAll($page->messages);
+        $messages = $page->messages->reverse()->values();
+
+        $isHead = $before === null && ! $page->hasNewer;
+        if ($isHead && $permissions->canPost && $messages->isNotEmpty()) {
+            try {
+                $markRead($viewer, $group, (int) $messages->first()->getKey());
+            } catch (GroupTalkActionException) {
+                // A membership that ended between the gate and here: nothing to mark.
+            }
+        }
+
+        $oldest = $page->hasOlder ? $page->messages->first() : null;
+        $olderCursor = $oldest === null ? null : (string) GroupTalkCursor::of($oldest);
+
+        return view('group-talk.index', [
+            'group' => $group,
+            'messages' => $messages,
+            'parents' => $replies($group, $page->messages),
+            'permissions' => $permissions,
+            'canPost' => $permissions->canPost,
+            'isMuted' => $permissions->canPost && GroupTalkPermissions::isMuted($group, $viewer),
+            'replyTo' => $permissions->canPost ? $this->liveMessage($group, $request->query('reply') ?? old('reply_to_message_id')) : null,
+            'olderUrl' => $olderCursor === null ? null : route('group.talk.show', ['group' => $group, 'before' => $olderCursor]),
+            'newerUrl' => $isHead ? null : route('group.talk.show', $group),
+            'loadMoreUrl' => $olderCursor === null ? null : route('group.talk.rows', ['group' => $group, 'before' => $olderCursor]),
+        ]);
+    }
+
+    private function modernScreen(Group $group, Member $viewer, GroupTalkPermissions $permissions, ?GroupMessage $anchor, GroupTalkMessages $query, TalkUnreadSnapshot $unread, ReactionAggregates $reactions, TalkAbsenceDigest $digest, ReplyReferences $replies, LinkCardSync $linkCards): InertiaResponse
+    {
         $reactionsVersion = TalkReactionVersion::of($group);
         $page = $anchor === null ? $query->latest($group) : $query->around($group, GroupTalkCursor::of($anchor));
         // Talk has no detail page, so its reads are where a card is asked for, and only for the rows
@@ -76,15 +139,44 @@ class GroupTalkController extends Controller
 
     /**
      * Best-effort by contract: a deleted message, another group's id, or anything that does not parse
-     * opens the newest page rather than refusing the conversation.
+     * is simply no message — the newest page opens, and no reply is offered — rather than a refusal.
      */
-    private function anchor(Group $group, mixed $id): ?GroupMessage
+    private function liveMessage(Group $group, mixed $id): ?GroupMessage
     {
+        if (is_int($id)) {
+            $id = (string) $id;
+        }
         if (! is_string($id) || ! ctype_digit($id)) {
             return null;
         }
 
-        return GroupMessage::query()->where('group_id', $group->getKey())->find((int) $id);
+        return GroupMessage::query()->where('group_id', $group->getKey())->with('author')->find((int) $id);
+    }
+
+    /** A page of Classic rows, the next page named in a Link header. */
+    public function rows(Request $request, Group $group, GroupTalkMessages $query, ReplyReferences $replies, LinkCardSync $linkCards): Response
+    {
+        $viewer = $this->viewer();
+        abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
+
+        $before = GroupTalkCursor::tryParse($request->query('before'));
+        $page = $before === null ? $query->latest($group, self::CLASSIC_PAGE) : $query->before($group, $before, self::CLASSIC_PAGE);
+        $linkCards->ensureAll($page->messages);
+
+        $response = response()
+            ->view('group-talk._rows', [
+                'messages' => $page->messages->reverse()->values(),
+                'parents' => $replies($group, $page->messages),
+                'permissions' => GroupTalkPermissions::for($group, $viewer),
+            ])
+            ->header('Cache-Control', 'private, no-store');
+
+        if ($page->hasOlder && ($oldest = $page->messages->first()) !== null) {
+            $next = route('group.talk.rows', ['group' => $group, 'before' => (string) GroupTalkCursor::of($oldest)]);
+            $response->header('Link', "<{$next}>; rel=\"next\"");
+        }
+
+        return $response;
     }
 
     /**
@@ -167,7 +259,7 @@ class GroupTalkController extends Controller
         ]);
     }
 
-    public function store(StoreGroupMessageRequest $request, Group $group, CreateGroupMessage $action, ReplyReferences $replies): JsonResponse
+    public function store(StoreGroupMessageRequest $request, Group $group, CreateGroupMessage $action, ReplyReferences $replies): JsonResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         // Gated before the reply id is resolved: the resolve's 422 would otherwise be an existence
@@ -179,6 +271,11 @@ class GroupTalkController extends Controller
             $message = $action($viewer, $group, $request->validated('body'), $request->mentions(), $request->pickedImages(), inReplyTo: $inReplyTo);
         } catch (GroupTalkActionException) {
             abort(404);
+        }
+
+        // The Classic form: back to the head of the conversation, where the message now leads.
+        if (! $request->wantsJson()) {
+            return redirect()->route('group.talk.show', $group)->with('status', __('Posted.'));
         }
 
         $message->setRelation('author', $viewer->loadMissing('avatar.file'));
@@ -209,7 +306,7 @@ class GroupTalkController extends Controller
         if ($message === null) {
             throw ValidationException::withMessages([
                 'reply_to_message_id' => __('The message you are replying to has been deleted.'),
-            ]);
+            ])->redirectTo(route('group.talk.show', $group));
         }
 
         return $message;
@@ -228,7 +325,7 @@ class GroupTalkController extends Controller
         return response()->noContent();
     }
 
-    public function mute(Request $request, Group $group, SetTalkMute $action): Response
+    public function mute(Request $request, Group $group, SetTalkMute $action): Response|RedirectResponse
     {
         abort_unless(GroupTalkAccess::canView($group, $this->viewer()), 404);
         $muted = (bool) $request->validate(['muted' => ['required', 'boolean']])['muted'];
@@ -239,10 +336,29 @@ class GroupTalkController extends Controller
             abort(404);
         }
 
+        if (! $request->wantsJson()) {
+            return redirect()->route('group.talk.show', $group)->with('status', $muted ? __('Muted.') : __('Unmuted.'));
+        }
+
         return response()->noContent();
     }
 
-    public function delete(Group $group, GroupMessage $message, DeleteGroupMessage $action): Response
+    public function showDelete(Request $request, Group $group, GroupMessage $message): View|RedirectResponse
+    {
+        abort_unless($message->group_id === $group->getKey(), 404);
+        abort_unless(GroupTalkPermissions::for($group, $this->viewer())->canDelete($message), 404);
+
+        // Modern confirms in its own action bar; the Classic viewer without the dialog script lands here.
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
+            return redirect()->route('group.talk.show', ['group' => $group, 'm' => $message->getKey()]);
+        }
+
+        $this->markLocalNavGroup($group);
+
+        return view('group-talk.delete', ['group' => $group, 'message' => $message->load('author.avatar.file', 'mentions', 'images.file')]);
+    }
+
+    public function delete(Request $request, Group $group, GroupMessage $message, DeleteGroupMessage $action): JsonResponse|RedirectResponse
     {
         abort_unless($message->group_id === $group->getKey(), 404);
 
@@ -252,6 +368,11 @@ class GroupTalkController extends Controller
             abort(404);
         }
 
-        return response()->noContent();
+        // The Classic dialog takes the row off the page itself; it has nowhere to be sent.
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true])->header('Cache-Control', 'private, no-store');
+        }
+
+        return redirect()->route('group.talk.show', $group)->with('status', __('Message deleted.'));
     }
 }

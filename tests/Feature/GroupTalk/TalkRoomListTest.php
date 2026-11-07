@@ -63,7 +63,7 @@ class TalkRoomListTest extends TalkTestCase
         $group = $this->joined($viewer);
 
         $this->actingAs($viewer)
-            ->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->image('shot.png', 40, 40)]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->image('shot.png', 40, 40)]])
             ->assertCreated();
 
         $this->actingAs($viewer)->get('/groups/mine')
@@ -76,7 +76,7 @@ class TalkRoomListTest extends TalkTestCase
         $group = $this->joined($viewer);
 
         $this->actingAs($viewer)
-            ->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->create('minutes.pdf', 12, 'application/pdf')]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['images' => [UploadedFile::fake()->create('minutes.pdf', 12, 'application/pdf')]])
             ->assertCreated();
 
         $this->actingAs($viewer)->get('/groups/mine')

@@ -105,8 +105,8 @@ class GroupTalkWriteTest extends TalkTestCase
         $message = GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
-            ->assertNoContent();
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
+            ->assertOk()->assertExactJson(['ok' => true]);
 
         $this->assertDatabaseMissing('group_messages', ['id' => $message->getKey()]);
     }
@@ -127,8 +127,8 @@ class GroupTalkWriteTest extends TalkTestCase
         ]);
 
         $this->actingAs($this->{$role}($group))
-            ->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
-            ->assertNoContent();
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
+            ->assertOk()->assertExactJson(['ok' => true]);
 
         $this->assertDatabaseMissing('group_messages', ['id' => $message->getKey()]);
     }
@@ -142,7 +142,7 @@ class GroupTalkWriteTest extends TalkTestCase
         ]);
 
         $this->actingAs($this->memberOf($group))
-            ->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
             ->assertNotFound();
 
         $this->assertDatabaseHas('group_messages', ['id' => $message->getKey()]);
@@ -157,7 +157,7 @@ class GroupTalkWriteTest extends TalkTestCase
         ]);
 
         $this->actingAs(Member::factory()->create())
-            ->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk/messages/{$message->getKey()}/delete")
             ->assertNotFound();
 
         $this->assertDatabaseHas('group_messages', ['id' => $message->getKey()]);
@@ -173,7 +173,7 @@ class GroupTalkWriteTest extends TalkTestCase
         $message = GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($intruder)
-            ->post("/groups/{$elsewhere->getKey()}/talk/messages/{$message->getKey()}/delete")
+            ->withHeader('Accept', 'application/json')->post("/groups/{$elsewhere->getKey()}/talk/messages/{$message->getKey()}/delete")
             ->assertNotFound();
 
         $this->assertDatabaseHas('group_messages', ['id' => $message->getKey()]);

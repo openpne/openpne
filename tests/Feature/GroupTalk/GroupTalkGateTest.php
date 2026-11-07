@@ -51,7 +51,7 @@ class GroupTalkGateTest extends TestCase
         $this->actingAs($member)->get("/groups/{$id}/talk")->assertNotFound();
         $this->actingAs($member)->getJson("/groups/{$id}/talk/messages")->assertNotFound();
         $this->actingAs($member)->postJson("/groups/{$id}/talk", ['body' => 'hello'])->assertNotFound();
-        $this->actingAs($member)->post("/groups/{$id}/talk/messages/1/delete")->assertNotFound();
+        $this->actingAs($member)->withHeader('Accept', 'application/json')->post("/groups/{$id}/talk/messages/1/delete")->assertNotFound();
         // And the legacy community-timeline URLs go with it: they redirect into talk, so the unit
         // that owns the destination is the one that answers for them.
         $this->actingAs($member)->get("/community/{$id}/timeline")->assertNotFound();

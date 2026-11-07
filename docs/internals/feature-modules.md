@@ -155,9 +155,8 @@ twin: the dashboard, the home issues and their month and day pages, `/groups/rec
 conversations, the Modern-only member config detail pages, the look picker) is not there, and a new
 one is covered without naming the gate. Classic is the OpenPNE 3 surface, and a feature OpenPNE 3
 never had needs no Classic screen while Classic's own pages cover the ground; a feature OpenPNE 3
-*did* have gets a Classic screen even where OpenPNE 3 had no such page. Group talk, which took in the
-OpenPNE 3 community timeline, is the one still waiting for its Classic screen, so until then it is a
-switched-off unit under `classic_only` ([feature-toggles.md](feature-toggles.md#dependencies)).
+*did* have gets a Classic screen even where OpenPNE 3 had no such page — group talk, which took in
+the OpenPNE 3 community timeline, draws that timeline's box ([group-talk.md](group-talk.md#the-classic-screen)).
 The JSON endpoints a Modern page fetches (reactions, unread counts, the compose preview, the
 Modern-only preference POSTs) are not gated: nothing Classic calls them, and they render no surface.
 The push subscribe UI is Modern-only, so no one subscribes under `classic_only` (the Classic header

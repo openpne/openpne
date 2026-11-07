@@ -46,7 +46,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look at this', 'images' => [$this->upload()]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['body' => 'look at this', 'images' => [$this->upload()]])
             ->assertCreated()
             ->json('id');
 
@@ -66,7 +66,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'from the old tab', 'image' => $this->upload()])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['body' => 'from the old tab', 'image' => $this->upload()])
             ->assertCreated()
             ->json('id');
 
@@ -81,12 +81,12 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", [
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", [
                 'body' => 'both at once',
                 'image' => $this->upload(),
                 'images' => [$this->upload('other.png')],
             ])
-            ->assertSessionHasErrors('image');
+            ->assertStatus(422)->assertJsonValidationErrors('image');
 
         $this->assertDatabaseCount('group_messages', 0);
         $this->assertDatabaseCount('files', 0);
@@ -99,7 +99,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", [
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", [
                 'body' => 'look at these',
                 'images' => [$this->upload('first.png'), $this->upload('second.png'), $this->upload('third.png')],
             ])
@@ -137,7 +137,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
             ->assertCreated()
             ->json('id');
 
@@ -152,7 +152,7 @@ class TalkImageTest extends TalkTestCase
     {
         $group = $this->group();
         $author = $this->memberOf($group);
-        $this->actingAs($author)->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]]);
+        $this->actingAs($author)->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]]);
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
             ->assertInertia(fn ($page) => $page
@@ -165,7 +165,7 @@ class TalkImageTest extends TalkTestCase
     {
         $group = $this->group();
         $author = $this->memberOf($group);
-        $this->actingAs($author)->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]]);
+        $this->actingAs($author)->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]]);
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
             ->assertInertia(fn ($page) => $page
@@ -258,7 +258,7 @@ class TalkImageTest extends TalkTestCase
         $group = $this->group();
         $author = $this->memberOf($group);
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", [
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", [
                 'body' => 'look',
                 'images' => [$this->upload('a.png'), $this->upload('b.png'), $this->upload('c.png')],
             ])
@@ -267,8 +267,8 @@ class TalkImageTest extends TalkTestCase
         $this->assertCount(3, $files);
 
         $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk/messages/{$id}/delete")
-            ->assertNoContent();
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk/messages/{$id}/delete")
+            ->assertOk()->assertExactJson(['ok' => true]);
 
         foreach ($files as $file) {
             $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
@@ -281,7 +281,7 @@ class TalkImageTest extends TalkTestCase
         $group = $this->group();
         $author = $this->adminOf($group);
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", [
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", [
                 'body' => 'look',
                 'images' => [$this->upload('a.png'), $this->upload('b.png'), $this->upload('c.png')],
             ])
@@ -352,7 +352,7 @@ class TalkImageTest extends TalkTestCase
     private function postThreeImages(Group $group, Member $author): int
     {
         return $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", [
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", [
                 'body' => 'look',
                 'images' => [$this->upload('a.png'), $this->upload('b.png'), $this->upload('c.png')],
             ])
@@ -448,7 +448,7 @@ class TalkImageTest extends TalkTestCase
         $group = $this->group(TopicReadAccess::MembersOnly);
         $author = $this->memberOf($group);
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
             ->json('id');
         $url = $this->attachedFile(GroupMessage::findOrFail($id))->url();
 
@@ -465,7 +465,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['images' => [$this->upload()]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['images' => [$this->upload()]])
             ->assertCreated()
             ->json('id');
 
@@ -480,7 +480,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => "   \n  ", 'images' => [$this->upload()]])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['body' => "   \n  ", 'images' => [$this->upload()]])
             ->assertCreated()
             ->json('id');
 
@@ -494,7 +494,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['image' => $this->upload()])
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", ['image' => $this->upload()])
             ->assertCreated()
             ->json('id');
 
@@ -550,7 +550,7 @@ class TalkImageTest extends TalkTestCase
         $target = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", [
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", [
                 'mentions' => [['member_id' => $target->getKey(), 'offset' => 0, 'length' => 4]],
                 'images' => [$this->upload()],
             ])
@@ -601,7 +601,7 @@ class TalkImageTest extends TalkTestCase
         $offset = mb_strpos($lfBody, '@Bob');
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", [
+            ->withHeader('Accept', 'application/json')->post("/groups/{$group->getKey()}/talk", [
                 // What the wire actually carries.
                 'body' => str_replace("\n", "\r\n", $lfBody),
                 'mentions' => [['member_id' => $target->getKey(), 'offset' => $offset, 'length' => 4]],

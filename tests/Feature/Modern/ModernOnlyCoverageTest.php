@@ -11,11 +11,13 @@ use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
 use App\Models\GroupMember;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Models\MfaResetRequest;
 use App\Models\TimelinePost;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +49,7 @@ class ModernOnlyCoverageTest extends TestCase
         'unread.counts',
         'timeline.mention_candidates',
         'timeline.index.rows', 'timeline.member.rows', 'timeline.tag.rows',
-        'group.talk.mention_candidates',
+        'group.talk.mention_candidates', 'group.talk.rows',
         'message.chat.recipients',
         'message.chat.withdrawn.messages',
         'member.config.passkeys.options',
@@ -390,6 +392,11 @@ class ModernOnlyCoverageTest extends TestCase
         $topicComment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'member_id' => $viewer->getKey()]);
         $this->actingAs($viewer)->get(route('group.topics.comment.delete.show', ['comment' => $topicComment->getKey()]))
             ->assertRedirect(route('group.topics.show', $topic));
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, true);
+        $message = GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('group.talk.delete.show', ['group' => $group, 'message' => $message]))
+            ->assertRedirect(route('group.talk.show', ['group' => $group, 'm' => $message->getKey()]));
 
         $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
         $this->actingAs($viewer)->get(route('group.events.delete.show', $event))
