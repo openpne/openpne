@@ -11,7 +11,7 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 `file` → OpenPNE 4 `files`, id and `name` (the storage/URL token) verbatim so file_bin
  * and every owning row resolve by id. OpenPNE 3 has no owner column, so the owner is resolved by
  * correlated subquery over ownedFileReferences(), then from the name for namePrefixOwners(); a file
- * no owner claims stays ownerless, private unless adminImage().
+ * no owner claims stays ownerless and private; an adminImage() is public regardless.
  */
 class FileUpgrade extends UpgradeStep
 {

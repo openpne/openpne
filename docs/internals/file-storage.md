@@ -65,8 +65,9 @@ upgrade does not carry, and the remains of a deleted diary, activity or banner
 names its owner in the same INSERT, or is marked `public`. `php artisan openpne:prune-ownerless-files`
 deletes them, bytes and image cache included, through the model so the observer runs; `--dry-run`
 prints the row count and the byte total first. Two kinds are never touched: an ownerless file marked
-`public` (an operator asset: branding, custom-HTML images) and a file named `admin_*`, which the
-OpenPNE 3 admin image manager wrote for custom HTML and CSS to reference by URL. A file whose owner
+`public` (an operator asset: branding, custom-HTML images) and a file named `admin_*` in any letter
+case, which the OpenPNE 3 admin image manager wrote for custom HTML and CSS to reference by URL and
+the upgrade marks public ([upgrade.md](upgrade.md#openpne-3-admin-images)). A file whose owner
 row is gone (a withdrawn member's upload, say) keeps its owner type and is not an ownerless file;
 the sweep leaves it. The sweep is not scheduled: it is a decision an operator takes, typically once
 after a cutover.
