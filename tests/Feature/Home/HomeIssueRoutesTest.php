@@ -11,6 +11,7 @@ use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
 use App\Models\Member;
 use App\Support\Look;
+use App\Support\ModernHome;
 use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,6 +82,7 @@ class HomeIssueRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/home/issues')->assertNotFound();
+        $this->actingAs($member)->get('/home/latest')->assertNotFound();
         $this->actingAs($member)->get('/home/2026/08')->assertNotFound();
         $this->actingAs($member)->get('/home/2026/08/27')->assertNotFound();
         $this->actingAs($member)->get('/')->assertOk()->assertSee('id="page_member_home"', false);
@@ -308,6 +310,57 @@ class HomeIssueRoutesTest extends TestCase
                 ->component('home/issue')
                 ->where('issue.number', (int) $issue->number)
                 ->where('issue.isCurrent', true));
+    }
+
+    #[DataProvider('modernSurfaceModes')]
+    public function test_a_site_whose_home_is_the_digest_serves_it_at_the_root_and_the_issue_beside_it(string $mode): void
+    {
+        config(['openpne.surface_mode' => $mode]);
+        $issue = $this->publish();
+        $this->setSnsSetting(SnsSettingKey::ModernHome, ModernHome::WhatsNew);
+        $this->freshRequestState();
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('dashboard')
+                ->where('modernHome', 'whats_new')
+                ->has('newcomer'));
+
+        $this->actingAs($member)->get('/home/latest')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('home/issue')
+                ->where('issue.number', (int) $issue->number)
+                ->where('issue.isCurrent', true)
+                ->where('next', null));
+
+        $this->actingAs($member)->get('/dashboard')
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('dashboard'));
+    }
+
+    public function test_the_latest_issue_has_its_own_address_where_the_root_serves_it_too(): void
+    {
+        $issue = $this->publish();
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/home/latest')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('home/issue')
+                ->where('modernHome', 'issue')
+                ->where('issue.number', (int) $issue->number));
+    }
+
+    public function test_the_classic_root_ignores_the_modern_home_setting(): void
+    {
+        config(['openpne.surface_mode' => 'classic_default']);
+        $this->setSnsSetting(SnsSettingKey::ModernHome, ModernHome::WhatsNew);
+        $this->freshRequestState();
+
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()->assertSee('id="page_member_home"', false);
     }
 
     /** @return array<string, array{string}> */

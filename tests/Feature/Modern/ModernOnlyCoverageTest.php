@@ -82,7 +82,7 @@ class ModernOnlyCoverageTest extends TestCase
 
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
     private const COVERED = [
-        'home', 'dashboard', 'home.issues',
+        'home', 'dashboard', 'home.issues', 'home.latest',
         'diary.list', 'diary.list_friend', 'diary.search', 'diary.new', 'diary.comment.history',
         'timeline.index', 'timeline.new',
         'friend.list', 'friend.requests', 'friend.link.show',
@@ -121,6 +121,7 @@ class ModernOnlyCoverageTest extends TestCase
             'home' => ['/'],
             'dashboard' => ['/dashboard'],
             'back issues' => ['/home/issues'],
+            'latest issue' => ['/home/latest'],
             'diary list' => ['/diary/list'],
             'diary friend list' => ['/diary/listFriend'],
             'diary search' => ['/diary/search'],

@@ -27,7 +27,7 @@ class ClassicOnlyCoverageTest extends TestCase
 
     /** Canonical GET route names with no Classic twin: 404 under classic_only, by the Inertia render gate. */
     private const MODERN_ONLY = [
-        'dashboard', 'home.issues',
+        'dashboard', 'home.issues', 'home.latest',
         'group.recent',
         'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
@@ -139,6 +139,7 @@ class ClassicOnlyCoverageTest extends TestCase
         return [
             'dashboard' => ['/dashboard'],
             'back issues' => ['/home/issues'],
+            'latest issue' => ['/home/latest'],
             'community recent activity' => ['/groups/recent'],
             'conversation list' => ['/messages'],
             'new message picker' => ['/messages/new'],

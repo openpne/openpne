@@ -10,6 +10,7 @@ use App\Features\Member\Queries\RandomMembers;
 use App\Files\ImageUploadPolicy;
 use App\Models\Member;
 use App\Notifications\Push\WebPushConfig;
+use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Support\Autoplay;
 use App\Support\BrandColor;
@@ -17,6 +18,7 @@ use App\Support\ClassicOnlyHandoff;
 use App\Support\Feature;
 use App\Support\LayoutHooks;
 use App\Support\LookResolver;
+use App\Support\SnsSettingKey;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -65,6 +67,7 @@ class HandleInertiaRequests extends Middleware
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),
             // Resolved once for the request and never null: a guest's is always `standard`.
             'look' => LookResolver::resolve($request)->value,
+            'modernHome' => app(SnsSettingService::class)->get(SnsSettingKey::ModernHome)->value,
             // False for a guest, who cannot reach the switch that stops it (docs/internals/images.md,
             // "Which placements animate"); a closure, so a partial reload that leaves it out reads no row.
             'autoplayAnimations' => fn () => $user?->autoplayAnimations() === Autoplay::On,

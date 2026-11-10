@@ -32,7 +32,7 @@ The looks today:
   `member/show`, and `/groups/{group}` renders `unified/group` instead of
   `community/show`; the bars become the persistent header plus dive row, the shell paints
   the unified ground, and the right rail is dropped. Those two pages are the only swap:
-  `/` renders `home/issue` under every look.
+  `/` renders the same page under every look ([home-issues.md](home-issues.md#routes)).
 - **`tabbed`** — the same swapped pages, different chrome, phone scope for now. Every
   screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
   the site name on the three pages that ARE a place (home, a member's, a group's — a

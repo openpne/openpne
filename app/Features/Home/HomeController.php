@@ -22,7 +22,10 @@ use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Services\GadgetService;
+use App\Services\SnsSettingService;
 use App\Support\Feature;
+use App\Support\ModernHome;
+use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
@@ -32,9 +35,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The OpenPNE 3 member/home portal at the canonical root: a Modern-default install renders the
- * latest issue (docs/internals/home-issues.md, "Routes") and a Classic-default one the Classic home,
- * whose home gadgets take the viewer as their subject.
+ * The OpenPNE 3 member/home portal at the canonical root: Modern renders the page the site's
+ * `modern_home` names (docs/internals/home-issues.md, "Routes") and Classic the Classic home, whose
+ * home gadgets take the viewer as their subject.
  */
 class HomeController extends Controller
 {
@@ -50,6 +53,7 @@ class HomeController extends Controller
         PublishDueHomeIssue $latest,
         ShowHomeIssue $show,
         AdjacentHomeIssues $adjacent,
+        SnsSettingService $settings,
     ): View|RedirectResponse|Response {
         /** @var Member|null $viewer */
         $viewer = $request->user();
@@ -58,24 +62,9 @@ class HomeController extends Controller
         }
 
         if (SurfaceResolver::resolve($request, 'home') === SurfaceResolver::MODERN) {
-            $now = CarbonImmutable::now();
-            $issue = $latest($now);
-
-            // Nothing published yet is not an absence to report: the site has a front page from its
-            // first day, and that one simply has nothing on it.
-            $page = $issue === null
-                ? HomeIssueSerializer::page(null, null, null, null, $now)
-                : HomeIssueSerializer::page(
-                    $issue,
-                    $show($viewer, $issue),
-                    $adjacent($issue)['previous'],
-                    // The latest issue is what this page IS, so nothing stands forward of it
-                    // however the run happens to be dated.
-                    null,
-                    $now,
-                );
-
-            return Inertia::render('home/issue', $page);
+            return $settings->get(SnsSettingKey::ModernHome) === ModernHome::WhatsNew
+                ? app()->call([$this, 'dashboard'])
+                : $this->latest($request, $latest, $show, $adjacent);
         }
 
         return view('home.index', [
@@ -96,6 +85,31 @@ class HomeController extends Controller
             // mailbox, where the number it announces is the rows waiting there.
             'unreadMessages' => Feature::DirectMessage->enabled() ? $unreadMessages($viewer) : 0,
         ]);
+    }
+
+    /** The latest issue, publishing the due one on the way (docs/internals/home-issues.md, "Publish on read"). */
+    public function latest(Request $request, PublishDueHomeIssue $latest, ShowHomeIssue $show, AdjacentHomeIssues $adjacent): Response
+    {
+        /** @var Member $viewer */
+        $viewer = $request->user();
+        $now = CarbonImmutable::now();
+        $issue = $latest($now);
+
+        // Nothing published yet is not an absence to report: the site has a front page from its
+        // first day, and that one simply has nothing on it.
+        $page = $issue === null
+            ? HomeIssueSerializer::page(null, null, null, null, $now)
+            : HomeIssueSerializer::page(
+                $issue,
+                $show($viewer, $issue),
+                $adjacent($issue)['previous'],
+                // The latest issue is what this page IS, so nothing stands forward of it
+                // however the run happens to be dated.
+                null,
+                $now,
+            );
+
+        return Inertia::render('home/issue', $page);
     }
 
     public function dashboard(

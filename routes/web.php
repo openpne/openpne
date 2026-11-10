@@ -408,6 +408,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // No unit owns the issues: each band inside one is gated by its own unit as it renders
     // (docs/internals/home-issues.md).
     Route::get('/home/issues', [HomeIssueController::class, 'index'])->name('home.issues');
+    Route::get('/home/latest', [HomeController::class, 'latest'])->name('home.latest');
     Route::get('/home/{year}/{month}', [HomeIssueController::class, 'month'])
         ->where(['year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]'])
         ->name('home.month');

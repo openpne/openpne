@@ -8,6 +8,7 @@ use App\Filament\Concerns\HiddenWhenClassicOnly;
 use App\Services\SnsSettingService;
 use App\Support\Look;
 use App\Support\LookResolver;
+use App\Support\ModernHome;
 use App\Support\PreferenceKey;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -159,7 +160,7 @@ class LookSettings extends Page
             // The service hands back typed looks; the controls hold and post the stored ids.
             $value = app(SnsSettingService::class)->get($key);
             $values[$key->value] = match (true) {
-                $value instanceof Look => $value->value,
+                $value instanceof Look, $value instanceof ModernHome => $value->value,
                 is_array($value) => array_column($value, 'value'),
                 default => $value,
             };
@@ -185,6 +186,18 @@ class LookSettings extends Page
                     ->label(SnsSettingKey::SelectableLooks->label())
                     ->options($this->byLook(static fn (Look $look): string => __($look->label()), $looks))
                     ->helperText(__('The site default can always be selected. Removing a layout returns the members who chose it to the site default.')),
+                Radio::make(SnsSettingKey::ModernHome->value)
+                    ->label(SnsSettingKey::ModernHome->label())
+                    ->options(array_combine(
+                        array_column(ModernHome::cases(), 'value'),
+                        array_map(static fn (ModernHome $home): string => __($home->label()), ModernHome::cases()),
+                    ))
+                    ->descriptions(array_combine(
+                        array_column(ModernHome::cases(), 'value'),
+                        array_map(static fn (ModernHome $home): string => __($home->description()), ModernHome::cases()),
+                    ))
+                    ->helperText(__('The other page stays in the menu.'))
+                    ->required(),
             ]);
     }
 

@@ -118,6 +118,36 @@ test('the diary hub offers the friend feed while friends are on', () => {
     ]);
 });
 
+test('a site whose home is the digest keeps the issue in the nav and the digest under Home', () => {
+    const nav = visibleNavSections(allOn, 'whats_new');
+    const issue = nav[0]!;
+    assert.equal(issue.href, '/home/latest');
+    assert.ok(!nav.some((section) => section.href === '/dashboard'));
+    assert.deepEqual(nav.slice(1), visibleNavSections(allOn).slice(1));
+
+    const home = bottomNavSections(allOn, 'whats_new')[0]!;
+    for (const path of ['/', '/dashboard']) {
+        assert.equal(isSectionActive(home, path), true, path);
+    }
+    for (const path of ['/home/latest', '/home/issues', '/home/2026/08/27']) {
+        assert.equal(isSectionActive(home, path), false, path);
+        assert.equal(isSectionActive(issue, path), true, path);
+    }
+    assert.deepEqual(unifiedTabs(allOn, 'whats_new')[0], home);
+
+    assert.ok(isHomeComponent('dashboard', 'whats_new'));
+    assert.ok(isHomeComponent('home/issue', 'whats_new'));
+    assert.ok(!isHomeComponent('home/archive', 'whats_new'));
+});
+
+test('the crumbs above the issue list and the group digest follow the home setting', () => {
+    const crumb = (component: string, modernHome?: string) => resolveChrome(component, { enabledFeatures: allOn, modernHome }).context?.[0]?.href;
+    assert.equal(crumb('home/issues'), '/');
+    assert.equal(crumb('home/issues', 'whats_new'), '/home/latest');
+    assert.equal(crumb('community/recent'), '/dashboard');
+    assert.equal(crumb('community/recent', 'whats_new'), '/');
+});
+
 test('the comment history lights none of the diary hub tabs', () => {
     const active = (variant: string) =>
         (resolveChrome('diary/feed', { enabledFeatures: allOn, variant }).tabs ?? []).filter((tab) => tab.active).map((tab) => tab.href);

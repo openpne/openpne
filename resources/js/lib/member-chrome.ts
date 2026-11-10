@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
-import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Rss, Search, Settings, UserCircle2, UserPlus, Users } from 'lucide-react';
-import type { FeatureKey, UnreadCounts } from '@/types';
+import { Activity, Bell, BookOpen, House, Mail, Newspaper, Pencil, Plus, Rss, Search, Settings, UserCircle2, UserPlus, Users } from 'lucide-react';
+import type { FeatureKey, ModernHomeId, UnreadCounts } from '@/types';
 
 /**
  * Builders run outside React, so everything here is data (label keys, hrefs, icon references) and
@@ -202,6 +202,7 @@ const SETTINGS = t('Settings');
 // The list screen's title and the crumb every dated issue takes back to it have to be the same
 // words.
 const PAST_HAPPENINGS = t('Past happenings');
+const HAPPENINGS = t('What happened');
 
 export type PolicyKind = 'terms' | 'privacy';
 
@@ -242,10 +243,14 @@ export const MEMBER_SEARCH_SECTION: NavSection = {
     label: MEMBER_SEARCH,
 };
 
-/** Home is the brand row, so it is omitted. */
-export const NAV_SECTIONS: NavSection[] = [
-    // No unit owns it: with every unit switched off it still stands its welcome panel.
-    { href: '/dashboard', match: ['/dashboard'], icon: Rss, label: WHATS_NEW },
+// No unit owns either: with every unit switched off each still renders.
+const WHATS_NEW_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], icon: Rss, label: WHATS_NEW };
+const HAPPENINGS_SECTION: NavSection = { href: '/home/latest', match: ['/home/'], icon: Newspaper, label: HAPPENINGS };
+
+/** Home is the brand row, so the nav leads with whichever of the two home pages `/` does not serve. */
+const navSections = (home: ModernHomeId): NavSection[] => [home === 'whats_new' ? HAPPENINGS_SECTION : WHATS_NEW_SECTION, ...UNIT_SECTIONS];
+
+const UNIT_SECTIONS: NavSection[] = [
     { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
     GROUPS_SECTION,
     { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
@@ -276,6 +281,8 @@ export const NAV_SECTIONS: NavSection[] = [
     { href: '/member/config', match: ['/member/config'], icon: Settings, label: SETTINGS },
 ];
 
+export const NAV_SECTIONS: NavSection[] = navSections('issue');
+
 /** Whether a path (query and hash already stripped) is inside a section. */
 export function isSectionActive(section: NavSection, path: string): boolean {
     // The root is compared whole — as a prefix it would claim every path.
@@ -286,16 +293,22 @@ export function isSectionActive(section: NavSection, path: string): boolean {
 export const TALK_ROOMS_HREF = '/groups/mine';
 
 /** The nav an administrator's current toggles leave: a section whose unit is off answers 404. */
-export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
-    return NAV_SECTIONS.filter((section) => section.feature === undefined || enabled[section.feature]);
+export function visibleNavSections(enabled: Record<FeatureKey, boolean>, home: ModernHomeId = 'issue'): NavSection[] {
+    return navSections(home).filter((section) => section.feature === undefined || enabled[section.feature]);
 }
 
 /** Home is the brand row in the nav lists, so it exists only for the bottom bar, which has no brand. */
 const HOME_SECTION: NavSection = { href: '/', match: ['/', '/home/'], icon: House, label: HOME };
 
-/** A dated issue is deliberately not one: it has a parent, the run it belongs to. */
-export function isHomeComponent(component: string): boolean {
-    return component === 'home/issue';
+/** The Home tab covers the page `/` serves under its other URL too, and leaves the nav's page alone. */
+const homeSection = (home: ModernHomeId): NavSection => (home === 'whats_new' ? { ...HOME_SECTION, match: ['/', '/dashboard'] } : HOME_SECTION);
+
+/**
+ * A dated issue is deliberately not one: it has a parent, the run it belongs to. The latest issue
+ * stays one where `/` serves the other page: its masthead is its heading and nothing stands above it.
+ */
+export function isHomeComponent(component: string, home: ModernHomeId = 'issue'): boolean {
+    return component === 'home/issue' || (home === 'whats_new' && component === 'dashboard');
 }
 
 /**
@@ -305,17 +318,17 @@ export function isHomeComponent(component: string): boolean {
  */
 const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications'];
 
-export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
-    const visible = visibleNavSections(enabled);
+export function bottomNavSections(enabled: Record<FeatureKey, boolean>, home: ModernHomeId = 'issue'): NavSection[] {
+    const visible = visibleNavSections(enabled, home);
 
     return [
-        HOME_SECTION,
+        homeSection(home),
         ...BOTTOM_NAV_HREFS.map((href) => visible.find((section) => section.href === href)).filter((section) => section !== undefined),
     ];
 }
 
-export function unifiedTabs(enabled: Record<FeatureKey, boolean>): NavSection[] {
-    return enabled.group ? [HOME_SECTION, GROUPS_SECTION] : [HOME_SECTION];
+export function unifiedTabs(enabled: Record<FeatureKey, boolean>, home: ModernHomeId = 'issue'): NavSection[] {
+    return enabled.group ? [homeSection(home), GROUPS_SECTION] : [homeSection(home)];
 }
 
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
@@ -419,6 +432,8 @@ interface OwnerScoped {
     isOwner: boolean;
 }
 
+const homeOf = (props: Record<string, unknown>): ModernHomeId => (props as { modernHome?: ModernHomeId }).modernHome ?? 'issue';
+
 // The shell shares the resolved unit map on every page (HandleInertiaRequests).
 const enabled = (props: Record<string, unknown>, feature: FeatureKey): boolean =>
     (props as { enabledFeatures: Record<FeatureKey, boolean> }).enabledFeatures[feature];
@@ -431,7 +446,11 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     }),
     // Deliberately not a nav section: the run of issues is the front page's history, not a place in
     // the nav.
-    'home/issues': () => ({ mode: 'contextual', title: PAST_HAPPENINGS, context: [{ href: '/', label: HOME_SECTION.label }] }),
+    'home/issues': (props) => ({
+        mode: 'contextual',
+        title: PAST_HAPPENINGS,
+        context: [homeOf(props) === 'whats_new' ? { href: HAPPENINGS_SECTION.href, label: HAPPENINGS } : { href: '/', label: HOME_SECTION.label }],
+    }),
     // Embedded on purpose: the issue's own masthead is the page's h1, and a chrome title over it
     // would name the screen twice.
     'home/archive': (props) => ({
@@ -509,10 +528,10 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         action: CREATE_COMMUNITY,
     }),
     // The dashboard digest's full list, not a hub tab: the set it shows is the digest's, mixed.
-    'community/recent': () => ({
+    'community/recent': (props) => ({
         mode: 'contextual',
         title: t('Recent %community% activity'),
-        context: [{ href: '/dashboard', label: WHATS_NEW }],
+        context: [{ href: homeOf(props) === 'whats_new' ? '/' : '/dashboard', label: WHATS_NEW }],
     }),
     // A board index keeps a short h1 so a long group name never wraps the heading.
     'group/topic/index': (props) => {

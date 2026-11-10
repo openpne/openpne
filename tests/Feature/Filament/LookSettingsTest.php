@@ -9,6 +9,7 @@ use App\Models\AdminUser;
 use App\Models\Member;
 use App\Services\SnsSettingService;
 use App\Support\Look;
+use App\Support\ModernHome;
 use App\Support\SnsSettingKey;
 use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,6 +58,24 @@ class LookSettingsTest extends TestCase
 
         $this->assertSame('unified', DB::table('sns_settings')->where('key', SnsSettingKey::DefaultLook->value)->value('value'));
         $this->assertSame(Look::Unified, app(SnsSettingService::class)->get(SnsSettingKey::DefaultLook));
+    }
+
+    public function test_the_home_page_is_the_issue_until_saved_and_round_trips(): void
+    {
+        Livewire::test(LookSettings::class)
+            ->assertSet('data.'.SnsSettingKey::ModernHome->value, 'issue')
+            ->set('data.'.SnsSettingKey::ModernHome->value, 'whats_new')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('data.'.SnsSettingKey::ModernHome->value, 'whats_new');
+
+        $this->assertSame('whats_new', DB::table('sns_settings')->where('key', SnsSettingKey::ModernHome->value)->value('value'));
+        $this->assertSame(ModernHome::WhatsNew, app(SnsSettingService::class)->get(SnsSettingKey::ModernHome));
+
+        Livewire::test(LookSettings::class)
+            ->set('data.'.SnsSettingKey::ModernHome->value, 'nope')
+            ->call('save')
+            ->assertHasErrors('data.'.SnsSettingKey::ModernHome->value);
     }
 
     public function test_it_can_be_switched_back(): void

@@ -194,7 +194,7 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
             {/* Not a landmark: the phone already carries one named nav (the bottom bar), and a second
                 with the same name is a landmark list a reader cannot tell apart. */}
             <div className="flex min-w-0 flex-1 items-stretch justify-center">
-                {unifiedTabs(props.enabledFeatures).map((section) => {
+                {unifiedTabs(props.enabledFeatures, props.modernHome).map((section) => {
                     const active = isSectionActive(section, path);
 
                     return (
@@ -251,7 +251,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const text = (l: ChromeLabel | string) => (typeof l === 'string' ? l : label(l));
     // A hub names itself; everything else names the place it is in, except the three pages that ARE
     // a place, which share one header of mark and site name.
-    const brand = isHomeComponent(String(component)) || isPlaceTop(String(component));
+    const brand = isHomeComponent(String(component), props.modernHome) || isPlaceTop(String(component));
     const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
     const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome);
 
@@ -350,7 +350,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     }
 
     // Home and the hubs are one bar under the unified chrome; everything below them is untouched.
-    const topLevel = isHomeComponent(String(component)) || chrome.mode === 'section';
+    const topLevel = isHomeComponent(String(component), props.modernHome) || chrome.mode === 'section';
     if (lookSpec(props.look).topBar === 'unified' && topLevel) {
         return <UnifiedBar hidden={hidden} />;
     }
