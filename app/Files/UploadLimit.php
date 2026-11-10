@@ -35,4 +35,12 @@ final class UploadLimit
     {
         return self::kilobytes() * 1024;
     }
+
+    /** The cap as shown to a member: whole megabytes when it is one, else kilobytes, so the stated size is never above the enforced one. */
+    public static function label(): string
+    {
+        $kilobytes = self::kilobytes();
+
+        return $kilobytes % 1024 === 0 ? intdiv($kilobytes, 1024).' MB' : $kilobytes.' KB';
+    }
 }

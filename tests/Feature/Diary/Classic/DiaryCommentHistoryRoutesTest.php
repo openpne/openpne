@@ -32,7 +32,7 @@ class DiaryCommentHistoryRoutesTest extends TestCase
         $response->assertSee('id="page_diaryComment_history"', false)
             ->assertSee('class="dparts recentList"', false)
             // op_diary_link_to_show(diary, withName, no icon): "title (count)" linked, then the author.
-            ->assertSee('<a href="'.route('diary.show', $diary).'">HistoryDiary (1)</a> (HistoryAuthor)', false);
+            ->assertSee('<a href="'.route('diary.show', $diary).'?comment_count=1">HistoryDiary (1)</a> (HistoryAuthor)', false);
     }
 
     /** op_diary_get_title_and_count: display width 36, full-width counting double, no ellipsis. */

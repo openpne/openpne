@@ -24,7 +24,7 @@ class ListFriends
      */
     public function take(Member $viewer, Member $owner, int $limit): Collection
     {
-        return $this->query($viewer, $owner)->limit($limit)->get();
+        return $this->query($viewer, $owner)->withCount('friendships')->limit($limit)->get();
     }
 
     public function count(Member $viewer, Member $owner): int

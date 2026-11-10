@@ -163,11 +163,24 @@ class DiaryFormParityTest extends TestCase
         $response->assertSeeInOrder([
             '<strong>*</strong> is required field.',
             '<label for="diary_comment_body">Comment <strong>*</strong>',
-            '<textarea id="diary_comment_body" name="body"',
+            '<textarea id="diary_comment_body" name="body" rows="8" cols="40"',
             '<ul id="diary_comment_photo_1">',
             '<input type="file" name="images[]" id="diary_comment_photo_1_photo"',
             '<ul id="diary_comment_photo_2">',
             '<ul id="diary_comment_photo_3">',
+            '<input type="submit" class="input_submit" value="Post">',
         ], false);
+    }
+
+    /** OpenPNE 3 diary/_form.php sets rows 10 / cols 50 on the body widget. */
+    public function test_the_body_textarea_keeps_the_size_openpne3_gave_it(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+
+        foreach (['/diary/new', "/diary/edit/{$diary->getKey()}"] as $url) {
+            $this->actingAs($owner)->get($url)->assertOk()
+                ->assertSee('<textarea id="diary_body" name="body" rows="10" cols="50"', false);
+        }
     }
 }

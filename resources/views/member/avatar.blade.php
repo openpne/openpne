@@ -36,7 +36,7 @@
             {{-- The memberImagesBox kind's upload notes. OpenPNE 3's third note capped the member at
                  three photos; OpenPNE 4 holds one avatar, so it has nothing to say here. --}}
             <ul>
-                <li>{{ __('Please upload a GIF, JPEG or PNG within :max_size bytes.', ['max_size' => $maxUploadBytes]) }}</li>
+                <li>{{ __('Please upload a GIF, JPEG or PNG image of :max_size or less.', ['max_size' => \App\Files\UploadLimit::label()]) }}</li>
                 <li>{{ __('Photos that infringe copyright or portrait rights, violent or obscene photos, and photos other members would find offensive are prohibited. Post them at your own responsibility.') }}</li>
             </ul>
         </div>

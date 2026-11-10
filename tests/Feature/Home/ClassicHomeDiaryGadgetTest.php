@@ -177,7 +177,7 @@ class ClassicHomeDiaryGadgetTest extends TestCase
             ->assertSee('id="homeRecentList_'.$gadget->id.'"', false)
             ->assertSee('class="dparts homeRecentList"', false)
             ->assertSee('Diary Comment History')  // h3 (en term rendering)
-            ->assertSee('CommentedDiary (1)')     // title + comment count
+            ->assertSee('<a href="'.route('diary.show', $diary).'?comment_count=1">CommentedDiary (1)</a>', false) // title + comment count
             ->assertSee('(CommentedAuthor)')      // author (withName)
             ->assertSee('March 4')                // last comment date, not the diary's January 1 created_at
             ->assertDontSee('icon_camera.gif')    // no camera marker for this kind (withIcon=false)

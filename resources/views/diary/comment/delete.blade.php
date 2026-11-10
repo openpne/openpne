@@ -15,7 +15,7 @@
                     </ul>
                 </div>
             </form>
-            <p><a href="{{ route('diary.show', $comment->diary) }}">{{ __('Back') }}</a></p>
         </div>
     </x-classic.parts>
+    <x-classic.history-back :fallback="route('diary.show', $comment->diary)" />
 @endsection

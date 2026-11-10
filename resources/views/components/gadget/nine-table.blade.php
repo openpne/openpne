@@ -1,6 +1,6 @@
 {{-- A row × col thumbnail grid (friend/community list). `items` are ['url','imageUrl','name'],
-     plus an optional 'crown' bool (community admin); `type` (full|only_image|only_name) selects
-     the photo/text rows. --}}
+     plus an optional 'count' (rendered as "name (count)") and 'crown' bool (community admin);
+     `type` (full|only_image|only_name) selects the photo/text rows. --}}
 @props(['items' => [], 'rows' => 3, 'cols' => 3, 'type' => 'full'])
 @php($items = collect($items)->values())
 @php($cols = max(1, (int) $cols))
@@ -36,7 +36,7 @@
                         @php($item = $items[$j] ?? null)
                         <td>
                             @if ($item)
-                                <a href="{{ $item['url'] }}">{{ $item['name'] }}</a>
+                                <a href="{{ $item['url'] }}">{{ $item['name'] }}@isset($item['count']) ({{ $item['count'] }})@endisset</a>
                             @endif
                         </td>
                     @endfor

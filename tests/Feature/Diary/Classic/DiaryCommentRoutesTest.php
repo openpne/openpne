@@ -161,7 +161,8 @@ class DiaryCommentRoutesTest extends TestCase
         $this->actingAs($owner)->get("/diary/comment/deleteConfirm/{$comment->getKey()}")
             ->assertOk()
             // The action lives in the diaryComment module, not diary.
-            ->assertSee('id="page_diaryComment_deleteConfirm"', false);
+            ->assertSee('id="page_diaryComment_deleteConfirm"', false)
+            ->assertSee('<a href="'.route('diary.show', $diary).'" data-history-back>Back to previous page</a>', false);
     }
 
     public function test_delete_confirm_returns_404_for_a_non_deletable_comment(): void

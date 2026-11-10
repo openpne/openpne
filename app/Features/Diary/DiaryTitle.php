@@ -19,6 +19,14 @@ final class DiaryTitle
         return self::truncate($diary->title).' ('.($diary->comments_count ?? 0).')';
     }
 
+    /** OpenPNE 3 op_diary_url_for_show: the list link carries the comment count, so a new comment makes it an unvisited link again. */
+    public static function showUrl(Diary $diary): string
+    {
+        $count = $diary->comments_count ?? 0;
+
+        return route('diary.show', $count > 0 ? [$diary, 'comment_count' => $count] : $diary);
+    }
+
     private static function truncate(string $title): string
     {
         return mb_strimwidth($title, 0, self::WIDTH, '');

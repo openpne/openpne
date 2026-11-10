@@ -117,8 +117,9 @@ class ClassicHomeGadgetTest extends TestCase
             ->assertSee('id="friendList_'.$friends->id.'"', false)
             ->assertSee('id="communityList_'.$groups->id.'"', false)
             ->assertSee('class="dparts nineTable"', false) // skin targets .nineTable tr.photo td
-            ->assertSee('AlphaFriend')
-            ->assertSee('BetaGroup');
+            // _partsNineTable.php names each cell with getNameAndCount(): the friend's friend count, the group's member count.
+            ->assertSee('>AlphaFriend (1)</a>', false)
+            ->assertSee('>BetaGroup (1)</a>', false);
     }
 
     public function test_empty_list_box_is_dropped_like_openpne3(): void

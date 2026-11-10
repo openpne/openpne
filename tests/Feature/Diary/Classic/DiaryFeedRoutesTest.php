@@ -259,11 +259,11 @@ class DiaryFeedRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get(route('diary.list', ['before' => $cursor]))->assertOk()
             ->assertSee(__('No older %diary% entries.'))
-            ->assertDontSee(__('No %diary% entries to show.'))
+            ->assertDontSee(__('There are no %diaries%.'))
             ->assertSee('<p class="prev"><a href="'.e(route('diary.list')).'">', false);
         $this->actingAs($viewer)->get(route('diary.list_friend', ['before' => $cursor]))->assertOk()
             ->assertSee(__('No older %diary% entries.'))
-            ->assertDontSee(__('No %diary% entries to show.'))
+            ->assertDontSee(__('There are no %diaries%.'))
             ->assertSee('<p class="prev"><a href="'.e(route('diary.list_friend')).'">', false);
     }
 

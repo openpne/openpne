@@ -26,10 +26,10 @@
         {{-- OpenPNE 3 listSuccess.php swaps the result list for a plain box once the pager is empty. --}}
         <x-classic.parts id="diaryList" name="box" :title="$title">
             @if ($diaries instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator)
-                <div class="body">{{ $hasKeyword ? __('Your search ":keyword" did not match any %diaries%.', ['keyword' => $keyword]) : __('No %diary% entries to show.') }}</div>
+                <div class="body">{{ $hasKeyword ? __('Your search ":keyword" did not match any %diaries%.', ['keyword' => $keyword]) : __('There are no %diaries%.') }}</div>
             @else
                 {{-- A cursor whose rows are gone since is not an empty feed, and still needs its way back to the head. --}}
-                <div class="body">{{ $newerUrl !== null ? __('No older %diary% entries.') : __('No %diary% entries to show.') }}</div>
+                <div class="body">{{ $newerUrl !== null ? __('No older %diary% entries.') : __('There are no %diaries%.') }}</div>
                 <x-classic.stream-pager :older-url="null" :newer-url="$newerUrl" />
             @endif
         </x-classic.parts>
@@ -43,7 +43,7 @@
                 <dl>
                     <dt>{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</dt>
                     {{-- op_diary_link_to_show with withName: the author trails the link, outside it. --}}
-                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a> ({{ $entry->member->name }})<x-diary.image-icon :count="$entry->pictures_count" /></dd>
+                    <dd><a href="{{ \App\Features\Diary\DiaryTitle::showUrl($entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a> ({{ $entry->member->name }})<x-diary.image-icon :count="$entry->pictures_count" /></dd>
                 </dl>
             @endforeach
             @include('diary._feed-pager')
