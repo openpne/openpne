@@ -17,8 +17,8 @@ use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -126,62 +126,126 @@ class DashboardTest extends TestCase
             );
     }
 
-    /** A group the viewer has joined, with one message said in it at the given time. */
-    private function talkedIn(Member $viewer, string $at): Group
-    {
-        $group = Group::factory()->create();
-        GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
-        GroupMessage::factory()->create([
-            'group_id' => $group->getKey(),
-            'member_id' => Member::factory()->create()->getKey(),
-            'created_at' => Carbon::parse($at),
-            'updated_at' => Carbon::parse($at),
-        ]);
-
-        return $group;
-    }
-
-    public function test_the_talk_digest_leads_with_the_most_recently_talked_in_rooms(): void
+    public function test_the_dashboard_carries_no_talk_digest(): void
     {
         $viewer = Member::factory()->create();
-        // Six rooms created in ascending talk order, so the group id — what the membership grid
-        // sorts by — is the wrong answer for both the cut and the order.
-        $rooms = array_map(
-            fn (int $minute): Group => $this->talkedIn($viewer, "2026-08-14 10:0{$minute}:00"),
-            range(1, 6),
-        );
+        $group = Group::factory()->create();
+        GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => Member::factory()->create()->getKey()]);
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->missing('talkRooms'));
+    }
+
+    public function test_the_friend_digest_holds_what_friends_let_friends_read(): void
+    {
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $blockingFriend = Member::factory()->create();
+        $this->makeFriends($viewer, $friend);
+        $this->makeFriends($viewer, $blockingFriend);
+        DB::table('member_blocks')->insert(['blocker_id' => $blockingFriend->getKey(), 'blocked_id' => $viewer->getKey(), 'created_at' => now()]);
+
+        $forFriends = Diary::factory()->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Friends]);
+        Diary::factory()->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Private]);
+        Diary::factory()->create(['member_id' => $blockingFriend->getKey(), 'visibility' => Visibility::Members]);
+        Diary::factory()->create(['visibility' => Visibility::Members]); // a stranger's
 
         $this->actingAs($viewer)
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page
-                ->has('talkRooms', 5)
-                ->where('talkRooms.0.id', $rooms[5]->getKey()) // last talked in
-                ->where('talkRooms.4.id', $rooms[1]->getKey()) // the oldest of the five that fit
+                ->has('friendDiaries', 1)
+                ->where('friendDiaries.0.id', $forFriends->getKey())
             );
     }
 
-    public function test_a_member_of_nothing_gets_an_empty_talk_digest(): void
-    {
-        $this->actingAs(Member::factory()->create())
-            ->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('talkRooms', []));
-    }
-
-    public function test_the_talk_digest_empties_and_reads_no_message_when_the_unit_is_off(): void
+    public function test_the_friend_digest_goes_with_the_friend_unit(): void
     {
         $viewer = Member::factory()->create();
-        $this->talkedIn($viewer, '2026-08-14 10:00:00');
+        $friend = Member::factory()->create();
+        $this->makeFriends($viewer, $friend);
+        Diary::factory()->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Members]);
 
-        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);
+        $this->setSnsSetting(SnsSettingKey::FeatureFriendEnabled, false);
         $this->freshRequestState();
 
-        DB::enableQueryLog();
-        $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('talkRooms', []));
-        $messageQueries = array_filter(DB::getQueryLog(), fn (array $q): bool => str_contains($q['query'], 'group_messages'));
-        DB::disableQueryLog();
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('friendDiaries', [])->has('diaries', 1));
+    }
 
-        $this->assertSame([], $messageQueries, 'a switched-off unit still read its table');
+    public function test_a_pending_admin_nomination_is_a_notice(): void
+    {
+        $viewer = Member::factory()->create();
+        $group = Group::factory()->create();
+        $group->forceFill(['pending_admin_member_id' => $viewer->getKey()])->save();
+        Group::factory()->create()->forceFill(['pending_admin_member_id' => Member::factory()->create()->getKey()])->save();
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->has('announcements.adminTransfers', 1)
+                ->where('announcements.adminTransfers.0', ['groupId' => $group->getKey(), 'groupName' => $group->name])
+            );
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
+        $this->freshRequestState();
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('announcements.adminTransfers', []));
+    }
+
+    /** @return array<string, array{bool, bool, bool}> */
+    public static function ties(): array
+    {
+        return [
+            'neither a friend nor a group' => [false, false, true],
+            'a friend' => [true, false, false],
+            'a group' => [false, true, false],
+            'both' => [true, true, false],
+        ];
+    }
+
+    #[DataProvider('ties')]
+    public function test_a_member_with_no_friend_and_no_group_is_a_newcomer(bool $hasFriend, bool $hasGroup, bool $newcomer): void
+    {
+        $viewer = Member::factory()->create();
+        if ($hasFriend) {
+            $this->makeFriends($viewer, Member::factory()->create());
+        }
+        if ($hasGroup) {
+            GroupMember::factory()->member()->create(['group_id' => Group::factory()->create()->getKey(), 'member_id' => $viewer->getKey()]);
+        }
+        // A feed with rows does not decide it: a long-standing member of a quiet site is no newcomer.
+        Diary::factory()->create(['visibility' => Visibility::Members]);
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('newcomer', $newcomer));
+    }
+
+    public function test_a_switched_off_unit_counts_as_nothing_joined(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->makeFriends($viewer, Member::factory()->create());
+
+        $this->setSnsSetting(SnsSettingKey::FeatureFriendEnabled, false);
+        $this->freshRequestState();
+        $this->actingAs($viewer)->get('/dashboard')->assertInertia(fn ($page) => $page->where('newcomer', true));
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
+        $this->freshRequestState();
+        $this->actingAs($viewer)->get('/dashboard')->assertInertia(fn ($page) => $page->where('newcomer', false));
+    }
+
+    private function makeFriends(Member $a, Member $b): void
+    {
+        DB::table('friendships')->insert([
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey(), 'created_at' => now()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey(), 'created_at' => now()],
+        ]);
     }
 
     public function test_each_digest_is_capped_to_the_preview_size(): void
@@ -222,22 +286,19 @@ class DashboardTest extends TestCase
         GroupMember::factory()->member()->create(['group_id' => $topicGroup->getKey(), 'member_id' => $viewer->getKey()]);
         GroupTopic::factory()->create(['group_id' => $topicGroup->getKey()]);
 
-        // A message in each of those groups, every one by a distinct author: the talk digest is five
-        // rooms, so its image, body and author loads must each stay a single batched query.
-        foreach (GroupMember::where('member_id', $viewer->getKey())->pluck('group_id') as $joinedId) {
-            GroupMessage::factory()->create([
-                'group_id' => $joinedId,
-                'member_id' => Member::factory()->create()->getKey(),
-            ]);
+        // Four friends with a diary and an image each: the friend digest reads the same per-row
+        // avatar and counts as the all-members one.
+        foreach (Member::factory()->count(4)->create() as $friend) {
+            $this->makeFriends($viewer, $friend);
+            $diary = Diary::factory()->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Friends]);
+            DiaryImage::factory()->create(['diary_id' => $diary->getKey()]);
         }
 
         $this->actingAs($viewer); // outside the count: the first authentication writes last_login_at once
         $queries = $this->countApplicationQueries(fn () => $this->get('/dashboard')->assertOk());
 
-        // Bounded by the feeds and their eager loads, never by the row count, and kept tight (steady
-        // state 38 with this fixture's single look: the shell's preference read, the timeline
-        // digest's one grouped reaction read and the joined boards' two id reads ahead of their counts included).
-        $this->assertLessThan(39, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
+        // Bounded by the feeds and their eager loads, never by the row count (steady state 41).
+        $this->assertLessThan(42, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

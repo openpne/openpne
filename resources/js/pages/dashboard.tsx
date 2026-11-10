@@ -4,8 +4,6 @@ import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { ActivityRow, type CommunityActivityEntry } from './community/activity-row';
-import { RoomRow } from './community/room-row';
-import type { TalkRoomRow } from './community/types';
 import { DiaryRow } from './diary/diary-row';
 import type { DiarySummary } from './diary/types';
 import { WelcomePanel } from './home/welcome';
@@ -16,11 +14,13 @@ interface Announcements {
     friendRequests: number;
     unreadMessages: number;
     groupApprovals: { groupId: number; groupName: string; count: number }[];
+    adminTransfers: { groupId: number; groupName: string }[];
 }
 
 interface DashboardProps extends PageProps {
     announcements: Announcements;
-    talkRooms: TalkRoomRow[];
+    newcomer: boolean;
+    friendDiaries: DiarySummary[];
     diaries: DiarySummary[];
     timeline: TimelinePostEntry[];
     groupActivity: CommunityActivityEntry[];
@@ -38,14 +38,24 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
     const friendRequests = features.friend ? announcements.friendRequests : 0;
     const unreadMessages = features.directMessage ? announcements.unreadMessages : 0;
     const groupApprovals = features.group ? announcements.groupApprovals : [];
+    const adminTransfers = features.group ? announcements.adminTransfers : [];
 
-    if (friendRequests === 0 && unreadMessages === 0 && groupApprovals.length === 0) {
+    if (friendRequests === 0 && unreadMessages === 0 && groupApprovals.length === 0 && adminTransfers.length === 0) {
         return null;
     }
 
     return (
         <Panel flush title={t('Notices')}>
             <List>
+                {adminTransfers.map((transfer) => (
+                    <ListRow key={transfer.groupId} rowLink chevron>
+                        <span className="min-w-0 flex-1 text-sm text-foreground">
+                            <Link href={`/groups/${transfer.groupId}`} className={stretchedLink}>
+                                {t('The administrator of :name asks you to take over the administration.', { name: transfer.groupName })}
+                            </Link>
+                        </span>
+                    </ListRow>
+                ))}
                 {friendRequests > 0 && (
                     <ListRow rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
@@ -82,19 +92,16 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
     );
 }
 
-function DigestSection({ title, viewAllHref, extra, children }: { title: string; viewAllHref: string; extra?: ReactNode; children: ReactNode }) {
+function DigestSection({ title, viewAllHref, children }: { title: string; viewAllHref: string; children: ReactNode }) {
     const t = useT();
     return (
         <Panel
             flush
             title={title}
             right={
-                <span className="flex shrink-0 items-center gap-3 text-xs">
-                    {extra}
-                    <Link href={viewAllHref} className="text-link hover:underline">
-                        {t('View all')}
-                    </Link>
-                </span>
+                <Link href={viewAllHref} className="shrink-0 text-xs text-link hover:underline">
+                    {t('View all')}
+                </Link>
             }
         >
             <List>{children}</List>
@@ -104,15 +111,12 @@ function DigestSection({ title, viewAllHref, extra, children }: { title: string;
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, talkRooms, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
+    const { auth, announcements, newcomer, friendDiaries, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
         return null;
     }
-
-    const everythingEmpty =
-        diaries.length === 0 && timeline.length === 0 && groupActivity.length === 0 && myDiaries.length === 0;
 
     return (
         <>
@@ -120,65 +124,48 @@ export default function Dashboard() {
 
             <AnnouncementsPanel announcements={announcements} />
 
-            {/* It sits outside the welcome branch and does not decide it: a room is a place to talk,
-                not the feeds and people that panel offers to go find. */}
-            {enabledFeatures.groupTalk && talkRooms.length > 0 && (
-                <DigestSection title={t('Talk')} viewAllHref="/groups/mine">
-                    {talkRooms.map((room) => (
-                        <RoomRow key={room.id} room={room} />
+            {newcomer && <WelcomePanel name={user.name} enabledFeatures={enabledFeatures} />}
+
+            {/* A section's rows arrive empty once its unit is switched off; the check keeps the
+                header and its deep links from outliving them. */}
+            {enabledFeatures.diary && enabledFeatures.friend && friendDiaries.length > 0 && (
+                <DigestSection title={t('%Diaries% of %My_friends%')} viewAllHref="/diary/listFriend">
+                    {friendDiaries.map((diary) => (
+                        <DiaryRow key={diary.id} diary={diary} />
                     ))}
                 </DigestSection>
             )}
 
-            {everythingEmpty ? (
-                <WelcomePanel name={user.name} enabledFeatures={enabledFeatures} />
-            ) : (
-                <>
-                    {/* A section's rows arrive empty once its unit is switched off; the check keeps
-                        the header and its deep links from outliving them. */}
-                    {enabledFeatures.diary && diaries.length > 0 && (
-                        <DigestSection
-                            title={t('Latest %diaries%')}
-                            viewAllHref="/diary/list"
-                            extra={
-                                // The friend lens goes with its unit; the section it hangs off stays.
-                                enabledFeatures.friend && (
-                                    <Link href="/diary/listFriend" className="text-link hover:underline">
-                                        {t('%Diaries% of %My_friends%')}
-                                    </Link>
-                                )
-                            }
-                        >
-                            {diaries.map((diary) => (
-                                <DiaryRow key={diary.id} diary={diary} />
-                            ))}
-                        </DigestSection>
-                    )}
+            {enabledFeatures.diary && diaries.length > 0 && (
+                <DigestSection title={t('Latest %diaries%')} viewAllHref="/diary/list">
+                    {diaries.map((diary) => (
+                        <DiaryRow key={diary.id} diary={diary} />
+                    ))}
+                </DigestSection>
+            )}
 
-                    {enabledFeatures.timeline && timeline.length > 0 && (
-                        <DigestSection title={t('%Activity%')} viewAllHref="/timeline">
-                            {timeline.map((post) => (
-                                <TimelineRow key={post.id} post={post} />
-                            ))}
-                        </DigestSection>
-                    )}
+            {enabledFeatures.diary && myDiaries.length > 0 && (
+                <DigestSection title={t('My recent %diaries%')} viewAllHref={`/diary/listMember/${user.id}`}>
+                    {myDiaries.map((diary) => (
+                        <DiaryRow key={diary.id} diary={diary} />
+                    ))}
+                </DigestSection>
+            )}
 
-                    {enabledFeatures.group && groupActivity.length > 0 && (
-                        <DigestSection title={t('Recent %community% activity')} viewAllHref="/groups/recent">
-                            {groupActivity.map((entry) => (
-                                <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
-                            ))}
-                        </DigestSection>
-                    )}
+            {enabledFeatures.group && groupActivity.length > 0 && (
+                <DigestSection title={t('Recent %community% activity')} viewAllHref="/groups/recent">
+                    {groupActivity.map((entry) => (
+                        <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
+                    ))}
+                </DigestSection>
+            )}
 
-                    {enabledFeatures.diary && myDiaries.length > 0 && (
-                        <DigestSection title={t('My recent %diaries%')} viewAllHref={`/diary/listMember/${user.id}`}>
-                            {myDiaries.map((diary) => (
-                                <DiaryRow key={diary.id} diary={diary} />
-                            ))}
-                        </DigestSection>
-                    )}
-                </>
+            {enabledFeatures.timeline && timeline.length > 0 && (
+                <DigestSection title={t('%Activity%')} viewAllHref="/timeline">
+                    {timeline.map((post) => (
+                        <TimelineRow key={post.id} post={post} />
+                    ))}
+                </DigestSection>
             )}
         </>
     );

@@ -36,12 +36,6 @@ class JoinedTalkRooms
         return $paginator->setCollection($this->rooms($paginator->getCollection(), $withUnreadMentions));
     }
 
-    /** @return Collection<int, TalkRoom> */
-    public function take(Member $viewer, int $limit): Collection
-    {
-        return $this->rooms($this->ordered($viewer)->limit($limit)->get());
-    }
-
     /**
      * $withUnreadMentions buys a third correlated subselect, so it stays off for the reads that run
      * on every page.
