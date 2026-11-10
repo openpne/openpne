@@ -2,6 +2,7 @@
 
 namespace App\Features\Member;
 
+use App\Features\Auth\RegistrationMode;
 use App\Features\Member\Queries\SearchMembers;
 use App\Features\Member\Queries\VisibleSelfIntroductions;
 use App\Features\Member\Serializers\MemberSearchSerializer;
@@ -56,6 +57,7 @@ class MemberSearchController extends Controller
                 'members' => MemberSearchSerializer::paginator($members, $introductions),
                 'profiles' => MemberSearchSerializer::formFields($profiles, $lang, $birthdayName),
                 'showAge' => $showAge,
+                'canInvite' => RegistrationMode::current()->allowsMemberInvite(),
                 // Cast to object so an empty filter set serialises as {} (a keyed map), not [].
                 'criteria' => [
                     'name' => $name,

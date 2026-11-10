@@ -288,7 +288,7 @@ test('a tabbed form names where it sits without offering a way out of itself', (
 });
 
 test('a tabbed page that is nowhere leaves the mark standing alone', () => {
-    const chrome = arrive('block/list', '/block/list', { look: 'tabbed' });
+    const chrome = arrive('policy/show', '/terms', { look: 'tabbed' });
 
     const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 

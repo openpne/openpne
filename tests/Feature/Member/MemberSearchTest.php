@@ -122,6 +122,20 @@ class MemberSearchTest extends TestCase
                 ->has('profiles'));
     }
 
+    public function test_modern_search_says_whether_the_viewer_may_invite(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $viewer = Member::factory()->create();
+
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
+        $this->actingAs($viewer)->get('/member/search')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('canInvite', true));
+
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'admin_only');
+        $this->actingAs($viewer)->get('/member/search')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('canInvite', false));
+    }
+
     public function test_classic_age_inputs_render_only_when_the_birthday_field_is_searchable(): void
     {
         $viewer = Member::factory()->create();
