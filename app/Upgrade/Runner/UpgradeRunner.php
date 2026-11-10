@@ -9,6 +9,7 @@ use App\Services\NavigationService;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Support\FaviconFallback;
+use App\Support\ModernGroupList;
 use App\Support\ModernHome;
 use App\Support\ReleaseMarker;
 use App\Support\SnsSettingKey;
@@ -229,6 +230,7 @@ final class UpgradeRunner
             $report->line('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
             $report->line('PLAN would set brand_favicon_fallback=none if unset (no browser-tab icon, as in OpenPNE 3).');
             $report->line("PLAN would set modern_home=whats_new if unset (the Modern home shows the What's new lists, the page nearest the OpenPNE 3 home).");
+            $report->line('PLAN would set modern_group_list=group if unset (a joined group opens its top under Modern, as an OpenPNE 3 community did, rather than its talk).');
             if ($this->readsSourceTable('sns_config')) {
                 foreach ((new SnsSettingUpgrade)->op3FormDefaults() as $key => $value) {
                     $report->line("PLAN would set {$key}={$value} if unset (the OpenPNE 3 default where the site never saved the setting).");
@@ -321,6 +323,7 @@ final class UpgradeRunner
             if ($walked) {
                 $this->stampFaviconFallback($report);
                 $this->stampModernHome($report);
+                $this->stampModernGroupList($report);
             }
             if ($walked && $this->readsSourceTable('sns_config')) {
                 $this->stampOp3FormDefaults();
@@ -399,6 +402,24 @@ final class UpgradeRunner
 
         if ($inserted > 0) {
             $report->nextStep('The Modern home shows the What\'s new lists, the page nearest the OpenPNE 3 home; "Page shown as home" on the UI layout settings page offers the other.');
+        }
+    }
+
+    /**
+     * Insert-if-absent like the surface stamp: an OpenPNE 3 community opened on its top, and the
+     * operator's later choice stands.
+     */
+    private function stampModernGroupList(RunReport $report): void
+    {
+        $inserted = DB::table('sns_settings')->insertOrIgnore([
+            'key' => SnsSettingKey::ModernGroupList->value,
+            'value' => SnsSettingKey::ModernGroupList->encode(ModernGroupList::Group),
+        ]);
+
+        app(SnsSettingService::class)->clearCache();
+
+        if ($inserted > 0) {
+            $report->nextStep('Under Modern a joined group opens its top, as an OpenPNE 3 community did, rather than its talk; "Page a joined group opens" on the UI layout settings page offers the talk.');
         }
     }
 

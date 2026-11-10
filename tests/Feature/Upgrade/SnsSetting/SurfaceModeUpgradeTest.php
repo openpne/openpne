@@ -91,6 +91,34 @@ class SurfaceModeUpgradeTest extends UpgradeSqlTestCase
         $this->assertStringNotContainsString("What's new lists", implode("\n", $lines));
     }
 
+    public function test_a_full_run_stamps_the_group_top_as_what_a_joined_group_opens_even_when_the_surface_was_set_first(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'surface_mode', 'value' => 'modern_only']);
+        $this->seedGraph();
+
+        $lines = [];
+        $this->assertTrue($this->runner()->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'modern_group_list', 'value' => 'group']);
+        $this->assertStringContainsString('a joined group opens its top', implode("\n", $lines));
+    }
+
+    public function test_the_joined_group_stamp_is_insert_if_absent(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'modern_group_list', 'value' => 'talk']);
+        $this->seedGraph();
+
+        $lines = [];
+        $this->assertTrue($this->runner()->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'modern_group_list', 'value' => 'talk']);
+        $this->assertStringNotContainsString('a joined group opens its top', implode("\n", $lines));
+    }
+
     public function test_the_tab_icon_stamp_is_insert_if_absent(): void
     {
         DB::table('sns_settings')->insert(['key' => 'brand_favicon_fallback', 'value' => 'generated']);
@@ -119,6 +147,8 @@ class SurfaceModeUpgradeTest extends UpgradeSqlTestCase
         $this->assertStringContainsString('brand_favicon_fallback=none', implode("\n", $lines));
         $this->assertStringContainsString('modern_home=whats_new', implode("\n", $lines));
         $this->assertDatabaseMissing('sns_settings', ['key' => 'modern_home']);
+        $this->assertStringContainsString('modern_group_list=group', implode("\n", $lines));
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'modern_group_list']);
         $this->assertDatabaseMissing('sns_settings', ['key' => 'surface_mode']);
         $this->assertDatabaseMissing('sns_settings', ['key' => 'brand_favicon_fallback']);
     }

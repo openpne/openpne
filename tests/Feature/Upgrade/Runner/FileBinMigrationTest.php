@@ -447,7 +447,8 @@ class FileBinMigrationTest extends TestCase
         $this->assertStringContainsString('RUN file_id_max_snapshot', implode("\n", $lines));
         $this->assertStringContainsString('No browser-tab icon', implode("\n", $lines));
         $this->assertStringContainsString("What's new lists", implode("\n", $lines));
-        $this->assertCount(4, $first->jsonSerialize()['next_steps']);
+        $this->assertStringContainsString('a joined group opens its top', implode("\n", $lines));
+        $this->assertCount(5, $first->jsonSerialize()['next_steps']);
 
         // A completed site runs nothing: no next steps, nothing resumed.
         $second = $this->out($again);
