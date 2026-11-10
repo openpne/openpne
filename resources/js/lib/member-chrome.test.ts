@@ -33,7 +33,7 @@ const allOn: Record<FeatureKey, boolean> = {
     mcp: true,
 };
 
-const hrefs = (enabled: Record<FeatureKey, boolean>) => visibleNavSections(enabled).map((section) => section.href);
+const hrefs = (enabled: Record<FeatureKey, boolean>) => visibleNavSections(enabled, 'issue').map((section) => section.href);
 
 test('every section shows while every unit is on', () => {
     assert.deepEqual(hrefs(allOn), NAV_SECTIONS.map((section) => section.href));
@@ -72,7 +72,7 @@ test('the groups section stays while only a board is off', () => {
     assert.equal(hrefs({ ...allOn, groupTopic: false, groupEvent: false }).includes('/groups/mine'), true);
 });
 
-const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
+const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled, 'issue').map((section) => section.href);
 
 test('the bottom bar is Home and three sections, and messages is not one of them', () => {
     // A word under each icon is what costs the fifth tab, and messages is the one dropped: the
@@ -94,7 +94,7 @@ test('Home and notifications survive every unit being off', () => {
 });
 
 test('the Home tab covers the front page and the issues, and nothing else', () => {
-    const home = bottomNavSections(allOn).find((section) => section.href === '/');
+    const home = bottomNavSections(allOn, 'issue').find((section) => section.href === '/');
 
     assert.ok(home);
     for (const path of ['/', '/home/issues', '/home/2026/08/27']) {
@@ -123,7 +123,7 @@ test('a site whose home is the digest keeps the issue in the nav and the digest 
     const issue = nav[0]!;
     assert.equal(issue.href, '/home/latest');
     assert.ok(!nav.some((section) => section.href === '/dashboard'));
-    assert.deepEqual(nav.slice(1), visibleNavSections(allOn).slice(1));
+    assert.deepEqual(nav.slice(1), visibleNavSections(allOn, 'issue').slice(1));
 
     const home = bottomNavSections(allOn, 'whats_new')[0]!;
     for (const path of ['/', '/dashboard']) {
@@ -230,10 +230,10 @@ test('the dashboard action goes with the diary unit', () => {
 
 test('home takes the mobile brand bar rather than a back control', () => {
     // A dated issue is somewhere below the run of them, and What's new is a hub.
-    assert.ok(isHomeComponent('home/issue'));
-    assert.ok(!isHomeComponent('home/archive'));
-    assert.ok(!isHomeComponent('dashboard'));
-    assert.ok(!isHomeComponent('diary/feed'));
+    assert.ok(isHomeComponent('home/issue', 'issue'));
+    assert.ok(!isHomeComponent('home/archive', 'issue'));
+    assert.ok(!isHomeComponent('dashboard', 'issue'));
+    assert.ok(!isHomeComponent('diary/feed', 'issue'));
     assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issue'));
 });
 
@@ -278,7 +278,7 @@ test('the unified member page is the same screen as the profile it replaces', ()
     assert.deepEqual(chrome('unified/member', {}), chrome('member/show', {}));
     assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/member'));
     // A page about somebody else, so its mobile bar takes the back control rather than the brand row.
-    assert.ok(!isHomeComponent('unified/member'));
+    assert.ok(!isHomeComponent('unified/member', 'issue'));
 });
 
 test('the unified group page is the same screen as the group top it replaces', () => {
@@ -287,7 +287,7 @@ test('the unified group page is the same screen as the group top it replaces', (
     assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/group'));
     // A page about the group itself, so it takes the back control rather than the brand row and
     // scopes to nothing above it.
-    assert.ok(!isHomeComponent('unified/group'));
+    assert.ok(!isHomeComponent('unified/group', 'issue'));
     assert.equal(chrome('unified/group', {}).scope, undefined);
 });
 
@@ -547,14 +547,14 @@ test('every look answers every question the shell asks', () => {
 });
 
 test('the unified bar offers home and the groups, and the groups tab goes with its unit', () => {
-    assert.deepEqual(unifiedTabs(allOn).map((tab) => tab.href), ['/', '/groups/mine']);
-    assert.deepEqual(unifiedTabs({ ...allOn, group: false }).map((tab) => tab.href), ['/']);
+    assert.deepEqual(unifiedTabs(allOn, 'issue').map((tab) => tab.href), ['/', '/groups/mine']);
+    assert.deepEqual(unifiedTabs({ ...allOn, group: false }, 'issue').map((tab) => tab.href), ['/']);
     // Nav entries, not a parallel list: the drawer's label and the tab's are the same object.
-    assert.deepEqual(unifiedTabs(allOn)[1], NAV_SECTIONS.find((section) => section.href === '/groups/mine'));
+    assert.deepEqual(unifiedTabs(allOn, 'issue')[1], NAV_SECTIONS.find((section) => section.href === '/groups/mine'));
 });
 
 test('the unified tabs light up on the paths their sections own', () => {
-    const current = (path: string) => unifiedTabs(allOn).filter((tab) => isSectionActive(tab, path)).map((tab) => tab.href);
+    const current = (path: string) => unifiedTabs(allOn, 'issue').filter((tab) => isSectionActive(tab, path)).map((tab) => tab.href);
 
     // Home stands for the front page and the issues; the groups tab for every group space.
     assert.deepEqual(current('/'), ['/']);

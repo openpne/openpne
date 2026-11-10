@@ -59,9 +59,9 @@ export interface TalkNavRooms {
     hasMore: boolean;
 }
 
-/** The feature units an administrator can switch off — the cases of App\Support\Feature. */
 export type ModernHomeId = 'issue' | 'whats_new';
 
+/** The feature units an administrator can switch off — the cases of App\Support\Feature. */
 export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'groupTopic' | 'groupEvent' | 'groupTalk' | 'friend' | 'mcp';
 
 /** The server's upload contract for the Modern pickers; `shrink` is null while the site has switched the browser-side shrink off. */

@@ -434,7 +434,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         );
     }
 
-    // Home's brand is a label, not a link: it would only point at the page it is on.
+    // The brand is a label here, not a link: the nav's brand row and the Home tab are the links to `/`.
     return (
         <TopBar hidden={hidden}>
             <NavDrawer />

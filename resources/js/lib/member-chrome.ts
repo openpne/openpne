@@ -293,7 +293,7 @@ export function isSectionActive(section: NavSection, path: string): boolean {
 export const TALK_ROOMS_HREF = '/groups/mine';
 
 /** The nav an administrator's current toggles leave: a section whose unit is off answers 404. */
-export function visibleNavSections(enabled: Record<FeatureKey, boolean>, home: ModernHomeId = 'issue'): NavSection[] {
+export function visibleNavSections(enabled: Record<FeatureKey, boolean>, home: ModernHomeId): NavSection[] {
     return navSections(home).filter((section) => section.feature === undefined || enabled[section.feature]);
 }
 
@@ -307,7 +307,7 @@ const homeSection = (home: ModernHomeId): NavSection => (home === 'whats_new' ? 
  * A dated issue is deliberately not one: it has a parent, the run it belongs to. The latest issue
  * stays one where `/` serves the other page: its masthead is its heading and nothing stands above it.
  */
-export function isHomeComponent(component: string, home: ModernHomeId = 'issue'): boolean {
+export function isHomeComponent(component: string, home: ModernHomeId): boolean {
     return component === 'home/issue' || (home === 'whats_new' && component === 'dashboard');
 }
 
@@ -318,7 +318,7 @@ export function isHomeComponent(component: string, home: ModernHomeId = 'issue')
  */
 const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications'];
 
-export function bottomNavSections(enabled: Record<FeatureKey, boolean>, home: ModernHomeId = 'issue'): NavSection[] {
+export function bottomNavSections(enabled: Record<FeatureKey, boolean>, home: ModernHomeId): NavSection[] {
     const visible = visibleNavSections(enabled, home);
 
     return [
@@ -327,7 +327,7 @@ export function bottomNavSections(enabled: Record<FeatureKey, boolean>, home: Mo
     ];
 }
 
-export function unifiedTabs(enabled: Record<FeatureKey, boolean>, home: ModernHomeId = 'issue'): NavSection[] {
+export function unifiedTabs(enabled: Record<FeatureKey, boolean>, home: ModernHomeId): NavSection[] {
     return enabled.group ? [homeSection(home), GROUPS_SECTION] : [homeSection(home)];
 }
 

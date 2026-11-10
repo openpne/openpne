@@ -66,7 +66,6 @@ class PublishOnReadTest extends TestCase
         $this->assertDatabaseCount('home_issue_items', 1);
     }
 
-    /** The 26th's issue is out and the 27th's window is open with a story in it: only the clock holds it. */
     public function test_where_the_root_serves_the_digest_the_issue_page_is_the_read_that_publishes(): void
     {
         $this->story(CarbonImmutable::parse(self::BOUNDARY)->subHour());
@@ -81,6 +80,7 @@ class PublishOnReadTest extends TestCase
         $this->assertSame(1, HomeIssue::count());
     }
 
+    /** The 26th's issue is out and the 27th's window is open with a story in it: only the clock holds it. */
     public function test_a_visit_before_the_boundary_publishes_nothing(): void
     {
         $previous = $this->publishedOn('2026-08-25');

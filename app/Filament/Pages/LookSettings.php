@@ -29,9 +29,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pick the look the Modern surface renders (App\Support\Look) and which looks members may pick for
- * themselves. `sns_settings` is authoritative; the value is stored verbatim on save and resolves to
- * `standard` while no row exists.
+ * Pick the look the Modern surface renders (App\Support\Look), which looks members may pick for
+ * themselves, and the page `/` serves (App\Support\ModernHome). `sns_settings` is authoritative; each
+ * value is stored verbatim on save and resolves to its registry default while no row exists.
  *
  * @property-read Schema $form
  */

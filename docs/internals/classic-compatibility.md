@@ -60,7 +60,7 @@ page with no Classic twin answers 404
 ([feature-modules.md](feature-modules.md#classic-only)).
 
 The root (`/`) is the canonical OpenPNE 3 `member/home`: the same resolver renders the
-Classic home or the Modern front page ([home-issues.md](home-issues.md)), and it is where
+Classic home or the Modern home page ([home-issues.md](home-issues.md#routes)), and it is where
 login and registration land. `/member` aliases it. Both are recorded in the [member route
 parity](../../app/Compat/Parities/MemberRouteParity.php).
 

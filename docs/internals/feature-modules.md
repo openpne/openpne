@@ -209,7 +209,7 @@ into ([layout-hooks.md](layout-hooks.md)). Per-section defaults live in the chro
 ([`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts)) — the same
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame, so
-the mobile (< lg) top bar varies with the page class: brand on the home issue (`/`), the
+the mobile (< lg) top bar varies with the page class: brand on the latest home issue, the
 section title on a signed-in hub (its in-page h1 folds to `sr-only` there, so the
 title is announced once; a guest keeps the brand bar and the visible h1), and on a
 detail page back plus the registry's `scope` — the

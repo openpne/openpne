@@ -10,10 +10,8 @@ namespace App\Support;
  */
 enum ModernHome: string
 {
-    /** The latest home issue. */
     case Issue = 'issue';
 
-    /** The "What's new" digest, the page nearest the OpenPNE 3 home. */
     case WhatsNew = 'whats_new';
 
     /** Label as a translation key, like Look: the consumer translates in the reader's locale. */
