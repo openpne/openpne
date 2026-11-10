@@ -265,6 +265,7 @@ unchanged.
 | `/message/deleteConfirm/{id}` | the same conversation (Modern confirms a purge inline) |
 | `/message/reply/{id}` | the same conversation, with no anchor — answering is writing in it |
 | `/message/sendToFriend?id={member}` | that member's conversation, or `/messages` when the id names none |
+| `/message/chain/{member}`, `/message/smtChain?id={member}` (the OpenPNE 3 smartphone thread) | the same as `sendToFriend`, which they redirect to on either surface |
 | `/message/edit/{id}` | nothing: the draft form is the one mailbox screen Modern still renders |
 
 The redirect resolves the counterpart from the viewer's side — the recipient of what they sent, the

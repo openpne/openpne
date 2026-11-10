@@ -71,6 +71,15 @@ class FriendRouteParity extends RouteParity
         ];
     }
 
+    public function compatRedirects(): array
+    {
+        return [
+            // The friend category of OpenPNE 3's confirmation center; the group categories are
+            // resolved per viewer by the route itself.
+            '/confirmation' => 'friend.requests',
+        ];
+    }
+
     public function gaps(): array
     {
         return [

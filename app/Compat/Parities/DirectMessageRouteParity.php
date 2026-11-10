@@ -57,10 +57,19 @@ class DirectMessageRouteParity extends RouteParity
         ];
     }
 
+    public function compatRedirects(): array
+    {
+        return [
+            '/message/chain/:id' => 'message.compose',
+            // The spelling OpenPNE 3's smartphone script linked, reached through the global fallback.
+            '/message/smtChain' => 'message.compose',
+        ];
+    }
+
     public function gaps(): array
     {
         return [
-            'messageChain' => 'Smartphone-only message thread; OpenPNE 4 has no mobile surface.',
+            'messageChain' => 'Smartphone-only message thread; its screen is not ported and the URL answers with a redirect (compatRedirects).',
             'message_post' => 'JSON compose API; not ported.',
             'message_search' => 'JSON conversation search API; not ported.',
             'recent_message_list' => 'JSON recent-messages API; not ported.',
