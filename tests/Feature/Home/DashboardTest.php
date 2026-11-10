@@ -164,7 +164,7 @@ class DashboardTest extends TestCase
     public function test_the_comment_history_digest_leads_with_the_last_commented_diary(): void
     {
         $viewer = Member::factory()->create();
-        $first = Diary::factory()->create(['visibility' => Visibility::Members]);
+        $first = Diary::factory()->create(['visibility' => Visibility::Members, 'created_at' => now()->subWeek()]);
         $second = Diary::factory()->create(['visibility' => Visibility::Members]);
         DiaryComment::factory()->create(['diary_id' => $second->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => now()->subDay()]);
         $last = DiaryComment::factory()->create(['diary_id' => $first->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => now()]);
