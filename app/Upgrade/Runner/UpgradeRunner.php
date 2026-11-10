@@ -228,7 +228,7 @@ final class UpgradeRunner
             }
             $report->line('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
             $report->line('PLAN would set brand_favicon_fallback=none if unset (no browser-tab icon, as in OpenPNE 3).');
-            $report->line("PLAN would set modern_home=whats_new if unset (the Modern home shows the What's new lists, as the OpenPNE 3 home did).");
+            $report->line("PLAN would set modern_home=whats_new if unset (the Modern home shows the What's new lists, the page nearest the OpenPNE 3 home).");
             if ($this->readsSourceTable('sns_config')) {
                 foreach ((new SnsSettingUpgrade)->op3FormDefaults() as $key => $value) {
                     $report->line("PLAN would set {$key}={$value} if unset (the OpenPNE 3 default where the site never saved the setting).");
@@ -317,7 +317,7 @@ final class UpgradeRunner
             }
 
             // Not in the chain above: a site whose operator set the surface before the first
-            // completion still gets this stamp.
+            // completion still gets these stamps.
             if ($walked) {
                 $this->stampFaviconFallback($report);
                 $this->stampModernHome($report);
@@ -398,7 +398,7 @@ final class UpgradeRunner
         app(SnsSettingService::class)->clearCache();
 
         if ($inserted > 0) {
-            $report->nextStep("The Modern home shows the What's new lists, as the OpenPNE 3 home did; choose the daily issue on the UI layout settings page.");
+            $report->nextStep('The Modern home shows the What\'s new lists, the page nearest the OpenPNE 3 home; "Page shown as home" on the UI layout settings page offers the other.');
         }
     }
 
