@@ -196,6 +196,18 @@ class GroupRoutesTest extends TestCase
         $this->assertStringContainsString(e(__('Everyone can read')), $content);
     }
 
+    public function test_the_form_submits_with_create_for_a_new_group_and_save_for_an_existing_one(): void
+    {
+        $group = Group::factory()->create();
+        $admin = $this->memberWithRole($group, GroupRole::Admin);
+
+        $this->actingAs($admin)->get('/groups/edit')->assertOk()
+            ->assertSee('class="input_submit" value="Create"', false)
+            ->assertDontSee('value="Save"', false);
+        $this->actingAs($admin)->get(route('group.edit', ['id' => $group->getKey()]))->assertOk()
+            ->assertSee('class="input_submit" value="Save"', false);
+    }
+
     public function test_the_create_form_preselects_the_openpne3_defaults(): void
     {
         $member = Member::factory()->create();

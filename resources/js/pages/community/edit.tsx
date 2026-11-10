@@ -194,7 +194,7 @@ export default function CommunityEdit() {
                     </div>
 
                     <Button type="submit" loading={form.processing}>
-                        {t('Save')}
+                        {isEdit ? t('Save') : t('Create')}
                     </Button>
                 </form>
             </Panel>

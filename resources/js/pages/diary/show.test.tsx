@@ -81,6 +81,13 @@ test('a signed-in reader may react to the entry and to each comment', () => {
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
 });
 
+test('the comment form submits with a comment button, not a save', () => {
+    renderShow({ id: 9 });
+
+    expect(screen.getByRole('button', { name: 'Post comment' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+});
+
 test('a guest on a web-public entry reads the counts and has nothing to press', () => {
     const { container } = renderShow(null);
 
