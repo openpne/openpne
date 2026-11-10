@@ -15,7 +15,8 @@ import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { membersPhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
+import { GroupAbout } from './group-about';
+import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, GroupAbout as GroupAboutData, TopicSummary } from './types';
 
 interface ShowProps extends PageProps {
     group: CommunityDetail;
@@ -33,6 +34,7 @@ interface ShowProps extends PageProps {
     canViewTalk: boolean; // the talk unit is on AND the viewer may read this group's talk
     talkPreview: { body: string; authorName: string | null; createdAt: string } | null;
     talkUnread: number; // the viewer's own unread here; 0 for a non-member, who holds no cursor
+    about: GroupAboutData;
 }
 
 export default function CommunityShow() {
@@ -40,7 +42,7 @@ export default function CommunityShow() {
     const confirm = useConfirm();
     const {
         group, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
-        recentTopics, canPostTopic, recentEvents, canPostEvent, canViewTalk, talkPreview, talkUnread,
+        recentTopics, canPostTopic, recentEvents, canPostEvent, canViewTalk, talkPreview, talkUnread, about,
     } = usePage<ShowProps>().props;
 
     const join = () => router.post(`/groups/${group.id}/join`);
@@ -118,6 +120,8 @@ export default function CommunityShow() {
                         <UserText text={group.description} />
                     </div>
                 )}
+
+                <GroupAbout about={about} />
             </Panel>
 
             {/* The server has already answered the read gate; a non-member of an Everyone group sees

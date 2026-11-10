@@ -54,6 +54,7 @@ final class UnifiedGroupSerializer
         bool $canViewTalk,
         ?array $talkPreview,
         int $talkUnread,
+        array $about,
     ): array {
         return [
             'group' => self::identity($group),
@@ -72,6 +73,7 @@ final class UnifiedGroupSerializer
             'canViewTalk' => $canViewTalk,
             'talkPreview' => $talkPreview,
             'talkUnread' => $talkUnread,
+            'about' => $about,
             // The board collections are null exactly when their read gate refused, so they are the
             // gate the picture sources ask as well — a source whose rows may not be read is not read.
             'recentPhotos' => self::photos($viewer, $group, $canViewTalk, $recentTopics !== null, $recentEvents !== null),

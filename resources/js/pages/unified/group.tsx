@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { membersPhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
-import type { CommunityRoleSlug, EventSummary, TopicSummary } from '../community/types';
+import { GroupAbout } from '../community/group-about';
+import type { CommunityRoleSlug, EventSummary, GroupAbout as GroupAboutData, TopicSummary } from '../community/types';
 import { BoardCards } from './board-cards';
 import { GroupGrid, type HomeGroup } from './group-grid';
 import { HOME_CARD, HomeSection } from './home-section';
@@ -41,6 +42,7 @@ interface UnifiedGroupProps extends PageProps {
     talkPreview: { body: string; authorName: string | null; createdAt: string } | null;
     talkUnread: number; // the viewer's own unread here; 0 for a non-member, who holds no cursor
     recentPhotos: HomePhoto[];
+    about: GroupAboutData;
 }
 
 /**
@@ -53,7 +55,7 @@ export default function UnifiedGroup() {
     const {
         group, viewerRole, isPending, isTransferNominee, canManage, canJoin, canLeave, members,
         categoryGroups, recentTopics, canPostTopic, recentEvents, canPostEvent, canViewTalk,
-        talkPreview, talkUnread, recentPhotos,
+        talkPreview, talkUnread, recentPhotos, about,
     } = usePage<UnifiedGroupProps>().props;
 
     const join = () => router.post(`/groups/${group.id}/join`);
@@ -241,6 +243,10 @@ export default function UnifiedGroup() {
                     <PeopleGrid people={members} />
                 </HomeSection>
             )}
+
+            <div className={`${HOME_CARD} px-4 py-4 sm:px-5`}>
+                <GroupAbout about={about} />
+            </div>
 
             {/* Sideways rather than deeper: a group's category is public to anyone who may open this
                 page, so the groups filed under it are a way on from here. */}

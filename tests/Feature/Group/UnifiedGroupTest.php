@@ -232,18 +232,18 @@ class UnifiedGroupTest extends TestCase
         $this->unifiedOn();
 
         DB::enableQueryLog();
-        $this->actingAs($viewer)->get("/groups/{$group->getKey()}")->assertOk();
+        $this->actingAs($viewer)->get("/groups/{$group->getKey()}")->assertOk()
+            ->assertInertia(fn ($page) => $page->component('unified/group')->has('about.createdOn')->where('about.admin', null));
         $faces = $this->queriesWith('group_members', 'limit 9');
         $topics = $this->queriesWith('group_topics', 'comments_count');
         $events = $this->queriesWith('participants_count');
-        // The Classic details box names the admin and sub-admins; Modern never asks for them.
         $staff = $this->queriesWith('group_members', '"role" in');
         DB::disableQueryLog();
 
         $this->assertCount(1, $faces, 'the face row was read more than once');
         $this->assertCount(1, $topics, 'the recent topics were read more than once');
         $this->assertCount(1, $events, 'the recent events were read more than once');
-        $this->assertSame([], $staff, 'a Classic-only query ran for a Modern page');
+        $this->assertCount(1, $staff, 'the staff were read more than once');
     }
 
     public function test_a_stranger_to_an_open_group_is_offered_the_way_in(): void

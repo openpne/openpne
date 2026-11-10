@@ -2,6 +2,7 @@
 
 namespace App\Features\Group\Serializers;
 
+use App\Features\Group\GroupRole;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Group;
 use App\Models\GroupMember;
@@ -42,6 +43,36 @@ class GroupSerializer
         return [
             ...self::summary($group),
             'registerPolicy' => $group->register_policy->slug(),
+        ];
+    }
+
+    /**
+     * Requires `member` loaded on each staff row; `registerPolicy` is a translation key.
+     *
+     * @param  iterable<GroupMember>  $staff  the admin and sub-admin memberships
+     * @return array{createdOn: string, admin: array{id: int, name: string}|null, subAdmins: list<array{id: int, name: string}>, registerPolicy: string}
+     */
+    public static function about(Group $group, iterable $staff): array
+    {
+        $admin = null;
+        $subAdmins = [];
+        foreach ($staff as $membership) {
+            if ($membership->member === null) {
+                continue;
+            }
+            $ref = ['id' => (int) $membership->member->getKey(), 'name' => (string) $membership->member->name];
+            if ($membership->role === GroupRole::Admin) {
+                $admin = $ref;
+            } else {
+                $subAdmins[] = $ref;
+            }
+        }
+
+        return [
+            'createdOn' => $group->created_at->toDateString(),
+            'admin' => $admin,
+            'subAdmins' => $subAdmins,
+            'registerPolicy' => $group->register_policy->label(),
         ];
     }
 
