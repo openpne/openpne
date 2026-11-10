@@ -58,7 +58,7 @@ class ModernFeatureSuppressionTest extends TestCase
 
     // --- Dashboard ---
 
-    public function test_the_dashboard_drops_both_diary_digests(): void
+    public function test_the_dashboard_drops_the_diary_digests(): void
     {
         $viewer = Member::factory()->create();
         Diary::factory()->create(['visibility' => Visibility::Members, 'title' => 'all-members-diary-row']);
@@ -68,14 +68,22 @@ class ModernFeatureSuppressionTest extends TestCase
             'title' => 'my-own-diary-row',
         ]);
 
+        $friend = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey(), 'created_at' => now()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
+        ]);
+        Diary::factory()->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Friends, 'title' => 'a-friend-diary-row']);
+
         $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('diaries', 1)->has('myDiaries', 1));
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('diaries', 1)->has('myDiaries', 1)->has('friendDiaries', 1));
 
         $this->switchOff(Feature::Diary);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('diaries', [])
+                ->where('friendDiaries', [])
                 ->where('myDiaries', []))
             ->assertDontSee('all-members-diary-row')
             ->assertDontSee('my-own-diary-row');

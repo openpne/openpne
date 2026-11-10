@@ -3,11 +3,11 @@
 namespace App\Features\Home;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\DirectMessage\Queries\CountUnreadDirectMessages;
 use App\Features\Group\Queries\PendingJoinRequestCounts;
-use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\Home\Actions\PublishDueHomeIssue;
 use App\Features\Home\Queries\AdjacentHomeIssues;
 use App\Features\Home\Queries\JoinedGroupActivity;
@@ -100,7 +100,6 @@ class HomeController extends Controller
     public function dashboard(
         Request $request,
         JoinedGroupActivity $groupActivity,
-        JoinedTalkRooms $talkRooms,
         UnreadCounts $unread,
         PendingJoinRequestCounts $pendingApprovals,
         ReactionAggregates $reactions,
@@ -112,18 +111,24 @@ class HomeController extends Controller
         // no query — hiding it on the client would still ship the rows.
         $diaryOn = Feature::Diary->enabled();
         $groupOn = Feature::Group->enabled();
+        $friendOn = Feature::Friend->enabled();
 
         $timeline = Feature::Timeline->enabled() ? (new HomeFeed)->take($viewer, self::PREVIEW) : collect();
 
         return Inertia::render('dashboard', HomeSerializer::dashboard(
             $viewer,
+            $diaryOn && $friendOn ? (new ListFriendDiaries)->take($viewer, self::PREVIEW) : collect(),
             $diaryOn ? (new ListRecentDiaries)->take($viewer, self::PREVIEW) : collect(),
             $timeline,
             $groupActivity($viewer, self::PREVIEW),
             $diaryOn ? (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW) : collect(),
             $unread->for($viewer),
             $groupOn ? $pendingApprovals($viewer) : collect(),
-            Feature::GroupTalk->enabled() ? $talkRooms->take($viewer, self::PREVIEW) : collect(),
+            $groupOn ? Group::where('pending_admin_member_id', $viewer->getKey())->orderBy('id')->get() : collect(),
+            // A switched-off unit counts as nothing joined, and with both off there is nothing to go find.
+            ($friendOn || $groupOn)
+                && ! ($friendOn && $viewer->friendships()->exists())
+                && ! ($groupOn && $viewer->groupMemberships()->exists()),
             $reactions($viewer, TimelinePost::class, $timeline->map(fn (TimelinePost $post): int => (int) $post->getKey())->all()),
         ));
     }

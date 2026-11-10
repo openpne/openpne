@@ -3,8 +3,6 @@
 namespace App\Features\Home\Serializers;
 
 use App\Features\Diary\Serializers\DiarySerializer;
-use App\Features\GroupTalk\Serializers\TalkRoomSerializer;
-use App\Features\GroupTalk\TalkRoom;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Models\Diary;
 use App\Models\Group;
@@ -17,31 +15,35 @@ use Illuminate\Support\Collection;
 
 /**
  * The Modern home dashboard: a capped digest of the member-facing feeds, each shaped by its own
- * feature serializer. The all-members diary feed is the primary and the friend feed one tap away, so
- * the two near-identical feeds of a small SNS never sit side by side.
+ * feature serializer: the diary lists and the group activity in the OpenPNE 3 default home's order,
+ * and the timeline last by choice, where OpenPNE 3 put it ahead of the group activity.
  */
 class HomeSerializer
 {
     /**
+     * @param  Collection<int, Diary>  $friendDiaries  recent diaries by the viewer's friends
      * @param  Collection<int, Diary>  $diaries  all-members recent diaries
      * @param  Collection<int, TimelinePost>  $timeline  home timeline feed
      * @param  Collection<int, GroupTopic|GroupEvent>  $groupActivity  joined-community activity
      * @param  Collection<int, Diary>  $myDiaries  the viewer's own recent diaries
      * @param  array{friendRequests: int, unreadMessages: int}  $unread  shell attention counts
      * @param  Collection<int, Group>  $pendingApprovals  admin groups with applicants_count
-     * @param  Collection<int, TalkRoom>  $talkRooms  the viewer's conversations, most recent first
+     * @param  Collection<int, Group>  $adminTransfers  groups whose administration the viewer is asked to take over
+     * @param  bool  $newcomer  the viewer has no friend and has joined no group
      * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $timelineReactions  chips keyed by post id
-     * @return array{announcements: array, talkRooms: list<array>, diaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
+     * @return array{announcements: array, newcomer: bool, friendDiaries: list<array>, diaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
      */
     public static function dashboard(
         Member $viewer,
+        Collection $friendDiaries,
         Collection $diaries,
         Collection $timeline,
         Collection $groupActivity,
         Collection $myDiaries,
         array $unread,
         Collection $pendingApprovals,
-        Collection $talkRooms,
+        Collection $adminTransfers,
+        bool $newcomer,
         array $timelineReactions,
     ): array {
         return [
@@ -53,10 +55,13 @@ class HomeSerializer
                     'groupName' => $c->name,
                     'count' => $c->applicants_count,
                 ])->all(),
+                'adminTransfers' => $adminTransfers->map(fn (Group $group): array => [
+                    'groupId' => $group->getKey(),
+                    'groupName' => $group->name,
+                ])->all(),
             ],
-            // Rows only: the digest leads the screen and its "View all" is the room list itself,
-            // so there is no pager here to feed.
-            'talkRooms' => $talkRooms->map([TalkRoomSerializer::class, 'room'])->all(),
+            'newcomer' => $newcomer,
+            'friendDiaries' => $friendDiaries->map([DiarySerializer::class, 'summary'])->all(),
             'diaries' => $diaries->map([DiarySerializer::class, 'summary'])->all(),
             'timeline' => $timeline->map(fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer, $timelineReactions[$post->getKey()] ?? []))->all(),
             'groupActivity' => $groupActivity->map([self::class, 'activityEntry'])->all(),

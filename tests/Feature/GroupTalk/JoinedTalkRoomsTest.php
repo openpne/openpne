@@ -193,7 +193,6 @@ class JoinedTalkRoomsTest extends TalkTestCase
         $this->names($this->said($group, $this->memberOf($group)), $viewer);
 
         $this->assertNull(app(JoinedTalkRooms::class)($viewer)->items()[0]->unreadMentions);
-        $this->assertNull(app(JoinedTalkRooms::class)->take($viewer, 5)->first()->unreadMentions);
     }
 
     /** Absent from the SQL, not merely unread: the nav runs this query on every page. */

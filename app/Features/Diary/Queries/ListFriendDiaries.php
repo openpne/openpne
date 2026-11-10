@@ -28,7 +28,7 @@ class ListFriendDiaries
     }
 
     /**
-     * First $limit diaries, unpaginated — for the home gadget list.
+     * First $limit diaries, unpaginated.
      *
      * @return Collection<int, Diary>
      */
