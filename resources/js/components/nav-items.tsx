@@ -6,7 +6,7 @@ import { TALK_ROOMS_HREF, visibleNavSections } from '@/lib/member-chrome';
 import { badgePhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { PageProps, TalkNavRooms } from '@/types';
+import type { ModernGroupListId, PageProps, TalkNavRooms } from '@/types';
 
 /**
  * Rendered from the member chrome registry, the same source the page frame reads for hub headers, so
@@ -44,7 +44,7 @@ export function NavItems({ onNavigate, rooms }: { onNavigate?: () => void; rooms
                             {badge && <CountPill count={count} label={badgePhrase(t, badge, count)} />}
                         </Link>
                         {href === TALK_ROOMS_HREF && rooms && rooms.rooms.length > 0 && (
-                            <TalkRooms rooms={rooms} url={url} />
+                            <TalkRooms rooms={rooms} url={url} opens={props.groupList} />
                         )}
                     </li>
                 );
@@ -59,18 +59,18 @@ const ROOM_ROW = 'flex min-h-9 items-center gap-2 rounded-full pr-2 text-sm tran
 
 /**
  * The conversations under the groups entry, newest-spoken-in first — the joined list's own order, so
- * the sidebar and the list it links to never disagree about where a room sits. A row opens the talk
- * rather than the group, for the reason the list's rows do: an order like this is answering "where is
- * the conversation".
+ * the sidebar and the list it links to never disagree about where a room sits. A row opens what the
+ * list's rows open, so the site setting decides both.
  */
-function TalkRooms({ rooms: { rooms, hasMore }, url }: { rooms: TalkNavRooms; url: string }) {
+function TalkRooms({ rooms: { rooms, hasMore }, url, opens }: { rooms: TalkNavRooms; url: string; opens: ModernGroupListId }) {
     const t = useT();
 
     return (
         <ul className="mt-0.5 mb-1 ml-3 flex flex-col gap-0.5">
             {rooms.map((room) => {
-                const href = `/groups/${room.id}/talk`;
-                const active = url.startsWith(href);
+                const href = opens === 'group' ? `/groups/${room.id}` : `/groups/${room.id}/talk`;
+                // Stopped at a segment boundary: `/groups/1` is a prefix of `/groups/12`.
+                const active = url === href || url.startsWith(`${href}/`) || url.startsWith(`${href}?`);
 
                 return (
                     <li key={room.id}>

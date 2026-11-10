@@ -70,7 +70,7 @@ export interface PaginatedCommunityMembers {
     meta: PaginationMeta;
 }
 
-/** One conversation on the joined-groups list. `id` is the group's: the row opens its talk. */
+/** One conversation on the joined-groups list. `id` is the group's. */
 export interface TalkRoomRow {
     id: number;
     name: string;

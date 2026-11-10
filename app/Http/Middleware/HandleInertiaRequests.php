@@ -68,6 +68,7 @@ class HandleInertiaRequests extends Middleware
             // Resolved once for the request and never null: a guest's is always `standard`.
             'look' => LookResolver::resolve($request)->value,
             'modernHome' => app(SnsSettingService::class)->get(SnsSettingKey::ModernHome)->value,
+            'groupList' => app(SnsSettingService::class)->get(SnsSettingKey::ModernGroupList)->value,
             // False for a guest, who cannot reach the switch that stops it (docs/internals/images.md,
             // "Which placements animate"); a closure, so a partial reload that leaves it out reads no row.
             'autoplayAnimations' => fn () => $user?->autoplayAnimations() === Autoplay::On,

@@ -150,6 +150,9 @@ enum SnsSettingKey: string
     /** The page Modern serves at `/` (App\Support\ModernHome). */
     case ModernHome = 'modern_home';
 
+    /** What a row of the joined list opens under Modern (App\Support\ModernGroupList). */
+    case ModernGroupList = 'modern_group_list';
+
     /** A CSV of look ids, the registry's one list-valued key; the effective set is this plus the default look. */
     case SelectableLooks = 'selectable_looks';
 
@@ -198,7 +201,7 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
-            self::DefaultLook, self::SelectableLooks, self::ModernHome => SettingGroup::Look,
+            self::DefaultLook, self::SelectableLooks, self::ModernHome, self::ModernGroupList => SettingGroup::Look,
             self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
             self::ImageUploadBrowserShrink => SettingGroup::Images,
@@ -268,7 +271,7 @@ enum SnsSettingKey: string
             // The policy bodies keep the OpenPNE 3 sns_config name verbatim; only their markup is
             // rewritten, by the post-walk pass (the walk copies the value as-is).
             self::UserAgreement, self::PrivacyPolicy => $this->value,
-            self::DefaultLook, self::SelectableLooks, self::ModernHome => null,
+            self::DefaultLook, self::SelectableLooks, self::ModernHome, self::ModernGroupList => null,
             self::GroupTalkNotifyDefault => null,
             self::GroupTopicCommentReply => 'op_community_topic_plugin_community_topic_comment_reply',
             self::GroupEventCommentReply => 'op_community_topic_plugin_community_event_comment_reply',
@@ -407,6 +410,7 @@ enum SnsSettingKey: string
             self::DefaultLook => Look::Standard,
             // What a fresh install has always served; the upgrade stamps the other for its sites.
             self::ModernHome => ModernHome::Issue,
+            self::ModernGroupList => ModernGroupList::Talk,
             // Nothing on offer until an operator ticks a look: the site runs on its default alone,
             // and the member config page shows no layout section.
             self::SelectableLooks => [],
@@ -447,6 +451,7 @@ enum SnsSettingKey: string
             self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value : (ProfileVisibilityPolicy::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             self::DefaultLook => $value instanceof Look ? $value : (Look::tryFrom(trim((string) $value)) ?? $this->default()),
             self::ModernHome => $value instanceof ModernHome ? $value : (ModernHome::tryFrom(trim((string) $value)) ?? $this->default()),
+            self::ModernGroupList => $value instanceof ModernGroupList ? $value : (ModernGroupList::tryFrom(trim((string) $value)) ?? $this->default()),
             self::BrandFaviconFallback => $value instanceof FaviconFallback ? $value : (FaviconFallback::tryFrom(trim((string) $value)) ?? $this->default()),
             // The one key whose value is a list: an explicit arm because the default one casts to
             // string, which an array cannot be.
@@ -474,6 +479,7 @@ enum SnsSettingKey: string
             self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value->value : (string) $value,
             self::DefaultLook => $value instanceof Look ? $value->value : (string) $value,
             self::ModernHome => $value instanceof ModernHome ? $value->value : (string) $value,
+            self::ModernGroupList => $value instanceof ModernGroupList ? $value->value : (string) $value,
             self::BrandFaviconFallback => $value instanceof FaviconFallback ? $value->value : (string) $value,
             // Same reason as coerce()'s arm: the list is stored as CSV, and (string) on an array fatals.
             self::SelectableLooks => implode(',', array_column(self::lookSet($value), 'value')),
@@ -497,6 +503,7 @@ enum SnsSettingKey: string
             // the layout the site shipped with rather than on an experiment.
             self::DefaultLook => Look::tryFrom($value) ?? $this->default(),
             self::ModernHome => ModernHome::tryFrom($value) ?? $this->default(),
+            self::ModernGroupList => ModernGroupList::tryFrom($value) ?? $this->default(),
             self::BrandFaviconFallback => FaviconFallback::tryFrom($value) ?? $this->default(),
             // Stored CSV → typed looks; an id no registered look answers to drops out of the set
             // rather than taking the whole row down with it.
@@ -591,6 +598,7 @@ enum SnsSettingKey: string
             self::ImageUploadBrowserShrink => __('Shrink pictures in the browser before upload'),
             self::DefaultLook => __('Default UI layout'),
             self::ModernHome => __('Page shown as home'),
+            self::ModernGroupList => __('Page a joined %community% opens'),
             self::ClassicTheme => __('Theme'),
             self::SelectableLooks => __('Selectable UI layouts'),
             self::MemberCapacity => __('Member capacity'),
@@ -601,7 +609,7 @@ enum SnsSettingKey: string
     public function isRequired(): bool
     {
         return match ($this) {
-            self::SnsName, self::AdminMailAddress, self::DefaultLook, self::ModernHome => true,
+            self::SnsName, self::AdminMailAddress, self::DefaultLook, self::ModernHome, self::ModernGroupList => true,
             self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge, self::ProfileVisibilityPolicy,
             self::TimelineAllowWebPublic, self::TimelinePostingEnabled, self::DiaryAllowWebPublic, self::DiarySearchEnabled,
             self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,

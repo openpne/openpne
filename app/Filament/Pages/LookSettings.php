@@ -8,6 +8,7 @@ use App\Filament\Concerns\HiddenWhenClassicOnly;
 use App\Services\SnsSettingService;
 use App\Support\Look;
 use App\Support\LookResolver;
+use App\Support\ModernGroupList;
 use App\Support\ModernHome;
 use App\Support\PreferenceKey;
 use App\Support\SettingGroup;
@@ -30,8 +31,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Pick the look the Modern surface renders (App\Support\Look), which looks members may pick for
- * themselves, and the page `/` serves (App\Support\ModernHome). `sns_settings` is authoritative; each
- * value is stored verbatim on save and resolves to its registry default while no row exists.
+ * themselves, the page `/` serves (App\Support\ModernHome) and what a joined group's row opens
+ * (App\Support\ModernGroupList). `sns_settings` is authoritative; each value is stored verbatim on
+ * save and resolves to its registry default while no row exists.
  *
  * @property-read Schema $form
  */
@@ -160,7 +162,7 @@ class LookSettings extends Page
             // The service hands back typed looks; the controls hold and post the stored ids.
             $value = app(SnsSettingService::class)->get($key);
             $values[$key->value] = match (true) {
-                $value instanceof Look, $value instanceof ModernHome => $value->value,
+                $value instanceof Look, $value instanceof ModernHome, $value instanceof ModernGroupList => $value->value,
                 is_array($value) => array_column($value, 'value'),
                 default => $value,
             };
@@ -197,6 +199,17 @@ class LookSettings extends Page
                         array_map(static fn (ModernHome $home): string => __($home->description()), ModernHome::cases()),
                     ))
                     ->helperText(__('The other page stays in the menu.'))
+                    ->required(),
+                Radio::make(SnsSettingKey::ModernGroupList->value)
+                    ->label(SnsSettingKey::ModernGroupList->label())
+                    ->options(array_combine(
+                        array_column(ModernGroupList::cases(), 'value'),
+                        array_map(static fn (ModernGroupList $list): string => __($list->label()), ModernGroupList::cases()),
+                    ))
+                    ->descriptions(array_combine(
+                        array_column(ModernGroupList::cases(), 'value'),
+                        array_map(static fn (ModernGroupList $list): string => __($list->description()), ModernGroupList::cases()),
+                    ))
                     ->required(),
             ]);
     }

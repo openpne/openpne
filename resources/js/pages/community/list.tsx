@@ -3,7 +3,7 @@ import { CommunityImage } from '@/components/community-image';
 import { Pagination } from '@/components/pagination';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import type { PageProps } from '@/types';
+import type { ModernGroupListId, PageProps } from '@/types';
 import { RoomRow } from './room-row';
 import type { MemberRef, PaginatedCommunities, PaginatedTalkRooms } from './types';
 
@@ -31,7 +31,7 @@ export default function CommunityList() {
                     <p className="text-sm text-muted-foreground">{t('No %communities% to show.')}</p>
                 </Panel>
             ) : props.view === 'rooms' ? (
-                <TalkRooms rooms={props.rooms} />
+                <TalkRooms rooms={props.rooms} opens={props.groupList} />
             ) : (
                 <CommunityGrid groups={props.groups} />
             )}
@@ -39,13 +39,13 @@ export default function CommunityList() {
     );
 }
 
-function TalkRooms({ rooms }: { rooms: PaginatedTalkRooms }) {
+function TalkRooms({ rooms, opens }: { rooms: PaginatedTalkRooms; opens: ModernGroupListId }) {
     return (
         <>
             <Panel flush>
                 <List>
                     {rooms.data.map((room) => (
-                        <RoomRow key={room.id} room={room} />
+                        <RoomRow key={room.id} room={room} opens={opens} />
                     ))}
                 </List>
             </Panel>
