@@ -23,6 +23,8 @@ class AvatarTest extends TestCase
             ->get(route('member.avatar.edit'))
             ->assertOk()
             ->assertSee('name="image"', escape: false)
+            ->assertSee('<li>You can have one photo. Uploading a new one replaces the current photo.</li>', escape: false)
+            ->assertSee('class="input_submit" value="Upload"', escape: false)
             // No avatar yet: no remove form (DELETE shares the /member/avatar URL with the
             // upload POST, so the @method('DELETE') field is what distinguishes it).
             ->assertDontSee('value="DELETE"', escape: false);
@@ -60,7 +62,9 @@ class AvatarTest extends TestCase
         $this->actingAs($member)
             ->get(route('member.avatar.edit'))
             ->assertSee($file->thumbnailUrl(120, 120, square: true), escape: false)
-            ->assertSee('value="DELETE"', escape: false);
+            ->assertSee('value="DELETE"', escape: false)
+            ->assertSee('class="input_submit" value="Replace photo"', escape: false)
+            ->assertDontSee('value="Upload"', escape: false);
     }
 
     public function test_upload_stores_a_member_owned_file_and_links_it(): void
