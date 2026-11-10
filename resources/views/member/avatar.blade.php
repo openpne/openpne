@@ -33,8 +33,6 @@
                 <p><input type="file" class="input_file" name="image" accept="{{ image_upload_accept() }}" required></p>
                 <p><input type="submit" class="input_submit" value="{{ $avatar ? __('Replace photo') : __('Upload') }}"></p>
             </form>
-            {{-- The memberImagesBox kind's upload notes. Where OpenPNE 3's first note allowed three photos,
-                 this one says there is a single photo and that an upload replaces it. --}}
             <ul>
                 <li>{{ __('You can have one photo. Uploading a new one replaces the current photo.') }}</li>
                 <li>{{ __('Please upload a GIF, JPEG or PNG image of :max_size or less.', ['max_size' => \App\Files\UploadLimit::label()]) }}</li>
