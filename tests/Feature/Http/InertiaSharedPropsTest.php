@@ -6,11 +6,13 @@ use App\Features\Member\Actions\SetAvatar;
 use App\Files\FileUploader;
 use App\Models\File;
 use App\Models\Member;
+use App\Services\SnsSettingService;
 use App\Support\AvatarColor;
 use App\Support\Feature;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -53,6 +55,20 @@ class InertiaSharedPropsTest extends TestCase
         $this->actingAs($member)
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page->where('auth.user.avatarColor', '#2563eb'));
+    }
+
+    public function test_shared_props_say_what_a_joined_group_row_opens(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('groupList', 'talk'));
+
+        DB::table('sns_settings')->insert(['key' => SnsSettingKey::ModernGroupList->value, 'value' => 'group']);
+        app(SnsSettingService::class)->clearCache();
+
+        $this->actingAs($member)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('groupList', 'group'));
     }
 
     public function test_shared_props_carry_every_feature_unit_on_a_fresh_install(): void

@@ -9,6 +9,7 @@ use App\Models\AdminUser;
 use App\Models\Member;
 use App\Services\SnsSettingService;
 use App\Support\Look;
+use App\Support\ModernGroupList;
 use App\Support\ModernHome;
 use App\Support\SnsSettingKey;
 use Filament\Notifications\Notification;
@@ -76,6 +77,24 @@ class LookSettingsTest extends TestCase
             ->set('data.'.SnsSettingKey::ModernHome->value, 'nope')
             ->call('save')
             ->assertHasErrors('data.'.SnsSettingKey::ModernHome->value);
+    }
+
+    public function test_a_joined_group_row_opens_the_talk_until_saved_and_round_trips(): void
+    {
+        Livewire::test(LookSettings::class)
+            ->assertSet('data.'.SnsSettingKey::ModernGroupList->value, 'talk')
+            ->set('data.'.SnsSettingKey::ModernGroupList->value, 'group')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('data.'.SnsSettingKey::ModernGroupList->value, 'group');
+
+        $this->assertSame('group', DB::table('sns_settings')->where('key', SnsSettingKey::ModernGroupList->value)->value('value'));
+        $this->assertSame(ModernGroupList::Group, app(SnsSettingService::class)->get(SnsSettingKey::ModernGroupList));
+
+        Livewire::test(LookSettings::class)
+            ->set('data.'.SnsSettingKey::ModernGroupList->value, 'nope')
+            ->call('save')
+            ->assertHasErrors('data.'.SnsSettingKey::ModernGroupList->value);
     }
 
     public function test_it_can_be_switched_back(): void

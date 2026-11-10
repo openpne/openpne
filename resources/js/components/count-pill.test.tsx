@@ -247,6 +247,7 @@ test('every unread phrase is given the count it names', () => {
 test('a group room row is named by the group and how many are waiting', () => {
     render(
         <RoomRow
+            opens="talk"
             room={{
                 id: 3,
                 name: 'Book club',
@@ -264,6 +265,7 @@ test('a group room row is named by the group and how many are waiting', () => {
 test('a group room row with one waiting says so in the singular', () => {
     render(
         <RoomRow
+            opens="talk"
             room={{
                 id: 3,
                 name: 'Book club',
