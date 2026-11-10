@@ -99,7 +99,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('comment datetime', L::Three, S::Ported, "op_format_date(comment->created_at, 'XDateTimeJaBr')", 'LocalizedDate::dateTimeLines; year / date / time stacked, as the entry dt'),
                 new ScreenElement('comment images', L::Three, S::Ported, '$comment->getDiaryCommentImagesJoinFile()', 'DiaryCommentImage thumbnails via the shared _images partial; FilePolicy-gated by the diary visibility'),
                 // Comment post form.
-                new ScreenElement('comment post form + is_open notice', L::One, S::Ported, 'op_include_form formDiaryComment'),
+                new ScreenElement('comment post form + is_open notice', L::One, S::Ported, 'op_include_form formDiaryComment', "the button reads Post where OpenPNE 3 reused the form's Save"),
                 new ScreenElement('comment image upload', L::Three, S::Ported, 'formDiaryComment isMultipart + DiaryCommentImageForm x3', 'x-classic.photo-rows: one labelled row per slot, the input inside ul#diary_comment_photo_N; PostImageRules validation'),
                 // Diary record.
                 new ScreenElement('owner edit entry', L::One, S::Ported, "operation form url_for('diary_edit')"),

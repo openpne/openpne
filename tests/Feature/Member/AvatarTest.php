@@ -4,6 +4,7 @@ namespace Tests\Feature\Member;
 
 use App\Features\Member\Actions\SetAvatar;
 use App\Files\FileStorage;
+use App\Files\UploadLimit;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,7 +30,7 @@ class AvatarTest extends TestCase
 
     public function test_the_edit_page_states_the_upload_limit_and_the_content_warning(): void
     {
-        // The stated byte limit follows the configured cap the upload is validated against.
+        // The stated limit follows the configured cap the upload is validated against.
         config()->set('openpne.images.max_upload_kilobytes', 123);
 
         $this->actingAs(Member::factory()->create())
@@ -39,6 +40,15 @@ class AvatarTest extends TestCase
             ->assertSee('infringe copyright or portrait rights')
             // OpenPNE 3's three-photo note has no counterpart on a single-avatar model.
             ->assertDontSee('3 photos');
+    }
+
+    public function test_the_stated_limit_is_never_above_the_enforced_one(): void
+    {
+        foreach ([5120 => '5 MB', 2000 => '2000 KB', 1000 => '1000 KB'] as $kilobytes => $label) {
+            config()->set('openpne.images.max_upload_kilobytes', $kilobytes);
+
+            $this->assertSame($label, UploadLimit::label());
+        }
     }
 
     public function test_the_edit_page_shows_the_avatar_thumbnail(): void
