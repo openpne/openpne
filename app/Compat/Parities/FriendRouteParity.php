@@ -74,7 +74,8 @@ class FriendRouteParity extends RouteParity
     public function compatRedirects(): array
     {
         return [
-            // OpenPNE 3's confirmation center, whose default category was the friend requests.
+            // The friend category of OpenPNE 3's confirmation center; the group categories are
+            // resolved per viewer by the route itself.
             '/confirmation' => 'friend.requests',
         ];
     }

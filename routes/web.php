@@ -66,9 +66,11 @@ use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
 use App\Mcp\OAuth\ApproveController;
 use App\Mcp\OAuth\AuthorizeController;
+use App\Models\Group;
 use App\Models\Member;
 use App\Support\BrandColor;
 use App\Support\ClassicErrorPage;
+use App\Support\Feature;
 use App\Support\GuestLoginRedirect;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\Request;
@@ -360,17 +362,25 @@ Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->c
 Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
-    // Each OpenPNE 3 confirmation category lands where its requests are answered now, and an
-    // unknown one is a 404 as it was there.
+    // Each OpenPNE 3 confirmation category lands where its requests are answered now; no category
+    // lands on the friend requests by choice, since OpenPNE 3 listed nothing for it.
     Route::get('/confirmation', function (Request $request) {
-        $category = $request->query('category', 'friend_confirm');
+        $category = $request->query('category') ?? 'friend_confirm';
         abort_unless(in_array($category, ['friend_confirm', 'community_confirm', 'community_admin_request', 'community_sub_admin_request'], true), 404);
 
         if ($category === 'friend_confirm') {
             return redirect()->route('friend.requests');
         }
 
-        // The group cautions are on the Classic home and on the Modern digest.
+        // A nomination is answered from the banner on its own group's top, on either surface.
+        $nominating = $category === 'community_admin_request' && Feature::Group->enabled()
+            ? Group::where('pending_admin_member_id', $request->user()->getKey())->orderBy('id')->first()
+            : null;
+        if ($nominating !== null) {
+            return redirect()->route('group.show', ['group' => $nominating->getKey()]);
+        }
+
+        // Join requests are listed on the Classic home and on the Modern digest.
         return SurfaceResolver::resolve($request, 'home') === SurfaceResolver::MODERN
             ? redirect()->route('dashboard')
             : redirect()->route('home');
@@ -918,7 +928,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/sendToFriend', 'compose')->name('message.compose');
         // OpenPNE 3's smartphone thread with one member, as its route and as the fallback spelling
         // its own script linked; compose is where a member id resolves on either surface.
-        Route::get('/chain/{id}', fn (int $id) => redirect()->route('message.compose', ['id' => $id]))
+        Route::get('/chain/{id}', fn (string $id) => redirect()->route('message.compose', ['id' => $id]))
             ->whereNumber('id')->name('message.chain_compat');
         Route::get('/smtChain', fn (Request $request) => redirect()->route('message.compose', ['id' => (int) $request->query('id')]))
             ->name('message.smt_chain_compat');
