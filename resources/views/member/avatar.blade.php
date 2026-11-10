@@ -31,11 +31,10 @@
             <form method="POST" action="{{ route('member.avatar.update') }}" enctype="multipart/form-data">
                 @csrf
                 <p><input type="file" class="input_file" name="image" accept="{{ image_upload_accept() }}" required></p>
-                <p><input type="submit" class="input_submit" value="{{ __('Upload') }}"></p>
+                <p><input type="submit" class="input_submit" value="{{ $avatar ? __('Replace photo') : __('Upload') }}"></p>
             </form>
-            {{-- The memberImagesBox kind's upload notes. OpenPNE 3's third note capped the member at
-                 three photos; OpenPNE 4 holds one avatar, so it has nothing to say here. --}}
             <ul>
+                <li>{{ __('You can have one photo. Uploading a new one replaces the current photo.') }}</li>
                 <li>{{ __('Please upload a GIF, JPEG or PNG image of :max_size or less.', ['max_size' => \App\Files\UploadLimit::label()]) }}</li>
                 <li>{{ __('Photos that infringe copyright or portrait rights, violent or obscene photos, and photos other members would find offensive are prohibited. Post them at your own responsibility.') }}</li>
             </ul>
