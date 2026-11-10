@@ -219,8 +219,8 @@ const GROUPS_SECTION: NavSection & { badge: CountBadge } = {
     label: COMMUNITIES,
     badge: {
         count: 'groupTalks',
-        label: t(':count %communities% with new messages'),
-        one: t('1 %community% with new messages'),
+        label: t(':count %communities% with new talk messages'),
+        one: t('1 %community% with new talk messages'),
     },
     feature: 'group',
 };

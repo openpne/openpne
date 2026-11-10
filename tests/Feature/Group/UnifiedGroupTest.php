@@ -237,7 +237,7 @@ class UnifiedGroupTest extends TestCase
         $faces = $this->queriesWith('group_members', 'limit 9');
         $topics = $this->queriesWith('group_topics', 'comments_count');
         $events = $this->queriesWith('participants_count');
-        $staff = $this->queriesWith('group_members', ' in (?, ?)');
+        $staff = $this->queriesWith('group_members', 'role', ' in (?, ?)');
         DB::disableQueryLog();
 
         $this->assertCount(1, $faces, 'the face row was read more than once');

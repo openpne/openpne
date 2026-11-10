@@ -171,7 +171,7 @@ test('the joined tab carries the unread-talk count', () => {
     );
     // This phrase, with the live count, is the link's only announcement of the number — the digits
     // the pill prints are hidden — so it must exist and must be the nav's own wording.
-    assert.equal(tabs[0]?.badge?.label.key, ':count %communities% with new messages');
+    assert.equal(tabs[0]?.badge?.label.key, ':count %communities% with new talk messages');
 });
 
 test("What's new is a hub headed by the words its own nav entry carries", () => {

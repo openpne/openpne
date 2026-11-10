@@ -161,7 +161,7 @@ export default function UnifiedGroup() {
                     >
                         <span className="min-w-0 flex-1 truncate text-sm">
                             {talkPreview === null ? (
-                                <span className="text-muted-foreground">{t('No messages yet.')}</span>
+                                <span className="text-muted-foreground">{t('Nothing has been said in this talk yet.')}</span>
                             ) : (
                                 <>
                                     <span className="text-muted-foreground">{talkPreview.authorName ?? t('%Withdrawn_member%')}</span>

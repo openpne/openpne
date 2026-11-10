@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChatDayHeading } from '@/components/chat-day-heading';
@@ -430,7 +430,17 @@ export default function GroupTalkIndex() {
                 )}
 
                 {messages.length === 0 ? (
-                    <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
+                    // Older rows may remain unloaded, and then the talk is not one nothing was said in.
+                    !stream.hasOlder && (
+                        <div className="space-y-2 px-4 py-4 text-sm sm:px-5">
+                            <p className="text-muted-foreground">{t('Nothing has been said in this talk yet.')}</p>
+                            <p>
+                                <Link href={`/groups/${group.id}`} className="text-link hover:underline">
+                                    {t('Open the %community% page')}
+                                </Link>
+                            </p>
+                        </div>
+                    )
                 ) : (
                     // Not the shared List: nothing rules between these rows
                     // (docs/internals/group-talk.md, "Date headings, and what stands above a row").

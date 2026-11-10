@@ -36,7 +36,7 @@ export function RoomRow({ room }: { room: TalkRoomRow }) {
                 </div>
                 <p className="mt-0.5 truncate text-sm text-muted-foreground">
                     {latest === null ? (
-                        t('No messages yet.')
+                        t('Nothing has been said in this talk yet.')
                     ) : (
                         <>
                             {speaker}
