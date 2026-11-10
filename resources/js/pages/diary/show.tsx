@@ -187,7 +187,7 @@ export default function DiaryShow() {
                     </Field>
                     <ImagesField id="comment_images" label={t('Attachments')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
                     <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
-                        {t('Save')}
+                        {t('Post comment')}
                     </Button>
                 </form>
             </Panel>

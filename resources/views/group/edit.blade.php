@@ -107,7 +107,7 @@
 
             <div class="operation">
                 <ul class="moreInfo button">
-                    <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                    <li><input type="submit" class="input_submit" value="{{ $group ? __('Save') : __('Create') }}"></li>
                     @if ($group)
                         <li><a href="{{ route('group.show', $group) }}">{{ __('Cancel') }}</a></li>
                     @endif
