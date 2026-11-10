@@ -13,7 +13,7 @@ use Illuminate\View\Component;
  */
 class FriendListBox extends Component
 {
-    /** @var list<array{url: string, imageUrl: ?string, name: string}> */
+    /** @var list<array{url: string, imageUrl: ?string, name: string, count: int}> */
     public array $items;
 
     public int $rows;
@@ -46,6 +46,7 @@ class FriendListBox extends Component
             'url' => route('member.profile.show', $member),
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
             'name' => $member->name,
+            'count' => $member->friendships_count,
         ])->all();
 
         if ($subject !== null && $this->items !== []) {

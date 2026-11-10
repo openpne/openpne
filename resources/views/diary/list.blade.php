@@ -26,7 +26,7 @@
             <x-slot:heading>
                 <h3>{{ $title }}@if ($period) <span class="archivePeriod">{{ $period }}</span>@endif</h3>
             </x-slot:heading>
-            <div class="body">{{ __('No %diary% entries to show.') }}</div>
+            <div class="body">{{ __('There are no %diaries%.') }}</div>
         </x-classic.parts>
     @else
         <x-classic.parts id="diary_list" name="recentList" :hand-written="true">
@@ -40,7 +40,7 @@
             @foreach ($diaries as $entry)
                 <dl>
                     <dt>{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</dt>
-                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a><x-diary.image-icon :count="$entry->pictures_count" /></dd>
+                    <dd><a href="{{ \App\Features\Diary\DiaryTitle::showUrl($entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a><x-diary.image-icon :count="$entry->pictures_count" /></dd>
                 </dl>
             @endforeach
             <x-classic.pager :paginator="$diaries" />

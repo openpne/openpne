@@ -35,7 +35,7 @@ class AvatarTest extends TestCase
         $this->actingAs(Member::factory()->create())
             ->get(route('member.avatar.edit'))
             ->assertOk()
-            ->assertSee('<li>Please upload a GIF, JPEG or PNG within '.(123 * 1024).' bytes.</li>', escape: false)
+            ->assertSee('<li>Please upload a GIF, JPEG or PNG image of 123 KB or less.</li>', escape: false)
             ->assertSee('infringe copyright or portrait rights')
             // OpenPNE 3's three-photo note has no counterpart on a single-avatar model.
             ->assertDontSee('3 photos');

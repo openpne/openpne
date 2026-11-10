@@ -23,7 +23,7 @@
                 <tr>
                     <th><label for="diary_body">{{ __('Body') }} <x-classic.required-mark /></label></th>
                     <td>
-                        <textarea id="diary_body" name="body" required>{{ old('body', $diary->body) }}</textarea>
+                        <textarea id="diary_body" name="body" rows="10" cols="50" required>{{ old('body', $diary->body) }}</textarea>
                         @error('body')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>

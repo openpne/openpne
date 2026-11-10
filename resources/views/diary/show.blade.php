@@ -50,8 +50,6 @@
                         <li><input type="submit" class="input_submit" value="{{ __('Edit this %diary%') }}"></li>
                     </ul>
                 </form>
-                {{-- OpenPNE 4 addition: OpenPNE 3 offers deletion from the edit screen. --}}
-                <a href="{{ route('diary.delete.show', $diary) }}">{{ __('Delete') }}</a>
             </div>
         @endif
     </x-classic.parts>
@@ -132,7 +130,7 @@
                 <tr>
                     <th><label for="diary_comment_body">{{ __('Comment') }} <x-classic.required-mark /></label></th>
                     <td>
-                        <textarea id="diary_comment_body" name="body" rows="8" required>{{ old('body') }}</textarea>
+                        <textarea id="diary_comment_body" name="body" rows="8" cols="40" required>{{ old('body') }}</textarea>
                         @error('body')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
@@ -140,7 +138,7 @@
             </table>
             <div class="operation">
                 <ul class="moreInfo button">
-                    <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                    <li><input type="submit" class="input_submit" value="{{ __('Post') }}"></li>
                 </ul>
             </div>
         </form>

@@ -49,7 +49,7 @@ abstract class DiaryListBox extends Component
 
         return $diaries->map(fn (Diary $diary): array => [
             'date' => LocalizedDate::monthDay($date($diary), $locale),
-            'url' => route('diary.show', $diary),
+            'url' => DiaryTitle::showUrl($diary),
             'title' => DiaryTitle::withCount($diary),
             'author' => $diary->member->name,
             'hasImages' => ($diary->pictures_count ?? 0) > 0,

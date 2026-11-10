@@ -69,6 +69,19 @@ class DiaryCommentCountTest extends TestCase
             ->assertSee('Quiet Entry (0)');
     }
 
+    /** OpenPNE 3 op_diary_url_for_show. */
+    public function test_list_links_carry_the_comment_count_only_when_there_are_comments(): void
+    {
+        $member = Member::factory()->create();
+        $commented = $this->countedDiary($member, 'Commented Entry', Visibility::Members, 3);
+        $quiet = $this->countedDiary($member, 'Quiet Entry', Visibility::Members, 0);
+
+        $this->actingAs($member)->get('/diary/listMember')
+            ->assertOk()
+            ->assertSee('<a href="'.route('diary.show', $commented).'?comment_count=3">Commented Entry (3)</a>', false)
+            ->assertSee('<a href="'.route('diary.show', $quiet).'">Quiet Entry (0)</a>', false);
+    }
+
     private function countedDiary(Member $owner, string $title, Visibility $visibility, int $comments): Diary
     {
         $diary = Diary::factory()->create([

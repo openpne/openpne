@@ -1112,7 +1112,7 @@
     "Please login to visit this page": "このページを見るにはログインが必要です",
     "Please Select": "選択してください",
     "Please select the item that wants to be set from the menu.": "設定する項目をメニューから選択してください。",
-    "Please upload a GIF, JPEG or PNG within :max_size bytes.": ":max_size bytes 以内のGIF・JPEG・PNGにしてください。",
+    "Please upload a GIF, JPEG or PNG image of :max_size or less.": ":max_size 以下の GIF・JPEG・PNG 画像をアップロードしてください。",
     "Please wait until it reopens.": "募集再開までしばらくお待ちください。",
     "Post": "投稿する",
     "Post %diary%": "%diary%を書く",

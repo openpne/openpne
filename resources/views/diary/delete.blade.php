@@ -11,10 +11,10 @@
                 <div class="operation">
                     <ul class="moreInfo button">
                         <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>
-                        <li><a href="{{ route('diary.show', $diary) }}">{{ __('Cancel') }}</a></li>
                     </ul>
                 </div>
             </form>
         </div>
     </x-classic.parts>
+    <x-classic.history-back :fallback="route('diary.show', $diary)" />
 @endsection

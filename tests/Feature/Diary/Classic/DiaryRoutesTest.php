@@ -49,10 +49,10 @@ class DiaryRoutesTest extends TestCase
         $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
     }
 
-    public function test_the_archive_offers_no_per_row_edit_or_delete_but_the_entry_still_does(): void
+    public function test_the_archive_offers_no_per_row_edit_or_delete_but_the_entry_leads_to_both(): void
     {
-        // listMemberSuccess.php lists titles only, OpenPNE 3 reaching edit and delete from the entry
-        // itself — asserted as a pair so dropping the archive links cannot strip the route to them.
+        // listMemberSuccess.php lists titles only, OpenPNE 3 reaching edit from the entry and delete
+        // from the editor — asserted as a chain so dropping the archive links cannot strip the route to them.
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
 
@@ -64,6 +64,10 @@ class DiaryRoutesTest extends TestCase
         $this->actingAs($owner)->get("/diary/{$diary->getKey()}")
             ->assertOk()
             ->assertSee(route('diary.edit', $diary), false)
+            ->assertDontSee(route('diary.delete.show', $diary), false);
+
+        $this->actingAs($owner)->get(route('diary.edit', $diary))
+            ->assertOk()
             ->assertSee(route('diary.delete.show', $diary), false);
     }
 
@@ -329,6 +333,18 @@ class DiaryRoutesTest extends TestCase
         $response->assertOk();
         // OpenPNE 3 action is deleteConfirm; the confirm page's body id follows it.
         $response->assertSee('id="page_diary_deleteConfirm"', false);
+        $response->assertSee('<a href="'.route('diary.show', $diary).'" data-history-back>Back to previous page</a>', false);
+        $response->assertDontSee('Cancel');
+    }
+
+    public function test_an_archive_month_without_entries_says_so_without_implying_more_will_come(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->withSession(['locale' => 'ja'])->get("/diary/listMember/{$member->getKey()}/2020/1")
+            ->assertOk()
+            ->assertSee('日記がありません。')
+            ->assertDontSee('まだ');
     }
 
     public function test_delete_confirm_returns_404_for_non_owner(): void

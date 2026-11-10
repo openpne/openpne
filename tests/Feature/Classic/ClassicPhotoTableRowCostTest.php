@@ -43,7 +43,7 @@ class ClassicPhotoTableRowCostTest extends TestCase
         );
     }
 
-    public function test_the_friend_list_gadget_totals_with_one_aggregate_and_no_per_row_count(): void
+    public function test_the_friend_list_gadget_totals_with_one_aggregate_and_counts_in_the_slice(): void
     {
         Gadget::create(['context' => 'home', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 0]);
         app(GadgetService::class)->clearCache();
@@ -55,12 +55,9 @@ class ClassicPhotoTableRowCostTest extends TestCase
 
         $queries = $this->queriesFor($large, '/');
 
-        // "Show all (n)" is the whole set, which the grid slice cannot report — but one aggregate
-        // answers it, and take() must still not pick up the paged path's per-row withCount, whose
-        // alias is the marker that the subquery ran.
-        foreach ($queries as $query) {
-            $this->assertStringNotContainsString('friendships_count', $query);
-        }
+        // Each cell's friend count rides in the slice's select list, not a query per row, so the
+        // aggregate for "Show all (n)" stays the gadget's only extra round trip.
+        $this->assertCount(1, array_filter($queries, fn (string $query) => str_contains($query, 'friendships_count')));
         $this->assertSame(1, $this->aggregateCountsOver($queries, 'friendships'));
     }
 

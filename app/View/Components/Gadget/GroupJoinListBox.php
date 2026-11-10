@@ -14,7 +14,7 @@ use Illuminate\View\Component;
  */
 class GroupJoinListBox extends Component
 {
-    /** @var list<array{url: string, imageUrl: ?string, name: string, crown: bool}> */
+    /** @var list<array{url: string, imageUrl: ?string, name: string, count: int, crown: bool}> */
     public array $items;
 
     public int $rows;
@@ -45,6 +45,7 @@ class GroupJoinListBox extends Component
             'url' => route('group.show', $group),
             'imageUrl' => $group->image?->thumbnailUrl(76, 76, square: true),
             'name' => $group->name,
+            'count' => $group->members_count,
             'crown' => (bool) $group->owner_is_admin,
         ])->all();
 
