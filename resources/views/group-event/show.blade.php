@@ -87,20 +87,12 @@
                         <a href="{{ $thread->link(1, true) }}">{{ __('View Oldest First') }}</a>
                     @endif
                 </div>
-                <div class="pagerRelative">
-                    @if ($thread->hasOlder())
-                        <p class="prev"><a href="{{ $thread->link($thread->olderPage(), $thread->ascending) }}">{{ __('Older') }}</a></p>
-                    @endif
-                    <p class="number">{{ __('No. :first - :last', ['first' => $thread->firstNumber(), 'last' => $thread->lastNumber()]) }}</p>
-                    @if ($thread->hasNewer())
-                        <p class="next"><a href="{{ $thread->link($thread->newerPage(), $thread->ascending) }}">{{ __('Newer') }}</a></p>
-                    @endif
-                </div>
+                <x-classic.comment-pager :thread="$thread" />
             @endif
 
             @foreach ($thread->comments as $comment)
                 <dl>
-                    <dt>{{ \App\Support\LocalizedDate::dateTime($comment->created_at) }}</dt>
+                    <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($comment->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
                     <dd>
                         <div class="title">
                             <p class="heading">
@@ -127,6 +119,9 @@
                     </dd>
                 </dl>
             @endforeach
+            @if ($thread->hasPages())
+                <x-classic.comment-pager :thread="$thread" />
+            @endif
         </x-classic.parts>
     @endif
     @if ($commentReplyLink && $canComment)

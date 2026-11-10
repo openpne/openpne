@@ -13,9 +13,9 @@
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>
-                    <li><a href="{{ route('group.events.show', $event) }}">{{ __('Cancel') }}</a></li>
                 </ul>
             </div>
         </form>
     </x-classic.parts>
+    <x-classic.history-back :fallback="route('group.events.show', $event)" />
 @endsection

@@ -9,9 +9,10 @@
             <input type="hidden" name="to" value="{{ $recipient->getKey() }}">
             @isset($parentId)<input type="hidden" name="parent_id" value="{{ $parentId }}">@endisset
             @isset($threadId)<input type="hidden" name="thread_id" value="{{ $threadId }}">@endisset
+            <x-classic.required-notice />
             <table>
                 <tr>
-                    <th>{{ __('Recipient') }}</th>
+                    <th><label>{{ __('Recipient') }}</label></th>
                     <td><a href="{{ route('member.profile.show', $recipient) }}">{{ $recipient->name }}</a></td>
                 </tr>
                 @include('message._fields', ['subject' => $subject ?? '', 'body' => $body ?? ''])

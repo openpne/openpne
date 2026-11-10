@@ -95,12 +95,12 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('article body line breaks + auto-link', L::Two, S::Ported, 'op_url_cmd(nl2br($communityTopic->getBody()))', 'x-user-text (BodyText)'),
                 new ScreenElement('edit entry', L::Two, S::Ported, 'showSuccess.php div.operation > form > ul.button input Edit', 'div.operation > form (GET edit) > ul.button; deletion is reached from the edit screen'),
                 new ScreenElement('comment thread (number, author, delete)', L::One, S::Ported, "include_component('communityTopicComment', 'list')"),
-                new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible)', 'GroupTopicCommentThread: fixed size 20, older/newer + latest/oldest toggle'),
-                new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),
+                new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible), echoed above and below the comments', 'GroupTopicCommentThread: fixed size 20, older/newer above and below + latest/oldest toggle; drawn only from two pages up, where OpenPNE 3 printed the No. line on a single page too'),
+                new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate::dateTimeLines; year / date / time stacked'),
                 new ScreenElement('comment images', L::Three, S::Ported, '_list.php $comment->getImages() ul.photo'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->getBody()))', 'x-user-text (BodyText)'),
                 new ScreenElement('reply (>>N) quote link', L::Three, S::Ported, '_list.php a.reply + SnsConfig op_community_topic_plugin_community_topic_comment_reply', 'a.reply on each comment while the viewer may comment, gated by the upgraded SnsSettingKey; classic-comment-reply.js appends >>N name to the box, the bare link jumps to the form'),
-                new ScreenElement('comment post form + image upload', L::One, S::Ported, "op_include_form('formCommunityTopicComment', isMultipart)", 'textarea#community_topic_comment_body; x-classic.photo-rows under ul#community_topic_comment_photo_N'),
+                new ScreenElement('comment post form + image upload', L::One, S::Ported, "op_include_form('formCommunityTopicComment', isMultipart)", 'textarea#community_topic_comment_body; x-classic.photo-rows under ul#community_topic_comment_photo_N; the button reads Post (ja 投稿する) where OpenPNE 3 used the form default Send (ja 送信)'),
                 new ScreenElement('required-field markers', L::Three, S::Ported, "_partsForm.php mark_required_field + '%0% is required field.'", 'x-classic.required-mark in the label, x-classic.required-notice above the table'),
                 new ScreenElement('community top-page line link', L::Two, S::Ported, "op_include_line('linkLine', link_to('community/home'))", '#linkLine to the community home, labelled [name] %Community% Top Page'),
             ],
@@ -125,14 +125,14 @@ class GroupTopicRouteParity extends RouteParity
             // deleteConfirmSuccess.php → group-topic/delete.blade.php
             'deleteConfirm' => [
                 new ScreenElement('delete confirmation form', L::One, S::Ported, "op_include_form('deleteConfirmForm', \$form, title)", 'OpenPNE 4 adds the question paragraph OpenPNE 3 left to the box title'),
-                new ScreenElement('back-to-previous line', L::Three, S::Partial, "op_include_line('backLink', link_to_function(history.back()))", 'a Cancel link to the topic instead of the JavaScript line box'),
+                new ScreenElement('back-to-previous line', L::Three, S::Ported, "op_include_line('backLink', link_to_function(history.back()))", 'x-classic.history-back; the href falls back to the topic'),
             ],
             // communityTopicComment/deleteConfirmSuccess.php → group-topic/comment-delete.blade.php
             'communityTopicComment/deleteConfirm' => [
                 new ScreenElement('delete confirmation form', L::One, S::Ported, "communityTopicComment/deleteConfirmSuccess.php op_include_form('deleteConfirmForm', \$form, url_for('communityTopic_comment_delete'))", 'the same dparts#deleteConfirmForm box, posting to group.topics.comment.delete; OpenPNE 4 adds the question paragraph and a blockquote.commentPreview of the comment'),
                 new ScreenElement('box heading (the question)', L::Three, S::Partial, "deleteConfirmSuccess.php title => 'Do you really delete this comment?'", 'headed "Delete the comment", with the question moved into a paragraph inside the box'),
                 new ScreenElement('delete submit button', L::Two, S::Ported, '_partsForm.php div.operation > ul.moreInfo.button > li > input.input_submit', 'same markup and Delete label; the CSRF hidden field sits under the form tag rather than inside the button li'),
-                new ScreenElement('back-to-previous line', L::Three, S::Partial, "op_include_line('backLink', link_to_function(history.back()))", 'a Back link to the topic in a second button li, so the div#backLink line box is not rendered'),
+                new ScreenElement('back-to-previous line', L::Three, S::Ported, "op_include_line('backLink', link_to_function(history.back()))", 'x-classic.history-back; the href falls back to the topic'),
                 new ScreenElement('form table', L::Three, S::Deferred, '_partsForm.php <table> (the confirm binds a bare sfForm, so the table holds no field row)', 'an empty table with nothing to style; single-action confirmations stay free-form (docs/internals/classic-compatibility.md, "Default skin"), as the topic delete confirm does'),
                 new ScreenElement('deletable gate', L::Two, S::Ported, 'executeDeleteConfirm forward404Unless CommunityTopicComment::isDeletable (author, or CommunityTopic::isEditable)', 'GroupTopicAccess::canDeleteComment; a Modern viewer is sent back to the topic, which confirms deletion inline'),
                 new ScreenElement('post-delete redirect + flash', L::Two, S::Ported, "opCommunityTopicPluginTopicCommentActions::executeDelete redirect @communityTopic_show + flash 'The comment was deleted successfully.'", 'back to the topic with a status flash, reworded'),

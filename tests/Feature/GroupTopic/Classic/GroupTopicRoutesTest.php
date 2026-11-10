@@ -205,7 +205,9 @@ class GroupTopicRoutesTest extends TestCase
 
         $this->actingAs($author)->get(route('group.topics.delete.show', $topic))
             ->assertOk()
-            ->assertSee('id="page_communityTopic_deleteConfirm"', false);
+            ->assertSee('id="page_communityTopic_deleteConfirm"', false)
+            ->assertSee('<a href="'.route('group.topics.show', $topic).'" data-history-back>Back to previous page</a>', false)
+            ->assertDontSee('Cancel');
 
         $this->actingAs($author)->post(route('group.topics.delete', $topic))
             ->assertRedirect(route('group.show', $group));

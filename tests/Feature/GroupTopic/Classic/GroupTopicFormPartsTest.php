@@ -69,6 +69,19 @@ class GroupTopicFormPartsTest extends TestCase
             'Comment <strong>*</strong>',
             '</table>',
             'class="operation"',
+            '<input type="submit" class="input_submit" value="Post">',
         ], false);
+    }
+
+    /** OpenPNE 3 drew the body with sfWidgetFormTextarea's default rows 4 / cols 30. */
+    public function test_the_body_textarea_keeps_the_size_openpne3_gave_it(): void
+    {
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+
+        $this->actingAs($member)->get(route('group.topics.new', $group))->assertOk()
+            ->assertSee('<textarea id="community_topic_body" name="body" rows="4" cols="30"', false);
+        $this->actingAs($member)->get(route('group.events.new', $group))->assertOk()
+            ->assertSee('<textarea id="community_event_body" name="body" rows="4" cols="30"', false);
     }
 }

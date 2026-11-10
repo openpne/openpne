@@ -9,7 +9,7 @@
 <tr>
     <th><label for="community_event_body">{{ __('Body') }} <x-classic.required-mark /></label></th>
     <td>
-        <textarea id="community_event_body" name="body" required>{{ old('body', $e?->body) }}</textarea>
+        <textarea id="community_event_body" name="body" rows="4" cols="30" required>{{ old('body', $e?->body) }}</textarea>
         @error('body')<p class="error">{{ $message }}</p>@enderror
     </td>
 </tr>
