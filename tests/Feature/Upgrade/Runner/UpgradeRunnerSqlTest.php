@@ -279,7 +279,7 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
 
         $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions));
 
-        foreach (['surface_mode', 'brand_favicon_fallback', 'modern_home'] as $key) {
+        foreach (['surface_mode', 'brand_favicon_fallback', 'modern_home', 'modern_group_list'] as $key) {
             $this->assertDatabaseMissing('sns_settings', ['key' => $key]);
         }
     }

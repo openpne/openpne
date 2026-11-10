@@ -319,8 +319,9 @@ contracts:
   picture-warming lines are recorded by the run that first completed the site (the one that
   inserted `surface_mode`), so a re-run has an empty list, and an operator who set the mode
   before the first completion never sees the picture line (the guide's §5 says the same). The
-  tab-icon line is recorded by the run that inserted `brand_favicon_fallback`, and the Modern
-  home line by the run that inserted `modern_home`, whatever the surface stamp did.
+  tab-icon line is recorded by the run that inserted `brand_favicon_fallback`, the Modern home
+  line by the run that inserted `modern_home`, and the joined-group line by the run that inserted
+  `modern_group_list`, whatever the surface stamp did.
 - `steps[]` lists the walk steps, the passes and the three `file_bin` keys by their checkpoint
   `step_key`; `elapsed_ms` is measured by the report between `started()` and `done()` /
   `failed()`, and is `null` for a failure recorded without a start (the emoji charset refusal).
@@ -352,7 +353,7 @@ contracts:
 ## Post-walk passes
 
 Work an `INSERT ... SELECT` cannot express runs after the walk, in this order, each under its own
-checkpoint except the four settings stamps, which write no `openpne4_upgrade_state` row:
+checkpoint except the five settings stamps, which write no `openpne4_upgrade_state` row:
 
 | Pass | Why after the walk | Resume model |
 |---|---|---|
@@ -367,6 +368,7 @@ checkpoint except the four settings stamps, which write no `openpne4_upgrade_sta
 | `surface_mode` stamp | no OpenPNE 3 source column | insert-if-absent, only after full success |
 | `brand_favicon_fallback` stamp | no OpenPNE 3 source column; OpenPNE 3 showed no browser-tab icon ([site-icon.md](site-icon.md)) | insert-if-absent, only after full success, independent of the surface stamp |
 | `modern_home` stamp (`whats_new`) | no OpenPNE 3 source column; the digest is the Modern page nearest the OpenPNE 3 home ([home-issues.md](home-issues.md#routes)) | insert-if-absent, only after full success, independent of the surface stamp; a run resumed after the UI layout settings page was saved in between finds the row that save wrote, and keeps it |
+| `modern_group_list` stamp (`group`) | no OpenPNE 3 source column; an OpenPNE 3 community opened on its top, and a community that never used its timeline arrives with an empty talk ([group-talk.md](group-talk.md#the-joined-group-list-is-a-room-list)) | insert-if-absent, only after full success, independent of the surface stamp; a row the UI layout settings page saved in between stands |
 | OpenPNE 3 form-default stamp (`SnsSettingKey::op3FormDefault()`, today `sns_name` = `MySNS`) | an `INSERT ... SELECT` copies rows, and the key has none in a source whose admin never saved the page; OpenPNE 3 then showed its form default, which differs from the default here | insert-if-absent after the settings step, only after full success; a copied or operator-set row stands |
 
 `PasswordWrap` writes `bcrypt(md5hex)` at cost 10 with `password_scheme = md5_bcrypt`; login

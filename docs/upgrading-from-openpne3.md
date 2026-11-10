@@ -121,8 +121,8 @@ Writes nothing. It prints the SQL each step would run, and — the part worth re
 **preflight** found: a read-only inspection of your source that runs before anything is written.
 
 The lines to act on start with one of these words, apart from the unprefixed instructions a
-first completion ends with (the surface switch and warming the pictures: §5; the tab icon: "What the
-upgrade changed"); the rest is the
+first completion ends with (the surface switch and warming the pictures: §5; the tab icon, the
+Modern home and what a joined community opens: "What the upgrade changed"); the rest is the
 `Site timezone` line to check, the dry run's `PLAN` lines and their SQL, progress, `Reset:` under
 `--force-restart`, and the closing `Finished in …`:
 
@@ -324,9 +324,12 @@ change from a problem when you go through it.
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
   after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the
   Modern surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover
-  below starts with the Modern branding. There, the joined communities' topics and events are the
-  two tabs after *Joined* and *All* under the communities entry, as the recent-list gadgets' "More"
-  was on the PC layout. If your OpenPNE 3 site had its smartphone layout switched
+  below starts with the Modern branding. There, the home is the "What's new" lists, the page nearest
+  the OpenPNE 3 home (the UI layout settings page offers the daily issue instead); the joined
+  communities' topics and events are the two tabs after *Joined* and *All* under the communities
+  entry, as the recent-list gadgets' "More" was on the PC layout, and a community on the *Joined*
+  list opens its page, as it did in OpenPNE 3, rather than its talk (the same settings page offers
+  the talk). If your OpenPNE 3 site had its smartphone layout switched
   off (a free-area script setting `disable_smt`, say) and phones should keep seeing the PC layout,
   choose `php artisan openpne:surface-mode classic_only` instead: nothing Modern is shown and members
   cannot switch; the community timeline posts the upgrade brought over are read and written on the
