@@ -118,6 +118,14 @@ test('the diary hub offers the friend feed while friends are on', () => {
     ]);
 });
 
+test('the comment history lights none of the diary hub tabs', () => {
+    const active = (variant: string) =>
+        (resolveChrome('diary/feed', { enabledFeatures: allOn, variant }).tabs ?? []).filter((tab) => tab.active).map((tab) => tab.href);
+    assert.deepEqual(active('commented'), []);
+    assert.deepEqual(active('friends'), ['/diary/listFriend']);
+    assert.deepEqual(active('search'), ['/diary/list']);
+});
+
 test('the diary hub drops the friend tab while friends are off', () => {
     // The friend lens goes with its unit; the hub and its remaining tabs stay.
     assert.deepEqual(tabHrefs('diary/feed', { ...allOn, friend: false }, { variant: 'recent' }), [

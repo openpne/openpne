@@ -12,7 +12,7 @@ import { DiaryRow } from './diary-row';
 import type { DiaryStream, PaginatedDiaries } from './types';
 
 interface FeedProps extends PageProps {
-    variant: 'recent' | 'friends' | 'search';
+    variant: 'recent' | 'friends' | 'search' | 'commented';
     searchable: boolean;
     keyword: string;
     hasKeyword: boolean;
@@ -31,9 +31,11 @@ export default function DiaryFeed() {
     const headTitle =
         variant === 'friends'
             ? t('%Diaries% of %My_friends%')
-            : variant === 'search' && hasKeyword
-              ? t('Search Results')
-              : t('Recently Posted %Diaries%');
+            : variant === 'commented'
+              ? t('%Diary% Comment History')
+              : variant === 'search' && hasKeyword
+                ? t('Search Results')
+                : t('Recently Posted %Diaries%');
     const form = useForm({ keyword });
 
     const submit = (e: FormEvent) => {
@@ -63,6 +65,8 @@ export default function DiaryFeed() {
                     </div>
                 </form>
             )}
+
+            {variant === 'commented' && <p className="text-sm text-muted-foreground">{t('%Diary% Comment History')}</p>}
 
             {variant === 'search' && hasKeyword && (
                 <p className="text-sm text-muted-foreground">{t('Search results for :keyword', { keyword })}</p>

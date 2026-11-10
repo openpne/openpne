@@ -21,6 +21,7 @@ interface DashboardProps extends PageProps {
     announcements: Announcements;
     newcomer: boolean;
     friendDiaries: DiarySummary[];
+    commentedDiaries: DiarySummary[];
     diaries: DiarySummary[];
     timeline: TimelinePostEntry[];
     groupActivity: CommunityActivityEntry[];
@@ -111,7 +112,7 @@ function DigestSection({ title, viewAllHref, children }: { title: string; viewAl
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, newcomer, friendDiaries, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
+    const { auth, announcements, newcomer, friendDiaries, diaries, commentedDiaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
@@ -139,6 +140,14 @@ export default function Dashboard() {
             {enabledFeatures.diary && diaries.length > 0 && (
                 <DigestSection title={t('Latest %diaries%')} viewAllHref="/diary/list">
                     {diaries.map((diary) => (
+                        <DiaryRow key={diary.id} diary={diary} />
+                    ))}
+                </DigestSection>
+            )}
+
+            {enabledFeatures.diary && commentedDiaries.length > 0 && (
+                <DigestSection title={t('%Diary% Comment History')} viewAllHref="/diary/comment/history">
+                    {commentedDiaries.map((diary) => (
                         <DiaryRow key={diary.id} diary={diary} />
                     ))}
                 </DigestSection>

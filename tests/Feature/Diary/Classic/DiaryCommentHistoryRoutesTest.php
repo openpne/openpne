@@ -95,12 +95,4 @@ class DiaryCommentHistoryRoutesTest extends TestCase
             $query->paginate($viewer)->pluck('id')->all(),
         );
     }
-
-    public function test_a_modern_viewer_is_sent_to_the_notification_feed(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-
-        $this->actingAs(Member::factory()->create())->get('/diary/comment/history')
-            ->assertRedirect(route('notifications.index'));
-    }
 }

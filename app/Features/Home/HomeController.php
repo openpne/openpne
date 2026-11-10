@@ -3,6 +3,7 @@
 namespace App\Features\Home;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Diary\Queries\DiaryCommentHistory;
 use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\RecentMemberDiaries;
@@ -100,6 +101,7 @@ class HomeController extends Controller
     public function dashboard(
         Request $request,
         JoinedGroupActivity $groupActivity,
+        DiaryCommentHistory $commented,
         UnreadCounts $unread,
         PendingJoinRequestCounts $pendingApprovals,
         ReactionAggregates $reactions,
@@ -119,6 +121,7 @@ class HomeController extends Controller
             $viewer,
             $diaryOn && $friendOn ? (new ListFriendDiaries)->take($viewer, self::PREVIEW) : collect(),
             $diaryOn ? (new ListRecentDiaries)->take($viewer, self::PREVIEW) : collect(),
+            $diaryOn ? $commented->summaries($viewer, self::PREVIEW) : collect(),
             $timeline,
             $groupActivity($viewer, self::PREVIEW),
             $diaryOn ? (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW) : collect(),
