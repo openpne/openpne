@@ -272,6 +272,18 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
         $this->assertStringNotContainsString("\n", $fails[0]);
     }
 
+    public function test_a_run_that_fails_in_the_walk_stamps_no_setting(): void
+    {
+        $this->seedGraph();
+        Exceptions::fake();
+
+        $this->assertFalse($this->runner([new FriendshipUpgrade, $this->brokenStep()])->run(new RunOptions));
+
+        foreach (['surface_mode', 'brand_favicon_fallback', 'modern_home'] as $key) {
+            $this->assertDatabaseMissing('sns_settings', ['key' => $key]);
+        }
+    }
+
     public function test_verbose_rethrows_the_failure_after_its_line_and_checkpoint(): void
     {
         $this->seedGraph();
