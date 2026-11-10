@@ -10,6 +10,8 @@ use App\Models\GroupEvent;
 use App\Models\HomeIssue;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\ModernHome;
+use App\Support\SnsSettingKey;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -62,6 +64,20 @@ class PublishOnReadTest extends TestCase
         $this->assertSame('2026-08-26', $issue->issue_date->toDateString());
         $this->assertSame(self::BOUNDARY, $issue->published_at->toDateTimeString());
         $this->assertDatabaseCount('home_issue_items', 1);
+    }
+
+    public function test_where_the_root_serves_the_digest_the_issue_page_is_the_read_that_publishes(): void
+    {
+        $this->story(CarbonImmutable::parse(self::BOUNDARY)->subHour());
+        $this->setSnsSetting(SnsSettingKey::ModernHome, ModernHome::WhatsNew);
+        $this->freshRequestState();
+
+        $this->actingAs($this->viewer)->get('/')->assertOk();
+        $this->assertSame(0, HomeIssue::count());
+
+        $this->actingAs($this->viewer)->get('/home/latest')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('issue.number', 1));
+        $this->assertSame(1, HomeIssue::count());
     }
 
     /** The 26th's issue is out and the 27th's window is open with a story in it: only the clock holds it. */

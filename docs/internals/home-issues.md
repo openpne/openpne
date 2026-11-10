@@ -208,7 +208,7 @@ from 06:00.
 
 ### Publish on read
 
-The schedule is not what the front page depends on. Before `/` renders,
+The schedule is not what the front page depends on. Before the front page ([Routes](#routes)) renders,
 [`PublishDueHomeIssue`](../../app/Features/Home/Actions/PublishDueHomeIssue.php) compares the latest
 issue's `published_at` with the last 06:00 boundary, and when that boundary has passed unpublished it
 runs the publisher as of the boundary — the same window, the same date, the same `published_at` the
@@ -226,11 +226,12 @@ boundary for a short while (`PublishDueHomeIssue::RETRY_SECONDS`) rather than th
 failure costs a late issue and a lasting one costs a plan per hold rather than per request. A failure that never reaches the
 handler — the request's time limit, which the CLI does not have — spends the whole day, so a site
 whose publication takes longer than a request may keep the schedule. After a spent attempt every read
-of `/` that day still costs one cache read, until the next boundary moves the key.
+of the front page that day still costs one cache read, until the next boundary moves the key.
 
 Only the Modern front page publishes. The archive and month pages render the issues there are, so a
 reader who opens one of them directly on a host without the schedule sees the day as not yet
-published until someone reads `/`.
+published until someone reads the front page. Where `/` serves the digest instead, reading `/`
+publishes nothing either.
 
 This is not OpenPNE 3's `daily_news_day`, which was a digest **mailed** to members on administrator-
 chosen weekdays; that is [not ported](../../app/Support/SnsSettingKey.php). An issue is a page on the
@@ -355,8 +356,12 @@ date, a row per published day.
 
 ## Routes
 
-`/` is the latest issue under a Modern surface — the front page is the newest one, whatever day it
-covers, and its pager only goes back. `/home/issues` is the month of the latest issue,
+The front page is the latest issue — the newest one, whatever day it covers — and its pager only
+goes back. It is always at `/home/latest`. Under a Modern surface `/` serves one of two pages, named
+by the site setting `modern_home` ([`ModernHome`](../../app/Support/ModernHome.php)): `issue`, the
+default, serves the front page there too, and `whats_new` serves the "What's new" digest that
+otherwise lives at `/dashboard`. The Modern nav leads with whichever page `/` does not serve, and the
+Home tab covers the one it does. `/home/issues` is the month of the latest issue,
 `/home/{y}/{m}` any month's and `/home/{y}/{m}/{d}` one day's, all Modern-only: OpenPNE 3 had no such
 page, so they render Inertia whatever surface the reader is on, and answer 404 under
 `surface_mode=classic_only` ([feature-modules.md](feature-modules.md#classic-only)). The day is validated before it is

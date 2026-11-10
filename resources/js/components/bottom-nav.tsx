@@ -72,7 +72,7 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
 
     return (
         <>
-            {bottomNavSections(props.enabledFeatures).map((section) => {
+            {bottomNavSections(props.enabledFeatures, props.modernHome).map((section) => {
                 const { href, icon: Icon, label, badge } = section;
                 const active = isSectionActive(section, path);
                 const count = badge ? (props.unread?.[badge.count] ?? 0) : 0;

@@ -59,6 +59,8 @@ export interface TalkNavRooms {
     hasMore: boolean;
 }
 
+export type ModernHomeId = 'issue' | 'whats_new';
+
 /** The feature units an administrator can switch off — the cases of App\Support\Feature. */
 export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'groupTopic' | 'groupEvent' | 'groupTalk' | 'friend' | 'mcp';
 
@@ -91,6 +93,8 @@ export interface PageProps {
     enabledFeatures: Record<FeatureKey, boolean>;
     /** The server's `App\Support\Look`; `standard` for a guest whatever the site says. */
     look: LookId;
+    /** The server's `App\Support\ModernHome`: which of the two home pages `/` serves. */
+    modernHome: ModernHomeId;
     /** The member's autoplay switch; false for a guest. The OS reduced-motion preference is read on the client and wins. */
     autoplayAnimations: boolean;
     /** Whether the member is still to be told how a row's actions are reached; null for a guest. */
