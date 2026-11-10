@@ -63,6 +63,34 @@ class SurfaceModeUpgradeTest extends UpgradeSqlTestCase
         $this->assertStringContainsString('No browser-tab icon', implode("\n", $lines));
     }
 
+    public function test_a_full_run_stamps_the_digest_as_the_modern_home_even_when_the_surface_was_set_first(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'surface_mode', 'value' => 'modern_only']);
+        $this->seedGraph();
+
+        $lines = [];
+        $this->assertTrue($this->runner()->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'modern_home', 'value' => 'whats_new']);
+        $this->assertStringContainsString("What's new lists", implode("\n", $lines));
+    }
+
+    public function test_the_modern_home_stamp_is_insert_if_absent(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'modern_home', 'value' => 'issue']);
+        $this->seedGraph();
+
+        $lines = [];
+        $this->assertTrue($this->runner()->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        }));
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'modern_home', 'value' => 'issue']);
+        $this->assertStringNotContainsString("What's new lists", implode("\n", $lines));
+    }
+
     public function test_the_tab_icon_stamp_is_insert_if_absent(): void
     {
         DB::table('sns_settings')->insert(['key' => 'brand_favicon_fallback', 'value' => 'generated']);
@@ -89,6 +117,8 @@ class SurfaceModeUpgradeTest extends UpgradeSqlTestCase
         $this->assertTrue($ok);
         $this->assertStringContainsString('surface_mode=classic_default', implode("\n", $lines));
         $this->assertStringContainsString('brand_favicon_fallback=none', implode("\n", $lines));
+        $this->assertStringContainsString('modern_home=whats_new', implode("\n", $lines));
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'modern_home']);
         $this->assertDatabaseMissing('sns_settings', ['key' => 'surface_mode']);
         $this->assertDatabaseMissing('sns_settings', ['key' => 'brand_favicon_fallback']);
     }
