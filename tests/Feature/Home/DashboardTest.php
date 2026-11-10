@@ -238,6 +238,12 @@ class DashboardTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
         $this->freshRequestState();
         $this->actingAs($viewer)->get('/dashboard')->assertInertia(fn ($page) => $page->where('newcomer', false));
+
+        $joined = Member::factory()->create();
+        GroupMember::factory()->member()->create(['group_id' => Group::factory()->create()->getKey(), 'member_id' => $joined->getKey()]);
+        $this->setSnsSetting(SnsSettingKey::FeatureFriendEnabled, true);
+        $this->freshRequestState();
+        $this->actingAs($joined)->get('/dashboard')->assertInertia(fn ($page) => $page->where('newcomer', true));
     }
 
     private function makeFriends(Member $a, Member $b): void

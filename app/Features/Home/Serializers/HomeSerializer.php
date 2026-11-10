@@ -15,7 +15,8 @@ use Illuminate\Support\Collection;
 
 /**
  * The Modern home dashboard: a capped digest of the member-facing feeds, each shaped by its own
- * feature serializer, in the order of the OpenPNE 3 default home.
+ * feature serializer: the diary lists and the group activity in the OpenPNE 3 default home's order,
+ * and the timeline last by choice, where OpenPNE 3 put it ahead of the group activity.
  */
 class HomeSerializer
 {
