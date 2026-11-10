@@ -95,7 +95,7 @@ class GroupTopicRouteParity extends RouteParity
                 new ScreenElement('article body line breaks + auto-link', L::Two, S::Ported, 'op_url_cmd(nl2br($communityTopic->getBody()))', 'x-user-text (BodyText)'),
                 new ScreenElement('edit entry', L::Two, S::Ported, 'showSuccess.php div.operation > form > ul.button input Edit', 'div.operation > form (GET edit) > ul.button; deletion is reached from the edit screen'),
                 new ScreenElement('comment thread (number, author, delete)', L::One, S::Ported, "include_component('communityTopicComment', 'list')"),
-                new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible), echoed above and below the comments', 'GroupTopicCommentThread: fixed size 20, older/newer above and below + latest/oldest toggle'),
+                new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible), echoed above and below the comments', 'GroupTopicCommentThread: fixed size 20, older/newer above and below + latest/oldest toggle; drawn only from two pages up, where OpenPNE 3 printed the No. line on a single page too'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate::dateTimeLines; year / date / time stacked'),
                 new ScreenElement('comment images', L::Three, S::Ported, '_list.php $comment->getImages() ul.photo'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->getBody()))', 'x-user-text (BodyText)'),

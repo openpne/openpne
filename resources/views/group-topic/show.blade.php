@@ -56,12 +56,11 @@
                         <a href="{{ $thread->link(1, true) }}">{{ __('View Oldest First') }}</a>
                     @endif
                 </div>
-                @include('group-topic._comment-pager')
+                <x-classic.comment-pager :thread="$thread" />
             @endif
 
             @foreach ($thread->comments as $comment)
                 <dl>
-                    {{-- XDateTimeJaBr, as the article's own dt: year / date / time stacked. --}}
                     <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($comment->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
                     <dd>
                         <div class="title">
@@ -89,9 +88,8 @@
                     </dd>
                 </dl>
             @endforeach
-            {{-- _list.php echoes the pager navigation again under the comments. --}}
             @if ($thread->hasPages())
-                @include('group-topic._comment-pager')
+                <x-classic.comment-pager :thread="$thread" />
             @endif
         </x-classic.parts>
     @endif

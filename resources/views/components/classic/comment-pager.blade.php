@@ -1,3 +1,4 @@
+@props(['thread'])
 <div class="pagerRelative">
     @if ($thread->hasOlder())
         <p class="prev"><a href="{{ $thread->link($thread->olderPage(), $thread->ascending) }}">{{ __('Older') }}</a></p>

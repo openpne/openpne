@@ -31,7 +31,7 @@ class DirectMessageComposeTest extends TestCase
             ->assertSee('name="to"', false);
     }
 
-    /** OpenPNE 3 _partsForm.php marks the required rows and labels every heading cell. */
+    /** The Recipient heading takes a label OpenPNE 3's hand-written firstRow lacked, so every heading cell weighs the same under a skin. */
     public function test_compose_form_marks_required_fields_and_labels_every_heading(): void
     {
         [$viewer, $recipient] = Member::factory()->count(2)->create();

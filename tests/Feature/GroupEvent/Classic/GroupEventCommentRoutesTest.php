@@ -194,7 +194,8 @@ class GroupEventCommentRoutesTest extends TestCase
         $this->actingAs($author)->get(route('group.events.comment.delete.show', $comment))
             ->assertOk()
             ->assertSee('id="page_communityEventComment_deleteConfirm"', false)
-            ->assertSee('<a href="'.route('group.events.show', $event).'" data-history-back>Back to previous page</a>', false);
+            ->assertSee('<a href="'.route('group.events.show', $event).'" data-history-back>Back to previous page</a>', false)
+            ->assertDontSee('>Back</a>', false);
 
         $this->actingAs($author)->post(route('group.events.comment.delete', $comment))
             ->assertRedirect(route('group.events.show', $event));

@@ -91,7 +91,8 @@ class GroupTopicCommentRoutesTest extends TestCase
         $this->actingAs($commenter)->get(route('group.topics.comment.delete.show', $comment))
             ->assertOk()
             ->assertSee('id="page_communityTopicComment_deleteConfirm"', false)
-            ->assertSee('<a href="'.route('group.topics.show', $topic).'" data-history-back>Back to previous page</a>', false);
+            ->assertSee('<a href="'.route('group.topics.show', $topic).'" data-history-back>Back to previous page</a>', false)
+            ->assertDontSee('>Back</a>', false);
 
         $this->actingAs($commenter)->post(route('group.topics.comment.delete', $comment))
             ->assertRedirect(route('group.topics.show', $topic));
