@@ -1,15 +1,19 @@
 import { Link } from '@inertiajs/react';
+import { AiChip } from '@/components/ai-chip';
 import { CivilDate } from '@/components/timestamp';
 import { useT } from '@/lib/i18n';
-import type { GroupAbout as GroupAboutData } from './types';
+import type { GroupAbout as GroupAboutData, GroupStaffRef } from './types';
 
 export function GroupAbout({ about }: { about: GroupAboutData }) {
     const t = useT();
     const term = 'text-muted-foreground';
-    const member = (ref: { id: number; name: string }) => (
-        <Link href={`/member/${ref.id}`} className="text-link hover:underline">
-            {ref.name}
-        </Link>
+    const member = (ref: GroupStaffRef) => (
+        <span className="inline-flex flex-wrap items-center gap-1">
+            <Link href={`/member/${ref.id}`} className="text-link hover:underline">
+                {ref.name}
+            </Link>
+            <AiChip isAi={ref.isAi} />
+        </span>
     );
 
     return (

@@ -79,7 +79,7 @@ class GroupRoutesTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $admin = Member::factory()->create(['name' => 'Ada Admin']);
-        $sub = Member::factory()->create(['name' => 'Sam Sub']);
+        $sub = Member::factory()->aiAccount()->create(['name' => 'Sam Sub']);
         $group = Group::factory()->create(['created_at' => '2019-04-05 12:00:00']);
         GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         GroupMember::factory()->subAdmin()->create(['group_id' => $group->getKey(), 'member_id' => $sub->getKey()]);
@@ -89,8 +89,8 @@ class GroupRoutesTest extends TestCase
             ->get("/groups/{$group->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->where('about.createdOn', '2019-04-05')
-                ->where('about.admin', ['id' => $admin->getKey(), 'name' => 'Ada Admin'])
-                ->where('about.subAdmins', [['id' => $sub->getKey(), 'name' => 'Sam Sub']])
+                ->where('about.admin', ['id' => $admin->getKey(), 'name' => 'Ada Admin', 'isAi' => false])
+                ->where('about.subAdmins', [['id' => $sub->getKey(), 'name' => 'Sam Sub', 'isAi' => true]])
                 ->where('about.registerPolicy', 'Anyone can join')
             );
     }

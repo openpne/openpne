@@ -47,10 +47,11 @@ class GroupSerializer
     }
 
     /**
-     * Requires `member` loaded on each staff row; `registerPolicy` is a translation key.
+     * Requires `member` loaded on each staff row; a staff reference is a name link with no avatar, so
+     * it carries `isAi` itself rather than delegating to MemberRefSerializer.
      *
      * @param  iterable<GroupMember>  $staff  the admin and sub-admin memberships
-     * @return array{createdOn: string, admin: array{id: int, name: string}|null, subAdmins: list<array{id: int, name: string}>, registerPolicy: string}
+     * @return array{createdOn: string, admin: array{id: int, name: string, isAi: bool}|null, subAdmins: list<array{id: int, name: string, isAi: bool}>, registerPolicy: string}
      */
     public static function about(Group $group, iterable $staff): array
     {
@@ -60,7 +61,11 @@ class GroupSerializer
             if ($membership->member === null) {
                 continue;
             }
-            $ref = ['id' => (int) $membership->member->getKey(), 'name' => (string) $membership->member->name];
+            $ref = [
+                'id' => (int) $membership->member->getKey(),
+                'name' => (string) $membership->member->name,
+                'isAi' => $membership->member->isAiAccount(),
+            ];
             if ($membership->role === GroupRole::Admin) {
                 $admin = $ref;
             } else {
