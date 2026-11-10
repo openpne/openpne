@@ -150,7 +150,7 @@ class GroupRouteParity extends RouteParity
             // editSuccess.php (CommunityForm + CommunityConfigForm + CommunityFileForm) →
             // group/edit.blade.php
             'edit' => [
-                new ScreenElement('one form for create and edit', L::Two, S::Ported, 'editSuccess.php $communityForm->isNew() title / url switch'),
+                new ScreenElement('one form for create and edit', L::Two, S::Ported, 'editSuccess.php $communityForm->isNew() title / url switch', 'the submit reads Create or Save by mode, where OpenPNE 3 left the form default Send on both'),
                 new ScreenElement('name input', L::Two, S::Ported, 'CommunityForm name (opValidatorString max_length 64)'),
                 new ScreenElement('category choice', L::Two, S::Ported, 'CommunityForm community_category_id sfWidgetFormChoice'),
                 new ScreenElement('description textarea', L::Two, S::Ported, 'community_config.yml description (FormType textarea)'),
