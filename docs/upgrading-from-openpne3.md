@@ -389,8 +389,8 @@ change from a problem when you go through it.
   a link to the record — so run the upgrade with `APP_URL` already set to the address the site will
   live at, since those links are stored. Whether new diaries, topics and events keep announcing
   themselves follows the OpenPNE 3 settings (*Settings → Timeline settings → Automatic posts*).
-  Every other post body is copied as stored: an HTML entity such as `&amp;` in it is shown as
-  written, not decoded.
+  An HTML entity such as `&amp;` in a timeline post or talk message is carried as stored and shown
+  as written, not decoded.
 - **Group talk** — a community's timeline becomes that group's talk. Talk shows every message in
   the group to everyone who may open the group today, including messages by people who have since
   left it and by people who have blocked the reader (OpenPNE 3 hid both); each member starts with the
