@@ -21,6 +21,7 @@ interface DashboardProps extends PageProps {
     announcements: Announcements;
     newcomer: boolean;
     friendDiaries: DiarySummary[];
+    commentedDiaries: DiarySummary[];
     diaries: DiarySummary[];
     timeline: TimelinePostEntry[];
     groupActivity: CommunityActivityEntry[];
@@ -111,12 +112,15 @@ function DigestSection({ title, viewAllHref, children }: { title: string; viewAl
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, newcomer, friendDiaries, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
+    const { auth, announcements, newcomer, friendDiaries, diaries, commentedDiaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
         return null;
     }
+
+    // A switched-off unit sends no rows, so the lengths alone say whether any section renders.
+    const nothingToShow = [friendDiaries, diaries, commentedDiaries, myDiaries, groupActivity, timeline].every((rows) => rows.length === 0);
 
     return (
         <>
@@ -125,6 +129,12 @@ export default function Dashboard() {
             <AnnouncementsPanel announcements={announcements} />
 
             {newcomer && <WelcomePanel name={user.name} enabledFeatures={enabledFeatures} />}
+
+            {!newcomer && nothingToShow && (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('There are no new posts.')}</p>
+                </Panel>
+            )}
 
             {/* A section's rows arrive empty once its unit is switched off; the check keeps the
                 header and its deep links from outliving them. */}
@@ -139,6 +149,14 @@ export default function Dashboard() {
             {enabledFeatures.diary && diaries.length > 0 && (
                 <DigestSection title={t('Latest %diaries%')} viewAllHref="/diary/list">
                     {diaries.map((diary) => (
+                        <DiaryRow key={diary.id} diary={diary} />
+                    ))}
+                </DigestSection>
+            )}
+
+            {enabledFeatures.diary && commentedDiaries.length > 0 && (
+                <DigestSection title={t('%Diary% Comment History')} viewAllHref="/diary/comment/history">
+                    {commentedDiaries.map((diary) => (
                         <DiaryRow key={diary.id} diary={diary} />
                     ))}
                 </DigestSection>

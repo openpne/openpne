@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modern;
 
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
@@ -74,9 +75,11 @@ class ModernFeatureSuppressionTest extends TestCase
             ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey(), 'created_at' => now()],
         ]);
         Diary::factory()->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Friends, 'title' => 'a-friend-diary-row']);
+        DiaryComment::factory()->create(['diary_id' => Diary::firstWhere('title', 'all-members-diary-row')->getKey(), 'member_id' => $viewer->getKey()]);
 
         $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn (AssertableInertia $page) => $page->has('diaries', 1)->has('myDiaries', 1)->has('friendDiaries', 1));
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('diaries', 1)->has('myDiaries', 1)->has('friendDiaries', 1)->has('commentedDiaries', 1));
 
         $this->switchOff(Feature::Diary);
 
@@ -84,6 +87,7 @@ class ModernFeatureSuppressionTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('diaries', [])
                 ->where('friendDiaries', [])
+                ->where('commentedDiaries', [])
                 ->where('myDiaries', []))
             ->assertDontSee('all-members-diary-row')
             ->assertDontSee('my-own-diary-row');

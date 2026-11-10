@@ -3,6 +3,7 @@
 namespace Tests\Feature\Home;
 
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\DiaryImage;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
@@ -160,6 +161,23 @@ class DashboardTest extends TestCase
             );
     }
 
+    public function test_the_comment_history_digest_leads_with_the_last_commented_diary(): void
+    {
+        $viewer = Member::factory()->create();
+        $first = Diary::factory()->create(['visibility' => Visibility::Members, 'created_at' => now()->subWeek()]);
+        $second = Diary::factory()->create(['visibility' => Visibility::Members]);
+        DiaryComment::factory()->create(['diary_id' => $second->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => now()->subDay()]);
+        $last = DiaryComment::factory()->create(['diary_id' => $first->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => now()]);
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->has('commentedDiaries', 2)
+                ->where('commentedDiaries.0.id', $first->getKey())
+                ->where('commentedDiaries.0.createdAt', $last->created_at->toIso8601String())
+            );
+    }
+
     public function test_the_friend_digest_goes_with_the_friend_unit(): void
     {
         $viewer = Member::factory()->create();
@@ -300,11 +318,18 @@ class DashboardTest extends TestCase
             DiaryImage::factory()->create(['diary_id' => $diary->getKey()]);
         }
 
+        // Four diaries the viewer commented on, each by a distinct author and with an image.
+        foreach (Member::factory()->count(4)->create() as $author) {
+            $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+            DiaryImage::factory()->create(['diary_id' => $diary->getKey()]);
+            DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => $viewer->getKey()]);
+        }
+
         $this->actingAs($viewer); // outside the count: the first authentication writes last_login_at once
         $queries = $this->countApplicationQueries(fn () => $this->get('/dashboard')->assertOk());
 
-        // Bounded by the feeds and their eager loads, never by the row count (steady state 41).
-        $this->assertLessThan(42, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
+        // Bounded by the feeds and their eager loads, never by the row count (steady state 44).
+        $this->assertLessThan(45, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

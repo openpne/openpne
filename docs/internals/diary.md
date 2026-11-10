@@ -65,6 +65,9 @@ derived form recomputes from the surviving rows, so a diary drops out once the v
 left on it, and deleting whichever non-owner comment was latest moves the box's time back to the one
 before it.
 
+Modern shows the same set on `/diary/comment/history` and as a digest on the dashboard. Each row's
+date is `last_comment_time`, the value the list is ordered by, in place of the diary's posting time.
+
 ## Lists order by created_at, then id
 
 The lists that order by posting time — the recent feed, the friend feed, search, a member's

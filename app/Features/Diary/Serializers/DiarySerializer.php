@@ -16,6 +16,7 @@ use App\Models\Member;
 use App\Support\BodyFormat;
 use App\Support\BodyRenderer;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -46,6 +47,17 @@ class DiarySerializer
             'author' => MemberRefSerializer::ref($diary->member),
             'createdAt' => $diary->created_at->toIso8601String(),
         ];
+    }
+
+    /**
+     * A comment-history row: the date it shows is the one the list is ordered by, its last comment
+     * by someone other than the owner, read off DiaryCommentHistory's `last_comment_time`.
+     *
+     * @return array{id: int, title: string, excerpt: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}, createdAt: string}
+     */
+    public static function commented(Diary $diary): array
+    {
+        return [...self::summary($diary), 'createdAt' => Carbon::parse($diary->last_comment_time)->toIso8601String()];
     }
 
     /**
@@ -175,12 +187,13 @@ class DiarySerializer
 
     /**
      * @param  LengthAwarePaginator<int, Diary>  $paginator
+     * @param  'summary'|'commented'  $row
      * @return array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
-    public static function paginator(LengthAwarePaginator $paginator): array
+    public static function paginator(LengthAwarePaginator $paginator, string $row = 'summary'): array
     {
         return [
-            'data' => array_map([self::class, 'summary'], $paginator->items()),
+            'data' => array_map([self::class, $row], $paginator->items()),
             'meta' => [
                 'currentPage' => $paginator->currentPage(),
                 'lastPage' => $paginator->lastPage(),

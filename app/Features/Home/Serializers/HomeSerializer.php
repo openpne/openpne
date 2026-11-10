@@ -23,6 +23,7 @@ class HomeSerializer
     /**
      * @param  Collection<int, Diary>  $friendDiaries  recent diaries by the viewer's friends
      * @param  Collection<int, Diary>  $diaries  all-members recent diaries
+     * @param  Collection<int, Diary>  $commentedDiaries  diaries the viewer commented on, last comment first
      * @param  Collection<int, TimelinePost>  $timeline  home timeline feed
      * @param  Collection<int, GroupTopic|GroupEvent>  $groupActivity  joined-community activity
      * @param  Collection<int, Diary>  $myDiaries  the viewer's own recent diaries
@@ -31,12 +32,13 @@ class HomeSerializer
      * @param  Collection<int, Group>  $adminTransfers  groups whose administration the viewer is asked to take over
      * @param  bool  $newcomer  the viewer has no friend and has joined no group
      * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $timelineReactions  chips keyed by post id
-     * @return array{announcements: array, newcomer: bool, friendDiaries: list<array>, diaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
+     * @return array{announcements: array, newcomer: bool, friendDiaries: list<array>, diaries: list<array>, commentedDiaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
      */
     public static function dashboard(
         Member $viewer,
         Collection $friendDiaries,
         Collection $diaries,
+        Collection $commentedDiaries,
         Collection $timeline,
         Collection $groupActivity,
         Collection $myDiaries,
@@ -63,6 +65,7 @@ class HomeSerializer
             'newcomer' => $newcomer,
             'friendDiaries' => $friendDiaries->map([DiarySerializer::class, 'summary'])->all(),
             'diaries' => $diaries->map([DiarySerializer::class, 'summary'])->all(),
+            'commentedDiaries' => $commentedDiaries->map([DiarySerializer::class, 'commented'])->all(),
             'timeline' => $timeline->map(fn (TimelinePost $post): array => TimelinePostSerializer::entry($post, $viewer, $timelineReactions[$post->getKey()] ?? []))->all(),
             'groupActivity' => $groupActivity->map([self::class, 'activityEntry'])->all(),
             'myDiaries' => $myDiaries->map([DiarySerializer::class, 'summary'])->all(),
