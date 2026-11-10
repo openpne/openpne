@@ -917,6 +917,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('event')->name('group.events.show.compat');
     });
 
+    // OpenPNE 3's smartphone thread with one member, as its route and as the fallback spelling
+    // its own script linked; compose is where a member id resolves on either surface.
+    Route::prefix('message')->middleware(EnsureFeatureEnabled::class.':directMessage')->group(function () {
+        Route::get('/chain/{id}', fn (string $id) => redirect()->route('message.compose', ['id' => $id]))
+            ->whereNumber('id')->name('message.chain_compat');
+        Route::get('/smtChain', fn (Request $request) => redirect()->route('message.compose', ['id' => (int) $request->query('id')]))
+            ->name('message.smt_chain_compat');
+    });
+
     // OpenPNE 3 message.
     Route::prefix('message')->middleware(EnsureFeatureEnabled::class.':directMessage')->controller(DirectMessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
@@ -926,12 +935,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/draftList', 'draft')->name('message.draft');
         Route::get('/dustList', 'trash')->name('message.trash');
         Route::get('/sendToFriend', 'compose')->name('message.compose');
-        // OpenPNE 3's smartphone thread with one member, as its route and as the fallback spelling
-        // its own script linked; compose is where a member id resolves on either surface.
-        Route::get('/chain/{id}', fn (string $id) => redirect()->route('message.compose', ['id' => $id]))
-            ->whereNumber('id')->name('message.chain_compat');
-        Route::get('/smtChain', fn (Request $request) => redirect()->route('message.compose', ['id' => (int) $request->query('id')]))
-            ->name('message.smt_chain_compat');
         Route::post('/sendToFriend', 'store')->middleware('throttle:direct-message-send')->name('message.compose.store');
         Route::get('/reply/{message}', 'reply')->whereNumber('message')->name('message.reply');
         Route::get('/edit/{message}', 'edit')->whereNumber('message')->name('message.draft.edit');
