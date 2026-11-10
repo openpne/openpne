@@ -8,6 +8,7 @@ use App\Features\Diary\Actions\DeleteComment;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Queries\DiaryCommentHistory;
 use App\Features\Diary\Queries\ShowDiary;
+use App\Features\Diary\Serializers\DiarySerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Diary\StoreCommentRequest;
 use App\Models\DiaryComment;
@@ -15,6 +16,8 @@ use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DiaryCommentController extends Controller
 {
@@ -33,15 +36,17 @@ class DiaryCommentController extends Controller
             ->with('status', __('Comment posted.'));
     }
 
-    /**
-     * OpenPNE 3 diaryComment/history. Modern has no twin — its nearest destination is the
-     * notification feed, whose Reply/Related rows serve the "something moved in a thread I joined"
-     * need — so a Modern viewer is sent there.
-     */
-    public function history(Request $request, DiaryCommentHistory $query): View|RedirectResponse
+    /** OpenPNE 3 diaryComment/history. */
+    public function history(Request $request, DiaryCommentHistory $query): View|Response
     {
         if (SurfaceResolver::resolve($request, 'diary') === SurfaceResolver::MODERN) {
-            return redirect()->route('notifications.index');
+            return Inertia::render('diary/feed', [
+                'variant' => 'commented',
+                'searchable' => false,
+                'keyword' => '',
+                'hasKeyword' => false,
+                'diaries' => DiarySerializer::paginator($query->paginateSummaries($this->viewer()), 'commented'),
+            ]);
         }
 
         return view('diary.comment.history', [

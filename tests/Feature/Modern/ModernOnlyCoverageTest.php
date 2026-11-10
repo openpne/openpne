@@ -63,7 +63,6 @@ class ModernOnlyCoverageTest extends TestCase
     private const REDIRECTS_UNDER_MODERN = [
         // Not confirms: OpenPNE 3 URLs whose Modern home is another canonical page.
         'friend.manage',
-        'diary.comment.history',
         'group.join.show',
         'group.quit.show',
         'group.members.appoint.show',
@@ -84,7 +83,7 @@ class ModernOnlyCoverageTest extends TestCase
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
     private const COVERED = [
         'home', 'dashboard', 'home.issues',
-        'diary.list', 'diary.list_friend', 'diary.search', 'diary.new',
+        'diary.list', 'diary.list_friend', 'diary.search', 'diary.new', 'diary.comment.history',
         'timeline.index', 'timeline.new',
         'friend.list', 'friend.requests', 'friend.link.show',
         'block.list', 'block.add.show',
@@ -126,6 +125,7 @@ class ModernOnlyCoverageTest extends TestCase
             'diary friend list' => ['/diary/listFriend'],
             'diary search' => ['/diary/search'],
             'diary new' => ['/diary/new'],
+            'diary comment history' => ['/diary/comment/history'],
             'timeline' => ['/timeline'],
             'timeline new' => ['/timeline/new'],
             'friend list' => ['/friend/list'],

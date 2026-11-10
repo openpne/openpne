@@ -329,8 +329,11 @@ const CREATE_COMMUNITY: ChromeAction = { href: '/groups/edit', label: t('Create 
 const NEW_MESSAGE: ChromeAction = { href: '/messages/new', label: t('New message'), icon: Pencil };
 const INVITE_MEMBER: ChromeAction = { href: '/invite', label: t('Invite a new member'), icon: UserPlus };
 
+// The comment history is reached from the home digest and is none of the hub's three lenses.
+const diaryFeedTab = (variant: string): 'all' | 'friends' | null => (variant === 'commented' ? null : variant === 'friends' ? 'friends' : 'all');
+
 // The friend tab is a lens the friend unit owns, so it goes with the unit while the diary hub stays.
-const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeTab[] => [
+const diaryTabs = (active: 'all' | 'friends' | 'mine' | null, friend: boolean): ChromeTab[] => [
     { href: '/diary/list', label: t('All'), active: active === 'all' },
     ...(friend ? [{ href: '/diary/listFriend', label: FRIENDS, active: active === 'friends' }] : []),
     { href: '/diary/listMember', label: t('My %diaries%'), active: active === 'mine' },
@@ -444,7 +447,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         mode: 'section',
         title: DIARIES,
         tabsLabel: DIARIES,
-        tabs: diaryTabs((props as { variant: string }).variant === 'friends' ? 'friends' : 'all', enabled(props, 'friend')),
+        tabs: diaryTabs(diaryFeedTab((props as { variant: string }).variant), enabled(props, 'friend')),
         action: WRITE_DIARY,
     }),
     'diary/list': (props) => {

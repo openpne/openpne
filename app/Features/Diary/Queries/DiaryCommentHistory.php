@@ -25,6 +25,31 @@ class DiaryCommentHistory
     }
 
     /**
+     * The same rows carrying what DiarySerializer::summary() reads per row.
+     *
+     * @return Collection<int, Diary>
+     */
+    public function summaries(Member $viewer, int $limit = 5): Collection
+    {
+        return $this->forSummary($this->query($viewer))->limit($limit)->get();
+    }
+
+    /** @return LengthAwarePaginator<int, Diary> */
+    public function paginateSummaries(Member $viewer, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->forSummary($this->query($viewer))->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * @param  Builder<Diary>  $query
+     * @return Builder<Diary>
+     */
+    private function forSummary(Builder $query): Builder
+    {
+        return $query->with(['member.avatar.file', 'images.file'])->withCount('pictures');
+    }
+
+    /**
      * One builder feeds this page and the home box, so the two can never disagree.
      *
      * @return LengthAwarePaginator<int, Diary>
