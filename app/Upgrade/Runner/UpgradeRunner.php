@@ -419,7 +419,7 @@ final class UpgradeRunner
         app(SnsSettingService::class)->clearCache();
 
         if ($inserted > 0) {
-            $report->nextStep('Under Modern a joined group opens its top, as an OpenPNE 3 community did, rather than its talk; "Page a joined group opens" on the UI layout settings page offers the talk.');
+            $report->nextStep('Under Modern a joined group opens its top, as an OpenPNE 3 community did, rather than its talk; the UI layout settings page offers the talk.');
         }
     }
 
