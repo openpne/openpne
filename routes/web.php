@@ -70,6 +70,7 @@ use App\Models\Member;
 use App\Support\BrandColor;
 use App\Support\ClassicErrorPage;
 use App\Support\GuestLoginRedirect;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -358,6 +359,22 @@ Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->c
 // database-driver sessions outright (see ResetMemberPassword).
 Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+
+    // Each OpenPNE 3 confirmation category lands where its requests are answered now, and an
+    // unknown one is a 404 as it was there.
+    Route::get('/confirmation', function (Request $request) {
+        $category = $request->query('category', 'friend_confirm');
+        abort_unless(in_array($category, ['friend_confirm', 'community_confirm', 'community_admin_request', 'community_sub_admin_request'], true), 404);
+
+        if ($category === 'friend_confirm') {
+            return redirect()->route('friend.requests');
+        }
+
+        // The group cautions are on the Classic home and on the Modern digest.
+        return SurfaceResolver::resolve($request, 'home') === SurfaceResolver::MODERN
+            ? redirect()->route('dashboard')
+            : redirect()->route('home');
+    })->name('confirmation.list_compat');
 
     // The OAuth consent screen, the one session-bound step of the token realm
     // (docs/internals/mcp.md, "Signing in from a client"); the rest is in routes/ai.php.
@@ -899,6 +916,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/draftList', 'draft')->name('message.draft');
         Route::get('/dustList', 'trash')->name('message.trash');
         Route::get('/sendToFriend', 'compose')->name('message.compose');
+        // OpenPNE 3's smartphone thread with one member, as its route and as the fallback spelling
+        // its own script linked; compose is where a member id resolves on either surface.
+        Route::get('/chain/{id}', fn (int $id) => redirect()->route('message.compose', ['id' => $id]))
+            ->whereNumber('id')->name('message.chain_compat');
+        Route::get('/smtChain', fn (Request $request) => redirect()->route('message.compose', ['id' => (int) $request->query('id')]))
+            ->name('message.smt_chain_compat');
         Route::post('/sendToFriend', 'store')->middleware('throttle:direct-message-send')->name('message.compose.store');
         Route::get('/reply/{message}', 'reply')->whereNumber('message')->name('message.reply');
         Route::get('/edit/{message}', 'edit')->whereNumber('message')->name('message.draft.edit');
