@@ -87,7 +87,7 @@ test('the shipped row prints every count it carries, each said in words as well'
 
     render(<BottomNav chrome={chrome} />);
 
-    const groups = screen.getByRole('link', { name: '%Communities% 3 %communities% with new messages' });
+    const groups = screen.getByRole('link', { name: '%Communities% 3 %communities% with new talk messages' });
     expect(groups.getAttribute('href')).toBe('/groups/mine');
     expect(groups.textContent).toContain('3');
     expect(groups.textContent).toContain('%Communities%');
@@ -159,7 +159,7 @@ test('the tabbed row marks the notification tab alone, and with a dot rather tha
     expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).getAttribute('href')).toBe('/notifications');
     expect(container.querySelector('.rounded-full.bg-primary')).toBeNull();
     // Every other tab is left unmarked under this look, its count kept by the drawer's pill.
-    expect(screen.queryByRole('link', { name: '3 %communities% with new messages' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '3 %communities% with new talk messages' })).toBeNull();
     expect(screen.getByRole('link', { name: '%Communities%' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '%Diaries%' })).toBeTruthy();
 });

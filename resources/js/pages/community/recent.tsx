@@ -18,7 +18,7 @@ export default function CommunityRecent() {
             <Head title={title} />
             {activity.length === 0 ? (
                 <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No activity to show yet.')}</p>
+                    <p className="text-sm text-muted-foreground">{t('No activity to show.')}</p>
                 </Panel>
             ) : (
                 <Panel flush>

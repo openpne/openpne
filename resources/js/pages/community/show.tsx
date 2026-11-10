@@ -146,7 +146,7 @@ export default function CommunityShow() {
                             <p className="min-w-0 flex-1 truncate text-sm">
                                 <Link href={`/groups/${group.id}/talk`} className={stretchedLink}>
                                     {talkPreview === null ? (
-                                        <span className="text-muted-foreground">{t('No messages yet.')}</span>
+                                        <span className="text-muted-foreground">{t('Nothing has been said in this talk yet.')}</span>
                                     ) : (
                                         <>
                                             <span className="text-muted-foreground">

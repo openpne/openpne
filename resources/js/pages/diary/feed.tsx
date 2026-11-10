@@ -69,7 +69,15 @@ export default function DiaryFeed() {
             )}
 
             {diaries.data.length === 0 ? (
-                <StreamEmpty headUrl={headUrl} empty={t('No %diary% entries to show.')} older={t('No older %diary% entries.')} />
+                <StreamEmpty
+                    headUrl={headUrl}
+                    empty={
+                        variant === 'search' && hasKeyword
+                            ? t('Your search ":keyword" did not match any %diaries%.', { keyword })
+                            : t('No %diary% entries to show.')
+                    }
+                    older={t('No older %diary% entries.')}
+                />
             ) : 'meta' in diaries ? (
                 <>
                     <Panel flush>

@@ -85,7 +85,11 @@ export default function DiaryList() {
 
             {diaries.data.length === 0 ? (
                 <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
+                    <p className="text-sm text-muted-foreground">
+                        {keyword
+                            ? t('Your search ":keyword" did not match any %diaries%.', { keyword })
+                            : t('No %diary% entries to show.')}
+                    </p>
                 </Panel>
             ) : (
                 <>

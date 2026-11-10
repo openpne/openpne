@@ -68,7 +68,7 @@ const counted = { friendRequests: 4, unreadMessages: 5, notifications: 2, groupT
 test('the bar tab is named word first', () => {
     render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread: counted })} />);
 
-    named('%Communities% 3 %communities% with new messages', 'Notifications 2 unread notifications');
+    named('%Communities% 3 %communities% with new talk messages', 'Notifications 2 unread notifications');
 });
 
 test('a nav entry is named word first, as it was', () => {
@@ -76,7 +76,7 @@ test('a nav entry is named word first, as it was', () => {
     render(<NavItems />);
 
     named(
-        '%Communities% 3 %communities% with new messages',
+        '%Communities% 3 %communities% with new talk messages',
         '%Friends% 4 pending %friend% requests',
         'Messages 5 conversations with new messages',
         'Notifications 2 unread notifications',
@@ -88,7 +88,7 @@ test('a count of one is said in the singular, on every phrase the nav carries', 
     render(<NavItems />);
 
     named(
-        '%Communities% 1 %community% with new messages',
+        '%Communities% 1 %community% with new talk messages',
         '%Friends% 1 pending %friend% request',
         'Messages 1 conversation with new messages',
         'Notifications 1 unread notification',
@@ -99,18 +99,18 @@ test('the bar tab says one in the singular too', () => {
     const unread = { friendRequests: 1, unreadMessages: 1, notifications: 1, groupTalks: 1 };
     render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread })} />);
 
-    named('%Communities% 1 %community% with new messages', 'Notifications 1 unread notification');
+    named('%Communities% 1 %community% with new talk messages', 'Notifications 1 unread notification');
 });
 
 test('a hub tab is named word first, as it was', () => {
     render(
         <PageTabs
             ariaLabel="Views"
-            items={[{ href: '/groups/mine', label: 'Joined', active: true, count: 3, countLabel: '3 %communities% with new messages' }]}
+            items={[{ href: '/groups/mine', label: 'Joined', active: true, count: 3, countLabel: '3 %communities% with new talk messages' }]}
         />,
     );
 
-    named('Joined 3 %communities% with new messages');
+    named('Joined 3 %communities% with new talk messages');
 });
 
 /*
