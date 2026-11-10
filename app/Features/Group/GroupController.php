@@ -100,15 +100,13 @@ class GroupController extends Controller
         // what the talk read cursor does.
         $feedRows->markTargetsRead((int) $viewer->getKey(), NotificationTarget::group((int) $found->getKey()));
 
-        return $this->respondWith($request, 'group', [
-            SurfaceResolver::CLASSIC => function () use ($found, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk) {
-                $this->markLocalNavGroup($found);
+        $staff = $found->members()
+            ->whereIn('role', [GroupRole::Admin, GroupRole::SubAdmin])
+            ->with('member')->orderByDesc('role')->orderBy('id')->get();
 
-                // The details listBox names the admin and sub-admins; only Classic needs them, so the
-                // query lives here and never runs for Modern.
-                $staff = $found->members()
-                    ->whereIn('role', [GroupRole::Admin, GroupRole::SubAdmin])
-                    ->with('member')->orderByDesc('role')->orderBy('id')->get();
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => function () use ($found, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk) {
+                $this->markLocalNavGroup($found);
 
                 return view('group.show', [
                     'group' => $found,
@@ -125,7 +123,7 @@ class GroupController extends Controller
                     'canViewTalk' => $canViewTalk,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
                 $canManage = $role?->canManage() ?? false;
                 $canJoin = $role === null && ! $isPending;
                 $canLeave = $role !== null && $role !== GroupRole::Admin;
@@ -156,6 +154,7 @@ class GroupController extends Controller
                         canViewTalk: $canViewTalk,
                         talkPreview: $preview,
                         talkUnread: $talkUnreadCount,
+                        about: GroupSerializer::about($found, $staff),
                     ));
                 }
 
@@ -175,6 +174,7 @@ class GroupController extends Controller
                     'canViewTalk' => $canViewTalk,
                     'talkPreview' => $preview,
                     'talkUnread' => $talkUnreadCount,
+                    'about' => GroupSerializer::about($found, $staff),
                 ]);
             },
         ]);

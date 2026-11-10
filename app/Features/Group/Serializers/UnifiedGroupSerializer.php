@@ -35,7 +35,7 @@ final class UnifiedGroupSerializer
      * @param  Collection<int, GroupTopic>|null  $recentTopics  null = the viewer may not read the boards
      * @param  Collection<int, GroupEvent>|null  $recentEvents
      * @param  array{body: string, authorName: string|null, createdAt: string}|null  $talkPreview
-     * @return array{group: array{id: int, name: string, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: null, isAi: false, bio: string|null, memberCount: int, categoryName: string|null, registerPolicy: string}, viewerRole: string|null, isPending: bool, isTransferNominee: bool, canManage: bool, canJoin: bool, canLeave: bool, members: list<array>, categoryGroups: list<array>, recentTopics: list<array>|null, canPostTopic: bool, recentEvents: list<array>|null, canPostEvent: bool, canViewTalk: bool, talkPreview: array|null, talkUnread: int, recentPhotos: list<array>}
+     * @return array{group: array{id: int, name: string, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: null, isAi: false, bio: string|null, memberCount: int, categoryName: string|null, registerPolicy: string}, viewerRole: string|null, isPending: bool, isTransferNominee: bool, canManage: bool, canJoin: bool, canLeave: bool, members: list<array>, categoryGroups: list<array>, recentTopics: list<array>|null, canPostTopic: bool, recentEvents: list<array>|null, canPostEvent: bool, canViewTalk: bool, talkPreview: array|null, talkUnread: int, about: array, recentPhotos: list<array>}
      */
     public static function page(
         Member $viewer,
@@ -54,6 +54,7 @@ final class UnifiedGroupSerializer
         bool $canViewTalk,
         ?array $talkPreview,
         int $talkUnread,
+        array $about,
     ): array {
         return [
             'group' => self::identity($group),
@@ -72,6 +73,7 @@ final class UnifiedGroupSerializer
             'canViewTalk' => $canViewTalk,
             'talkPreview' => $talkPreview,
             'talkUnread' => $talkUnread,
+            'about' => $about,
             // The board collections are null exactly when their read gate refused, so they are the
             // gate the picture sources ask as well — a source whose rows may not be read is not read.
             'recentPhotos' => self::photos($viewer, $group, $canViewTalk, $recentTopics !== null, $recentEvents !== null),

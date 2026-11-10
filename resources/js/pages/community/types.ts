@@ -29,6 +29,19 @@ export interface CommunityDetail extends CommunitySummary {
     registerPolicy: 'open' | 'approval'; // drives the join-button label
 }
 
+export interface GroupStaffRef {
+    id: number;
+    name: string;
+    isAi: boolean;
+}
+
+export interface GroupAbout {
+    createdOn: string; // the site's calendar day, `Y-m-d`
+    admin: GroupStaffRef | null;
+    subAdmins: GroupStaffRef[];
+    registerPolicy: string; // a translation key
+}
+
 export type CommunityRoleSlug = 'member' | 'sub_admin' | 'admin';
 
 export interface CommunityMemberRow {
