@@ -2,15 +2,14 @@
 
 namespace App\Upgrade\Steps;
 
-use App\Models\Navigation;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
  * OpenPNE 3 `navigation_translation` → OpenPNE 4 `navigation_translations` (localised caption per
- * (id, lang); id is the navigation id). Restricted to the PC navigation types NavigationUpgrade
- * copies, so a translation never references a navigations row that was filtered out.
+ * (id, lang); id is the navigation id). Restricted to the source types NavigationUpgrade copies, in
+ * the source's own vocabulary, so every copied navigations row keeps its captions and no other does.
  */
 class NavigationTranslationUpgrade extends UpgradeStep
 {
@@ -39,6 +38,6 @@ class NavigationTranslationUpgrade extends UpgradeStep
 
     private function typeList(): string
     {
-        return implode(', ', array_map(static fn (string $t): string => "'{$t}'", Navigation::TYPES));
+        return implode(', ', array_map(static fn (string $t): string => "'{$t}'", NavigationUpgrade::sourceTypes()));
     }
 }

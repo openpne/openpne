@@ -116,6 +116,22 @@ class NavigationUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseMissing('navigation_translations', ['id' => 2]);
     }
 
+    public function test_every_copied_type_keeps_its_captions(): void
+    {
+        $types = ['insecure_global', 'secure_global', 'default', 'friend', 'community'];
+        foreach ($types as $index => $type) {
+            $this->seedNav($index + 1, $type, '@homepage');
+            $this->seedNavTranslation($index + 1, 'ja_JP', "caption {$type}");
+        }
+
+        $this->runUpgrade();
+
+        $this->assertSame(count($types), DB::table('navigations')->count());
+        foreach ($types as $index => $type) {
+            $this->assertDatabaseHas('navigation_translations', ['id' => $index + 1, 'lang' => 'ja_JP', 'caption' => "caption {$type}"]);
+        }
+    }
+
     public function test_resolves_the_policy_tokens_to_their_canonical_pages(): void
     {
         // OpenPNE 3 named the policy pages four ways; all four moved to /terms and /privacy, and a

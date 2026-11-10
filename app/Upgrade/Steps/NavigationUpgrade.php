@@ -93,8 +93,12 @@ class NavigationUpgrade extends UpgradeStep
         return implode(', ', array_map(static fn (string $t): string => "'{$t}'", self::sourceTypes()));
     }
 
-    /** The OpenPNE 3 `navigation.type` values this step copies, in Navigation::TYPES order. */
-    private static function sourceTypes(): array
+    /**
+     * The OpenPNE 3 `navigation.type` values this step copies, in Navigation::TYPES order.
+     *
+     * @return list<string>
+     */
+    public static function sourceTypes(): array
     {
         return array_map(static fn (string $t): string => self::SOURCE_TYPES[$t] ?? $t, Navigation::TYPES);
     }
