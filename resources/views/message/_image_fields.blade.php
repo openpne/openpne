@@ -1,7 +1,7 @@
 {{-- Up to MAX_IMAGES file inputs for attaching pictures or files to a message. The enclosing <form>
      must carry enctype="multipart/form-data". --}}
 <tr>
-    <th>{{ __('Attachments') }}</th>
+    <th><label>{{ __('Attachments') }}</label></th>
     <td>
         @for ($i = 0; $i < \App\Files\PostImages::MAX_IMAGES; $i++)
             <p><input type="file" name="images[]"></p>

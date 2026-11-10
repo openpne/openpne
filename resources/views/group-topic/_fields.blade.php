@@ -8,7 +8,7 @@
 <tr>
     <th><label for="community_topic_body">{{ __('Body') }} <x-classic.required-mark /></label></th>
     <td>
-        <textarea id="community_topic_body" name="body" required>{{ old('body', $body ?? '') }}</textarea>
+        <textarea id="community_topic_body" name="body" rows="4" cols="30" required>{{ old('body', $body ?? '') }}</textarea>
         @error('body')<p class="error">{{ $message }}</p>@enderror
     </td>
 </tr>

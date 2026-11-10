@@ -8,17 +8,18 @@
     <x-classic.parts id="formMessage" name="form" :title="__('Edit draft')">
         <form method="POST" action="{{ route('message.draft.update', ['message' => $draft->getKey()]) }}" enctype="multipart/form-data">
             @csrf
+            <x-classic.required-notice />
             <table>
                 @if ($recipient)
                     <tr>
-                        <th>{{ __('Recipient') }}</th>
+                        <th><label>{{ __('Recipient') }}</label></th>
                         <td><a href="{{ route('member.profile.show', $recipient) }}">{{ $recipient->name }}</a></td>
                     </tr>
                 @endif
                 @include('message._fields', ['subject' => $draft->subject, 'body' => $draft->body])
                 @if ($draft->files->isNotEmpty())
                     <tr>
-                        <th>{{ __('Current attachments') }}</th>
+                        <th><label>{{ __('Current attachments') }}</label></th>
                         <td>
                             <ul class="photo">
                                 @foreach ($draft->files as $image)

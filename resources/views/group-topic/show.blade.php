@@ -56,20 +56,13 @@
                         <a href="{{ $thread->link(1, true) }}">{{ __('View Oldest First') }}</a>
                     @endif
                 </div>
-                <div class="pagerRelative">
-                    @if ($thread->hasOlder())
-                        <p class="prev"><a href="{{ $thread->link($thread->olderPage(), $thread->ascending) }}">{{ __('Older') }}</a></p>
-                    @endif
-                    <p class="number">{{ __('No. :first - :last', ['first' => $thread->firstNumber(), 'last' => $thread->lastNumber()]) }}</p>
-                    @if ($thread->hasNewer())
-                        <p class="next"><a href="{{ $thread->link($thread->newerPage(), $thread->ascending) }}">{{ __('Newer') }}</a></p>
-                    @endif
-                </div>
+                @include('group-topic._comment-pager')
             @endif
 
             @foreach ($thread->comments as $comment)
                 <dl>
-                    <dt>{{ \App\Support\LocalizedDate::dateTime($comment->created_at) }}</dt>
+                    {{-- XDateTimeJaBr, as the article's own dt: year / date / time stacked. --}}
+                    <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($comment->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
                     <dd>
                         <div class="title">
                             <p class="heading">
@@ -96,6 +89,10 @@
                     </dd>
                 </dl>
             @endforeach
+            {{-- _list.php echoes the pager navigation again under the comments. --}}
+            @if ($thread->hasPages())
+                @include('group-topic._comment-pager')
+            @endif
         </x-classic.parts>
     @endif
     @if ($commentReplyLink && $canComment)
@@ -121,7 +118,7 @@
                 </table>
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Post') }}"></li>
                     </ul>
                 </div>
             </form>

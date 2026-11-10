@@ -15,6 +15,22 @@ class GroupEventCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** OpenPNE 3 communityEventComment/_list.php: XDateTimeJaBr in the dt, the pager navigation above and below. */
+    public function test_the_comment_list_stacks_its_dates_and_repeats_the_pager_under_the_comments(): void
+    {
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
+        foreach (range(1, 21) as $number) {
+            GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'number' => $number, 'created_at' => '2026-03-04 12:34:00']);
+        }
+
+        $content = (string) $this->actingAs($member)->withSession(['locale' => 'ja'])->get(route('group.events.show', $event))->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($content, '<p class="number">'));
+        $this->assertStringContainsString('<dt>2026年<br />03月04日<br />12:34</dt>', $content);
+    }
+
     private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
@@ -177,7 +193,8 @@ class GroupEventCommentRoutesTest extends TestCase
         $this->actingAs($other)->get(route('group.events.comment.delete.show', $comment))->assertNotFound();
         $this->actingAs($author)->get(route('group.events.comment.delete.show', $comment))
             ->assertOk()
-            ->assertSee('id="page_communityEventComment_deleteConfirm"', false);
+            ->assertSee('id="page_communityEventComment_deleteConfirm"', false)
+            ->assertSee('<a href="'.route('group.events.show', $event).'" data-history-back>Back to previous page</a>', false);
 
         $this->actingAs($author)->post(route('group.events.comment.delete', $comment))
             ->assertRedirect(route('group.events.show', $event));

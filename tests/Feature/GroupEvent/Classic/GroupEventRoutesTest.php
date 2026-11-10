@@ -247,7 +247,9 @@ class GroupEventRoutesTest extends TestCase
 
         $this->actingAs($author)->get(route('group.events.delete.show', $event))
             ->assertOk()
-            ->assertSee('id="page_communityEvent_deleteConfirm"', false);
+            ->assertSee('id="page_communityEvent_deleteConfirm"', false)
+            ->assertSee('<a href="'.route('group.events.show', $event).'" data-history-back>Back to previous page</a>', false)
+            ->assertDontSee('Cancel');
 
         $this->actingAs($author)->post(route('group.events.delete', $event))
             ->assertRedirect(route('group.show', $group));

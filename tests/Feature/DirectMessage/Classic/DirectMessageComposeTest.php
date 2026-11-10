@@ -31,6 +31,23 @@ class DirectMessageComposeTest extends TestCase
             ->assertSee('name="to"', false);
     }
 
+    /** OpenPNE 3 _partsForm.php marks the required rows and labels every heading cell. */
+    public function test_compose_form_marks_required_fields_and_labels_every_heading(): void
+    {
+        [$viewer, $recipient] = Member::factory()->count(2)->create();
+
+        $this->actingAs($viewer)->get(route('message.compose', ['id' => $recipient->getKey()]))
+            ->assertOk()
+            ->assertSeeInOrder([
+                '<strong>*</strong> is required field.',
+                '<th><label>Recipient</label></th>',
+                '<label for="message_subject">Subject <strong>*</strong>',
+                '<label for="message_body">Body <strong>*</strong>',
+                '<textarea id="message_body" name="body" rows="7" cols="30"',
+                '<th><label>Attachments</label></th>',
+            ], false);
+    }
+
     public function test_compose_to_self_is_404(): void
     {
         $member = Member::factory()->create();

@@ -90,11 +90,28 @@ class GroupTopicCommentRoutesTest extends TestCase
 
         $this->actingAs($commenter)->get(route('group.topics.comment.delete.show', $comment))
             ->assertOk()
-            ->assertSee('id="page_communityTopicComment_deleteConfirm"', false);
+            ->assertSee('id="page_communityTopicComment_deleteConfirm"', false)
+            ->assertSee('<a href="'.route('group.topics.show', $topic).'" data-history-back>Back to previous page</a>', false);
 
         $this->actingAs($commenter)->post(route('group.topics.comment.delete', $comment))
             ->assertRedirect(route('group.topics.show', $topic));
         $this->assertDatabaseMissing('group_topic_comments', ['id' => $comment->getKey()]);
+    }
+
+    /** OpenPNE 3 communityTopicComment/_list.php: XDateTimeJaBr in the dt, the pager navigation above and below. */
+    public function test_the_comment_list_stacks_its_dates_and_repeats_the_pager_under_the_comments(): void
+    {
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
+        foreach (range(1, 21) as $number) {
+            GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'number' => $number, 'created_at' => '2026-03-04 12:34:00']);
+        }
+
+        $content = (string) $this->actingAs($member)->withSession(['locale' => 'ja'])->get(route('group.topics.show', $topic))->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($content, '<p class="number">'));
+        $this->assertStringContainsString('<dt>2026年<br />03月04日<br />12:34</dt>', $content);
     }
 
     public function test_the_topic_author_and_admins_may_delete_others_comments(): void
