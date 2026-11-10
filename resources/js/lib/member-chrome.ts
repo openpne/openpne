@@ -329,7 +329,7 @@ const CREATE_COMMUNITY: ChromeAction = { href: '/groups/edit', label: t('Create 
 const NEW_MESSAGE: ChromeAction = { href: '/messages/new', label: t('New message'), icon: Pencil };
 const INVITE_MEMBER: ChromeAction = { href: '/invite', label: t('Invite a new member'), icon: UserPlus };
 
-// The comment history is reached from the home digest and is none of the hub's three lenses.
+// The comment history is none of the hub's three lenses.
 const diaryFeedTab = (variant: string): 'all' | 'friends' | null => (variant === 'commented' ? null : variant === 'friends' ? 'friends' : 'all');
 
 // The friend tab is a lens the friend unit owns, so it goes with the unit while the diary hub stays.

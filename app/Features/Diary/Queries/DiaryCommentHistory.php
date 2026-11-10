@@ -25,7 +25,8 @@ class DiaryCommentHistory
     }
 
     /**
-     * The same rows carrying what DiarySerializer::summary() reads per row.
+     * The same rows carrying what DiarySerializer::summary() reads per row, without the pictures a
+     * digest row does not draw.
      *
      * @return Collection<int, Diary>
      */
@@ -37,7 +38,7 @@ class DiaryCommentHistory
     /** @return LengthAwarePaginator<int, Diary> */
     public function paginateSummaries(Member $viewer, int $perPage = 20): LengthAwarePaginator
     {
-        return $this->forSummary($this->query($viewer))->paginate($perPage)->withQueryString();
+        return $this->forSummary($this->query($viewer))->with('images.file')->paginate($perPage)->withQueryString();
     }
 
     /**
@@ -46,7 +47,7 @@ class DiaryCommentHistory
      */
     private function forSummary(Builder $query): Builder
     {
-        return $query->with(['member.avatar.file', 'images.file'])->withCount('pictures');
+        return $query->with('member.avatar.file')->withCount('pictures');
     }
 
     /**

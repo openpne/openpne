@@ -167,13 +167,14 @@ class DashboardTest extends TestCase
         $first = Diary::factory()->create(['visibility' => Visibility::Members]);
         $second = Diary::factory()->create(['visibility' => Visibility::Members]);
         DiaryComment::factory()->create(['diary_id' => $second->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => now()->subDay()]);
-        DiaryComment::factory()->create(['diary_id' => $first->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => now()]);
+        $last = DiaryComment::factory()->create(['diary_id' => $first->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => now()]);
 
         $this->actingAs($viewer)
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page
                 ->has('commentedDiaries', 2)
                 ->where('commentedDiaries.0.id', $first->getKey())
+                ->where('commentedDiaries.0.createdAt', $last->created_at->toIso8601String())
             );
     }
 
@@ -327,8 +328,8 @@ class DashboardTest extends TestCase
         $this->actingAs($viewer); // outside the count: the first authentication writes last_login_at once
         $queries = $this->countApplicationQueries(fn () => $this->get('/dashboard')->assertOk());
 
-        // Bounded by the feeds and their eager loads, never by the row count (steady state 46).
-        $this->assertLessThan(47, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
+        // Bounded by the feeds and their eager loads, never by the row count (steady state 44).
+        $this->assertLessThan(45, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

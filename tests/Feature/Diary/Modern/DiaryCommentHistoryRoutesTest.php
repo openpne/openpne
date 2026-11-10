@@ -39,6 +39,7 @@ class DiaryCommentHistoryRoutesTest extends TestCase
         $viewer = Member::factory()->create();
         $older = $this->commentedOn($viewer, ['created_at' => Carbon::parse('2026-03-02 09:00:00')], '2026-03-03 09:00:00');
         $newer = $this->commentedOn($viewer, ['created_at' => Carbon::parse('2026-03-01 09:00:00')], '2026-03-04 09:00:00');
+        DiaryImage::factory()->create(['diary_id' => $newer->getKey()]);
         Diary::factory()->create(['visibility' => Visibility::Members]); // never commented on
 
         $this->actingAs($viewer)->get('/diary/comment/history')->assertInertia(fn ($page) => $page
@@ -50,6 +51,7 @@ class DiaryCommentHistoryRoutesTest extends TestCase
             ->where('diaries.data.1.id', $older->getKey())
             // The row's date is the comment's, the one the order is made of, not the diary's.
             ->where('diaries.data.0.createdAt', Carbon::parse('2026-03-04 09:00:00')->toIso8601String())
+            ->has('diaries.data.0.thumbnails', 1)
             ->where('diaries.meta.total', 2)
         );
     }
