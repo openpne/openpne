@@ -204,67 +204,74 @@ export default function MemberConfig() {
                 </SettingsGroup>
             )}
 
-            {/* Privacy holds the diary default and the profile-page audience; the group goes when both are absent. */}
-            {(diaryField || profileField) && (
-                <SettingsGroup title={t('Privacy')}>
-                    {diaryField && (
-                        <GroupItem>
-                            <FormSection
-                                title={t('Default audience for new %diaries%')}
-                                headingLevel="h3"
-                                description={t('Applies to %diaries% you write from now on. Existing %diaries% keep their audience.')}
+            <SettingsGroup title={t('Privacy')}>
+                {diaryField && (
+                    <GroupItem>
+                        <FormSection
+                            title={t('Default audience for new %diaries%')}
+                            headingLevel="h3"
+                            description={t('Applies to %diaries% you write from now on. Existing %diaries% keep their audience.')}
+                        >
+                            <RadioCardGroup
+                                legend={t('Default audience for new %diaries%')}
+                                error={diary.errors.diary_default_visibility}
                             >
-                                <RadioCardGroup
-                                    legend={t('Default audience for new %diaries%')}
-                                    error={diary.errors.diary_default_visibility}
-                                >
-                                    <div className="flex flex-wrap gap-2">
-                                        {diaryField.options.map((opt) => (
-                                            <RadioPill
-                                                key={opt.value}
-                                                name="diary_default_visibility"
-                                                value={opt.value}
-                                                checked={diary.data.diary_default_visibility === opt.value}
-                                                disabled={diary.processing}
-                                                onChange={(e) => saveDiary(e.target.value)}
-                                                label={t(opt.label)}
-                                            />
-                                        ))}
-                                    </div>
-                                </RadioCardGroup>
-                                <SavedIndicator show={diary.recentlySuccessful} />
-                            </FormSection>
-                        </GroupItem>
-                    )}
-                    {profileField && (
-                        <GroupItem>
-                            <FormSection
-                                title={t('Who can see your profile page')}
-                                headingLevel="h3"
-                                description={t('Each field on it still keeps its own audience.')}
-                            >
-                                <RadioCardGroup legend={t('Who can see your profile page')} error={profile.errors.profile_visibility}>
-                                    <div className="flex flex-wrap gap-2">
-                                        {profileField.options.map((opt) => (
-                                            <RadioPill
-                                                key={opt.value}
-                                                name="profile_visibility"
-                                                value={opt.value}
-                                                checked={profile.data.profile_visibility === opt.value}
-                                                disabled={profile.processing}
-                                                onChange={(e) => saveProfileVisibility(e.target.value)}
-                                                label={t(opt.label)}
-                                            />
-                                        ))}
-                                    </div>
-                                </RadioCardGroup>
-                                <SavedIndicator show={profile.recentlySuccessful} />
-                            </FormSection>
-                        </GroupItem>
-                    )}
-                    {/* Age visibility is edited next to the birthday it derives from, on the profile-edit page. */}
-                </SettingsGroup>
-            )}
+                                <div className="flex flex-wrap gap-2">
+                                    {diaryField.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="diary_default_visibility"
+                                            value={opt.value}
+                                            checked={diary.data.diary_default_visibility === opt.value}
+                                            disabled={diary.processing}
+                                            onChange={(e) => saveDiary(e.target.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
+                            </RadioCardGroup>
+                            <SavedIndicator show={diary.recentlySuccessful} />
+                        </FormSection>
+                    </GroupItem>
+                )}
+                {profileField && (
+                    <GroupItem>
+                        <FormSection
+                            title={t('Who can see your profile page')}
+                            headingLevel="h3"
+                            description={t('Each field on it still keeps its own audience.')}
+                        >
+                            <RadioCardGroup legend={t('Who can see your profile page')} error={profile.errors.profile_visibility}>
+                                <div className="flex flex-wrap gap-2">
+                                    {profileField.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="profile_visibility"
+                                            value={opt.value}
+                                            checked={profile.data.profile_visibility === opt.value}
+                                            disabled={profile.processing}
+                                            onChange={(e) => saveProfileVisibility(e.target.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
+                            </RadioCardGroup>
+                            <SavedIndicator show={profile.recentlySuccessful} />
+                        </FormSection>
+                    </GroupItem>
+                )}
+                {/* Age visibility is edited next to the birthday it derives from, on the profile-edit page. */}
+                <GroupItem>
+                    <DetailRow
+                        title={t('Blocked members')}
+                        action={
+                            <ActionLink href="/block/list" variant="outline" size="sm">
+                                {t('Manage')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+            </SettingsGroup>
 
             <SettingsGroup title={t('Display & language')}>
                 <GroupItem>

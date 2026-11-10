@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Rss, Search, Settings, UserCircle2, Users } from 'lucide-react';
+import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Rss, Search, Settings, UserCircle2, UserPlus, Users } from 'lucide-react';
 import type { FeatureKey, UnreadCounts } from '@/types';
 
 /**
@@ -327,6 +327,7 @@ function postActivityAction(props: Record<string, unknown>): { action?: ChromeAc
 }
 const CREATE_COMMUNITY: ChromeAction = { href: '/groups/edit', label: t('Create a %community%'), icon: Plus };
 const NEW_MESSAGE: ChromeAction = { href: '/messages/new', label: t('New message'), icon: Pencil };
+const INVITE_MEMBER: ChromeAction = { href: '/invite', label: t('Invite a new member'), icon: UserPlus };
 
 // The friend tab is a lens the friend unit owns, so it goes with the unit while the diary hub stays.
 const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeTab[] => [
@@ -662,7 +663,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             conversation: true,
         };
     },
-    'member/search': () => ({ mode: 'section', title: MEMBER_SEARCH, gap: '6' }),
+    'member/search': (props) => ({
+        mode: 'section',
+        title: MEMBER_SEARCH,
+        gap: '6',
+        ...((props as { canInvite?: boolean }).canInvite ? { action: INVITE_MEMBER } : {}),
+    }),
     'member/config': () => ({ mode: 'section', title: SETTINGS, gap: '8' }),
     'notifications/index': () => ({ mode: 'section', title: NOTIFICATIONS }),
 };
@@ -671,8 +677,8 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'block/add': { width: 'narrow', form: true },
     'block/remove': { width: 'narrow', form: true },
     'friend/link': { width: 'narrow', form: true },
-    'member/invite': { width: 'narrow', form: true },
-    'block/list': { gap: '6' },
+    'member/invite': { width: 'narrow', form: true, context: [{ href: '/member/search', label: MEMBER_SEARCH }] },
+    'block/list': { gap: '6', context: CONFIG_CONTEXT },
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
@@ -724,10 +730,8 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'member/show',
     'unified/member',
     'block/add',
-    'block/list',
     'block/remove',
     'friend/link',
-    'member/invite',
     // Reached by a guest as well as a member, so there is no one parent to crumb back to.
     'policy/show',
 ];

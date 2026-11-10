@@ -643,7 +643,19 @@ test("a form's crumb is static text, whatever it would otherwise have been", () 
 test('a screen that is nowhere and crumbs to nothing leaves the mark standing alone', () => {
     // Home included: the mark expands to the site name there rather than pointing at a second thing.
     assert.equal(crumb('home/issue', {}), null);
-    assert.equal(crumb('block/list', {}), null);
+});
+
+test('the screens with no nav entry of their own crumb back to the screen that links to them', () => {
+    assert.deepEqual(chrome('block/list', {}).context, [{ href: '/member/config', label: { key: 'Settings', replacements: undefined } }]);
+    assert.deepEqual(chrome('member/invite', {}).context, [
+        { href: '/member/search', label: { key: 'Search members', replacements: undefined } },
+    ]);
+});
+
+test('member search offers the invitation only while members may invite', () => {
+    assert.equal(chrome('member/search', { canInvite: true }).action?.href, '/invite');
+    assert.equal(chrome('member/search', { canInvite: false }).action, undefined);
+    assert.equal(chrome('member/search', {}).action, undefined);
 });
 
 test('the retired mailbox screens are gone from the registry', () => {
