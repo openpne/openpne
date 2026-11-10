@@ -1564,6 +1564,7 @@
     "There are new :count messages!": "新着メッセージが:count件あります！",
     "There are no %diaries%.": "%diary%がありません。",
     "There are no messages": "メッセージはありません",
+    "There are no new posts.": "新しい投稿はありません。",
     "There is no new notification.": "新しい通知はありません",
     "These codes are shown only this once.": "これらのコードが表示されるのはこの1回だけです。",
     "This %community% requires admin approval. Send a join request to :name?": "この%community%は管理者の承認が必要です。:nameに参加リクエストを送りますか？",
