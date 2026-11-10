@@ -403,9 +403,8 @@ they were last spoken in. What a row opens is the site setting `modern_group_lis
 ([`ModernGroupList`](../../app/Support/ModernGroupList.php)): `talk`, the default, opens the
 conversation, and `group` opens the group top, where a row whose talk is empty also drops its
 "nothing said yet" line — on a site whose groups live in their boards the line would read as the
-group being empty. The setting changes the link and that line and nothing else: the query, the order
-and the pills are the same list. Every other
-reading of the route — another member's memberships, Classic, talk switched off — keeps the
+group being empty. The query, the order and the pills are the same list under either value. Every
+other reading of the route — another member's memberships, Classic, talk switched off — keeps the
 membership grid (`ListMemberGroups`) and reads no message at all. A room list is the viewer's own by
 construction: the order is their conversations and the pills are their unread, neither of which
 another member's membership list can answer.
@@ -431,8 +430,9 @@ them. The group page's own talk card previews the same way through
 [`LatestGroupMessage`](../../app/Features/GroupTalk/Queries/LatestGroupMessage.php), and the
 conversation list of direct messages is the third caller of the same helper.
 
-The desktop sidebar draws the head of the same list ([`NavTalkRooms`](../../app/Features/GroupTalk/Queries/NavTalkRooms.php)),
-whose rows open what the list's rows open. It shares the ordered query and stops there: no preview is drawn, so the bodies and their authors
+The desktop sidebar draws the head of the same list
+([`NavTalkRooms`](../../app/Features/GroupTalk/Queries/NavTalkRooms.php)), whose rows open what the
+list's rows open. It shares the ordered query and stops there: no preview is drawn, so the bodies and their authors
 are not read, and the slice costs two queries — the rooms and their images — on a prop every Inertia
 page evaluates. It holds ten and hands the rest to `/groups/mine`; `hasMore` is one row read past
 that limit rather than a `count(*)` over the membership.

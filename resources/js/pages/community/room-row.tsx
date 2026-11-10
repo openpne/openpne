@@ -20,7 +20,7 @@ export function RoomRow({ room, opens }: { room: TalkRoomRow; opens: ModernGroup
     const speaker = latest === null ? '' : markedName(latest.authorName ?? t('%Withdrawn_member%'), latest.authorIsAi, t);
     // A row that opens the group says nothing about an empty talk: the line would read as the group
     // being empty.
-    const hasLine = latest !== null || opens === 'talk';
+    const hasLine = latest !== null || opens !== 'group';
     const href = opens === 'group' ? `/groups/${room.id}` : `/groups/${room.id}/talk`;
 
     return (
