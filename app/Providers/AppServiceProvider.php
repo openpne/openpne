@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Auth\LegacyEloquentUserProvider;
 use App\Auth\MemberUserProvider;
 use App\Auth\PassportGuard;
+use App\Auth\SessionGuard;
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
@@ -187,6 +188,7 @@ class AppServiceProvider extends ServiceProvider
         // cookie or credentials (see MemberUserProvider).
         Auth::provider('member-eloquent', fn ($app, array $config): MemberUserProvider => new MemberUserProvider($app['hash'], $config['model']));
 
+        Auth::extend('session', fn ($app, string $name, array $config): SessionGuard => SessionGuard::make($app, $name, $config));
         Auth::extend('passport-if-keyed', fn ($app, string $name, array $config) => PassportGuard::make($app, $config));
         $this->configurePassport();
 

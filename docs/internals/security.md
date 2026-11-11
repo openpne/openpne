@@ -546,8 +546,8 @@ are the sidecar's to judge; a host that shares users puts the spool on a volume 
 
 ## Cookies
 
-The two realm session cookies carry a browser-enforced name prefix on an HTTPS
-site ([sessions.md](sessions.md#cookie-name-prefix)). The `XSRF-TOKEN` cookie
-is read from JS by name and the remember-me cookies are guard-named, so neither
-takes a prefix — they carry the Secure flag from `session.secure` but not the
-prefix. The prefix requirement is met for the session cookies only.
+The realm session cookies, the remember-me cookie and the `XSRF-TOKEN` cookie
+carry a browser-enforced name prefix on an HTTPS site
+([sessions.md](sessions.md#cookie-name-prefix)). Under `__Host-` — a site whose
+cookies are host-only at `/` — another host under the same parent domain cannot
+plant any of them; a site that falls back to `__Secure-` has no such guarantee.

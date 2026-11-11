@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readCookie } from './csrf.ts';
+import { readCookie, xsrfCookieName } from './csrf.ts';
 
 test('reads a cookie value by name', () => {
     assert.equal(readCookie('XSRF-TOKEN=abc123; other=x', 'XSRF-TOKEN'), 'abc123');
@@ -24,4 +24,13 @@ test('a value containing = keeps everything after the first =', () => {
 
 test('empty cookie string yields null', () => {
     assert.equal(readCookie('', 'XSRF-TOKEN'), null);
+});
+
+test('the cookie name is the one the server declared', () => {
+    assert.equal(xsrfCookieName('__Host-XSRF-TOKEN'), '__Host-XSRF-TOKEN');
+});
+
+test('the cookie name falls back to the framework default without a declaration', () => {
+    assert.equal(xsrfCookieName(null), 'XSRF-TOKEN');
+    assert.equal(xsrfCookieName(''), 'XSRF-TOKEN');
 });

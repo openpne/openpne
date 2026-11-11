@@ -39,8 +39,10 @@ Per request it pins, both ways:
 
 ## Cookie-name prefix
 
-The two realm session cookies are renamed with a prefix the browser enforces,
-chosen from the session config on every request:
+The two realm session cookies, the remember-me cookie and the `XSRF-TOKEN`
+cookie are all issued under the session config's path, domain and Secure flag,
+and all take a prefix the browser enforces, chosen from that config on every
+request ([`CookiePrefix`](../../app/Support/CookiePrefix.php)):
 
 | `session.secure` | `session.domain` | `session.path` | Name |
 |---|---|---|---|
@@ -57,10 +59,22 @@ and a site that scopes its cookie to a parent domain or a sub-path keeps
 `__Secure-`. A `__Host-` cookie belongs to the one host that set it: another
 host under the same parent domain cannot plant a cookie of that name for it.
 
-The prefix is not applied to the `XSRF-TOKEN` cookie (read by name from JS) or
-the remember-me cookies (guard-named); those keep their Secure flag from
-`session.secure` but no prefix. A change of prefix renames the session cookie,
-so everyone re-logs in once on the deploy that brings it. A `SESSION_COOKIE` /
+A `__Secure-` cookie carries no such guarantee: on a site that scopes its
+cookies to a parent domain or a sub-path, another host under that domain can
+still plant a remember-me or `XSRF-TOKEN` cookie.
+
+The remember-me name is the guard's
+([`App\Auth\SessionGuard`](../../app/Auth/SessionGuard.php)); only the prefixed
+name is read, so a cookie planted under the unprefixed name restores no login.
+The `XSRF-TOKEN` name is the CSRF middleware's
+([`PreventRequestForgery`](../../app/Http/Middleware/PreventRequestForgery.php)),
+and the Modern shell declares it in `<meta name="xsrf-cookie">` for the JS that
+echoes the cookie in `X-XSRF-TOKEN`; Classic and the admin realm send the
+page-embedded token instead.
+
+A change of prefix renames the cookies: everyone re-logs in once on the deploy
+that brings a session-cookie prefix, and a remembered login is not restored
+once on the deploy that brings the remember-me prefix. A `SESSION_COOKIE` /
 `SESSION_ADMIN_COOKIE` an operator has already prefixed (`__Secure-`/`__Host-`)
 is passed through unchanged — the operator then owns satisfying the browser's
 prefix terms.

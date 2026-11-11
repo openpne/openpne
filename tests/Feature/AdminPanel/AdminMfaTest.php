@@ -14,8 +14,8 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\OneTimeCodeInput;
-use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
@@ -198,7 +198,7 @@ class AdminMfaTest extends TestCase
         // Even if a client forges the field, no recaller cookie — the bypass token — is issued.
         $component->set('data.remember', true)->call('authenticate')->assertHasNoFormErrors();
         $this->assertAuthenticatedAs($admin, 'admin');
-        $recaller = 'remember_admin_'.sha1(SessionGuard::class);
+        $recaller = Auth::guard('admin')->getRecallerName();
         $this->assertArrayNotHasKey($recaller, $this->app['cookie']->getQueuedCookies());
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\AdminRealm;
+use App\Support\CookiePrefix;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,7 +37,7 @@ class UseAdminSessionStore
         $admin = AdminRealm::matches($request);
 
         config([
-            'session.cookie' => $this->cookieName($admin ? config('session.admin_cookie') : $this->memberCookie),
+            'session.cookie' => CookiePrefix::apply((string) ($admin ? config('session.admin_cookie') : $this->memberCookie)),
             'session.table' => $admin ? config('session.admin_table') : config('session.member_table'),
         ]);
         Auth::shouldUse($admin ? 'admin' : $this->memberGuard);
@@ -48,31 +49,12 @@ class UseAdminSessionStore
             // removeCookie matches an exact name/path/domain triple, which must mirror how
             // PreventRequestForgery queued it.
             $response->headers->removeCookie(
-                'XSRF-TOKEN',
+                PreventRequestForgery::cookieName(),
                 config('session.path', '/'),
                 config('session.domain'),
             );
         }
 
         return $response;
-    }
-
-    /**
-     * A browser rejects a prefixed cookie that breaks its prefix's terms — Secure for both, and for
-     * `__Host-` also no Domain attribute and Path=/ — so the prefix follows the session config
-     * (docs/internals/sessions.md, "Cookie-name prefix"). An already-prefixed base (an operator-set
-     * name, or the pin re-deriving in a long-lived process) is left untouched.
-     */
-    private function cookieName(string $base): string
-    {
-        if (! config('session.secure') || str_starts_with($base, '__Secure-') || str_starts_with($base, '__Host-')) {
-            return $base;
-        }
-
-        // Symfony's Cookie omits an empty Domain and writes an empty path as `/`.
-        $hostOnly = in_array(config('session.domain'), [null, ''], true)
-            && in_array(config('session.path'), [null, '', '/'], true);
-
-        return ($hostOnly ? '__Host-' : '__Secure-').$base;
     }
 }
