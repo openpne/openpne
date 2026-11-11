@@ -46,9 +46,10 @@ class OperatorContentRenderTest extends TestCase
 
     public function test_an_empty_slot_prints_no_wrapper(): void
     {
-        $this->setSnsSetting(SnsSettingKey::FooterBeforeMarkdown, '');
+        $this->setSnsSetting(SnsSettingKey::InsertTopMarkdown, '');
+        $this->setSnsSetting(SnsSettingKey::FooterBeforeMarkdown, "a\n\nb");
 
-        $this->get('/login')->assertOk()->assertDontSee('class="markdownBody"', false);
+        $this->assertSame(1, substr_count($this->get('/login')->assertOk()->getContent(), 'class="markdownBody"'));
     }
 
     public function test_markup_typed_into_markdown_does_not_reach_the_page(): void
@@ -73,19 +74,30 @@ class OperatorContentRenderTest extends TestCase
         }
     }
 
-    public function test_the_footer_is_a_block_after_the_policy_links(): void
+    public function test_a_one_paragraph_footer_sits_in_the_policy_links_paragraph(): void
     {
         $this->setSnsSetting(SnsSettingKey::FooterBefore, self::SCRIPT);
 
         $xpath = $this->xpath($this->get('/login')->assertOk()->getContent());
 
-        $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]/p')->length);
+        $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]//p')->length);
+        $this->assertSame(3, $xpath->query('//div[@id="FooterContainer"]/p/a')->length);
+        $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]/p/a[@href="https://www.openpne.jp/"]')->length);
+        $this->assertSame(0, $xpath->query('//div[@id="FooterContainer"]//div')->length);
+        $this->assertSame(0, $xpath->query('//div[@id="FooterContainer"]//script')->length);
+    }
+
+    public function test_a_longer_footer_is_a_block_after_the_policy_links(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::FooterBeforeMarkdown, "first\n\n- item");
+
+        $xpath = $this->xpath($this->get('/login')->assertOk()->getContent());
+
         $this->assertSame(2, $xpath->query('//div[@id="FooterContainer"]/p/a')->length);
         $this->assertSame(0, $xpath->query('//div[@id="FooterContainer"]/p//div')->length);
         $this->assertSame(0, $xpath->query('//div[@id="FooterContainer"]//p[not(node())]')->length);
-        $footer = $xpath->query('//div[@id="FooterContainer"]/div[@class="markdownBody"]/p/a[@href="https://www.openpne.jp/"]');
-        $this->assertSame(1, $footer->length);
-        $this->assertSame(0, $xpath->query('//div[@id="FooterContainer"]//script')->length);
+        $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]/div[@class="markdownBody"]/p[text()="first"]')->length);
+        $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]/div[@class="markdownBody"]/ul/li')->length);
     }
 
     public function test_the_footer_follows_the_page_class(): void
@@ -97,11 +109,12 @@ class OperatorContentRenderTest extends TestCase
         $this->actingAs(Member::factory()->create())->get('/')->assertOk()->assertSee('member-footer')->assertDontSee('guest-footer');
     }
 
-    public function test_the_markdown_styles_are_on_the_page_once(): void
+    public function test_the_markdown_styles_are_in_the_head_once(): void
     {
         $html = $this->get('/login')->assertOk()->getContent();
 
         $this->assertSame(1, substr_count($html, '.markdownBody p {'));
+        $this->assertLessThan(strpos($html, '</head>'), strpos($html, '.markdownBody p {'));
         $this->assertStringContainsString('.markdownBody img { max-width: 100%;', $html);
     }
 
@@ -112,6 +125,36 @@ class OperatorContentRenderTest extends TestCase
         $this->get('/login')->assertOk()
             ->assertSee('<div class="markdownBody"><p><a href="/shop"><img src="/ad.png" alt="ad" /></a></p>', false)
             ->assertDontSee('raw-banner', false)
+            ->assertDontSee(self::SCRIPT, false);
+    }
+
+    public function test_the_member_and_side_placements_print_markdown_too(): void
+    {
+        Gadget::create(['context' => 'sidebanner', 'zone' => 'contents', 'name' => 'sideBanner', 'sort_order' => 0]);
+        app(GadgetService::class)->clearCache();
+        foreach (['top_after', 'side_after', 'side_before'] as $name) {
+            Banner::create(['name' => $name, 'is_use_html' => true, 'html' => self::SCRIPT."<b>raw-{$name}</b>", 'markdown' => "*md-{$name}*"]);
+        }
+
+        $member = $this->actingAs(Member::factory()->create())->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('<p><em>md-top_after</em></p>', $member);
+        $this->assertStringContainsString('<p><em>md-side_after</em></p>', $member);
+        $this->assertStringNotContainsString('md-side_before', $member);
+        $this->assertStringNotContainsString('raw-', $member);
+        $this->assertStringNotContainsString(self::SCRIPT, $member);
+    }
+
+    public function test_a_free_area_on_the_login_page_prints_its_markdown(): void
+    {
+        $gadget = Gadget::create(['context' => 'login', 'zone' => 'top', 'name' => 'freeArea', 'sort_order' => 0]);
+        GadgetConfig::create(['gadget_id' => $gadget->id, 'name' => 'value', 'value' => self::SCRIPT.'<b>raw-login</b>']);
+        GadgetConfig::create(['gadget_id' => $gadget->id, 'name' => 'value_markdown', 'value' => '*md-login*']);
+        app(GadgetService::class)->clearCache();
+
+        $this->get('/login')->assertOk()
+            ->assertSee('<p><em>md-login</em></p>', false)
+            ->assertDontSee('raw-login', false)
             ->assertDontSee(self::SCRIPT, false);
     }
 

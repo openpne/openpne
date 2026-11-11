@@ -313,8 +313,9 @@ the footer (`footer_before` / `footer_after`) are stored in `sns_settings` (the 
 stylesheet's leading `@charset` survives. The inserts, the footer, a banner's custom content and the
 `informationBox` / `freeArea` bodies are printed as Markdown unless the host allows raw HTML
 ([security.md](security.md#administrator-content)); the imported HTML stays stored beside its
-Markdown version ([upgrade.md](upgrade.md#operator-html)). In Markdown mode the footer is a block
-after the policy links' `<p>` rather than inline inside it, and `pc_html_head` is not printed.
+Markdown version ([upgrade.md](upgrade.md#operator-html)). In Markdown mode a
+one-paragraph footer prints inside the policy links' `<p>` as OpenPNE 3 did, a longer one is a block
+after that `<p>`, and `pc_html_head` is not printed.
 HTML a package draws into the shell, which the operator cannot edit, is a layout hook instead
 ([layout-hooks.md](layout-hooks.md)).
 

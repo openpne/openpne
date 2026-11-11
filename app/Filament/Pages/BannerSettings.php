@@ -11,6 +11,7 @@ use App\Models\Banner;
 use App\Models\BannerImage;
 use App\Support\OperatorContent;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
@@ -113,9 +114,10 @@ class BannerSettings extends Page
             if ($mode === 'html' && OperatorContent::rawHtml()) {
                 $banner->html = ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null;
             }
-            if ($mode === 'html' && ! OperatorContent::rawHtml()) {
-                // Never NULL: that reads as "not converted yet", and a later conversion would bring the old HTML back.
-                $banner->markdown = (string) ($data[$name.'_markdown'] ?? '');
+            $markdown = (string) ($data[$name.'_markdown'] ?? '');
+            // NULL reads as "not converted yet": an emptied text is stored as '', and a placement nobody wrote stays NULL for the conversion.
+            if ($mode === 'html' && ! OperatorContent::rawHtml() && ($banner->markdown !== null || $markdown !== '')) {
+                $banner->markdown = $markdown;
             }
             $banner->save();
 
@@ -193,9 +195,16 @@ class BannerSettings extends Page
                     ->visible(fn (Get $get): bool => $get($name.'_mode') === 'html' && ($raw || (string) $get($name.'_html') !== '')),
 
                 Textarea::make($name.'_markdown')
-                    ->label(__('Text'))
+                    ->label(__('Banner text'))
                     ->helperText(__('Markdown is available.'))
                     ->rows(4)
+                    ->rules([
+                        fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                            if (strlen((string) $value) > 65535) {
+                                $fail(__('The :label value is too large.', ['label' => __('Banner text')]));
+                            }
+                        },
+                    ])
                     ->visible(fn (Get $get): bool => ! $raw && $get($name.'_mode') === 'html'),
             ]);
         }

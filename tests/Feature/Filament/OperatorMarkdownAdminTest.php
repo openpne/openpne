@@ -117,6 +117,37 @@ class OperatorMarkdownAdminTest extends TestCase
         $this->assertSame('', Banner::where('name', 'top_after')->value('markdown'));
     }
 
+    /** A save before the conversion must not mark the untouched values as converted. */
+    public function test_saving_leaves_values_nobody_wrote_unconverted(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::FooterAfter, '<b>old</b>');
+        Banner::create(['name' => 'top_after', 'is_use_html' => true, 'html' => '<b>old</b>']);
+        Banner::create(['name' => 'top_before', 'is_use_html' => true, 'html' => '<b>old</b>']);
+
+        Livewire::test(DesignSettings::class)->fillForm(['insert_top_markdown' => 'new'])->call('save')->assertHasNoErrors();
+        Livewire::test(BannerSettings::class)->fillForm(['top_before_markdown' => 'new'])->call('save')->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'insert_top_markdown', 'value' => 'new']);
+        $this->assertSame(1, DB::table('sns_settings')->where('key', 'like', '%_markdown')->count());
+        $this->assertSame('new', Banner::where('name', 'top_before')->value('markdown'));
+        $this->assertNull(Banner::where('name', 'top_after')->value('markdown'));
+    }
+
+    public function test_oversized_markdown_is_rejected(): void
+    {
+        Banner::create(['name' => 'top_after', 'is_use_html' => true]);
+
+        Livewire::test(BannerSettings::class)
+            ->fillForm(['top_after_markdown' => str_repeat('a', 65536)])
+            ->call('save')
+            ->assertHasErrors('data.top_after_markdown');
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm(['context' => 'home', 'name' => 'freeArea', 'zone' => 'contents', 'sort_order' => 10, 'config_value_markdown' => str_repeat('a', 65536)])
+            ->call('create')
+            ->assertHasFormErrors(['config_value_markdown']);
+    }
+
     public function test_a_gadget_is_created_with_a_markdown_body(): void
     {
         Livewire::test(CreateGadget::class)

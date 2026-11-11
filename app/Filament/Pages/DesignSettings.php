@@ -103,6 +103,13 @@ class DesignSettings extends Page
 
         DB::transaction(function () use ($data): void {
             foreach ($this->keys() as $key) {
+                $value = $key->coerce($data[$key->value] ?? '');
+
+                // A Markdown row means "converted": one left at its default stays absent, so the conversion can still fill it from the HTML.
+                if ($key->isOperatorMarkdown() && $value === $key->default() && ! DB::table('sns_settings')->where('key', $key->value)->exists()) {
+                    continue;
+                }
+
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? ''))],
@@ -137,8 +144,8 @@ class DesignSettings extends Page
     }
 
     /**
-     * The three design areas as their own sections; every Design-group key lands in exactly one, so
-     * the page stays in sync with the registry without a second list.
+     * Every key of keys() lands in exactly one of the first three sections, so the page stays in sync
+     * with the registry without a second list.
      *
      * @return list<Section>
      */
@@ -196,6 +203,10 @@ class DesignSettings extends Page
      */
     private function previousHtml(): array
     {
+        if (OperatorContent::rawHtml()) {
+            return [];
+        }
+
         $keys = array_values(array_filter(
             SnsSettingKey::inGroup(SettingGroup::Design),
             static fn (SnsSettingKey $key): bool => $key !== SnsSettingKey::CustomCss && ! $key->isOperatorMarkdown(),

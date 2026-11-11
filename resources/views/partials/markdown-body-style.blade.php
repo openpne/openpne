@@ -1,4 +1,5 @@
-@once('markdown-body-style')
+{{-- The OpenPNE 3 skin (opSkinBasicPlugin) is a hard reset — it zeroes strong/em, list markers,
+     headings and blockquotes — so Markdown prose renders flat without these rules. --}}
 <style>
     /* A detail box rules off every div inside its dd (.diaryDetailBox dd div); this
        wrapper is an OpenPNE 4 addition within one, not a section of its own. */
@@ -31,4 +32,3 @@
     .markdownBody th { font-weight: bold; background: #F7F7F7; }
     .markdownBody img { max-width: 100%; height: auto; }
 </style>
-@endonce

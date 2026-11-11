@@ -181,7 +181,11 @@ class GadgetForm
             'select' => Select::make($key)->options($field->choices)->selectablePlaceholder(false),
             'radio' => Radio::make($key)->options($field->choices),
             'rich_textarea' => Textarea::make($key)->rows(6),
-            'markdown' => Textarea::make($key)->rows(6)->helperText(__('Markdown is available.')),
+            'markdown' => Textarea::make($key)->rows(6)->helperText(__('Markdown is available.'))->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                if (strlen((string) $value) > 65535) {
+                    $fail(__('The :label value is too large.', ['label' => __('Body')]));
+                }
+            }),
             'url' => TextInput::make($key)->rule(fn (): Closure => OperatorLink::rule()),
             default => TextInput::make($key),
         };

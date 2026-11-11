@@ -37,9 +37,7 @@
     {{-- The OpenPNE 3 skin has no visually-hidden class or new-tab notice rule, both of which the body
          HTML the server renders for both surfaces relies on (docs/internals/body-text.md, "Where a link opens"). --}}
     <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[data-new-tab-notice]::before{content:' ' attr(data-new-tab-notice)}</style>
-    @unless (\App\Support\OperatorContent::rawHtml())
-        @include('partials.markdown-body-style')
-    @endunless
+    @include('partials.markdown-body-style')
     {!! classic_html_slot('head') !!}
     {!! layout_hook(LayoutHook::ClassicHead) !!}
 </head>
@@ -149,14 +147,14 @@
                 <p>
                     <a href="{{ route('policy.privacy') }}" target="_blank" rel="noopener">{{ __('Privacy policy') }}</a>
                     <a href="{{ route('policy.terms') }}" target="_blank" rel="noopener">{{ __('Terms of service') }}</a>
-                    @if (\App\Support\OperatorContent::rawHtml())
-                        {!! $footerHtml !!}
-                    @endif
+                    {{-- OpenPNE 3 printed the footer inside this <p>, which skins style; Markdown that is
+                         more than one paragraph is block content and goes after it instead. --}}
+                    @php($footerInline = \App\Support\OperatorContent::rawHtml() ? $footerHtml : \App\Support\OperatorContent::inlineParagraph($footerHtml))
+                    {!! $footerInline !!}
                 </p>
-                {{-- Rendered Markdown is block content, which cannot sit inside the <p>. --}}
-                @unless (\App\Support\OperatorContent::rawHtml())
+                @if ($footerInline === null)
                     {!! $footerHtml !!}
-                @endunless
+                @endif
                 {!! layout_hook(LayoutHook::ClassicFooterEnd) !!}
             </div>
         </div><!-- Footer -->
