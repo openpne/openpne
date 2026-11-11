@@ -3,7 +3,6 @@
 namespace App\Features\Member;
 
 use App\Features\Member\Actions\DeleteMemberPasskey;
-use App\Features\Member\Actions\OpenPasskeyReauth;
 use App\Features\Member\Actions\RegisterMemberPasskey;
 use App\Features\Member\Serializers\MemberPasskeySerializer;
 use App\Http\Controllers\Controller;
@@ -30,17 +29,9 @@ class MemberPasskeyController extends Controller
         return Inertia::render('member/config/passkeys', MemberPasskeySerializer::state($this->viewer(), $request->session()));
     }
 
-    public function reauth(PasskeyReauthRequest $request, OpenPasskeyReauth $open): RedirectResponse
+    /** The request itself verified the proof and opened the registration window. */
+    public function reauth(PasskeyReauthRequest $request): RedirectResponse
     {
-        $open(
-            $this->viewer(),
-            $request->requiresSecondFactor(),
-            $request->validated('code'),
-            $request->validated('recovery_code'),
-        );
-
-        PasskeyReauth::stamp($request->session());
-
         return $this->passkeyRedirect($request);
     }
 

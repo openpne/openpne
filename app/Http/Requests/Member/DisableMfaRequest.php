@@ -2,36 +2,39 @@
 
 namespace App\Http\Requests\Member;
 
+use App\Auth\Reauth\ReauthPurpose;
+use App\Auth\Reauth\RequiresReauth;
 use App\Models\Member;
-use Illuminate\Validation\Rule;
+use Illuminate\Foundation\Http\FormRequest;
 
-/**
- * Disabling a live factor demands the password and a second-factor proof; cancelling a pending
- * set-up demands neither, since the pending secret gates nothing. Only the proof's presence is
- * validated here: the Action verifies its value after the password has passed, so a wrong password
- * never spends a recovery code or marks a TOTP code used.
- */
-class DisableMfaRequest extends MfaManagementRequest
+/** Cancelling a pending set-up asks for nothing, since the pending secret gates nothing. */
+class DisableMfaRequest extends FormRequest
 {
+    use RequiresReauth;
+
+    public function authorize(): bool
+    {
+        return $this->user() instanceof Member;
+    }
+
+    public function reauthPurpose(): ReauthPurpose
+    {
+        return ReauthPurpose::MfaDisable;
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return parent::rules() + [
-            // requiredIf is implicit, so `nullable` does not defeat it and only lets the field pass when not demanded.
-            'code' => [
-                Rule::requiredIf(fn (): bool => $this->requiresPassword() && ! $this->filled('recovery_code')),
-                'nullable',
-                'string',
-            ],
-            'recovery_code' => ['nullable', 'string'],
-        ];
+        return $this->reauthRules();
     }
 
-    public function requiresPassword(): bool
+    protected function demandsReauth(): bool
     {
-        $viewer = $this->user();
-        assert($viewer instanceof Member);
+        return $this->requiresSecondFactor();
+    }
 
-        return $viewer->hasEnabledTwoFactorAuthentication();
+    protected function verifiesReauthInAction(): bool
+    {
+        return true;
     }
 }

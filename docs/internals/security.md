@@ -126,18 +126,14 @@ methods and middleware pinned by `FortifyRoutesTest`). Fortify's
 `/user/two-factor-*` endpoints never ship: they would allow enabling/disabling
 the factor without the app's re-auth and revocation contract:
 
-- **Re-auth is per flow and demands a second factor.** Enabling verifies the
-  account password and opens a short re-auth window
-  ([`MfaSetupReauth`](../../app/Features/Member/MfaSetupReauth.php)); confirming
-  inside the window needs only the TOTP code, after it the password again.
-  Disabling a live factor and regenerating recovery codes demand the account
-  password **and** a second-factor proof inline every time — a current TOTP code,
-  or (disable only) an unused recovery code. Cancelling an inert pending set-up
-  demands neither (it gates nothing). The ordering is structural: the FormRequest
-  verifies only the password and the proof's *presence*, and the feature Action
-  verifies the proof's value only after that password rule has passed — so a wrong
-  password never marks a TOTP code used in Fortify's replay cache nor spends a
-  recovery code. A disable that spends a recovery code logs
+- **Re-auth is per flow and demands a second factor**
+  ([Member re-authentication](#member-re-authentication)). Enabling opens a
+  short window ([`MfaSetupReauth`](../../app/Features/Member/MfaSetupReauth.php));
+  confirming inside the window needs only the pending factor's code, after it
+  the password again. Disabling a live factor and regenerating recovery codes
+  ask inline every time; regenerating takes a current TOTP code only, never a
+  recovery code. Cancelling an inert pending set-up demands nothing (it gates
+  nothing). A disable that spends a recovery code logs
   `mfa.recovery_code_used`, deferred until the transaction commits so a rollback
   records nothing.
 - **State is re-derived — and mutated — under a row lock.** Every state-dependent
@@ -284,24 +280,20 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   ceremony — the member retries. The client re-arms the browser's passkey
   picker on page load only; after a dismissed button prompt the button remains
   the way in until the page reloads.
-- **Adding one is a step-up.** Registration opens a 15-minute window
-  (`App\Features\Member\PasskeyReauth`, distinct from the MFA window) with the
-  account password **and**, when a confirmed TOTP factor exists, a current code
-  or an unused recovery code — the same proof as disabling the factor, because
-  a new passkey bypasses it. The password rule runs first, so a wrong password
-  never marks a code used nor spends a recovery code; the factor state is
-  re-read under the member row lock and fails closed if it changed. A
-  successful registration clears the window; two stores racing inside it before
-  either clears are bounded by the per-member throttle, not prevented (the
-  session's single challenge slot serialises sequential retries, not
-  concurrent ones). A cancelled browser prompt keeps the window.
+- **Adding one is a step-up**
+  ([Member re-authentication](#member-re-authentication)). Registration opens
+  a 15-minute window (`App\Features\Member\PasskeyReauth`, distinct from the
+  MFA window). A successful registration clears the window; two stores racing
+  inside it before either clears are bounded by the per-member throttle, not
+  prevented (the session's single challenge slot serialises sequential
+  retries, not concurrent ones). A cancelled browser prompt keeps the window.
   Accepted residual: a walked-up session inside the window can complete one
   registration without the password.
 - **Nothing asks the member to name one.** `RegisterMemberPasskey` titles the row after where the
   passkey is kept, read from the credential's AAGUID, and drops a name the client posted; an
   authenticator that withholds its AAGUID, or one the bundled table does not list, leaves the name
   empty and the screen calls that one "passkey".
-- **Removing one revokes.** Deletion demands the password inline and revokes
+- **Removing one revokes.** Deletion is a step-up asked inline and revokes
   the member's other sessions and the remember token (a lost device is the
   usual reason). Adding the first one, for a member with no confirmed TOTP
   factor, revokes the same way as confirming TOTP does: it changes what a
@@ -338,6 +330,40 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
 
 There is no site-wide enforcement or password removal: registering a passkey
 is the member's choice, and the password stays usable with the second proof.
+
+## Member re-authentication
+
+A signed-in member proves who they are again before a sensitive change. The
+proof is asked through one seam, `App\Auth\Reauth\RequiresReauth`, a trait on
+the operation's FormRequest:
+
+- **The proof is the account password, plus the confirmed TOTP factor when the
+  member has one** — a current code or an unused recovery code. A member
+  without a confirmed factor gives the password alone.
+- **A proof serves one purpose.** Each request names a `ReauthPurpose`; a
+  purpose either asks every time or opens its own 15-minute `ReauthWindow`, and
+  no window opens another operation. A window is stamped only by a verified
+  proof, and a `current_password` that is sent is verified even inside a fresh
+  window.
+- **Ordering is structural.** The validation rules check the password and only
+  the *presence* of the second factor. Its value is checked after every rule
+  has passed, so a wrong password never marks a TOTP code used in Fortify's
+  replay cache nor spends a recovery code.
+- **The verdict is taken on the locked row.** `VerifiesReauthProof` re-checks
+  the raw password against the member row read `FOR UPDATE` and compares the
+  factor state with what the rules saw, failing closed on a difference: the
+  rules read the member as loaded when the request began.
+- **A TOTP code is verified once per request**, since the replay cache refuses
+  a second check. An operation that changes the factor itself (disable,
+  regenerate recovery codes) verifies the proof inside the lock it mutates
+  under; every other operation is verified by the seam before its controller
+  runs.
+- Starting or confirming a TOTP set-up asks for the password only: both refuse
+  a member who already holds a confirmed factor.
+
+The seam covers the two-factor and passkey settings. The other step-ups
+(password, email, withdrawal, AI accounts and tokens, OAuth consent and
+connections) still verify the password directly.
 
 ## AI account access tokens
 

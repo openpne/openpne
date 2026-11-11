@@ -327,18 +327,18 @@
                                         @csrf
                                         @method('DELETE')
                                         <input type="hidden" name="_passkey_form" value="destroy-{{ $passkey['id'] }}">
-                                        <details @if (old('_passkey_form') === 'destroy-'.$passkey['id'] && $errors->has('current_password')) open @endif>
+                                        @php($reauth = ['idPrefix' => 'passkey_delete_'.$passkey['id'], 'requiresSecondFactor' => $passkeys['requiresSecondFactor'], 'showErrors' => old('_passkey_form') === 'destroy-'.$passkey['id']])
+                                        <details @if ($reauth['showErrors'] && $errors->hasAny(['current_password', 'code', 'recovery_code'])) open @endif>
                                             <summary>{{ __('Remove') }}</summary>
                                             <p>
                                                 {{ count($passkeys['passkeys']) === 1
                                                     ? __('Remove this passkey? You will sign in with your password from now on.')
                                                     : __('Remove this passkey? It will no longer sign you in; your other passkeys and your password still will.') }}
                                             </p>
-                                            <label for="passkey_delete_password_{{ $passkey['id'] }}">{{ __('Current password') }}</label>
-                                            <input type="password" id="passkey_delete_password_{{ $passkey['id'] }}" name="current_password" autocomplete="current-password">
-                                            @if (old('_passkey_form') === 'destroy-'.$passkey['id'])
-                                                @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                            @endif
+                                            <table>
+                                                @include('member.partials.reauth-fields', ['part' => 'rows'] + $reauth)
+                                            </table>
+                                            @include('member.partials.reauth-fields', ['part' => 'recovery'] + $reauth)
                                             <div class="operation">
                                                 <ul class="moreInfo button">
                                                     <li><input type="submit" class="input_submit" value="{{ __('Remove') }}"></li>
@@ -361,42 +361,11 @@
                     <form method="POST" action="{{ route('member.config.passkeys.reauth') }}">
                         @csrf
                         <input type="hidden" name="_passkey_form" value="reauth">
+                        @php($reauth = ['idPrefix' => 'passkey_add', 'requiresSecondFactor' => $passkeys['requiresSecondFactor'], 'showErrors' => old('_passkey_form', 'reauth') === 'reauth', 'codeHelp' => __('A passkey signs you in without this code, so adding one needs it once.')])
                         <table>
-                            <tr>
-                                <th><label for="passkey_current_password">{{ __('Current password') }}</label></th>
-                                <td>
-                                    <input type="password" id="passkey_current_password" name="current_password" autocomplete="current-password">
-                                    @if (old('_passkey_form', 'reauth') === 'reauth')
-                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    @endif
-                                </td>
-                            </tr>
-                            @if ($passkeys['requiresSecondFactor'])
-                                <tr>
-                                    <th><label for="passkey_code">{{ __('Authentication code') }}</label></th>
-                                    <td>
-                                        <input type="text" id="passkey_code" name="code" class="input_text" inputmode="numeric" autocomplete="one-time-code">
-                                        <p>{{ __('A passkey signs you in without this code, so adding one needs it once.') }}</p>
-                                        @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    </td>
-                                </tr>
-                            @endif
+                            @include('member.partials.reauth-fields', ['part' => 'rows'] + $reauth)
                         </table>
-                        @if ($passkeys['requiresSecondFactor'])
-                            <details @if ($errors->has('recovery_code')) open @endif>
-                                <summary>{{ __('Use a recovery code instead') }}</summary>
-                                <table>
-                                    <tr>
-                                        <th><label for="passkey_recovery_code">{{ __('Recovery code') }}</label></th>
-                                        <td>
-                                            <input type="text" id="passkey_recovery_code" name="recovery_code" class="input_text" autocomplete="off">
-                                            <p>{{ __('Each recovery code can be used once, if you no longer have your authenticator.') }}</p>
-                                            @error('recovery_code')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                        </td>
-                                    </tr>
-                                </table>
-                            </details>
-                        @endif
+                        @include('member.partials.reauth-fields', ['part' => 'recovery'] + $reauth)
                         <div class="operation">
                             <ul class="moreInfo button">
                                 <li><input type="submit" class="input_submit" value="{{ __('Continue') }}"></li>
@@ -473,13 +442,7 @@
                     <form method="POST" action="{{ route('member.config.mfa.enable') }}">
                         @csrf
                         <table>
-                            <tr>
-                                <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
-                                <td>
-                                    <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
-                                    @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                </td>
-                            </tr>
+                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_enable', 'requiresSecondFactor' => false])
                         </table>
                         <div class="operation">
                             <ul class="moreInfo button">
@@ -506,14 +469,7 @@
                                 </td>
                             </tr>
                             @if ($mfa['requiresPassword'])
-                                <tr>
-                                    <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
-                                    <td>
-                                        <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
-                                        <p>{{ __('Some time has passed since you started, so please confirm it is you: enter your current password as well.') }}</p>
-                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    </td>
-                                </tr>
+                                @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_confirm', 'requiresSecondFactor' => false, 'passwordHelp' => __('Some time has passed since you started, so please confirm it is you: enter your current password as well.')])
                             @endif
                         </table>
                         <div class="operation">
@@ -559,27 +515,9 @@
                     <form method="POST" action="{{ route('member.config.mfa.recovery') }}">
                         @csrf
                         <input type="hidden" name="_mfa_form" value="regenerate">
+                        {{-- `code` is a key shared with the disable form below, so errors are gated on the submitted form. --}}
                         <table>
-                            <tr>
-                                <th><label for="mfa_regen_password">{{ __('Current password') }}</label></th>
-                                <td>
-                                    <input type="password" id="mfa_regen_password" name="current_password" autocomplete="current-password">
-                                    @if ($submittedForm === 'regenerate')
-                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    @endif
-                                </td>
-                            </tr>
-                            <tr>
-                                <th><label for="mfa_regen_code">{{ __('Authentication code') }}</label></th>
-                                <td>
-                                    <input type="text" id="mfa_regen_code" name="code" class="input_text"
-                                           inputmode="numeric" autocomplete="one-time-code">
-                                    {{-- `code` is shared with the disable form below, so gate it on the submitted form. --}}
-                                    @if ($submittedForm === 'regenerate')
-                                        @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    @endif
-                                </td>
-                            </tr>
+                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_regen', 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'regenerate'])
                         </table>
                         <div class="operation">
                             <ul class="moreInfo button">
@@ -593,46 +531,11 @@
                     <form method="POST" action="{{ route('member.config.mfa.disable') }}">
                         @csrf
                         <input type="hidden" name="_mfa_form" value="disable">
+                        @php($reauth = ['idPrefix' => 'mfa_disable', 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'disable'])
                         <table>
-                            <tr>
-                                <th><label for="mfa_disable_password">{{ __('Current password') }}</label></th>
-                                <td>
-                                    <input type="password" id="mfa_disable_password" name="current_password" autocomplete="current-password">
-                                    @if ($submittedForm === 'disable')
-                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    @endif
-                                </td>
-                            </tr>
-                            <tr>
-                                <th><label for="mfa_disable_code">{{ __('Authentication code') }}</label></th>
-                                <td>
-                                    <input type="text" id="mfa_disable_code" name="code" class="input_text"
-                                           inputmode="numeric" autocomplete="one-time-code">
-                                    {{-- `code` is shared with the regenerate form above, so gate it on the submitted form. --}}
-                                    @if ($submittedForm === 'disable')
-                                        @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    @endif
-                                </td>
-                            </tr>
+                            @include('member.partials.reauth-fields', ['part' => 'rows'] + $reauth)
                         </table>
-                        {{-- Progressive disclosure without JS; a recovery code is an alternative to the TOTP
-                             code above (server prefers a filled recovery_code). Reopened when a recovery
-                             attempt just failed so the error is not hidden behind the closed summary. Kept
-                             outside the table so the disclosure wraps its own row, not a table cell. --}}
-                        <details @if ($errors->has('recovery_code')) open @endif>
-                            <summary>{{ __('Use a recovery code instead') }}</summary>
-                            <table>
-                                <tr>
-                                    <th><label for="mfa_disable_recovery_code">{{ __('Recovery code') }}</label></th>
-                                    <td>
-                                        <input type="text" id="mfa_disable_recovery_code" name="recovery_code"
-                                               class="input_text" autocomplete="off">
-                                        <p>{{ __('Each recovery code can be used once, if you no longer have your authenticator.') }}</p>
-                                        @error('recovery_code')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                    </td>
-                                </tr>
-                            </table>
-                        </details>
+                        @include('member.partials.reauth-fields', ['part' => 'recovery'] + $reauth)
                         <div class="operation">
                             <ul class="moreInfo button">
                                 <li><input type="submit" class="input_submit" value="{{ __('Disable two-factor authentication') }}"></li>

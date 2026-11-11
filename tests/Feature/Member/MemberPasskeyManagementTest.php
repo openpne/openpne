@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Member;
 
+use App\Auth\Reauth\VerifyReauthProof;
 use App\Features\Member\Actions\DeleteMemberPasskey;
-use App\Features\Member\Actions\OpenPasskeyReauth;
 use App\Features\Member\Actions\RegisterMemberPasskey;
 use App\Features\Member\PasskeyReauth;
 use App\Models\Member;
@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
-use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Passkeys\Actions\DeletePasskey;
 use Laravel\Passkeys\Actions\StorePasskey;
 use Laravel\Passkeys\Passkey;
@@ -203,12 +202,12 @@ class MemberPasskeyManagementTest extends TestCase
 
         // Validated as "no factor" on the session's instance, then the factor goes live in the row
         // before the Action re-reads it.
-        $this->app->bind(OpenPasskeyReauth::class, function ($app) use ($member) {
+        $this->app->bind(VerifyReauthProof::class, function () use ($member) {
             $row = $member->fresh();
             app(EnableTwoFactorAuthentication::class)($row, force: true);
             $row->forceFill(['two_factor_confirmed_at' => now()])->save();
 
-            return new OpenPasskeyReauth($app->make(TwoFactorAuthenticationProvider::class));
+            return new VerifyReauthProof;
         });
 
         $this->actingAs($member)

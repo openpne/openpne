@@ -2,11 +2,12 @@
 
 namespace App\Features\Member\Actions;
 
+use App\Auth\Reauth\ReauthProof;
+use App\Auth\Reauth\VerifiesReauthProof;
 use App\Models\Member;
 use App\Models\MfaResetRequest;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
-use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
 /**
  * The live factor is re-confirmed against the locked row: a parallel disable would otherwise mint
@@ -15,21 +16,18 @@ use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
  */
 class RegenerateMemberRecoveryCodes
 {
-    use SyncsCallerInstance, VerifiesTotpProof;
+    use SyncsCallerInstance, VerifiesReauthProof;
 
-    public function __construct(
-        private readonly GenerateNewRecoveryCodes $generate,
-        private readonly TwoFactorAuthenticationProvider $provider,
-    ) {}
+    public function __construct(private readonly GenerateNewRecoveryCodes $generate) {}
 
-    public function __invoke(Member $viewer, string $code): void
+    public function __invoke(Member $viewer, ReauthProof $proof): void
     {
-        $fresh = DB::transaction(function () use ($viewer, $code): Member {
+        $fresh = DB::transaction(function () use ($viewer, $proof): Member {
             $fresh = Member::whereKey($viewer->getKey())->lockForUpdate()->firstOrFail();
 
             abort_unless($fresh->hasEnabledTwoFactorAuthentication(), 403);
 
-            $this->verifyTotpCode($this->provider, $fresh, $code);
+            $this->verifyReauthProof($fresh, $proof);
 
             ($this->generate)($fresh);
 

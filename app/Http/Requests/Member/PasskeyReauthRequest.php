@@ -2,35 +2,34 @@
 
 namespace App\Http\Requests\Member;
 
+use App\Auth\Reauth\ReauthPurpose;
+use App\Auth\Reauth\RequiresReauth;
 use App\Models\Member;
-use Illuminate\Validation\Rule;
+use Illuminate\Foundation\Http\FormRequest;
 
-/**
- * Only the second-factor proof's presence is validated here: the Action verifies its value after the
- * password has passed, so a wrong password never spends a recovery code or marks a TOTP code used.
- */
-class PasskeyReauthRequest extends MfaManagementRequest
+/** This endpoint is the ask itself, so it demands the proof even while its window is still open. */
+class PasskeyReauthRequest extends FormRequest
 {
+    use RequiresReauth;
+
+    public function authorize(): bool
+    {
+        return $this->user() instanceof Member;
+    }
+
+    public function reauthPurpose(): ReauthPurpose
+    {
+        return ReauthPurpose::PasskeyAdd;
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return parent::rules() + [
-            // requiredIf is implicit, so `nullable` does not defeat it and only lets the field pass when not demanded.
-            'code' => [
-                Rule::requiredIf(fn (): bool => $this->requiresSecondFactor() && ! $this->filled('recovery_code')),
-                'nullable',
-                'string',
-            ],
-            'recovery_code' => ['nullable', 'string'],
-        ];
+        return $this->reauthRules();
     }
 
-    /** The snapshot the Action re-checks under the member row lock. */
-    public function requiresSecondFactor(): bool
+    protected function demandsReauth(): bool
     {
-        $viewer = $this->user();
-        assert($viewer instanceof Member);
-
-        return $viewer->hasEnabledTwoFactorAuthentication();
+        return true;
     }
 }
