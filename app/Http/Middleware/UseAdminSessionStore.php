@@ -69,7 +69,9 @@ class UseAdminSessionStore
             return $base;
         }
 
-        $hostOnly = in_array(config('session.domain'), [null, ''], true) && config('session.path') === '/';
+        // Symfony's Cookie omits an empty Domain and writes an empty path as `/`.
+        $hostOnly = in_array(config('session.domain'), [null, ''], true)
+            && in_array(config('session.path'), [null, '', '/'], true);
 
         return ($hostOnly ? '__Host-' : '__Secure-').$base;
     }

@@ -133,14 +133,27 @@ class AdminSessionStoreTest extends TestCase
         ];
     }
 
-    public function test_an_empty_cookie_domain_counts_as_unset(): void
+    /** @param array<string, mixed> $scope */
+    #[DataProvider('emptyScopes')]
+    public function test_an_empty_domain_or_path_still_emits_a_host_only_root_cookie(array $scope): void
     {
-        config(['session.secure' => true, 'session.domain' => '']);
-        $memberBase = config('session.cookie');
+        config(['session.driver' => 'database', 'session.secure' => true] + $scope);
+        $prefixed = '__Host-'.config('session.cookie');
 
-        $this->handle('/dashboard');
+        $header = (string) $this->get('/login')->assertCookie($prefixed)->getCookie($prefixed, false);
 
-        $this->assertSame('__Host-'.$memberBase, config('session.cookie'));
+        $this->assertStringContainsString('; path=/;', $header);
+        $this->assertStringNotContainsString('domain=', $header);
+    }
+
+    /** @return array<string, array{array<string, mixed>}> */
+    public static function emptyScopes(): array
+    {
+        return [
+            'empty domain' => [['session.domain' => '']],
+            'empty path' => [['session.path' => '']],
+            'null path' => [['session.path' => null]],
+        ];
     }
 
     public function test_no_secure_prefix_on_a_plain_http_host(): void

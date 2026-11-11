@@ -45,9 +45,9 @@ chosen from the session config on every request:
 | `session.secure` | `session.domain` | `session.path` | Name |
 |---|---|---|---|
 | off | any | any | the base name |
-| on | unset | `/` | `__Host-` + base |
+| on | unset or empty | `/`, unset or empty | `__Host-` + base |
 | on | set | any | `__Secure-` + base |
-| on | unset | not `/` | `__Secure-` + base |
+| on | unset or empty | a sub-path | `__Secure-` + base |
 
 `session.secure` is on with an explicit `SESSION_SECURE_COOKIE` or with
 `force_https`. A browser accepts a `__Secure-` cookie only with the Secure
