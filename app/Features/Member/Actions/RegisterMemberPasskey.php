@@ -36,12 +36,12 @@ class RegisterMemberPasskey
             // credential-less row never gains a credential.
             abort_if($fresh->isAiAccount(), 403);
 
-            $isFirst = ! $fresh->passkeys()->exists();
+            $raisesPasswordFloor = ! $fresh->passkeys()->exists() && ! $fresh->hasEnabledTwoFactorAuthentication();
             $passkey = ($this->store)($fresh, $name, $credential, $options);
 
-            // The first passkey changes what a password sign-in must prove, so sessions and
-            // recallers opened under the old rule end (docs/internals/security.md, "Member passkeys").
-            if ($isFirst) {
+            // Sessions and recallers opened on the password alone end once it no longer signs in
+            // alone (docs/internals/security.md, "Member passkeys").
+            if ($raisesPasswordFloor) {
                 SessionRevocation::revokeMember($fresh, $exceptSessionId);
             }
 

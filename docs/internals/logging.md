@@ -35,7 +35,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `logout` | listener `LogLogout` (`Logout`) | `guard`, `member_id`\|`username` |
 | `password.reset` | listener `LogPasswordReset` (`PasswordReset`) | `guard`, `member_id` |
 | `login.code_sent` | seam: `App\Features\Auth\LoginCode::issue` — a passkey holder's password verified and a confirmation code was mailed | `guard`, `member_id` |
-| `login.code_failed` | seam: `LoginCodeController::store` — a wrong, expired or spent code; the code itself is never logged | `guard`, `member_id` |
+| `login.code_failed` | seam: `LoginCodeController::store` — a submitted code that was refused (wrong, over the attempt cap, or the challenge voided since); an expired challenge logs nothing, and the code itself is never logged | `guard`, `member_id` |
 | `mfa.failed` | listener `LogTwoFactorFailure` (member TOTP) | `guard`, `member_id` |
 | `member.registered` | listener `LogMemberRegistered` (`MemberRegistered`) | `guard`, `member_id` |
 | `mfa.enabled` | seam: `MemberMfaController::confirm`, `AdminAppAuthentication` set-up | `guard`, `member_id`\|`username` |

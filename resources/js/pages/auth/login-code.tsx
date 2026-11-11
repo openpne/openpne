@@ -8,7 +8,6 @@ import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
-// The challenged member is carried in the session, so there is no identifier field.
 export default function LoginCode() {
     const t = useT();
     const status = usePage<PageProps>().props.flash.status;

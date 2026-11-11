@@ -3,7 +3,6 @@
 namespace App\Features\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Member;
 use App\Support\SecurityLog;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -56,14 +55,13 @@ class LoginCodeController extends Controller
 
     public function resend(Request $request): RedirectResponse
     {
-        $slot = $this->codes->pending($request->session());
-        $member = $slot === null ? null : Member::find($slot['member_id']);
+        $sent = $this->codes->reissue($request->session());
 
-        if ($member === null) {
+        if ($sent === null) {
             return $this->expired();
         }
 
-        if (! $this->codes->issue($request->session(), $member, (bool) $slot['remember'])) {
+        if (! $sent) {
             return back()->withErrors(['code' => __('Too many confirmation codes have been sent. Please try again later.')]);
         }
 

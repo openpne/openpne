@@ -38,6 +38,7 @@ class LoginCode
             'nonce' => Str::random(40),
             'hash' => $this->mac($code),
             'password' => $this->mac((string) $member->password),
+            'email' => $this->mac((string) $member->email),
             'expires_at' => now()->addMinutes(self::TTL_MINUTES)->getTimestamp(),
         ]);
 
@@ -51,12 +52,12 @@ class LoginCode
         return true;
     }
 
-    /** @return array{member_id: int, remember: bool, nonce: string, hash: string, password: string, expires_at: int}|null */
+    /** @return array{member_id: int, remember: bool, nonce: string, hash: string, password: string, email: string, expires_at: int}|null */
     public function pending(Session $session): ?array
     {
         $slot = $session->get(self::SLOT);
 
-        if (! is_array($slot) || ! isset($slot['member_id'], $slot['nonce'], $slot['hash'], $slot['password'], $slot['expires_at'])) {
+        if (! is_array($slot) || ! isset($slot['member_id'], $slot['nonce'], $slot['hash'], $slot['password'], $slot['email'], $slot['expires_at'])) {
             return null;
         }
 
@@ -71,8 +72,8 @@ class LoginCode
 
     /**
      * Null on any refusal; the slot survives only a plain wrong code with attempts left. The attempt
-     * is counted in the cache before the comparison, because the session is not locked and a counter
-     * kept there loses concurrent updates.
+     * is counted in the cache before the comparison, because a counter in the session rewinds with a
+     * replayed cookie.
      */
     public function verify(Session $session, string $code): ?Member
     {
@@ -90,12 +91,9 @@ class LoginCode
             return null;
         }
 
-        $member = Member::find($slot['member_id']);
+        $member = $this->challenged($slot);
 
-        // The password is re-read because a guest session outlives the revocation a password change
-        // performs.
-        if (! $member || $member->is_login_rejected || $member->isAiAccount()
-            || ! hash_equals($slot['password'], $this->mac((string) $member->password))) {
+        if ($member === null) {
             $session->forget(self::SLOT);
 
             return null;
@@ -112,6 +110,43 @@ class LoginCode
         $session->forget(self::SLOT);
 
         return $member;
+    }
+
+    /**
+     * Replaces the pending code. Null when the challenge no longer stands, false when the member's
+     * hourly budget is spent.
+     */
+    public function reissue(Session $session): ?bool
+    {
+        $slot = $this->pending($session);
+        $member = $slot === null ? null : $this->challenged($slot);
+
+        if ($member === null) {
+            $session->forget(self::SLOT);
+
+            return null;
+        }
+
+        return $this->issue($session, $member, (bool) $slot['remember']);
+    }
+
+    /**
+     * The member the slot still stands for. Password and address are re-read because a guest session
+     * outlives the revocation their change performs, and a factor confirmed since must take the TOTP
+     * challenge instead.
+     *
+     * @param  array{member_id: int, password: string, email: string}  $slot
+     */
+    private function challenged(array $slot): ?Member
+    {
+        $member = Member::find($slot['member_id']);
+
+        if (! $member || $member->is_login_rejected || $member->isAiAccount() || $member->hasEnabledTwoFactorAuthentication()) {
+            return null;
+        }
+
+        return hash_equals($slot['password'], $this->mac((string) $member->password))
+            && hash_equals($slot['email'], $this->mac((string) $member->email)) ? $member : null;
     }
 
     private function mac(string $value): string

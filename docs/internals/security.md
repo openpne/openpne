@@ -244,11 +244,14 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   (`App\Features\Auth\LoginCode`). The branch is taken after the password
   verified, so the login form does not reveal who holds a passkey. The pending
   challenge lives in its own session slot (`login.code`, never Fortify's
-  `login.id`), holding an HMAC of the code, a per-issue nonce and an HMAC of
-  the password hash; a code lasts 10 minutes, dies with a password change or a
-  ban, and is replaced by a resend. Wrong codes are counted in the cache per
-  nonce — the session is not locked, and a counter kept there loses concurrent
-  updates or rewinds with a replayed cookie — and the fifth ends the challenge.
+  `login.id`), holding HMACs of the code, of the password hash and of the
+  address, and a per-issue nonce. A code lasts 10 minutes and is replaced by a
+  resend; entering it and resending it are both refused once the password or
+  the address changed, the member was banned, or a TOTP factor was confirmed
+  since. The two POSTs rewrite the one slot and are serialised per session
+  (route `block()`). Wrong codes are counted in the cache per nonce, not in the
+  session — a counter there rewinds with a replayed cookie — and the fifth
+  ends the challenge.
   A member is mailed at most five codes an hour; the POST is throttled 5/min
   per challenged member (`login-code`) and the resend only by that hourly
   budget. The mail is queued encrypted, so the code is not readable in `jobs`.
@@ -256,7 +259,8 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   so the floor this raises the password path to is the mailbox, not the
   passkey; whoever holds the password can spend the hourly budget and stall
   the password path (the passkey still signs in, and each mail is an alarm);
-  a queued mail can arrive after the code that replaced it.
+  a queued mail can arrive after the code that replaced it, or after its own
+  code expired.
 - **Sign-in is the package's own route pair** (`/passkeys/login/options`,
   `/passkeys/login`, `guest:member`), which verifies the assertion and calls
   the guard directly — it never enters Fortify's login pipeline, so the ban
@@ -298,10 +302,10 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   empty and the screen calls that one "passkey".
 - **Removing one revokes.** Deletion demands the password inline and revokes
   the member's other sessions and the remember token (a lost device is the
-  usual reason). Adding the first one revokes the same way, as confirming TOTP
-  does: it changes what a password sign-in must prove, so a session or
-  recaller opened on the password alone must not outlive it. A later one
-  revokes nothing — the proof was just given in this session and the new
+  usual reason). Adding the first one, for a member with no confirmed TOTP
+  factor, revokes the same way as confirming TOTP does: it changes what a
+  password sign-in must prove, so a session or recaller opened on the password
+  alone must not outlive it. Any other addition revokes nothing — the proof was just given in this session and the new
   credential does not invalidate what other sessions were opened with.
 - **Every registration and removal is mailed** to the registered address
   (`passkey-registered` / `passkey-removed`, always sent) and logged

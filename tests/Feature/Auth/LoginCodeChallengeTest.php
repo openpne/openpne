@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
@@ -314,6 +315,82 @@ class LoginCodeChallengeTest extends TestCase
 
         $this->post('/login/code', ['code' => $this->mailedCode()])->assertRedirect('/login');
         $this->assertGuest();
+    }
+
+    public function test_a_resend_does_not_revive_a_challenge_the_password_change_voided(): void
+    {
+        $member = $this->memberWithPasskey();
+        $this->startChallenge($member);
+        $member->forceFill(['password' => Hash::make('a-new-password')])->save();
+
+        $this->post('/login/code/resend')->assertRedirect('/login');
+
+        $this->assertNull(session('login.code'));
+        Notification::assertSentOnDemandTimes(LoginCodeNotification::class, 1);
+    }
+
+    public function test_a_resend_mails_nothing_to_a_member_banned_during_the_challenge(): void
+    {
+        $member = $this->memberWithPasskey();
+        $this->startChallenge($member);
+        $member->forceFill(['is_login_rejected' => true])->save();
+
+        $this->post('/login/code/resend')->assertRedirect('/login');
+
+        Notification::assertSentOnDemandTimes(LoginCodeNotification::class, 1);
+    }
+
+    public function test_a_totp_factor_confirmed_during_the_challenge_ends_it(): void
+    {
+        $member = $this->memberWithPasskey();
+        $this->startChallenge($member);
+        $code = $this->mailedCode();
+        $slot = session('login.code');
+        app(EnableTwoFactorAuthentication::class)($member, force: true);
+        $member->forceFill(['two_factor_confirmed_at' => now()])->save();
+
+        $this->post('/login/code', ['code' => $code])->assertRedirect('/login');
+        $this->assertGuest();
+
+        $this->withSession(['login.code' => $slot])->post('/login/code/resend')->assertRedirect('/login');
+        Notification::assertSentOnDemandTimes(LoginCodeNotification::class, 1);
+    }
+
+    public function test_an_address_change_during_the_challenge_voids_the_code_and_the_resend(): void
+    {
+        $member = $this->memberWithPasskey();
+        $this->startChallenge($member);
+        $code = $this->mailedCode();
+        $slot = session('login.code');
+        $member->forceFill(['email' => 'moved@example.test'])->save();
+
+        $this->post('/login/code', ['code' => $code])->assertRedirect('/login');
+        $this->assertGuest();
+
+        $this->withSession(['login.code' => $slot])->post('/login/code/resend')->assertRedirect('/login');
+        Notification::assertSentOnDemandTimes(LoginCodeNotification::class, 1);
+    }
+
+    public function test_the_two_code_posts_are_serialised_per_session(): void
+    {
+        foreach (['login.code.store', 'login.code.resend'] as $name) {
+            $this->assertNotNull(Route::getRoutes()->getByName($name)->locksFor(), "route [{$name}] lost its session block");
+        }
+    }
+
+    public function test_starting_either_challenge_drops_the_other_ones_slot(): void
+    {
+        $totpMember = Member::factory()->create();
+        app(EnableTwoFactorAuthentication::class)($totpMember, force: true);
+        $totpMember->forceFill(['two_factor_confirmed_at' => now()])->save();
+        $passkeyMember = $this->memberWithPasskey();
+
+        $this->post('/login', ['email' => $totpMember->email, 'password' => 'password'])->assertRedirect('/two-factor-challenge');
+        $this->startChallenge($passkeyMember);
+        $this->assertNull(session('login.id'));
+
+        $this->post('/login', ['email' => $totpMember->email, 'password' => 'password'])->assertRedirect('/two-factor-challenge');
+        $this->assertNull(session('login.code'));
     }
 
     public function test_the_login_pipeline_resolves_the_passkey_rule(): void
