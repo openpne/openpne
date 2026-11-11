@@ -42,7 +42,7 @@ class LinkListBoxGadget extends GadgetKind
         $fields = [new GadgetConfigField('title', ['ja' => 'タイトル', 'en' => 'Title'], 'input')];
 
         for ($i = 1; $i <= self::MAX_LINKS; $i++) {
-            $fields[] = new GadgetConfigField("url{$i}", ['ja' => "URL{$i}", 'en' => "URL {$i}"], 'input');
+            $fields[] = new GadgetConfigField("url{$i}", ['ja' => "URL{$i}", 'en' => "URL {$i}"], 'url');
             $fields[] = new GadgetConfigField("text{$i}", ['ja' => "リンクテキスト{$i}", 'en' => "Link text {$i}"], 'input');
         }
 

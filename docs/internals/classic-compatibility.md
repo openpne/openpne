@@ -326,8 +326,9 @@ images it shows (picked from that shared pool), and any HTML are set on the
 
 A link target an administrator typed outside those HTML fields — a banner image's URL, a
 `linkListBox` row's — is drawn as a link only when it is `http(s)://`, `mailto:` or a site path
-([`OperatorLink`](../../app/Support/OperatorLink.php)); any other value, which the upgrade still
-carries over, shows the image or the text without a link.
+([`OperatorLink`](../../app/Support/OperatorLink.php)), and the two admin forms accept nothing
+else; any other value, which the upgrade still carries over, shows the image or the text without
+a link.
 
 Modern does not apply the same CSS/HTML. It offers its own migration targets
 (logo, primary color, header image, footer/free area, a scoped safe-HTML slot).

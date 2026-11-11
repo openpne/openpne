@@ -234,6 +234,10 @@ if (! function_exists('classic_banner')) {
             return $img;
         }
 
+        if (OperatorLink::isSitePath($url)) {
+            return sprintf('<a href="%s">%s</a>', e($url), $img);
+        }
+
         $target = LinkTarget::of($url);
 
         return sprintf('<a href="%s"%s>%s%s</a>', e($url), $target->attributes('noopener'), $img, $target->notice());

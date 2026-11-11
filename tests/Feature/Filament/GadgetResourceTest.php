@@ -76,6 +76,21 @@ class GadgetResourceTest extends TestCase
         $this->assertSame('Notice', $item['config']['title']);
     }
 
+    public function test_a_link_list_url_takes_only_what_classic_would_draw_as_a_link(): void
+    {
+        $form = ['context' => 'home', 'name' => 'linkListBox', 'zone' => 'contents', 'sort_order' => 10, 'config_text1' => 'Link'];
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm($form + ['config_url1' => 'javascript:alert(1)'])
+            ->call('create')
+            ->assertHasFormErrors(['config_url1']);
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm($form + ['config_url1' => 'mailto:info@example.test'])
+            ->call('create')
+            ->assertHasNoFormErrors();
+    }
+
     public function test_edit_updates_config_and_clears_cache(): void
     {
         $viewer = Member::factory()->create();

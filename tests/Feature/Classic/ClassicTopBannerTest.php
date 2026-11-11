@@ -65,6 +65,16 @@ class ClassicTopBannerTest extends TestCase
             ->assertDontSee('javascript:alert(1)', false);
     }
 
+    public function test_a_banner_linking_to_a_site_path_opens_in_place(): void
+    {
+        $member = Member::factory()->create();
+        $this->addImage(Banner::create(['name' => 'top_after']), '/groups/1', 'Promo');
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('<a href="/groups/1"><img', false);
+    }
+
     public function test_a_guest_sees_the_before_login_banner(): void
     {
         // The login page is guest-reachable and uses the Classic shell.

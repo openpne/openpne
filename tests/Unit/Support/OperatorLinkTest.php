@@ -30,6 +30,8 @@ class OperatorLinkTest extends TestCase
         yield 'vbscript' => ['vbscript:msgbox(1)', null];
         yield 'protocol-relative' => ['//example.com', null];
         yield 'protocol-relative behind a tab' => ["/\t/example.com", null];
+        yield 'backslash read as a slash' => ['/\\example.com', null];
+        yield 'backslash in an http url' => ['https://example.com\\@evil.example', null];
         yield 'relative path' => ['diary/list', null];
         yield 'other scheme' => ['ftp://example.com', null];
     }

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\BannerImages\Pages\CreateBannerImage;
 use App\Filament\Resources\BannerImages\Pages\EditBannerImage;
 use App\Filament\Resources\BannerImages\Pages\ListBannerImages;
 use App\Models\AdminUser;
 use App\Models\BannerImage;
+use App\Models\File;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -53,6 +55,35 @@ class BannerImageResourceTest extends TestCase
             ->assertHasFormErrors(['image']);
 
         $this->assertSame(0, BannerImage::count());
+    }
+
+    public function test_the_link_url_takes_only_what_classic_would_draw_as_a_link(): void
+    {
+        foreach (['ftp://ad.example.test', 'javascript:alert(1)', 'ad.example.test'] as $url) {
+            Livewire::test(CreateBannerImage::class)
+                ->fillForm(['url' => $url])
+                ->call('create')
+                ->assertHasFormErrors(['url']);
+        }
+
+        foreach (['https://ad.example.test', 'mailto:ad@example.test', '/groups/1', ''] as $url) {
+            Livewire::test(CreateBannerImage::class)
+                ->fillForm(['url' => $url])
+                ->call('create')
+                ->assertHasNoFormErrors(['url']);
+        }
+    }
+
+    public function test_the_lightbox_is_not_handed_a_link_that_could_run_script(): void
+    {
+        $image = (new BannerImage)->forceFill(['url' => 'javascript:alert(1)']);
+        $image->setRelation('file', (new File)->forceFill(['name' => 'b_token']));
+
+        $this->assertSame('', BannerImageResource::lightboxImageAttributes($image)['data-lb-url']);
+
+        $image->url = 'https://ad.example.test';
+
+        $this->assertSame('https://ad.example.test', BannerImageResource::lightboxImageAttributes($image)['data-lb-url']);
     }
 
     public function test_the_list_page_loads(): void
