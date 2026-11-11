@@ -63,7 +63,7 @@ final class OperatorMarkdownTransform implements Phase
             ]);
 
             $items = DB::transaction(function () use ($tables): array {
-                $items = (new OperatorContentConversion)->run($tables);
+                $items = (new OperatorContentConversion('run the upgrade again (shorten the imported copy in this database; a shortened OpenPNE 3 value needs --force-restart)'))->run($tables);
 
                 UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                     'status' => UpgradeState::STATUS_COMPLETED,

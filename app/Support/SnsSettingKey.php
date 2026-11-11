@@ -78,7 +78,6 @@ enum SnsSettingKey: string
 
     case FooterAfter = 'footer_after';
 
-    /** Markdown that takes the place of the operator HTML above wherever raw operator HTML is not emitted. */
     case InsertTop2Markdown = 'insert_top2_markdown';
 
     case InsertTopMarkdown = 'insert_top_markdown';

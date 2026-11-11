@@ -104,6 +104,7 @@ class OperatorContentConversionTest extends TestCase
         $this->assertSame('書き直し', Banner::where('name', 'top_after')->value('markdown'));
         $this->assertSame('書き直し', $this->gadgetConfig($gadget, 'value_markdown'));
         $this->assertSame([false, false, false], array_map(static fn (OperatorContentItem $item): bool => $item->written, $items));
+        $this->assertSame([false, false, false], array_map(static fn (OperatorContentItem $item): bool => $item->selected, $items));
 
         (new OperatorContentConversion)->run(force: true);
 
@@ -134,6 +135,7 @@ class OperatorContentConversionTest extends TestCase
         $this->assertNull($this->setting('insert_top_markdown'));
         $this->assertCount(1, $items);
         $this->assertSame('sns_settings:pc_html_top', $items[0]->location);
+        $this->assertTrue($items[0]->selected);
         $this->assertFalse($items[0]->written);
         $this->assertSame(['iframe' => 1], $items[0]->converted->droppedElements);
         $this->assertSame(['class' => 1, 'style' => 1], $items[0]->converted->droppedAttributes);
@@ -174,6 +176,7 @@ class OperatorContentConversionTest extends TestCase
             $this->fail('the oversized rewrite should have thrown');
         } catch (RuntimeException $e) {
             $this->assertStringContainsString('banners:top_after', $e->getMessage());
+            $this->assertStringContainsString('openpne:convert-operator-html', $e->getMessage());
         }
 
         $this->assertNull($this->setting('insert_top_markdown'));
@@ -195,6 +198,33 @@ class OperatorContentConversionTest extends TestCase
             ->expectsOutputToContain('written  sns_settings:pc_html_top')
             ->assertSuccessful();
         $this->assertSame('x', $this->setting('insert_top_markdown'));
+    }
+
+    public function test_a_dry_run_tells_stored_markdown_from_markdown_it_would_write(): void
+    {
+        $this->seedSetting('pc_html_top', '<b>x</b>');
+        $this->seedSetting('insert_top_markdown', '書き直し');
+        $this->seedSetting('pc_html_bottom', '<b>y</b>');
+        Banner::create(['name' => 'top_after', 'is_use_html' => true, 'html' => '<b>x</b>', 'markdown' => '書き直し']);
+        $gadget = $this->seedGadget('freeArea', '<b>x</b>');
+        DB::table('gadget_configs')->insert(['gadget_id' => $gadget, 'name' => 'value_markdown', 'value' => '書き直し']);
+
+        $this->artisan('openpne:convert-operator-html', ['--dry-run' => true])
+            ->expectsOutputToContain('kept  sns_settings:pc_html_top')
+            ->expectsOutputToContain('would write  sns_settings:pc_html_bottom')
+            ->expectsOutputToContain('kept  banners:top_after')
+            ->expectsOutputToContain("kept  gadgets:{$gadget} ")
+            ->expectsOutputToContain('1 of 4 operator HTML values would be written')
+            ->assertSuccessful();
+
+        $this->artisan('openpne:convert-operator-html', ['--dry-run' => true, '--force' => true])
+            ->expectsOutputToContain('would write  sns_settings:pc_html_top')
+            ->expectsOutputToContain('would write  banners:top_after')
+            ->expectsOutputToContain('4 of 4 operator HTML values would be written')
+            ->assertSuccessful();
+
+        $this->assertSame('書き直し', $this->setting('insert_top_markdown'));
+        $this->assertNull($this->setting('insert_bottom_markdown'));
     }
 
     private function seedSetting(string $key, string $value): void

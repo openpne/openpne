@@ -488,5 +488,7 @@ writes nothing. `GadgetConfigUpgrade` leaves `value_markdown` out of its copy an
 since the name belongs to this pass.
 
 `php artisan openpne:convert-operator-html` runs the same conversion outside an upgrade: `--dry-run`
-lists every operator HTML value with the elements and attributes its Markdown version loses, and
-`--force` rewrites Markdown that is already stored.
+lists every operator HTML value with the elements and attributes its Markdown version loses, marked
+`would write` or `kept`, and `--force` rewrites Markdown that is already stored. Stored Markdown does
+not record whether the conversion or an administrator wrote it, so HTML edited after the Markdown
+was written reaches it only through `--force`, which also replaces any Markdown edited by hand.

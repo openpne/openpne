@@ -28,6 +28,9 @@ final class OperatorContentConversion
     /** The TEXT columns the Markdown is written to. */
     private const MAX_BYTES = 65535;
 
+    /** @param  string  $retry  what the oversize error tells the operator to do after shortening the HTML */
+    public function __construct(private readonly string $retry = 'run `php artisan openpne:convert-operator-html` again') {}
+
     /**
      * @param  list<string>  $tables  the subset of TABLES to convert
      * @param  bool  $force  rewrite Markdown that is already stored
@@ -43,8 +46,11 @@ final class OperatorContentConversion
         ]);
 
         if (! $dryRun) {
-            app(SnsSettingService::class)->clearCache();
-            app(GadgetService::class)->clearCache();
+            // A caller's surrounding transaction has not committed yet, and a read before it would cache the old values again.
+            DB::afterCommit(static function (): void {
+                app(SnsSettingService::class)->clearCache();
+                app(GadgetService::class)->clearCache();
+            });
         }
 
         return $items;
@@ -65,13 +71,13 @@ final class OperatorContentConversion
             }
 
             $converted = $this->convert("sns_settings:{$html->value}", $source);
-            $write = ! $dryRun && ($force || ! DB::table('sns_settings')->where('key', $markdown->value)->exists());
+            $selected = $force || ! DB::table('sns_settings')->where('key', $markdown->value)->exists();
 
-            if ($write) {
+            if ($selected && ! $dryRun) {
                 DB::table('sns_settings')->updateOrInsert(['key' => $markdown->value], ['value' => $converted->markdown]);
             }
 
-            $items[] = new OperatorContentItem("sns_settings:{$html->value}", $converted, $write);
+            $items[] = new OperatorContentItem("sns_settings:{$html->value}", $converted, $selected, $selected && ! $dryRun);
         }
 
         return $items;
@@ -84,13 +90,13 @@ final class OperatorContentConversion
 
         foreach (DB::table('banners')->whereNotNull('html')->orderBy('id')->get(['id', 'name', 'html', 'markdown']) as $banner) {
             $converted = $this->convert("banners:{$banner->name}", (string) $banner->html);
-            $write = ! $dryRun && ($force || $banner->markdown === null);
+            $selected = $force || $banner->markdown === null;
 
-            if ($write) {
+            if ($selected && ! $dryRun) {
                 DB::table('banners')->where('id', $banner->id)->update(['markdown' => $converted->markdown]);
             }
 
-            $items[] = new OperatorContentItem("banners:{$banner->name}", $converted, $write);
+            $items[] = new OperatorContentItem("banners:{$banner->name}", $converted, $selected, $selected && ! $dryRun);
         }
 
         return $items;
@@ -113,13 +119,13 @@ final class OperatorContentConversion
             $location = "gadgets:{$row->id} ({$row->name}, {$row->context}/{$row->zone})";
             $converted = $this->convert($location, (string) $row->value);
             $target = ['gadget_id' => $row->id, 'name' => self::GADGET_MARKDOWN];
-            $write = ! $dryRun && ($force || ! DB::table('gadget_configs')->where($target)->exists());
+            $selected = $force || ! DB::table('gadget_configs')->where($target)->exists();
 
-            if ($write) {
+            if ($selected && ! $dryRun) {
                 DB::table('gadget_configs')->updateOrInsert($target, ['value' => $converted->markdown]);
             }
 
-            $items[] = new OperatorContentItem($location, $converted, $write);
+            $items[] = new OperatorContentItem($location, $converted, $selected, $selected && ! $dryRun);
         }
 
         return $items;
@@ -132,7 +138,7 @@ final class OperatorContentConversion
 
         // Escaping can lengthen the text past the column, and a truncated value is worse than a failed run.
         if ($bytes > self::MAX_BYTES) {
-            throw new RuntimeException("{$location}: the Markdown rewrite is {$bytes} bytes, over the ".self::MAX_BYTES.' the column holds — shorten the HTML and run the conversion again');
+            throw new RuntimeException("{$location}: the Markdown rewrite is {$bytes} bytes, over the ".self::MAX_BYTES.' the column holds — shorten the HTML, then '.$this->retry);
         }
 
         return $converted;

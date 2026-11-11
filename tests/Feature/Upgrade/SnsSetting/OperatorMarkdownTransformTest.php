@@ -89,7 +89,9 @@ class OperatorMarkdownTransformTest extends TestCase
         $this->assertFalse($this->runPass(['sns_settings', 'banners']));
 
         $this->assertNull($this->stored('footer_after_markdown'));
-        $this->assertSame(UpgradeState::STATUS_FAILED, UpgradeState::where('step_key', 'operator_markdown')->value('status'));
+        $state = UpgradeState::where('step_key', 'operator_markdown')->firstOrFail();
+        $this->assertSame(UpgradeState::STATUS_FAILED, $state->status);
+        $this->assertStringContainsString('then run the upgrade again', (string) $state->error);
 
         Banner::where('name', 'top_before')->update(['html' => '<b>short</b>']);
         $this->assertTrue($this->runPass(['sns_settings', 'banners']));
