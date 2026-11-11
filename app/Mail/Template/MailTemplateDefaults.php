@@ -113,6 +113,10 @@ final class MailTemplateDefaults
             'en' => 'A passkey was removed from your account',
             'ja' => 'パスキーが削除されました',
         ],
+        'login-code' => [
+            'en' => 'Your sign-in confirmation code',
+            'ja' => 'ログインの確認コード',
+        ],
         'mfa-reset-link' => [
             'en' => 'Reset your two-factor authentication',
             'ja' => '2要素認証のリセット',

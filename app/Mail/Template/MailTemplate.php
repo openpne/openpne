@@ -37,6 +37,7 @@ enum MailTemplate: string
     case MfaResetLink = 'mfa-reset-link';
     case PasskeyRegistered = 'passkey-registered';
     case PasskeyRemoved = 'passkey-removed';
+    case LoginCode = 'login-code';
     case MemberCapacityRequest = 'member-capacity-request';
 
     case Signature = 'signature';
@@ -276,6 +277,15 @@ enum MailTemplate: string
                 isConfigurable: false,
                 caption: 'Passkey removed',
                 variables: [],
+            ),
+            self::LoginCode => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Sign-in confirmation code',
+                variables: [
+                    'code' => ['help' => 'The confirmation code.', 'sample' => '123456'],
+                    'minutes' => ['help' => 'How many minutes the code stays valid.', 'sample' => '10'],
+                ],
             ),
             self::MfaResetLink => new MailTemplateDefinition(
                 // OpenPNE 3 had no such flow.

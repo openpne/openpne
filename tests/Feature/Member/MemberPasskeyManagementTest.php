@@ -397,6 +397,7 @@ class MemberPasskeyManagementTest extends TestCase
             $ai,
             WebAuthn::fromJson(json_encode($authenticator->attest($options)), PublicKeyCredential::class),
             WebAuthn::fromJson(session('passkey.registration_options'), PublicKeyCredentialCreationOptions::class),
+            'this-session',
         );
     }
 
@@ -488,7 +489,7 @@ class MemberPasskeyManagementTest extends TestCase
         Notification::assertSentToTimes($member, PasskeyRemovedNotification::class, 1);
     }
 
-    public function test_adding_a_passkey_revokes_nothing(): void
+    public function test_the_first_passkey_revokes_other_sessions_and_later_ones_do_not(): void
     {
         $member = Member::factory()->create();
         $this->insertOtherDeviceSession($member);
@@ -496,8 +497,15 @@ class MemberPasskeyManagementTest extends TestCase
 
         $this->register($member);
 
+        $this->assertSame(0, DB::table('sessions')->where('id', 'other-device-session')->count());
+        $afterFirst = $member->fresh()->remember_token;
+        $this->assertNotSame($before, $afterFirst);
+
+        $this->insertOtherDeviceSession($member);
+        $this->register($member);
+
         $this->assertSame(1, DB::table('sessions')->where('id', 'other-device-session')->count());
-        $this->assertSame($before, $member->fresh()->remember_token);
+        $this->assertSame($afterFirst, $member->fresh()->remember_token);
     }
 
     public function test_the_mutating_routes_share_one_budget_that_fits_a_registration(): void

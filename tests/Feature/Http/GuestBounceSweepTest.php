@@ -30,6 +30,7 @@ class GuestBounceSweepTest extends TestCase
         'login', 'login.store',
         'password.request', 'password.email', 'password.reset', 'password.update',
         'two-factor.login', 'two-factor.login.store',
+        'login.code', 'login.code.store', 'login.code.resend',
         'passkey.login', 'passkey.login-options',
         'register', 'register.request', 'register.sent', 'register.form', 'register.complete', 'register.capacity-request',
         'member.config.email.confirm', 'member.config.email.confirm.submit',

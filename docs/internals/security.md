@@ -104,7 +104,8 @@ Differences from the admin posture, all deliberate:
 - **"Remember me" stays available.** Fortify only mints the remember cookie
   *after* the challenge succeeds, so a recaller is always evidence of a full
   password + TOTP login — unlike Filament, whose recaller path would bypass the
-  challenge (why the admin login dropped it). Enabling or disabling MFA rotates
+  challenge (why the admin login dropped it). The mailed-code challenge
+  ("Member passkeys") mints it at the same point. Enabling or disabling MFA rotates
   `remember_token`, so recallers minted before MFA was enabled stop working.
 - **Recovery codes are encrypted but recoverable** (Fortify standard: a used
   code is compared in plaintext), not bcrypt-hashed like the admin's. They are
@@ -234,6 +235,28 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   Signing in with one therefore skips the TOTP challenge; it is a sign-in
   method, not a second factor, and lives as its own settings row above the
   password.
+- **A passkey holder's password needs a second proof.** Once a member holds a
+  passkey, a correct password alone no longer signs them in
+  (`App\Auth\RequireSecondLoginProof`, bound over Fortify's two-factor pipeline
+  step, so it runs only while that feature is on): a confirmed TOTP factor
+  takes the TOTP challenge as before, and otherwise a six-digit code is mailed
+  to the registered address and asked for at `/login/code`
+  (`App\Features\Auth\LoginCode`). The branch is taken after the password
+  verified, so the login form does not reveal who holds a passkey. The pending
+  challenge lives in its own session slot (`login.code`, never Fortify's
+  `login.id`), holding an HMAC of the code, a per-issue nonce and an HMAC of
+  the password hash; a code lasts 10 minutes, dies with a password change or a
+  ban, and is replaced by a resend. Wrong codes are counted in the cache per
+  nonce — the session is not locked, and a counter kept there loses concurrent
+  updates or rewinds with a replayed cookie — and the fifth ends the challenge.
+  A member is mailed at most five codes an hour; the POST is throttled 5/min
+  per challenged member (`login-code`) and the resend only by that hourly
+  budget. The mail is queued encrypted, so the code is not readable in `jobs`.
+  Accepted residuals: a code can be relayed in real time by a phishing proxy,
+  so the floor this raises the password path to is the mailbox, not the
+  passkey; whoever holds the password can spend the hourly budget and stall
+  the password path (the passkey still signs in, and each mail is an alarm);
+  a queued mail can arrive after the code that replaced it.
 - **Sign-in is the package's own route pair** (`/passkeys/login/options`,
   `/passkeys/login`, `guest:member`), which verifies the assertion and calls
   the guard directly — it never enters Fortify's login pipeline, so the ban
@@ -275,9 +298,11 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   empty and the screen calls that one "passkey".
 - **Removing one revokes.** Deletion demands the password inline and revokes
   the member's other sessions and the remember token (a lost device is the
-  usual reason). Adding one revokes nothing — the proof was just given in this
-  session and the new credential does not invalidate what other sessions were
-  opened with; this is a deliberate difference from confirming TOTP.
+  usual reason). Adding the first one revokes the same way, as confirming TOTP
+  does: it changes what a password sign-in must prove, so a session or
+  recaller opened on the password alone must not outlive it. A later one
+  revokes nothing — the proof was just given in this session and the new
+  credential does not invalidate what other sessions were opened with.
 - **Every registration and removal is mailed** to the registered address
   (`passkey-registered` / `passkey-removed`, always sent) and logged
   (`passkey.registered` / `passkey.removed`).
@@ -305,8 +330,8 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   sign-in does not tell a synced passkey from a device-bound one, only the
   list does.
 
-There is no site-wide enforcement or password removal: a passkey is always an
-addition the member chooses.
+There is no site-wide enforcement or password removal: registering a passkey
+is the member's choice, and the password stays usable with the second proof.
 
 ## AI account access tokens
 

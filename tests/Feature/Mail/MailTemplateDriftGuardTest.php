@@ -14,6 +14,7 @@ use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Notifications\Auth\LoginCodeNotification;
 use App\Notifications\Auth\MemberCapacityRequestNotification;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
@@ -115,6 +116,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new MfaResetLinkNotification('the-token', 'en'), new AnonymousNotifiable],
             [new PasskeyRegisteredNotification('en'), $recipient],
             [new PasskeyRemovedNotification('en'), $recipient],
+            [new LoginCodeNotification('123456', 10, 'en'), new AnonymousNotifiable],
             [new GroupTalkMentionedNotification($sender, $talkMessage), $recipient],
             [new GroupTalkMessagePostedNotification($sender, $talkMessage, ['mail']), $recipient],
             [new TimelineMentionedNotification($sender, $post), $recipient],

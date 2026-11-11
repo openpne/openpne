@@ -35,6 +35,10 @@ class FortifyRoutesTest extends TestCase
             // The challenge GET is deliberately unthrottled: a refresh must not spend the guess budget.
             'challenge form' => ['two-factor.login', 'GET', 'two-factor-challenge', ['guest:member'], ['throttle:two-factor']],
             'challenge submit' => ['two-factor.login.store', 'POST', 'two-factor-challenge', ['guest:member', 'throttle:two-factor'], []],
+            'code form' => ['login.code', 'GET', 'login/code', ['guest:member'], ['throttle:login-code']],
+            'code submit' => ['login.code.store', 'POST', 'login/code', ['guest:member', 'throttle:login-code'], []],
+            // Bounded by the hourly issue budget instead, so a resend never spends a guess.
+            'code resend' => ['login.code.resend', 'POST', 'login/code/resend', ['guest:member'], ['throttle:login-code']],
             // The options GET is unthrottled for the same reason as the challenge form.
             'passkey options' => ['passkey.login-options', 'GET', 'passkeys/login/options', ['guest:member'], ['throttle:passkey-login']],
             'passkey login' => ['passkey.login', 'POST', 'passkeys/login', ['guest:member', 'throttle:passkey-login'], []],
