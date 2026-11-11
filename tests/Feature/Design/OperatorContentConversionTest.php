@@ -200,6 +200,21 @@ class OperatorContentConversionTest extends TestCase
         $this->assertSame('x', $this->setting('insert_top_markdown'));
     }
 
+    /** The read inside the caller's transaction stands in for another request filling the cache before the commit. */
+    public function test_the_caches_are_cleared_once_the_callers_transaction_commits(): void
+    {
+        $this->seedSetting('pc_html_top', '<b>x</b>');
+        $settings = app(SnsSettingService::class);
+
+        DB::transaction(function () use ($settings): void {
+            (new OperatorContentConversion)->run();
+            $this->assertSame('**x**', $settings->get(SnsSettingKey::InsertTopMarkdown));
+            $this->seedSetting('insert_top_markdown', 'later');
+        });
+
+        $this->assertSame('later', $settings->get(SnsSettingKey::InsertTopMarkdown));
+    }
+
     public function test_a_dry_run_tells_stored_markdown_from_markdown_it_would_write(): void
     {
         $this->seedSetting('pc_html_top', '<b>x</b>');
