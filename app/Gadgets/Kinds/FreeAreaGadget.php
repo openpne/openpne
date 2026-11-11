@@ -7,7 +7,7 @@ namespace App\Gadgets\Kinds;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
 
-/** A free-form titled HTML block (OpenPNE 3 default/freeAreaBox). Public on the profile/login pages. */
+/** A free-form titled block (OpenPNE 3 default/freeAreaBox). Public on the profile/login pages. */
 class FreeAreaGadget extends GadgetKind
 {
     public function name(): string
@@ -39,7 +39,7 @@ class FreeAreaGadget extends GadgetKind
     {
         return [
             new GadgetConfigField('title', ['ja' => 'タイトル', 'en' => 'Title'], 'input'),
-            new GadgetConfigField('value', ['ja' => '内容', 'en' => 'Body'], 'rich_textarea'),
+            GadgetConfigField::operatorBody(),
         ];
     }
 

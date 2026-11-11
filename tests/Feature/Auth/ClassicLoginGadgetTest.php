@@ -39,6 +39,8 @@ class ClassicLoginGadgetTest extends TestCase
 
     public function test_free_area_gadget_is_public_on_the_login_page(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->makeGadget('top', 'freeArea', ['value' => '<p>Welcome notice</p>']);
         $this->makeGadget('contents', 'loginForm');
 

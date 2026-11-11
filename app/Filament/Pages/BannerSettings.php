@@ -9,7 +9,9 @@ use App\Filament\Forms\Components\BannerImagePicker;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
 use App\Models\BannerImage;
+use App\Support\OperatorContent;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
@@ -27,7 +29,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 
 /**
- * The HTML mode stores operator markup verbatim; it is admin-trusted and rendered unescaped.
+ * The custom-content mode edits `html` or `markdown`, following App\Support\OperatorContent::rawHtml().
  *
  * @property-read Schema $form
  */
@@ -109,8 +111,13 @@ class BannerSettings extends Page
             // Each mode writes only its own payload: OpenPNE 3 keeps both banner.html and the image
             // selection regardless of is_use_html, and the hidden field is not dehydrated, so writing
             // it would wipe it.
-            if ($mode === 'html') {
+            if ($mode === 'html' && OperatorContent::rawHtml()) {
                 $banner->html = ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null;
+            }
+            $markdown = (string) ($data[$name.'_markdown'] ?? '');
+            // NULL reads as "not converted yet": an emptied text is stored as '', and a placement nobody wrote stays NULL for the conversion.
+            if ($mode === 'html' && ! OperatorContent::rawHtml() && ($banner->markdown !== null || $markdown !== '')) {
+                $banner->markdown = $markdown;
             }
             $banner->save();
 
@@ -140,6 +147,7 @@ class BannerSettings extends Page
             $banner = Banner::firstOrCreate(['name' => $name]);
             $values[$name.'_mode'] = $banner->is_use_html ? 'html' : 'images';
             $values[$name.'_html'] = (string) $banner->html;
+            $values[$name.'_markdown'] = (string) $banner->markdown;
             // Strings so the picker's Alpine checkbox x-model matches the option values (which are strings).
             $values[$name.'_images'] = $banner->images()->pluck('banner_images.id')->map(fn (int $id): string => (string) $id)->all();
         }
@@ -152,6 +160,7 @@ class BannerSettings extends Page
      */
     private function buildSections(): array
     {
+        $raw = OperatorContent::rawHtml();
         $sections = [];
         foreach (self::PLACEMENTS as $name) {
             $sections[] = Section::make(BannerImageResource::placementLabel($name))->schema([
@@ -159,11 +168,11 @@ class BannerSettings extends Page
                     ->label(__('Display mode'))
                     ->options([
                         'images' => __('Show banner images'),
-                        'html' => __('Use custom HTML'),
+                        'html' => $raw ? __('Use custom HTML') : __('Use custom text'),
                     ])
                     ->descriptions([
                         'images' => __('Show one of the selected images at random.'),
-                        'html' => __('Show your own HTML instead of images.'),
+                        'html' => $raw ? __('Show your own HTML instead of images.') : __('Show your own text instead of images.'),
                     ])
                     ->default('images')
                     ->live(),
@@ -178,9 +187,25 @@ class BannerSettings extends Page
                     ->visible(fn (Get $get): bool => $get($name.'_mode') === 'images'),
 
                 Textarea::make($name.'_html')
-                    ->label(__('HTML'))
+                    ->label($raw ? __('HTML') : __('Previous HTML'))
+                    ->helperText($raw ? null : __('HTML stored before this site used Markdown. It is not shown on the site.'))
                     ->rows(4)
-                    ->visible(fn (Get $get): bool => $get($name.'_mode') === 'html'),
+                    // Disabled outside raw mode, so it is never dehydrated and a save cannot write the column.
+                    ->disabled(! $raw)
+                    ->visible(fn (Get $get): bool => $get($name.'_mode') === 'html' && ($raw || (string) $get($name.'_html') !== '')),
+
+                Textarea::make($name.'_markdown')
+                    ->label(__('Banner text'))
+                    ->helperText(__('Markdown is available.'))
+                    ->rows(4)
+                    ->rules([
+                        fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                            if (strlen((string) $value) > 65535) {
+                                $fail(__('The :label value is too large.', ['label' => __('Banner text')]));
+                            }
+                        },
+                    ])
+                    ->visible(fn (Get $get): bool => ! $raw && $get($name.'_mode') === 'html'),
             ]);
         }
 

@@ -128,6 +128,8 @@ class ClassicProfileGadgetTest extends TestCase
 
     public function test_active_profile_layout_narrows_the_rendered_zones(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         DB::table('sns_settings')->insert(['key' => 'gadget_profile_layout', 'value' => 'layoutC']);
         app(SnsSettingService::class)->clearCache();
 
@@ -222,6 +224,8 @@ class ClassicProfileGadgetTest extends TestCase
 
     public function test_nickname_row_is_not_auto_linked(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         // A nickname is not free-text profile content, so a URL-looking name must not be linkified.
         $owner = Member::factory()->create(['name' => 'https://nick.example/x']);
         $viewer = Member::factory()->create();

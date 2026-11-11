@@ -487,8 +487,18 @@ value that was only a script, must not get the default footer back), and a missi
 writes nothing. `GadgetConfigUpgrade` leaves `value_markdown` out of its copy and its verify count,
 since the name belongs to this pass.
 
+A site already on OpenPNE 4 gets the same conversion from a data migration, kept apart from the
+schema migration that adds `banners.markdown` because MySQL commits on `ALTER TABLE`.
+
+A conversion that is not forced keeps Markdown another writer stores while it runs: a setting is an
+insert the primary key refuses, a banner an `UPDATE … WHERE markdown IS NULL`, and a gadget's
+`value_markdown` row is checked and written under the gadget's row lock, which the admin gadget form
+takes too (`gadget_configs` has no unique key on the name).
+
 `php artisan openpne:convert-operator-html` runs the same conversion outside an upgrade: `--dry-run`
 lists every operator HTML value with the elements and attributes its Markdown version loses, marked
 `would write` or `kept`, and `--force` rewrites Markdown that is already stored. Stored Markdown does
 not record whether the conversion or an administrator wrote it, so HTML edited after the Markdown
 was written reaches it only through `--force`, which also replaces any Markdown edited by hand.
+An admin save writes a Markdown value only once someone has written it, so a field left as it was
+stays unconverted and a later conversion still fills it from the HTML.

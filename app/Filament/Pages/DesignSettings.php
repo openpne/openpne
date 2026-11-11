@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Services\SnsSettingService;
+use App\Support\OperatorContent;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
@@ -26,8 +27,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Every value is stored verbatim, with no trimming, so a stylesheet's leading @charset and any
- * significant whitespace survive. The values are emitted raw into the Classic page: admin-trusted
- * operator HTML/CSS.
+ * significant whitespace survive. Which of the HTML and the Markdown keys the page edits follows
+ * App\Support\OperatorContent::rawHtml().
  *
  * @property-read Schema $form
  */
@@ -36,6 +37,8 @@ class DesignSettings extends Page
     use HiddenWhenModernOnly;
 
     protected static ?int $navigationSort = 6;
+
+    private const PREVIOUS_PREFIX = 'previous_';
 
     /**
      * @var array<string, mixed>|null
@@ -100,9 +103,16 @@ class DesignSettings extends Page
 
         DB::transaction(function () use ($data): void {
             foreach ($this->keys() as $key) {
+                $value = $key->coerce($data[$key->value] ?? '');
+
+                // A Markdown row means "converted": one left at its default stays absent, so the conversion can still fill it from the HTML.
+                if ($key->isOperatorMarkdown() && $value === $key->default() && ! DB::table('sns_settings')->where('key', $key->value)->exists()) {
+                    continue;
+                }
+
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
-                    ['value' => $key->encode($key->coerce($data[$key->value] ?? ''))],
+                    ['value' => $key->encode($value)],
                 );
             }
         });
@@ -126,13 +136,16 @@ class DesignSettings extends Page
         foreach ($this->keys() as $key) {
             $values[$key->value] = (string) app(SnsSettingService::class)->get($key);
         }
+        foreach ($this->previousHtml() as $key => $html) {
+            $values[self::PREVIOUS_PREFIX.$key] = $html;
+        }
 
         return $values;
     }
 
     /**
-     * The three design areas as their own sections; every Design-group key lands in exactly one, so
-     * the page stays in sync with the registry without a second list.
+     * Every key of keys() lands in exactly one of the first three sections, so the page stays in sync
+     * with the registry without a second list.
      *
      * @return list<Section>
      */
@@ -147,30 +160,79 @@ class DesignSettings extends Page
 
             if ($key === SnsSettingKey::CustomCss) {
                 $css[] = $field;
-            } elseif (in_array($key, [SnsSettingKey::FooterBefore, SnsSettingKey::FooterAfter], true)) {
+            } elseif (in_array($key, [SnsSettingKey::FooterBefore, SnsSettingKey::FooterAfter, SnsSettingKey::FooterBeforeMarkdown, SnsSettingKey::FooterAfterMarkdown], true)) {
                 $footer[] = $field;
             } else {
                 $html[] = $field;
             }
         }
 
+        if (OperatorContent::rawHtml()) {
+            return [
+                Section::make(__('Custom CSS'))->schema($css),
+                Section::make(__('HTML insertion'))->schema($html),
+                Section::make(__('Footer'))->schema($footer),
+            ];
+        }
+
+        $previous = [];
+        foreach (array_keys($this->previousHtml()) as $key) {
+            // Disabled, so it is never dehydrated and a save cannot write the HTML row.
+            $previous[] = Textarea::make(self::PREVIOUS_PREFIX.$key)
+                ->label(SnsSettingKey::from($key)->label())
+                ->rows(4)
+                ->disabled();
+        }
+
         return [
             Section::make(__('Custom CSS'))->schema($css),
-            Section::make(__('HTML insertion'))->schema($html),
-            Section::make(__('Footer'))->schema($footer),
+            Section::make(__('Page inserts'))->description(__('Markdown is available.'))->schema($html),
+            Section::make(__('Footer'))->description(__('Markdown is available.'))->schema($footer),
+            Section::make(__('Previous HTML'))
+                ->description(__('HTML stored before this site used Markdown. It is not shown on the site.'))
+                ->schema($previous)
+                ->collapsed()
+                ->visible($previous !== []),
         ];
     }
 
     /**
-     * The save writes only these, so the Markdown counterparts this page does not show keep their stored value.
+     * Stored rows only, so a default that was never saved is not shown as previous content.
+     *
+     * @return array<string, string> the non-empty operator HTML by setting key
+     */
+    private function previousHtml(): array
+    {
+        if (OperatorContent::rawHtml()) {
+            return [];
+        }
+
+        $keys = array_values(array_filter(
+            SnsSettingKey::inGroup(SettingGroup::Design),
+            static fn (SnsSettingKey $key): bool => $key !== SnsSettingKey::CustomCss && ! $key->isOperatorMarkdown(),
+        ));
+
+        return DB::table('sns_settings')
+            ->whereIn('key', array_map(static fn (SnsSettingKey $key): string => $key->value, $keys))
+            ->where('value', '<>', '')
+            ->orderBy('key')
+            ->pluck('value', 'key')
+            ->map(static fn (mixed $value): string => (string) $value)
+            ->all();
+    }
+
+    /**
+     * The save writes only these, so the values of the mode not in force keep what is stored.
      *
      * @return list<SnsSettingKey>
      */
     private function keys(): array
     {
+        $raw = OperatorContent::rawHtml();
+
         return array_values(array_filter(
             SnsSettingKey::inGroup(SettingGroup::Design),
-            static fn (SnsSettingKey $key): bool => ! $key->isOperatorMarkdown(),
+            static fn (SnsSettingKey $key): bool => $key === SnsSettingKey::CustomCss || $key->isOperatorMarkdown() !== $raw,
         ));
     }
 

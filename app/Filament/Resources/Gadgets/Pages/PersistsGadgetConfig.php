@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Gadgets\Pages;
 
 use App\Filament\Resources\Gadgets\Schemas\GadgetForm;
 use App\Services\GadgetService;
+use App\Support\GadgetConfigRow;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -46,12 +47,16 @@ trait PersistsGadgetConfig
 
     private function persistConfig(): void
     {
-        foreach ($this->gadgetConfig as $name => $value) {
-            DB::table('gadget_configs')->updateOrInsert(
-                ['gadget_id' => $this->record->getKey(), 'name' => $name],
-                ['value' => $value === null ? null : (string) $value],
-            );
-        }
+        DB::transaction(function (): void {
+            foreach ($this->gadgetConfig as $name => $value) {
+                $target = ['gadget_id' => (int) $this->record->getKey(), 'name' => (string) $name];
+                $row = ['value' => $value === null ? null : (string) $value];
+
+                GadgetConfigRow::lockedExists($target['gadget_id'], $target['name'])
+                    ? DB::table('gadget_configs')->where($target)->update($row)
+                    : DB::table('gadget_configs')->insert([...$target, ...$row]);
+            }
+        });
 
         app(GadgetService::class)->clearCache();
     }

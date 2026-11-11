@@ -369,9 +369,14 @@ change from a problem when you go through it.
   requests, no friend list, and the friends-only audience is gone from every picker (existing
   friendships still decide who may read what was already published). Switch it on under *Settings →
   Features* if you want it back.
-- **Inserted HTML and scripts** — the Classic surface does not load OpenPNE 3's bundled jQuery or its
-  other page scripts. Inserted HTML (`pc_html_head` and the other slots) that calls `$` must load its own
-  copy, in `pc_html_head`, ahead of the code that uses it.
+- **Inserted HTML, footer, banner HTML and gadget bodies** — OpenPNE 4 shows these as Markdown, and the
+  upgrade writes a Markdown version of each. Text, links, images, lists, headings and tables carry over;
+  scripts, frames, forms, `<style>`, colours and `id` / `class` attributes do not, and `pc_html_head` is
+  not shown at all. `php artisan openpne:convert-operator-html --dry-run` lists what each value loses,
+  and the admin pages keep the original HTML to read. A host that accepts administrators running
+  script on members' pages can set `OPENPNE_OPERATOR_RAW_HTML=true` to print the HTML as stored; the
+  Classic surface does not load OpenPNE 3's bundled jQuery, so HTML that calls `$` must then load its
+  own copy in `pc_html_head`.
 - **Profile page audience** — OpenPNE 3's two layers both carry over: the site setting
   (`is_allow_config_public_flag_profile_page`) becomes *Settings → Member privacy settings*, and each
   member's own choice stays on their account, applying whenever the site setting lets members choose.

@@ -9,6 +9,7 @@ use App\Services\SnsSettingService;
 use App\Support\OperatorContentConversion;
 use App\Support\OperatorContentItem;
 use App\Support\SnsSettingKey;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -206,6 +207,37 @@ class OperatorContentConversionTest extends TestCase
         $this->assertSame('書き直し', $this->setting('insert_top_markdown'));
         $this->assertSame('書き直し', Banner::where('name', 'top_after')->value('markdown'));
         $this->assertSame('書き直し', $this->gadgetConfig($gadget, 'value_markdown'));
+    }
+
+    /** A write injected right after the conversion's own read stands in for another process committing between its read and its write. */
+    public function test_markdown_stored_between_the_read_and_the_write_is_kept(): void
+    {
+        $this->seedSetting('pc_html_top', '<b>HTML</b>');
+        Banner::create(['name' => 'top_after', 'is_use_html' => true, 'html' => '<b>HTML</b>']);
+        $injected = [];
+
+        DB::listen(function (QueryExecuted $query) use (&$injected): void {
+            if (! str_starts_with($query->sql, 'select')) {
+                return;
+            }
+
+            if (! isset($injected['setting']) && in_array('insert_top_markdown', $query->bindings, true)) {
+                $injected['setting'] = true;
+                $this->seedSetting('insert_top_markdown', '先に保存');
+            }
+
+            if (! isset($injected['banner']) && str_contains($query->sql, 'banners')) {
+                $injected['banner'] = true;
+                DB::table('banners')->where('name', 'top_after')->update(['markdown' => '先に保存']);
+            }
+        });
+
+        $items = (new OperatorContentConversion)->run(['sns_settings', 'banners']);
+
+        $this->assertSame(['setting' => true, 'banner' => true], $injected);
+        $this->assertSame('先に保存', $this->setting('insert_top_markdown'));
+        $this->assertSame('先に保存', Banner::where('name', 'top_after')->value('markdown'));
+        $this->assertSame([false, false], array_map(static fn (OperatorContentItem $item): bool => $item->written, $items));
     }
 
     public function test_the_command_lists_losses_on_a_dry_run_and_writes_without_it(): void

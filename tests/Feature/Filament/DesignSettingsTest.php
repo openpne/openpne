@@ -32,6 +32,8 @@ class DesignSettingsTest extends TestCase
 
     public function test_saving_stores_every_design_field_verbatim(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         Livewire::test(DesignSettings::class)
             ->fillForm([
                 'customizing_css' => '#logo { color: red; }',
@@ -73,6 +75,8 @@ class DesignSettingsTest extends TestCase
 
     public function test_save_takes_effect_on_the_service(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->assertSame('', app(SnsSettingService::class)->get(SnsSettingKey::PcHtmlHead));
 
         Livewire::test(DesignSettings::class)
@@ -85,6 +89,8 @@ class DesignSettingsTest extends TestCase
 
     public function test_page_exposes_the_design_settings_group_without_the_markdown_counterparts(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $data = Livewire::test(DesignSettings::class)->get('data');
 
         $actual = array_keys($data);
@@ -102,6 +108,8 @@ class DesignSettingsTest extends TestCase
 
     public function test_saving_leaves_a_stored_markdown_counterpart_alone(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         DB::table('sns_settings')->insert(['key' => 'footer_after_markdown', 'value' => '管理者の文']);
 
         Livewire::test(DesignSettings::class)

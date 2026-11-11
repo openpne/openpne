@@ -7,6 +7,8 @@ use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKindRegistry;
 use App\Models\Gadget;
+use App\Support\OperatorContent;
+use App\Support\OperatorContentConversion;
 use App\Support\OperatorLink;
 use Closure;
 use Filament\Forms\Components\Field;
@@ -117,6 +119,21 @@ class GadgetForm
                 ));
         }
 
+        if (! OperatorContent::rawHtml()) {
+            $previous = self::CONFIG_PREFIX.OperatorContentConversion::GADGET_HTML;
+            // Disabled, so it is never dehydrated and a save cannot write the HTML row.
+            $components[] = Textarea::make($previous)
+                ->label(__('Previous HTML'))
+                ->helperText(__('HTML stored before this site used Markdown. It is not shown on the site.'))
+                ->rows(4)
+                ->disabled()
+                ->visible(fn (Get $get): bool => (string) $get($previous) !== '' && in_array(
+                    OperatorContentConversion::GADGET_MARKDOWN,
+                    self::selectedFields((string) $get('context'), (string) $get('name')),
+                    true,
+                ));
+        }
+
         return $components;
     }
 
@@ -164,6 +181,11 @@ class GadgetForm
             'select' => Select::make($key)->options($field->choices)->selectablePlaceholder(false),
             'radio' => Radio::make($key)->options($field->choices),
             'rich_textarea' => Textarea::make($key)->rows(6),
+            'markdown' => Textarea::make($key)->rows(6)->helperText(__('Markdown is available.'))->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail) use ($field): void {
+                if (strlen((string) $value) > 65535) {
+                    $fail(__('The :label value is too large.', ['label' => $field->caption[app()->getLocale()] ?? $field->caption['en'] ?? $field->name]));
+                }
+            }),
             'url' => TextInput::make($key)->rule(fn (): Closure => OperatorLink::rule()),
             default => TextInput::make($key),
         };

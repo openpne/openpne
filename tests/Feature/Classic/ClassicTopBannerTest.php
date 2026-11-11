@@ -88,6 +88,8 @@ class ClassicTopBannerTest extends TestCase
 
     public function test_html_mode_emits_the_operator_html(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $member = Member::factory()->create();
         Banner::create(['name' => 'top_after', 'is_use_html' => true, 'html' => '<div class="promo">Hello</div>']);
 

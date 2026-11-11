@@ -106,6 +106,8 @@ class ShellNavigationTest extends TestCase
 
     public function test_footer_renders_the_configured_html(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         // A logged-in member is on a secure page, so the footer shows footer_after (OpenPNE 3 parity).
         $this->setSnsSetting(SnsSettingKey::FooterAfter, 'Operated by <a href="https://example.test">Example</a>');
         $member = Member::factory()->create();

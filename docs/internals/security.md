@@ -551,3 +551,31 @@ carry a browser-enforced name prefix on an HTTPS site
 ([sessions.md](sessions.md#cookie-name-prefix)). Under `__Host-` — a site whose
 cookies are host-only at `/` — another host under the same parent domain cannot
 plant any of them; a site that falls back to `__Secure-` has no such guarantee.
+
+## Administrator content
+
+An administrator writes four kinds of page content for Classic: the page inserts, the footer, a
+banner's custom content, and the body of an `informationBox` / `freeArea` gadget. These reach every
+member's page, the login page included, so by default they are **Markdown**, rendered by
+`MarkdownText::renderOperator()` ([body-text.md](body-text.md#operator-text)): no script, no form,
+no frame, no `style` / `id` / `class` / `data-*` attribute, links and images only over `http(s)`
+(links also `mailto:`) or relative to the site. An administrator therefore cannot run script in a
+member's session or draw a form over the login page through these fields, which keeps the admin
+panel from becoming a way to take over a member account (see "Reset-link boundary invariant").
+
+`OPENPNE_OPERATOR_RAW_HTML=true` switches all four to raw HTML, printed as stored, and brings back
+the `<head>` insert (`pc_html_head`), which has no Markdown form. It is an environment setting
+because it is the host's decision: whoever sets it accepts that an administrator of that site can
+do anything a page script can. Nothing in the admin panel changes it.
+
+[`OperatorContent`](../../app/Support/OperatorContent.php) is the only reader of the switch and the
+only place the content turns into output; the helpers and gadget views call `render()` with both
+stored forms and print what it returns. Each mode has its own storage (`pc_html_*` / `footer_*`
+against the `*_markdown` settings, `banners.html` against `banners.markdown`, the gadget's `value`
+row against `value_markdown`), and each admin form reads and writes only the storage of the mode
+in force, so switching modes loses nothing. In Markdown mode the forms show the stored HTML read
+only, as text.
+
+What Markdown mode leaves open: custom CSS, which is not restricted here and can restyle the page
+or load from another host; an image from another host, which tells that host when a page was
+viewed; and a link whose text misdescribes its target.

@@ -43,6 +43,8 @@ class BannerSettingsTest extends TestCase
 
     public function test_saving_a_side_placement_persists_it(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         Livewire::test(BannerSettings::class)
             ->fillForm([
                 'side_after_mode' => 'html',
@@ -60,8 +62,25 @@ class BannerSettingsTest extends TestCase
         $this->assertFalse($before->is_use_html);
     }
 
+    public function test_saving_in_raw_mode_leaves_a_stored_markdown_alone(): void
+    {
+        config(['openpne.security.operator_raw_html' => true]);
+        Banner::create(['name' => 'top_after', 'is_use_html' => true, 'html' => '<b>old</b>', 'markdown' => 'kept-md']);
+
+        Livewire::test(BannerSettings::class)
+            ->fillForm(['top_after_html' => '<b>new</b>'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $banner = Banner::where('name', 'top_after')->firstOrFail();
+        $this->assertSame('<b>new</b>', $banner->html);
+        $this->assertSame('kept-md', $banner->markdown);
+    }
+
     public function test_saving_sets_the_mode_and_html_per_placement(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         Livewire::test(BannerSettings::class)
             ->fillForm([
                 'top_after_mode' => 'html',
