@@ -112,7 +112,7 @@ class DesignSettings extends Page
 
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
-                    ['value' => $key->encode($key->coerce($data[$key->value] ?? ''))],
+                    ['value' => $key->encode($value)],
                 );
             }
         });

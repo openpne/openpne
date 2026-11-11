@@ -81,8 +81,8 @@ class OperatorContentRenderTest extends TestCase
         $xpath = $this->xpath($this->get('/login')->assertOk()->getContent());
 
         $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]//p')->length);
-        $this->assertSame(3, $xpath->query('//div[@id="FooterContainer"]/p/a')->length);
-        $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]/p/a[@href="https://www.openpne.jp/"]')->length);
+        $this->assertSame(2, $xpath->query('//div[@id="FooterContainer"]/p/a')->length);
+        $this->assertSame(1, $xpath->query('//div[@id="FooterContainer"]/p/span[@class="markdownBody"]/a[@href="https://www.openpne.jp/"]')->length);
         $this->assertSame(0, $xpath->query('//div[@id="FooterContainer"]//div')->length);
         $this->assertSame(0, $xpath->query('//div[@id="FooterContainer"]//script')->length);
     }

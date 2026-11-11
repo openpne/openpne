@@ -495,3 +495,5 @@ lists every operator HTML value with the elements and attributes its Markdown ve
 `would write` or `kept`, and `--force` rewrites Markdown that is already stored. Stored Markdown does
 not record whether the conversion or an administrator wrote it, so HTML edited after the Markdown
 was written reaches it only through `--force`, which also replaces any Markdown edited by hand.
+An admin save writes a Markdown value only once someone has written it, so a field left as it was
+stays unconverted and a later conversion still fills it from the HTML.

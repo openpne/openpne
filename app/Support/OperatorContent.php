@@ -31,7 +31,7 @@ final class OperatorContent
     public static function inlineParagraph(string $rendered): ?string
     {
         return preg_match('~^<div class="markdownBody"><p>((?:(?!</?p\b).)*)</p>\s*</div>$~s', $rendered, $match) === 1
-            ? $match[1]
+            ? '<span class="markdownBody">'.$match[1].'</span>'
             : null;
     }
 }
