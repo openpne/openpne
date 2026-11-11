@@ -21,9 +21,7 @@ class VerifyReauthProof
 
         // Only the spent recovery code is carried over: an Action that compares the caller's instance
         // against its own locked row must still see what the request began with.
-        $viewer->setRawAttributes(
-            ['two_factor_recovery_codes' => $fresh->getRawOriginal('two_factor_recovery_codes')] + $viewer->getAttributes(),
-            true,
-        );
+        $viewer->setRawAttributes(['two_factor_recovery_codes' => $fresh->getRawOriginal('two_factor_recovery_codes')] + $viewer->getAttributes());
+        $viewer->syncOriginalAttribute('two_factor_recovery_codes');
     }
 }

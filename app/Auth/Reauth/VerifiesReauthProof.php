@@ -19,15 +19,17 @@ trait VerifiesReauthProof
     {
         // The request-boundary rule read the member as loaded when the request began; a password
         // changed since must not be proven by what was true then.
-        if (! $proof->offered || ! Hash::check($proof->password, (string) $locked->password)) {
+        if ($proof->offered && ! Hash::check($proof->password, (string) $locked->password)) {
             throw ValidationException::withMessages(['current_password' => __('validation.current_password')]);
         }
 
-        if ($proof->secondFactorDemanded === null) {
+        if ($proof->offered && $proof->secondFactorDemanded === null) {
             return;
         }
 
-        if ($locked->hasEnabledTwoFactorAuthentication() !== $proof->secondFactorDemanded) {
+        // A request that was asked for nothing reaches here only because the state it was validated
+        // against has since changed.
+        if (! $proof->offered || $locked->hasEnabledTwoFactorAuthentication() !== $proof->secondFactorDemanded) {
             throw ValidationException::withMessages([
                 'current_password' => __('Your two-factor settings changed while this page was open. Please try again.'),
             ]);

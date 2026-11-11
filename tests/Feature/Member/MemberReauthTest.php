@@ -187,6 +187,37 @@ class MemberReauthTest extends TestCase
         $this->assertFalse(PasskeyReauth::isFresh(app('session.store')));
     }
 
+    public function test_a_factor_confirmed_after_the_rules_ran_does_not_remove_a_passkey(): void
+    {
+        $member = Member::factory()->create();
+        $passkey = $this->passkeyFor($member);
+
+        $this->app->bind(VerifyReauthProof::class, function () use ($member) {
+            $row = $member->fresh();
+            app(EnableTwoFactorAuthentication::class)($row, force: true);
+            $row->forceFill(['two_factor_confirmed_at' => now()])->save();
+
+            return new VerifyReauthProof;
+        });
+
+        $this->actingAs($member)
+            ->delete("/member/config/passkeys/{$passkey->getKey()}", ['current_password' => 'password'])
+            ->assertSessionHasErrors('current_password');
+        $this->assertSame(1, Passkey::count());
+    }
+
+    public function test_removing_a_passkey_that_is_gone_spends_no_recovery_code(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $codes = $member->recoveryCodes();
+
+        $this->actingAs($member)
+            ->delete('/member/config/passkeys/999999', ['current_password' => 'password', 'recovery_code' => $codes[0]])
+            ->assertNotFound();
+
+        $this->assertSame($codes, $member->fresh()->recoveryCodes());
+    }
+
     public function test_a_password_changed_after_the_rule_passed_does_not_disable_the_factor(): void
     {
         $member = $this->memberWithTwoFactor();

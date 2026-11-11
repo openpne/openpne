@@ -11,9 +11,17 @@ class DeletePasskeyRequest extends FormRequest
 {
     use RequiresReauth;
 
+    /** A passkey that is not the member's is a 404 before any proof is read, so a stale form spends no code. */
     public function authorize(): bool
     {
-        return $this->user() instanceof Member;
+        $viewer = $this->user();
+        if (! $viewer instanceof Member) {
+            return false;
+        }
+
+        abort_unless($viewer->passkeys()->whereKey($this->route('id'))->exists(), 404);
+
+        return true;
     }
 
     public function reauthPurpose(): ReauthPurpose
