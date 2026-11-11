@@ -23,7 +23,7 @@ final class OperatorHtmlMarkdown
 
     private const BLOCKS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'ul', 'ol', 'dl', 'table', 'blockquote', 'pre'];
 
-    /** Held to what the renderer's sanitizer lets through, so the report names everything a reader loses. */
+    /** Held to the attribute names the renderer's sanitizer lets through, so a name it drops is reported here. */
     private const KEPT_ATTRIBUTES = ['a' => ['href'], 'img' => ['src', 'alt', 'title']];
 
     public static function convert(string $html): ConvertedOperatorHtml
@@ -93,7 +93,7 @@ final class OperatorHtmlMarkdown
                 foreach (iterator_to_array($child->attributes) as $attribute) {
                     $key = strtolower($attribute->nodeName);
 
-                    if (! in_array($key, self::KEPT_ATTRIBUTES[$name] ?? [], true) || ($key === 'href' && self::isRefusedScheme($attribute->nodeValue ?? ''))) {
+                    if (! in_array($key, self::KEPT_ATTRIBUTES[$name] ?? [], true) || self::isRefusedScheme($key, $attribute->nodeValue ?? '')) {
                         $attributes[$key] = ($attributes[$key] ?? 0) + 1;
                         $child->removeAttributeNode($attribute);
                     }
@@ -161,12 +161,14 @@ final class OperatorHtmlMarkdown
         return false;
     }
 
-    /** Whether the renderer would drop this href: a scheme other than the ones an operator link may use. */
-    private static function isRefusedScheme(string $href): bool
+    /** Whether the renderer would drop this URL for its scheme; it refuses a few malformed URLs too, which go unreported. */
+    private static function isRefusedScheme(string $attribute, string $url): bool
     {
-        $href = trim($href);
+        $allowed = ['href' => 'https?|mailto', 'src' => 'https?'][$attribute] ?? null;
 
-        return preg_match('#^[a-z][a-z0-9+.-]*:#i', $href) === 1 && preg_match('#^(https?|mailto):#i', $href) !== 1;
+        return $allowed !== null
+            && preg_match('#^\s*[a-z][a-z0-9+.-]*:#i', $url) === 1
+            && preg_match('#^\s*('.$allowed.'):#i', $url) !== 1;
     }
 
     private static function collapse(string $text): string

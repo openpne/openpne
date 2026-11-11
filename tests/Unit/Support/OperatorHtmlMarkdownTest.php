@@ -159,10 +159,10 @@ class OperatorHtmlMarkdownTest extends TestCase
 
     public function test_a_link_title_and_a_refused_scheme_are_reported_as_dropped(): void
     {
-        $converted = OperatorHtmlMarkdown::convert('<a href="https://example.com/" title="説明">公式</a> <a href="tel:0312345678">電話</a> <a href="mailto:info@example.com">メール</a>');
+        $converted = OperatorHtmlMarkdown::convert('<a href="https://example.com/" title="説明">公式</a> <a href="tel:0312345678">電話</a> <a href="mailto:info@example.com">メール</a><img src="data:image/png;base64,iVBORw0KGgo=" alt="">');
         $html = MarkdownText::renderOperator($converted->markdown)->toHtml();
 
-        $this->assertSame(['href' => 1, 'title' => 1], $converted->droppedAttributes);
+        $this->assertSame(['href' => 1, 'src' => 1, 'title' => 1], $converted->droppedAttributes);
         $this->assertStringContainsString('電話 <a href="mailto:info&#64;example.com">メール</a>', $html);
         $this->assertStringNotContainsString('説明', $html);
     }
