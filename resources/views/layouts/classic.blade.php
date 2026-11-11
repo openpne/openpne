@@ -37,7 +37,9 @@
     {{-- The OpenPNE 3 skin has no visually-hidden class or new-tab notice rule, both of which the body
          HTML the server renders for both surfaces relies on (docs/internals/body-text.md, "Where a link opens"). --}}
     <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[data-new-tab-notice]::before{content:' ' attr(data-new-tab-notice)}</style>
-    {{-- Operator HTML insertion in <head>; admin-trusted, output raw. --}}
+    @unless (\App\Support\OperatorContent::rawHtml())
+        @include('partials.markdown-body-style')
+    @endunless
     {!! classic_html_slot('head') !!}
     {!! layout_hook(LayoutHook::ClassicHead) !!}
 </head>
@@ -136,9 +138,9 @@
 
         <div id="Footer">
             <div id="FooterContainer">
-                {{-- OpenPNE 3 _footer.php: the two policy links lead, then the trusted admin/operator
-                     HTML chosen by the page's secure_page/insecure_page class. $classicFooterHtml
-                     stays a per-request override seam. --}}
+                {{-- OpenPNE 3 _footer.php: the two policy links lead, then the administrator's footer
+                     chosen by the page's secure_page/insecure_page class. $classicFooterHtml stays a
+                     per-request override seam. --}}
                 @php($footerHtml = $classicFooterHtml ?? classic_footer_html(($pageClass ?? 'secure_page') !== 'insecure_page'))
                 @if ($classicTheme !== null)
                     {{-- The theme plugin's _footer.php opens with this span, which a theme copied in may style. --}}
@@ -147,16 +149,20 @@
                 <p>
                     <a href="{{ route('policy.privacy') }}" target="_blank" rel="noopener">{{ __('Privacy policy') }}</a>
                     <a href="{{ route('policy.terms') }}" target="_blank" rel="noopener">{{ __('Terms of service') }}</a>
-                    {!! $footerHtml !!}
+                    @if (\App\Support\OperatorContent::rawHtml())
+                        {!! $footerHtml !!}
+                    @endif
                 </p>
+                {{-- Rendered Markdown is block content, which cannot sit inside the <p>. --}}
+                @unless (\App\Support\OperatorContent::rawHtml())
+                    {!! $footerHtml !!}
+                @endunless
                 {!! layout_hook(LayoutHook::ClassicFooterEnd) !!}
             </div>
         </div><!-- Footer -->
 
-        {{-- Operator HTML insertion before #Container closes. --}}
         {!! classic_html_slot('bottom2') !!}
     </div><!-- Container -->
-    {{-- Operator HTML insertion before #Body closes. --}}
     {!! classic_html_slot('bottom') !!}
 </div><!-- Body -->
 {!! layout_hook(LayoutHook::ClassicBodyEnd) !!}

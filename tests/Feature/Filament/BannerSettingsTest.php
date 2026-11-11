@@ -43,6 +43,8 @@ class BannerSettingsTest extends TestCase
 
     public function test_saving_a_side_placement_persists_it(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         Livewire::test(BannerSettings::class)
             ->fillForm([
                 'side_after_mode' => 'html',
@@ -62,6 +64,8 @@ class BannerSettingsTest extends TestCase
 
     public function test_saving_sets_the_mode_and_html_per_placement(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         Livewire::test(BannerSettings::class)
             ->fillForm([
                 'top_after_mode' => 'html',

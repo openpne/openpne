@@ -116,6 +116,7 @@ and `config/openpne.php`:
 |----------|--------|
 | `TRUSTED_PROXIES` | Proxy IP/CIDR list (comma-separated) or `*`. Makes `$request->ip()` and the HTTPS check read `X-Forwarded-For`/`-Proto`. Empty = trust none. |
 | `OPENPNE_FORCE_HTTPS` | Force `https://` URL generation + a `Secure` session cookie. Defaults on when `APP_ENV=production`. |
+| `OPENPNE_OPERATOR_RAW_HTML` | Print administrator-written page content as raw HTML instead of Markdown ([security.md](security.md#administrator-content)). Off by default. |
 
 Why this matters, not just hardening:
 

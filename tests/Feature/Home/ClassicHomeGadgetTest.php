@@ -32,6 +32,8 @@ class ClassicHomeGadgetTest extends TestCase
 
     public function test_renders_a_configured_gadget_instead_of_the_fallback(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $member = Member::factory()->create();
         $gadget = $this->makeGadget('home', 'contents', 'freeArea', ['title' => 'Notice Board', 'value' => '<p>FreeBody</p>']);
 
@@ -103,6 +105,8 @@ class ClassicHomeGadgetTest extends TestCase
 
     public function test_top_zone_renders_layout_a(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $member = Member::factory()->create();
         $this->makeGadget('home', 'top', 'informationBox', ['value' => '<p>TopNews</p>']);
 
@@ -178,6 +182,8 @@ class ClassicHomeGadgetTest extends TestCase
 
     public function test_active_layout_narrows_the_rendered_zones(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         DB::table('sns_settings')->insert(['key' => 'gadget_home_layout', 'value' => 'layoutC']);
         app(SnsSettingService::class)->clearCache();
 

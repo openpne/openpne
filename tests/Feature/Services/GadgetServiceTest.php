@@ -163,6 +163,8 @@ class GadgetServiceTest extends TestCase
 
     public function test_types_config_values_with_defaults(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->makeGadget('home', 'contents', 'freeArea', 0, ['title' => 'Hello']); // value left unset
         $this->makeGadget('home', 'sideMenu', 'friendListBox'); // no config at all
         $viewer = Member::factory()->create();

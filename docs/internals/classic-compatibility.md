@@ -308,23 +308,27 @@ banners, gadgets, layout and navigation settings.
 Custom CSS, the PC HTML insertion slots (`pc_html_head` / `top2` / `top` / `bottom2` / `bottom`) and
 the footer (`footer_before` / `footer_after`) are stored in `sns_settings` (the `Design`
 [`SnsSettingKey`](../../app/Support/SnsSettingKey.php) group), edited on the admin
-[`DesignSettings`](../../app/Filament/Pages/DesignSettings.php) page, carried over verbatim by
-[`SnsSettingUpgrade`](../../app/Upgrade/Steps/SnsSettingUpgrade.php), and emitted raw as trusted
-operator HTML/CSS — stored without trimming so a stylesheet's leading `@charset` survives.
+[`DesignSettings`](../../app/Filament/Pages/DesignSettings.php) page, and carried over verbatim by
+[`SnsSettingUpgrade`](../../app/Upgrade/Steps/SnsSettingUpgrade.php) — stored without trimming so a
+stylesheet's leading `@charset` survives. The inserts, the footer, a banner's custom content and the
+`informationBox` / `freeArea` bodies are printed as Markdown unless the host allows raw HTML
+([security.md](security.md#administrator-content)); the imported HTML stays stored beside its
+Markdown version ([upgrade.md](upgrade.md#operator-html)). In Markdown mode the footer is a block
+after the policy links' `<p>` rather than inline inside it, and `pc_html_head` is not printed.
 HTML a package draws into the shell, which the operator cannot edit, is a layout hook instead
 ([layout-hooks.md](layout-hooks.md)).
 
-A banner (OpenPNE 3 `op_banner`) shows operator HTML or one of a pool of images at random, by login
-state. The top placements render in `#topBanner` above the content (`top_after` when signed in, else
+A banner (OpenPNE 3 `op_banner`) shows the administrator's own content or one of a pool of images at
+random, by login state. The top placements render in `#topBanner` above the content (`top_after` when signed in, else
 `top_before`); the side placements (`side_after` / `side_before`) are emitted bare by the `sideBanner`
 gadget in the PC side column (no wrapper — the `#sideBanner` column is itself the gadget zone). Images
 are uploaded and edited in the [`BannerImages`](../../app/Filament/Resources/BannerImages/BannerImageResource.php)
 resource and served publicly through [`BannerImageController`](../../app/Http/Controllers/BannerImageController.php)
 (banners show to guests, so unlike other files they are not auth-gated); each placement's mode, the
-images it shows (picked from that shared pool), and any HTML are set on the
+images it shows (picked from that shared pool), and any custom content are set on the
 [`Banner`](../../app/Filament/Pages/BannerSettings.php) page.
 
-A link target an administrator typed outside those HTML fields — a banner image's URL, a
+A link target an administrator typed outside those content fields — a banner image's URL, a
 `linkListBox` row's — is drawn as a link only when it is `http(s)://`, `mailto:` or a site path
 ([`OperatorLink`](../../app/Support/OperatorLink.php)), and the two admin forms accept nothing
 else; any other value, which the upgrade still carries over, shows the image or the text without

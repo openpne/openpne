@@ -14,6 +14,7 @@ use App\Support\ClassicThemes;
 use App\Support\LayoutHook;
 use App\Support\LayoutHooks;
 use App\Support\LinkTarget;
+use App\Support\OperatorContent;
 use App\Support\OperatorLink;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\Schema;
@@ -89,9 +90,8 @@ if (! function_exists('app_icon_url')) {
 
 if (! function_exists('classic_html_slot')) {
     /**
-     * Operator-supplied raw HTML for a Classic shell insertion slot (OpenPNE 3 pc_html_* settings),
-     * keyed by position: head | top2 | top | bottom2 | bottom. The layout outputs it raw; it is
-     * admin-trusted content (e.g. analytics tags), the same trust model as the footer.
+     * Administrator content for a Classic shell slot (OpenPNE 3 pc_html_* settings), keyed by position:
+     * head | top2 | top | bottom2 | bottom. `head` has no Markdown form, so it prints only as raw HTML.
      */
     function classic_html_slot(string $slot): string
     {
@@ -103,7 +103,14 @@ if (! function_exists('classic_html_slot')) {
             'bottom' => SnsSettingKey::PcHtmlBottom,
         };
 
-        return (string) app(SnsSettingService::class)->get($key);
+        $settings = app(SnsSettingService::class);
+        $markdown = $key->markdownCounterpart();
+
+        if ($markdown === null) {
+            return OperatorContent::rawHtml() ? (string) $settings->get($key) : '';
+        }
+
+        return OperatorContent::render((string) $settings->get($key), (string) $settings->get($markdown));
     }
 }
 
@@ -177,9 +184,11 @@ if (! function_exists('classic_footer_html')) {
      */
     function classic_footer_html(bool $secure): string
     {
-        return (string) app(SnsSettingService::class)->get(
-            $secure ? SnsSettingKey::FooterAfter : SnsSettingKey::FooterBefore,
-        );
+        $settings = app(SnsSettingService::class);
+
+        return $secure
+            ? OperatorContent::render((string) $settings->get(SnsSettingKey::FooterAfter), (string) $settings->get(SnsSettingKey::FooterAfterMarkdown))
+            : OperatorContent::render((string) $settings->get(SnsSettingKey::FooterBefore), (string) $settings->get(SnsSettingKey::FooterBeforeMarkdown));
     }
 }
 
@@ -201,7 +210,7 @@ if (! function_exists('classic_layout')) {
 }
 
 if (! function_exists('classic_banner')) {
-    /** OpenPNE 3 op_banner: operator HTML is emitted raw, or one of the placement's images at random. */
+    /** OpenPNE 3 op_banner: the administrator's own content, or one of the placement's images at random. */
     function classic_banner(string $placement): string
     {
         // The shell renders before the schema exists on a pre-migrate boot (and on the error page
@@ -217,7 +226,7 @@ if (! function_exists('classic_banner')) {
         }
 
         if ($banner->is_use_html) {
-            return (string) $banner->html;
+            return OperatorContent::render($banner->html, $banner->markdown);
         }
 
         $image = $banner->randomImage();

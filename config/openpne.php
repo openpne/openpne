@@ -285,10 +285,16 @@ return [
     | that proxy's forwarded headers is configured separately (TRUSTED_PROXIES,
     | see bootstrap/app.php and docs/internals/runtime.md).
     |
+    | 'operator_raw_html' lets administrators publish raw HTML (page inserts,
+    | footer, banners, information and free-area gadgets) instead of Markdown.
+    | It is the host's decision, so it is not a setting an administrator can
+    | change. See docs/internals/security.md.
+    |
     */
 
     'security' => [
         'force_https' => (bool) env('OPENPNE_FORCE_HTTPS', env('APP_ENV') === 'production'),
+        'operator_raw_html' => (bool) env('OPENPNE_OPERATOR_RAW_HTML', false),
     ],
 
     /*

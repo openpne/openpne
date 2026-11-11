@@ -7,7 +7,7 @@ namespace App\Gadgets\Kinds;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
 
-/** An announcement HTML block (OpenPNE 3 default/informationBox). Public in the side banner. */
+/** An announcement block (OpenPNE 3 default/informationBox). Public in the side banner. */
 class InformationBoxGadget extends GadgetKind
 {
     public function name(): string
@@ -38,7 +38,7 @@ class InformationBoxGadget extends GadgetKind
     public function configFields(string $context): array
     {
         return [
-            new GadgetConfigField('value', ['ja' => '内容', 'en' => 'Body'], 'rich_textarea'),
+            GadgetConfigField::operatorBody(),
         ];
     }
 

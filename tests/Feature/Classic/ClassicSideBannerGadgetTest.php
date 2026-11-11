@@ -66,6 +66,8 @@ class ClassicSideBannerGadgetTest extends TestCase
 
     public function test_side_banner_is_public_for_a_guest(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         // The login page is guest-reachable; the side banner shows there too (global, all PC pages).
         $this->makeGadget('informationBox', ['value' => '<p>Banner notice</p>']);
 
@@ -87,6 +89,8 @@ class ClassicSideBannerGadgetTest extends TestCase
 
     public function test_side_banner_gadget_shows_the_after_login_placement_to_a_member(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $member = Member::factory()->create();
         $this->makeGadget('sideBanner');
         Banner::create(['name' => 'side_before', 'is_use_html' => true, 'html' => '<div class="side-before">Guest side</div>']);
@@ -100,6 +104,8 @@ class ClassicSideBannerGadgetTest extends TestCase
 
     public function test_side_banner_gadget_shows_the_before_login_placement_to_a_guest(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->makeGadget('sideBanner');
         Banner::create(['name' => 'side_before', 'is_use_html' => true, 'html' => '<div class="side-promo">Guest side</div>']);
         Banner::create(['name' => 'side_after', 'is_use_html' => true, 'html' => '<div class="side-after">Member side</div>']);
@@ -125,6 +131,8 @@ class ClassicSideBannerGadgetTest extends TestCase
 
     public function test_side_banner_gadget_is_emitted_bare_without_a_wrapper(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $member = Member::factory()->create();
         $this->makeGadget('sideBanner');
         Banner::create(['name' => 'side_after', 'is_use_html' => true, 'html' => '<div class="side-promo">Member side</div>']);

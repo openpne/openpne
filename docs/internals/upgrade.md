@@ -487,6 +487,9 @@ value that was only a script, must not get the default footer back), and a missi
 writes nothing. `GadgetConfigUpgrade` leaves `value_markdown` out of its copy and its verify count,
 since the name belongs to this pass.
 
+A site already on OpenPNE 4 gets the same conversion from a data migration, kept apart from the
+schema migration that adds `banners.markdown` because MySQL commits on `ALTER TABLE`.
+
 `php artisan openpne:convert-operator-html` runs the same conversion outside an upgrade: `--dry-run`
 lists every operator HTML value with the elements and attributes its Markdown version loses, marked
 `would write` or `kept`, and `--force` rewrites Markdown that is already stored. Stored Markdown does

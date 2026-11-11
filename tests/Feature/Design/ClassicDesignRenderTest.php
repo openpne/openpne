@@ -35,6 +35,8 @@ class ClassicDesignRenderTest extends TestCase
 
     public function test_html_insertion_slots_render_raw(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->setSnsSetting(SnsSettingKey::PcHtmlHead, '<meta name="op-head" content="1">');
         $this->setSnsSetting(SnsSettingKey::PcHtmlTop2, '<div id="op-top2"></div>');
         $this->setSnsSetting(SnsSettingKey::PcHtmlTop, '<div id="op-top"></div>');
@@ -68,6 +70,8 @@ class ClassicDesignRenderTest extends TestCase
 
     public function test_slots_and_footer_pass_script_and_iframe_through_unescaped(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $stored = $this->storeScriptAndIframeInEverySlot();
 
         $guest = $this->get('/login')->assertOk()->getContent();
@@ -97,6 +101,8 @@ class ClassicDesignRenderTest extends TestCase
 
     public function test_head_slot_is_in_head_and_top_slot_after_body(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->setSnsSetting(SnsSettingKey::PcHtmlHead, '<meta name="op-head" content="1">');
         $this->setSnsSetting(SnsSettingKey::PcHtmlTop2, '<i id="op-top2"></i>');
 
@@ -113,6 +119,8 @@ class ClassicDesignRenderTest extends TestCase
 
     public function test_footer_uses_insecure_html_for_a_guest(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->setSnsSetting(SnsSettingKey::FooterBefore, 'Guest footer text');
         $this->setSnsSetting(SnsSettingKey::FooterAfter, 'Member footer text');
 
@@ -124,6 +132,8 @@ class ClassicDesignRenderTest extends TestCase
 
     public function test_footer_uses_secure_html_for_a_member(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $this->setSnsSetting(SnsSettingKey::FooterBefore, 'Guest footer text');
         $this->setSnsSetting(SnsSettingKey::FooterAfter, 'Member footer text');
 

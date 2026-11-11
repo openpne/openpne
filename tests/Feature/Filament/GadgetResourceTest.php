@@ -51,6 +51,8 @@ class GadgetResourceTest extends TestCase
 
     public function test_creates_a_gadget_with_config_and_clears_cache(): void
     {
+        config(['openpne.security.operator_raw_html' => true]);
+
         $viewer = Member::factory()->create();
 
         Livewire::test(CreateGadget::class)
