@@ -99,7 +99,7 @@ class DesignSettings extends Page
         $data = $this->form->getState();
 
         DB::transaction(function () use ($data): void {
-            foreach (SnsSettingKey::inGroup(SettingGroup::Design) as $key) {
+            foreach ($this->keys() as $key) {
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? ''))],
@@ -123,7 +123,7 @@ class DesignSettings extends Page
     private function currentValues(): array
     {
         $values = [];
-        foreach (SnsSettingKey::inGroup(SettingGroup::Design) as $key) {
+        foreach ($this->keys() as $key) {
             $values[$key->value] = (string) app(SnsSettingService::class)->get($key);
         }
 
@@ -142,7 +142,7 @@ class DesignSettings extends Page
         $html = [];
         $footer = [];
 
-        foreach (SnsSettingKey::inGroup(SettingGroup::Design) as $key) {
+        foreach ($this->keys() as $key) {
             $field = $this->field($key);
 
             if ($key === SnsSettingKey::CustomCss) {
@@ -159,6 +159,19 @@ class DesignSettings extends Page
             Section::make(__('HTML insertion'))->schema($html),
             Section::make(__('Footer'))->schema($footer),
         ];
+    }
+
+    /**
+     * The save writes only these, so the Markdown counterparts this page does not show keep their stored value.
+     *
+     * @return list<SnsSettingKey>
+     */
+    private function keys(): array
+    {
+        return array_values(array_filter(
+            SnsSettingKey::inGroup(SettingGroup::Design),
+            static fn (SnsSettingKey $key): bool => ! $key->isOperatorMarkdown(),
+        ));
     }
 
     private function field(SnsSettingKey $key): Textarea

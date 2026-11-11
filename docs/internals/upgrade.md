@@ -361,6 +361,7 @@ checkpoint except the five settings stamps, which write no `openpne4_upgrade_sta
 | `ActivityTemplateTransform` | the OpenPNE 3 template lines carry PHP-serialized parameters; the body is re-derived from them and `uri` by `ActivityTemplateRenderer` (the same `Announcement` a new record gets), in the site's base locale, in `timeline_posts` (cut to 140 code points) and `group_messages` (the talk body length, so never cut) alike | id cursor plus the per-reason kept counts, committed with each chunk; the body is a function of the source row, so a restart from 0 rewrites the same text. Runs before the emoji pass because the parameters carry carrier codes, which `Announcement` converts itself |
 | `EmojiTransform` | per-row PHP mapping; 16 carrier-logo ids stay literal | id cursor in `metadata.last_id`, because a "contains a code" predicate never drains |
 | `SitePolicyMarkdownTransform` | Markdown rewrite of raw HTML | not idempotent (escapes double); the rewrite and its COMPLETED checkpoint commit in one transaction |
+| `OperatorMarkdownTransform` | Markdown written beside the operator HTML, which stays as imported ("Operator HTML") | a function of the imported HTML, written only where no Markdown is stored yet, so a rerun writes nothing new; the writes and the COMPLETED checkpoint commit in one transaction |
 | `TalkReadCursorBackfill` | `GroupMemberUpgrade` runs before the messages exist, so the walk leaves the read cursor at the schema default, a wall-clock stamp; the pass writes each group's latest `(created_at, id)` tuple, the one `TalkReadCursor::snapshot()` picks, in one UPDATE once they have landed | a function of the migrated rows, so a rescan writes the same tuple; the UPDATE and the COMPLETED checkpoint commit in one transaction |
 | `BoardBumpBackfill` | `GroupTopicUpgrade` / `GroupEventUpgrade` run before the comments exist, so they write `created_at` as the placeholder; the pass settles each thread's `bumped_at` to `COALESCE(MAX(comments.created_at), created_at)` in one UPDATE per table ([group-boards.md](group-boards.md#the-board-key-is-bumped_at)) | a function of the migrated rows, so a rescan writes the same value; the UPDATE and the COMPLETED checkpoint commit in one transaction |
 | `ClassicThemeSelection` | the skin OpenPNE 3 showed is a function of two source tables at once — the `opSkin*` rows of `plugin` (the two bundled skins count as enabled without a row, and only the theme plugin as the one enabled skin dressed the site; an activation written in `plugin.yml` is not visible here, and a row left by a skin plugin since removed from disk still counts) and `sns_config.Theme_used`, which a site that never saved the theme page lacks (OpenPNE 3 then wore the first package on its disk, which the run cannot see: the default skin is written with a WARN naming the choice to make) — which no `INSERT ... SELECT` over one of them expresses; writes `sns_settings.classic_theme` ([classic-compatibility.md](classic-compatibility.md#themes)), and a `Theme_used` naming a package not vendored here is written as it was with a WARN, so `ClassicThemeCheck` fails until the package is copied in | a function of the source rows, so a rescan writes the same value; the write and the COMPLETED checkpoint commit in one transaction |
@@ -469,3 +470,23 @@ without tags has its Markdown constructs escaped (newlines stay, since a soft br
 `<br>`); a body with tags is `nl2br()`'d and converted with `league/html-to-markdown`, stripping
 markup with no Markdown form. Deliberate difference: bare URLs, `www.` hosts and email addresses are
 autolinked where OpenPNE 3 left them as text.
+
+## Operator HTML
+
+OpenPNE 3 printed the page inserts (`pc_html_top2` / `top` / `bottom2` / `bottom`), the footers, a
+banner's HTML and the body of an `informationBox` / `freeArea` gadget as stored, with no `nl2br()`.
+The walk copies them verbatim, and `OperatorMarkdownTransform` then writes a Markdown version of
+each beside it through [`OperatorContentConversion`](../../app/Support/OperatorContentConversion.php):
+the `*_markdown` settings, `banners.markdown`, and a `value_markdown` config row on the gadget. The
+conversion and what it cannot carry are described in [body-text.md](body-text.md#operator-text).
+`pc_html_head` has no Markdown version.
+
+Whether a Markdown value exists is read from the stored row, never from the setting's default: a
+source row writes its conversion even when that is empty (an operator who emptied the footer, or a
+value that was only a script, must not get the default footer back), and a missing source row
+writes nothing. `GadgetConfigUpgrade` leaves `value_markdown` out of its copy and its verify count,
+since the name belongs to this pass.
+
+`php artisan openpne:convert-operator-html` runs the same conversion outside an upgrade: `--dry-run`
+lists every operator HTML value with the elements and attributes its Markdown version loses, and
+`--force` rewrites Markdown that is already stored.

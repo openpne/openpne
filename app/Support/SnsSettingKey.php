@@ -78,6 +78,19 @@ enum SnsSettingKey: string
 
     case FooterAfter = 'footer_after';
 
+    /** Markdown that takes the place of the operator HTML above wherever raw operator HTML is not emitted. */
+    case InsertTop2Markdown = 'insert_top2_markdown';
+
+    case InsertTopMarkdown = 'insert_top_markdown';
+
+    case InsertBottom2Markdown = 'insert_bottom2_markdown';
+
+    case InsertBottomMarkdown = 'insert_bottom_markdown';
+
+    case FooterBeforeMarkdown = 'footer_before_markdown';
+
+    case FooterAfterMarkdown = 'footer_after_markdown';
+
     /** The theme package under public/opSkinThemePlugin the Classic shell wears; '' is the default skin. */
     case ClassicTheme = 'classic_theme';
 
@@ -175,6 +188,8 @@ enum SnsSettingKey: string
     /** OpenPNE 3's footer seed. */
     private const FOOTER_DEFAULT = 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>';
 
+    private const FOOTER_MARKDOWN_DEFAULT = 'Powered by [OpenPNE](https://www.openpne.jp/)';
+
     /** A century, longer than any archive; a bound also keeps `subDays()` away from the int-scale values that wrap into the future. */
     public const DIARY_SEARCH_PERIOD_MAX_DAYS = 36500;
 
@@ -191,7 +206,9 @@ enum SnsSettingKey: string
             self::DiarySearchPeriodDays => SettingGroup::Diary,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
-            self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
+            self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,
+            self::InsertTop2Markdown, self::InsertTopMarkdown, self::InsertBottom2Markdown, self::InsertBottomMarkdown,
+            self::FooterBeforeMarkdown, self::FooterAfterMarkdown => SettingGroup::Design,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled,
@@ -255,6 +272,9 @@ enum SnsSettingKey: string
             // Design keys keep the OpenPNE 3 sns_config name verbatim (1:1 copy).
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => $this->value,
+            // Not a copied value: written from the operator HTML above by App\Support\OperatorContentConversion.
+            self::InsertTop2Markdown, self::InsertTopMarkdown, self::InsertBottom2Markdown, self::InsertBottomMarkdown,
+            self::FooterBeforeMarkdown, self::FooterAfterMarkdown => null,
             // Not a copied value: the feature flags upgrade through App\Upgrade\Steps\FeatureFlagUpgrade
             // steps, which write a row only for a unit OpenPNE 3 had switched off (see above).
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
@@ -389,8 +409,10 @@ enum SnsSettingKey: string
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
             // No custom CSS / HTML insertion until an operator sets it; the footer shows OpenPNE 3's bar.
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
-            self::PcHtmlBottom => '',
+            self::PcHtmlBottom,
+            self::InsertTop2Markdown, self::InsertTopMarkdown, self::InsertBottom2Markdown, self::InsertBottomMarkdown => '',
             self::FooterBefore, self::FooterAfter => self::FOOTER_DEFAULT,
+            self::FooterBeforeMarkdown, self::FooterAfterMarkdown => self::FOOTER_MARKDOWN_DEFAULT,
             // On, so an absent row runs the feature until an administrator says otherwise.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
@@ -573,8 +595,12 @@ enum SnsSettingKey: string
             self::PcHtmlBottom => __('HTML insertion: content bottom'),
             // Chosen by the page's secure_page/insecure_page class (OpenPNE 3 isSecurePage), not the
             // viewer's login state.
-            self::FooterBefore => __('Footer (insecure pages)'),
-            self::FooterAfter => __('Footer (secure pages)'),
+            self::FooterBefore, self::FooterBeforeMarkdown => __('Footer (insecure pages)'),
+            self::FooterAfter, self::FooterAfterMarkdown => __('Footer (secure pages)'),
+            self::InsertTop2Markdown => __('Page insert: page top (before content)'),
+            self::InsertTopMarkdown => __('Page insert: content top'),
+            self::InsertBottom2Markdown => __('Page insert: page bottom'),
+            self::InsertBottomMarkdown => __('Page insert: content bottom'),
             // A feature toggle is labelled with the feature's own name (App\Support\Feature::label()).
             self::FeatureDiaryEnabled => __('%Diary%'),
             self::FeatureDirectMessageEnabled => __('Message'),
@@ -618,6 +644,8 @@ enum SnsSettingKey: string
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,
+            self::InsertTop2Markdown, self::InsertTopMarkdown, self::InsertBottom2Markdown, self::InsertBottomMarkdown,
+            self::FooterBeforeMarkdown, self::FooterAfterMarkdown,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
@@ -651,6 +679,28 @@ enum SnsSettingKey: string
             SettingGroup::Design, SettingGroup::LoginScreen, SettingGroup::SitePolicy => 65535,
             default => $this->maxLength(),
         };
+    }
+
+    /** The Markdown key that stands in for this operator-HTML key, or null: `<head>` content has no Markdown form. */
+    public function markdownCounterpart(): ?self
+    {
+        return match ($this) {
+            self::PcHtmlTop2 => self::InsertTop2Markdown,
+            self::PcHtmlTop => self::InsertTopMarkdown,
+            self::PcHtmlBottom2 => self::InsertBottom2Markdown,
+            self::PcHtmlBottom => self::InsertBottomMarkdown,
+            self::FooterBefore => self::FooterBeforeMarkdown,
+            self::FooterAfter => self::FooterAfterMarkdown,
+            default => null,
+        };
+    }
+
+    public function isOperatorMarkdown(): bool
+    {
+        return in_array($this, [
+            self::InsertTop2Markdown, self::InsertTopMarkdown, self::InsertBottom2Markdown, self::InsertBottomMarkdown,
+            self::FooterBeforeMarkdown, self::FooterAfterMarkdown,
+        ], true);
     }
 
     /**

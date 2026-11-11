@@ -71,6 +71,18 @@ class GadgetUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseMissing('gadget_configs', ['gadget_id' => 2]);
     }
 
+    public function test_a_source_config_named_like_the_markdown_row_is_not_copied(): void
+    {
+        $this->seedGadget(1, 'contents', 'freeArea');
+        $this->seedConfig(10, 1, 'value', '<b>HTML</b>');
+        $this->seedConfig(11, 1, 'value_markdown', 'from OpenPNE 3');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('gadget_configs', ['gadget_id' => 1, 'name' => 'value', 'value' => '<b>HTML</b>']);
+        $this->assertDatabaseMissing('gadget_configs', ['gadget_id' => 1, 'name' => 'value_markdown']);
+    }
+
     public function test_renames_builtin_names_by_exact_match_only(): void
     {
         $this->seedGadget(1, 'top', 'communityJoinListBox');

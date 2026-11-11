@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['name', 'is_use_html', 'html'])]
+#[Fillable(['name', 'is_use_html', 'html', 'markdown'])]
 class Banner extends Model
 {
     /** @use HasFactory<BannerFactory> */
