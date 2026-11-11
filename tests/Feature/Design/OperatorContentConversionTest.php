@@ -183,6 +183,31 @@ class OperatorContentConversionTest extends TestCase
         $this->assertNull(Banner::where('name', 'top_after')->value('markdown'));
     }
 
+    public function test_stored_markdown_is_kept_when_the_html_beside_it_would_outgrow_the_column(): void
+    {
+        $oversized = '<p>'.str_repeat('[', 40000).'</p>';
+        $this->seedSetting('pc_html_top', $oversized);
+        $this->seedSetting('insert_top_markdown', '書き直し');
+        Banner::create(['name' => 'top_after', 'is_use_html' => true, 'html' => $oversized, 'markdown' => '書き直し']);
+        $gadget = $this->seedGadget('freeArea', $oversized);
+        DB::table('gadget_configs')->insert(['gadget_id' => $gadget, 'name' => 'value_markdown', 'value' => '書き直し']);
+
+        foreach (OperatorContentConversion::TABLES as $table) {
+            (new OperatorContentConversion)->run([$table]);
+
+            try {
+                (new OperatorContentConversion)->run([$table], force: true);
+                $this->fail("forcing the oversized {$table} rewrite should have thrown");
+            } catch (RuntimeException $e) {
+                $this->assertStringContainsString('over the 65535', $e->getMessage());
+            }
+        }
+
+        $this->assertSame('書き直し', $this->setting('insert_top_markdown'));
+        $this->assertSame('書き直し', Banner::where('name', 'top_after')->value('markdown'));
+        $this->assertSame('書き直し', $this->gadgetConfig($gadget, 'value_markdown'));
+    }
+
     public function test_the_command_lists_losses_on_a_dry_run_and_writes_without_it(): void
     {
         $this->seedSetting('pc_html_top', '<p style="color:red">x</p><script>a()</script>');
