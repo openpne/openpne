@@ -157,6 +157,81 @@ class OperatorHtmlMarkdownTest extends TestCase
         $this->assertStringContainsString('<p>誤記のリンク</p>', $html);
     }
 
+    public function test_a_link_title_and_a_refused_scheme_are_reported_as_dropped(): void
+    {
+        $converted = OperatorHtmlMarkdown::convert('<a href="https://example.com/" title="説明">公式</a> <a href="tel:0312345678">電話</a> <a href="mailto:info@example.com">メール</a>');
+        $html = MarkdownText::renderOperator($converted->markdown)->toHtml();
+
+        $this->assertSame(['href' => 1, 'title' => 1], $converted->droppedAttributes);
+        $this->assertStringContainsString('電話 <a href="mailto:info&#64;example.com">メール</a>', $html);
+        $this->assertStringNotContainsString('説明', $html);
+    }
+
+    public function test_attributes_run_together_without_whitespace_do_not_lose_the_text(): void
+    {
+        $html = $this->render('<div class="mbo"style="margin:0"><div style="padding:10px"><b style="color:#c00">お知らせ</b></div><p>本文</p></div>');
+
+        $this->assertStringContainsString('<strong>お知らせ</strong>', $html);
+        $this->assertStringContainsString('<p>本文</p>', $html);
+    }
+
+    /** The tree builder has no adoption agency algorithm, so the re-opened part loses its link; the text must not. */
+    public function test_formatting_closed_out_of_order_keeps_every_piece_of_text(): void
+    {
+        $html = $this->render('<b><a href="/x">リンク</b>続き</a>おわり');
+
+        $this->assertStringContainsString('リンク', $html);
+        $this->assertStringContainsString('続き', $html);
+        $this->assertStringContainsString('おわり', $html);
+    }
+
+    public function test_punctuation_inside_a_div_nested_in_a_list_item_stays_literal(): void
+    {
+        $html = $this->render('<ul><li><div>*強調ではない*</div></li><li>二つ目</li></ul>');
+
+        $this->assertStringNotContainsString('<em>', $html);
+        $this->assertStringContainsString('*強調ではない*', $html);
+        $this->assertSame(2, substr_count($html, '<li>'));
+    }
+
+    public function test_a_list_wrapped_in_an_inline_tag_stays_a_list(): void
+    {
+        $html = $this->render('<font size="2"><ul><li>一つ目</li><li>二つ目</li></ul></font>');
+
+        $this->assertSame(2, substr_count($html, '<li>'));
+    }
+
+    public function test_a_line_of_equals_signs_after_a_break_does_not_make_a_heading(): void
+    {
+        $html = $this->render('上の行<br>===');
+
+        $this->assertStringNotContainsString('<h1>', $html);
+        $this->assertStringContainsString('===', html_entity_decode($html));
+    }
+
+    public function test_a_table_keeps_its_cells_apart(): void
+    {
+        $html = $this->render('<table><tr><th>品目</th><th>価格</th></tr><tr><td>りんご</td><td>100</td></tr></table>');
+
+        $this->assertStringContainsString('<th>品目</th>', $html);
+        $this->assertStringContainsString('<td>100</td>', $html);
+    }
+
+    public function test_form_controls_are_removed_with_their_content_and_reported(): void
+    {
+        $converted = OperatorHtmlMarkdown::convert('<p>検索</p><textarea>初期値</textarea><select><option>選択肢</option></select><button>送信</button>');
+
+        $this->assertSame('検索', $converted->markdown);
+        $this->assertSame(['button' => 1, 'select' => 1, 'textarea' => 1], $converted->droppedElements);
+    }
+
+    public function test_an_entity_written_as_text_stays_text(): void
+    {
+        $html = $this->render('著作権は &amp;copy; と書きます');
+
+        $this->assertStringContainsString('&amp;copy;', $html);
+    }
+
     /** The routes operator HTML used to reach a member's credentials without running script. */
     #[DataProvider('takeoverMarkup')]
     public function test_markup_that_hijacks_the_page_does_not_survive(string $source): void

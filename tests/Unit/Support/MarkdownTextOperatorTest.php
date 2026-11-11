@@ -44,13 +44,22 @@ class MarkdownTextOperatorTest extends TestCase
         $this->assertStringContainsString('<a href="https://other.example/" target="_blank" rel="noopener noreferrer nofollow">外部<span class="sr-only"', $external);
     }
 
-    public function test_a_path_a_browser_reads_as_another_host_is_not_treated_as_this_site(): void
+    public function test_a_scheme_relative_link_is_another_site(): void
     {
-        foreach (['//other.example/x', '/\\other.example/x'] as $url) {
-            $html = $this->operator("[x]({$url})");
+        $this->assertStringContainsString('<a href="//other.example/x" target="_blank"', $this->operator('[x](//other.example/x)'));
+    }
 
-            $this->assertStringNotContainsString("<a href=\"{$url}\">", $html, $url);
+    public function test_a_fragment_a_query_and_a_relative_path_open_in_place(): void
+    {
+        foreach (['#rules', '?page=2', 'page.html'] as $url) {
+            $this->assertStringContainsString("<a href=\"{$url}\">x</a>", html_entity_decode($this->operator("[x]({$url})")), $url);
         }
+    }
+
+    public function test_a_mailto_link_is_kept_without_a_new_tab(): void
+    {
+        $this->assertStringContainsString('<a href="mailto:info&#64;sns.example">問い合わせ</a>', $this->operator('[問い合わせ](mailto:info@sns.example)'));
+        $this->assertStringNotContainsString('href="mailto:', MarkdownText::render('[x](mailto:info@sns.example)')->toHtml());
     }
 
     public function test_a_member_body_still_refuses_a_relative_link(): void

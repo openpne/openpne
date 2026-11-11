@@ -136,7 +136,8 @@ final class MarkdownText
     {
         return preg_replace_callback(self::SANITIZED_ANCHOR, function (array $m) use ($operator): string {
             $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5);
-            $target = $operator && OperatorLink::isSitePath((string) OperatorLink::href($url))
+            // A URL with no scheme and no host resolves against this page, and a mailto: opens no page at all.
+            $target = $operator && preg_match('#^\s*(?!mailto:)([a-z][a-z0-9+.-]*:|//)#i', $url) !== 1
                 ? LinkTarget::inPlace()
                 : LinkTarget::of($url);
 
@@ -212,7 +213,8 @@ final class MarkdownText
 
         if ($operator) {
             // The library's default media schemes include data:, so the list is spelled out.
-            $config = $config->allowRelativeLinks()
+            $config = $config->allowLinkSchemes(['http', 'https', 'mailto'])
+                ->allowRelativeLinks()
                 ->allowElement('img', ['src', 'alt', 'title'])
                 ->allowMediaSchemes(['http', 'https'])
                 ->allowRelativeMedias();

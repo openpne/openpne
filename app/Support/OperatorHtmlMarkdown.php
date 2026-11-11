@@ -7,25 +7,24 @@ namespace App\Support;
 use DOMComment;
 use DOMElement;
 use DOMNode;
+use League\HTMLToMarkdown\Converter\TableConverter;
 use League\HTMLToMarkdown\HtmlConverter;
 use Masterminds\HTML5;
 
 /**
- * Rewrites operator HTML as Markdown that MarkdownText::renderOperator() draws the way a browser drew
- * the HTML, minus what Markdown cannot say (docs/internals/body-text.md, "Operator text").
+ * Rewrites operator HTML as Markdown for MarkdownText::renderOperator(), keeping what Markdown can
+ * say and naming what it cannot (docs/internals/body-text.md, "Operator text").
  */
 final class OperatorHtmlMarkdown
 {
-    /** Removed with their content: nothing inside them is text the page showed. */
-    private const REMOVED = ['script', 'style', 'iframe', 'noscript', 'meta', 'link', 'base', 'title', 'object', 'embed', 'template', 'svg', 'math'];
+    private const REMOVED = ['script', 'style', 'iframe', 'noscript', 'meta', 'link', 'base', 'title', 'object', 'embed', 'template', 'svg', 'math', 'textarea', 'select', 'button'];
 
-    /** Containers whose tag is dropped and whose inline children become paragraphs. */
     private const UNWRAPPED = ['div', 'center', 'section', 'article', 'header', 'footer', 'nav', 'aside', 'main', 'form', 'fieldset'];
 
     private const BLOCKS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'ul', 'ol', 'dl', 'table', 'blockquote', 'pre'];
 
-    /** The attributes Markdown carries, by element. */
-    private const KEPT_ATTRIBUTES = ['a' => ['href', 'title'], 'img' => ['src', 'alt', 'title']];
+    /** Held to what the renderer's sanitizer lets through, so the report names everything a reader loses. */
+    private const KEPT_ATTRIBUTES = ['a' => ['href'], 'img' => ['src', 'alt', 'title']];
 
     public static function convert(string $html): ConvertedOperatorHtml
     {
@@ -34,13 +33,13 @@ final class OperatorHtmlMarkdown
         }
 
         if (preg_match('~<[a-z!/][^>]*>~i', $html) !== 1) {
-            // A browser decoded entities and collapsed whitespace; OpenPNE 3 printed these fields with no nl2br.
-            $text = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            // OpenPNE 3 printed these fields with no nl2br, so the browser ran the lines together.
+            $text = self::collapse(html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
-            return new ConvertedOperatorHtml(MarkdownEscape::plain(self::collapse($text)));
+            return new ConvertedOperatorHtml(MarkdownEscape::plain(htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8')));
         }
 
-        // An HTML5 parse, so a stray `</br>` or a misnested tag takes the shape a browser gave it.
+        // An HTML5 tree builder, so a stray `</br>` is the line break a browser made of it.
         $parser = new HTML5(['disable_html_ns' => true]);
         $fragment = $parser->loadHTMLFragment($html);
 
@@ -53,14 +52,18 @@ final class OperatorHtmlMarkdown
             'strip_tags' => true,
             'strip_placeholder_links' => true,
             'remove_nodes' => implode(' ', self::REMOVED),
-            // `<br>` becomes a bare newline, which MarkdownText renders back as `<br>`; the converter folds every other newline into a space, as the browser did.
+            // `<br>` becomes a bare newline, which MarkdownText renders back as `<br>`.
             'hard_break' => true,
             'header_style' => 'atx',
             'use_autolinks' => false,
         ]);
 
+        $converter->getEnvironment()->addConverter(new TableConverter);
+
         $markdown = $converter->convert($parser->saveHTML($fragment));
         $markdown = trim((string) preg_replace("/\n{3,}/", "\n\n", $markdown));
+        // A line of `=` after a `<br>` would turn the line above it into a setext heading.
+        $markdown = (string) preg_replace('/^(\h*)(=+\h*)$/mu', '$1\\\\$2', $markdown);
 
         ksort($elements);
         ksort($attributes);
@@ -90,7 +93,7 @@ final class OperatorHtmlMarkdown
                 foreach (iterator_to_array($child->attributes) as $attribute) {
                     $key = strtolower($attribute->nodeName);
 
-                    if (! in_array($key, self::KEPT_ATTRIBUTES[$name] ?? [], true)) {
+                    if (! in_array($key, self::KEPT_ATTRIBUTES[$name] ?? [], true) || ($key === 'href' && self::isRefusedScheme($attribute->nodeValue ?? ''))) {
                         $attributes[$key] = ($attributes[$key] ?? 0) + 1;
                         $child->removeAttributeNode($attribute);
                     }
@@ -102,18 +105,23 @@ final class OperatorHtmlMarkdown
     }
 
     /**
-     * The converter escapes Markdown punctuation only for text inside a paragraph, so every inline run
-     * that sits directly in the root or in an unwrapped container gets one.
+     * Leaves no text directly in the root or in a `div`: the converter escapes Markdown punctuation at
+     * the head of a line only inside a paragraph, and not at all in text whose parent is a `div`.
      */
-    private static function paragraphs(DOMNode $container): void
+    private static function paragraphs(DOMNode $container, bool $blockLevel = true): void
     {
         $run = null;
 
         foreach (iterator_to_array($container->childNodes) as $child) {
             $name = $child instanceof DOMElement ? strtolower($child->nodeName) : null;
+            $isBlock = $name !== null && in_array($name, self::BLOCKS, true);
 
-            if ($name !== null && in_array($name, self::UNWRAPPED, true)) {
-                self::paragraphs($child);
+            if ($name !== null && (in_array($name, self::UNWRAPPED, true) || (! $isBlock && $name !== 'a' && $blockLevel && self::holdsBlock($child)))) {
+                self::paragraphs($child, $blockLevel);
+
+                if (! $blockLevel) {
+                    $child->appendChild($child->ownerDocument->createElement('br'));
+                }
 
                 while ($child->firstChild !== null) {
                     $container->insertBefore($child->firstChild, $child);
@@ -121,9 +129,17 @@ final class OperatorHtmlMarkdown
 
                 $container->removeChild($child);
                 $run = null;
-            } elseif ($name !== null && in_array($name, self::BLOCKS, true)) {
+
+                continue;
+            }
+
+            if ($name !== null && ! in_array($name, ['p', 'pre', 'hr'], true) && ! preg_match('/^h[1-6]$/', $name)) {
+                self::paragraphs($child, blockLevel: false);
+            }
+
+            if ($isBlock) {
                 $run = null;
-            } else {
+            } elseif ($blockLevel) {
                 if ($run === null) {
                     $run = $container->ownerDocument->createElement('p');
                     $container->insertBefore($run, $child);
@@ -132,6 +148,25 @@ final class OperatorHtmlMarkdown
                 $run->appendChild($child);
             }
         }
+    }
+
+    private static function holdsBlock(DOMElement $element): bool
+    {
+        foreach ([...self::BLOCKS, ...self::UNWRAPPED] as $name) {
+            if ($element->getElementsByTagName($name)->length > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Whether the renderer would drop this href: a scheme other than the ones an operator link may use. */
+    private static function isRefusedScheme(string $href): bool
+    {
+        $href = trim($href);
+
+        return preg_match('#^[a-z][a-z0-9+.-]*:#i', $href) === 1 && preg_match('#^(https?|mailto):#i', $href) !== 1;
     }
 
     private static function collapse(string $text): string

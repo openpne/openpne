@@ -159,19 +159,22 @@ It differs from a member body in two ways, both of which OpenPNE 3 operator HTML
 
 - An image is drawn (`img` with `src`, `alt`, `title`), from an `http(s)` URL or a path on this site.
   A `data:` URL is not, although CommonMark alone would let a raster one through.
-- A link may be relative. One that [`OperatorLink`](../../app/Support/OperatorLink.php) reads as a
-  path on this site opens in place; anything else follows "Where a link opens".
+- A link may be relative or a `mailto:`. A URL with no scheme and no host resolves against this
+  site and opens in place, as does a `mailto:`; any other link follows "Where a link opens".
 
 Raw HTML in the source is escaped exactly as in a member body, so operator text cannot carry a
 `form`, an `id` or `name`, a `data-*` attribute, an inline style or an unclosed tag into the page.
 
 [`OperatorHtmlMarkdown`](../../app/Support/OperatorHtmlMarkdown.php) rewrites operator HTML into that
-Markdown. It parses as HTML5, so a misnested or stray tag takes the shape a browser gave it, and
-folds a newline between text lines into a space, since the browser showed no break there. `script`,
-`style`, `iframe`, `noscript`, `meta`, `link` and the like are removed with their content; any other
-tag without a Markdown form is dropped and its content kept. Colour, size, alignment, `class`, `id`
-and `target` have no Markdown form and are lost. The result names what was removed, by element and by
-attribute, for the caller to report.
+Markdown. It reads the HTML with an HTML5 tree builder, so a stray `</br>` is the line break a
+browser made of it, and folds a newline between text lines into a space, since the browser showed no
+break there. `script`, `style`, `iframe`, `noscript`, `meta`, `link`, form controls and the like are
+removed with their content; any other tag without a Markdown form is dropped and its content kept.
+The result names what a reader loses, by removed element and by dropped attribute: colour, size,
+alignment, `class`, `id`, `target`, a link's `title`, and an `href` under a scheme the renderer
+refuses. Two losses go unreported: formatting tags closed out of order keep their text but may lose
+the formatting or link on the part a browser would have re-opened (the tree builder does not
+implement the adoption agency algorithm), and bare URLs in text become links.
 
 ## Excerpts and mail text
 

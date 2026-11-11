@@ -6,7 +6,7 @@ namespace App\Support;
 
 final class MarkdownEscape
 {
-    /** Text with no markup of its own, escaped so App\Support\MarkdownText prints every character literally. */
+    /** Escapes the punctuation App\Support\MarkdownText would read as emphasis, a link, code or a block starter. */
     public static function plain(string $text): string
     {
         // The backslash goes first so the escapes added below are not re-escaped.
