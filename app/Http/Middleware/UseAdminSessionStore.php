@@ -58,10 +58,10 @@ class UseAdminSessionStore
     }
 
     /**
-     * A browser rejects a `__Secure-` cookie that is not Secure over HTTPS, so the prefix is added
-     * exactly when `session.secure` is on. An already-prefixed base (an operator-set name, or the pin
-     * re-deriving in a long-lived process) is left untouched, since `__Secure-__Host-…` would demote a
-     * `__Host-` name.
+     * A browser rejects a prefixed cookie that breaks its prefix's terms — Secure for both, and for
+     * `__Host-` also no Domain attribute and Path=/ — so the prefix follows the session config
+     * (docs/internals/sessions.md, "Cookie-name prefix"). An already-prefixed base (an operator-set
+     * name, or the pin re-deriving in a long-lived process) is left untouched.
      */
     private function cookieName(string $base): string
     {
@@ -69,6 +69,10 @@ class UseAdminSessionStore
             return $base;
         }
 
-        return '__Secure-'.$base;
+        // Symfony's Cookie omits an empty Domain and writes an empty path as `/`.
+        $hostOnly = in_array(config('session.domain'), [null, ''], true)
+            && in_array(config('session.path'), [null, '', '/'], true);
+
+        return ($hostOnly ? '__Host-' : '__Secure-').$base;
     }
 }
