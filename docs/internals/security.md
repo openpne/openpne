@@ -248,8 +248,8 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   address, and a per-issue nonce. A code lasts 10 minutes and is replaced by a
   resend; entering it and resending it are both refused once the password or
   the address changed, the member was banned, or a TOTP factor was confirmed
-  since. The two POSTs rewrite the one slot and are serialised per session
-  (route `block()`). Wrong codes are counted in the cache per nonce, not in the
+  since. The challenge's three routes are serialised per session (route
+  `block()`), since each request writes the whole session back. Wrong codes are counted in the cache per nonce, not in the
   session — a counter there rewinds with a replayed cookie — and the fifth
   ends the challenge.
   A member is mailed at most five codes an hour; the POST is throttled 5/min
@@ -260,7 +260,8 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   passkey; whoever holds the password can spend the hourly budget and stall
   the password path (the passkey still signs in, and each mail is an alarm);
   a queued mail can arrive after the code that replaced it, or after its own
-  code expired.
+  code expired; a same-session request outside those three routes can write a
+  replaced slot back, which stays inside that nonce's attempt cap and expiry.
 - **Sign-in is the package's own route pair** (`/passkeys/login/options`,
   `/passkeys/login`, `guest:member`), which verifies the assertion and calls
   the guard directly — it never enters Fortify's login pipeline, so the ban
@@ -305,8 +306,9 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   usual reason). Adding the first one, for a member with no confirmed TOTP
   factor, revokes the same way as confirming TOTP does: it changes what a
   password sign-in must prove, so a session or recaller opened on the password
-  alone must not outlive it. Any other addition revokes nothing — the proof was just given in this session and the new
-  credential does not invalidate what other sessions were opened with.
+  alone must not outlive it. Any other addition revokes nothing — the proof
+  was just given in this session and the new credential does not invalidate
+  what other sessions were opened with.
 - **Every registration and removal is mailed** to the registered address
   (`passkey-registered` / `passkey-removed`, always sent) and logged
   (`passkey.registered` / `passkey.removed`).

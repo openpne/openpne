@@ -131,9 +131,8 @@ class LoginCode
     }
 
     /**
-     * The member the slot still stands for. Password and address are re-read because a guest session
-     * outlives the revocation their change performs, and a factor confirmed since must take the TOTP
-     * challenge instead.
+     * Password and address are re-read because a guest session outlives the revocation their change
+     * performs, and a factor confirmed since must take the TOTP challenge instead.
      *
      * @param  array{member_id: int, password: string, email: string}  $slot
      */

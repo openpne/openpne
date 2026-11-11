@@ -168,7 +168,7 @@ Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(functio
     // The resend carries no limiter of its own, so it never spends the guess budget; LoginCode's
     // hourly issue budget bounds it (docs/internals/security.md, "Member passkeys").
     Route::get('/login/code', [LoginCodeController::class, 'create'])
-        ->middleware('guest:member')->name('login.code');
+        ->middleware('guest:member')->block()->name('login.code');
     Route::post('/login/code', [LoginCodeController::class, 'store'])
         ->middleware(['guest:member', 'throttle:login-code'])->block()->name('login.code.store');
     Route::post('/login/code/resend', [LoginCodeController::class, 'resend'])

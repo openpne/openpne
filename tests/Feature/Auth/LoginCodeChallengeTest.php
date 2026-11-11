@@ -371,9 +371,9 @@ class LoginCodeChallengeTest extends TestCase
         Notification::assertSentOnDemandTimes(LoginCodeNotification::class, 1);
     }
 
-    public function test_the_two_code_posts_are_serialised_per_session(): void
+    public function test_the_challenge_routes_are_serialised_per_session(): void
     {
-        foreach (['login.code.store', 'login.code.resend'] as $name) {
+        foreach (['login.code', 'login.code.store', 'login.code.resend'] as $name) {
             $this->assertNotNull(Route::getRoutes()->getByName($name)->locksFor(), "route [{$name}] lost its session block");
         }
     }
