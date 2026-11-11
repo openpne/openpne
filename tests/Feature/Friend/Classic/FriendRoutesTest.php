@@ -5,6 +5,7 @@ namespace Tests\Feature\Friend\Classic;
 use App\Features\Friend\Events\FriendRequestAccepted;
 use App\Features\Friend\Events\FriendRequested;
 use App\Models\Member;
+use App\Services\TermService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -273,6 +274,23 @@ class FriendRoutesTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="page_friend_unlink"', false);
         $response->assertSee('Bob');
+    }
+
+    public function test_unlink_show_page_escapes_a_term_and_keeps_the_name_link(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create(['name' => 'Bob <b>']);
+        $this->makeFriends($alice, $bob);
+        foreach (['ja', 'en'] as $locale) {
+            DB::table('term_overrides')->insert(['name' => 'my_friend', 'locale' => $locale, 'value' => '<i>pals</i>']);
+        }
+        app(TermService::class)->clearCache();
+
+        $this->actingAs($alice)->get("/friend/unlink/{$bob->getKey()}")
+            ->assertOk()
+            ->assertSee('<a href="'.route('member.profile.show', $bob).'">Bob &lt;b&gt;</a>', false)
+            ->assertSee('&lt;i&gt;pals&lt;/i&gt;', false)
+            ->assertDontSee('<i>pals</i>', false);
     }
 
     public function test_unlink_answers_who_it_cannot_unlink_with_a_notice_not_a_404(): void

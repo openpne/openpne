@@ -7,7 +7,8 @@
                 @php($url = $config['url'.$i] ?? '')
                 @php($text = $config['text'.$i] ?? '')
                 @if ($url !== '' && $text !== '')
-                    <li><a href="{{ $url }}">{{ $text }}</a></li>
+                    @php($href = \App\Support\OperatorLink::href($url))
+                    <li>@if ($href !== null)<a href="{{ $href }}">{{ $text }}</a>@else{{ $text }}@endif</li>
                 @endif
             @endfor
         </ul>
