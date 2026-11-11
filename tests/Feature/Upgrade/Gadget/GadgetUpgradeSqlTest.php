@@ -3,8 +3,11 @@
 namespace Tests\Feature\Upgrade\Gadget;
 
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
+use App\Upgrade\Verify\UpgradeVerifier;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
@@ -69,6 +72,34 @@ class GadgetUpgradeSqlTest extends UpgradeSqlTestCase
 
         $this->assertDatabaseHas('gadget_configs', ['gadget_id' => 1, 'name' => 'title', 'value' => 'Hello']);
         $this->assertDatabaseMissing('gadget_configs', ['gadget_id' => 2]);
+    }
+
+    public function test_a_source_config_named_like_the_markdown_row_is_not_copied(): void
+    {
+        $this->seedGadget(1, 'contents', 'freeArea');
+        $this->seedConfig(10, 1, 'value', '<b>HTML</b>');
+        $this->seedConfig(11, 1, 'value_markdown', 'from OpenPNE 3');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('gadget_configs', ['gadget_id' => 1, 'name' => 'value', 'value' => '<b>HTML</b>']);
+        $this->assertDatabaseMissing('gadget_configs', ['gadget_id' => 1, 'name' => 'value_markdown']);
+    }
+
+    public function test_verify_does_not_count_the_markdown_rows_the_run_adds(): void
+    {
+        $this->seedGadget(1, 'contents', 'freeArea');
+        $this->seedConfig(10, 1, 'value', '<b>HTML</b>');
+        $steps = [new GadgetUpgrade, new GadgetConfigUpgrade];
+
+        (new UpgradeRunner(new InsertSelectCompiler, $steps))->run(new RunOptions);
+
+        $this->assertDatabaseHas('gadget_configs', ['gadget_id' => 1, 'name' => 'value_markdown', 'value' => '**HTML**']);
+        $lines = [];
+        (new UpgradeVerifier(new InsertSelectCompiler, $steps))->verify(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+        $this->assertStringContainsString('PASS GadgetConfigUpgrade', implode("\n", $lines));
     }
 
     public function test_renames_builtin_names_by_exact_match_only(): void

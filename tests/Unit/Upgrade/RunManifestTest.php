@@ -33,7 +33,7 @@ class RunManifestTest extends TestCase
         $this->assertSame([], $none->keys());
 
         $some = RunManifest::build([], $phases, ['members', 'files', 'group_topics', 'group_topic_comments', 'sns_settings'], ['member', 'sns_config']);
-        $this->assertSame(['PasswordWrap', 'EmojiTransform', 'SitePolicyMarkdownTransform', 'BoardBumpBackfill', 'ClassicThemeSelection', 'FileBinMigration'], $some->keys());
+        $this->assertSame(['PasswordWrap', 'EmojiTransform', 'SitePolicyMarkdownTransform', 'OperatorMarkdownTransform', 'BoardBumpBackfill', 'ClassicThemeSelection', 'FileBinMigration'], $some->keys());
 
         // sns_settings without a step reading sns_config: the theme pass is not applicable.
         $this->assertNotContains('ClassicThemeSelection', RunManifest::build([], $phases, ['sns_settings'], ['member'])->keys());

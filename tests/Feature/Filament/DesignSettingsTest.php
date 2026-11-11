@@ -83,7 +83,7 @@ class DesignSettingsTest extends TestCase
         $this->assertSame('<meta name="a" content="b">', app(SnsSettingService::class)->get(SnsSettingKey::PcHtmlHead));
     }
 
-    public function test_page_only_exposes_the_design_settings_group(): void
+    public function test_page_exposes_the_design_settings_group_without_the_markdown_counterparts(): void
     {
         $data = Livewire::test(DesignSettings::class)->get('data');
 
@@ -92,10 +92,25 @@ class DesignSettingsTest extends TestCase
 
         $expected = array_map(
             fn (SnsSettingKey $key): string => $key->value,
-            SnsSettingKey::inGroup(SettingGroup::Design),
+            array_filter(SnsSettingKey::inGroup(SettingGroup::Design), fn (SnsSettingKey $key): bool => ! $key->isOperatorMarkdown()),
         );
         sort($expected);
 
         $this->assertSame($expected, $actual);
+        $this->assertNotContains('footer_after_markdown', $actual);
+    }
+
+    public function test_saving_leaves_a_stored_markdown_counterpart_alone(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'footer_after_markdown', 'value' => '管理者の文']);
+
+        Livewire::test(DesignSettings::class)
+            ->fillForm(['footer_after' => '<b>HTML</b>'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after', 'value' => '<b>HTML</b>']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after_markdown', 'value' => '管理者の文']);
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'insert_top_markdown']);
     }
 }

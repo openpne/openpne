@@ -27,7 +27,7 @@ class BannerUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // OpenPNE 3 `banner` has no created_at / updated_at; the nullable columns rely on their default.
-        return ['created_at', 'updated_at'];
+        // OpenPNE 3 `banner` has no created_at / updated_at; `markdown` is written after the walk from `html`.
+        return ['created_at', 'updated_at', 'markdown'];
     }
 }

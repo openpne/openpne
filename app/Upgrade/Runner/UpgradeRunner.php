@@ -222,6 +222,7 @@ final class UpgradeRunner
             (new ActivityTemplateTransform)->plan($report);
             (new EmojiTransform)->plan($report);
             (new SitePolicyMarkdownTransform)->plan($report);
+            (new OperatorMarkdownTransform)->plan($report);
             (new TalkReadCursorBackfill)->plan($report);
             (new BoardBumpBackfill)->plan($report);
             if ((new ClassicThemeSelection)->checkpointKeys($this->targetTables(), $this->sourceTables()) !== []) {
@@ -286,6 +287,10 @@ final class UpgradeRunner
             // newlines, OpenPNE 4 renders them as Markdown, and no INSERT...SELECT can bridge that.
             if ($walked) {
                 $walked = (new SitePolicyMarkdownTransform)->run($this->targetTables(), $report);
+            }
+
+            if ($walked) {
+                $walked = (new OperatorMarkdownTransform)->run($this->targetTables(), $report);
             }
 
             // Only after the messages landed: the membership step leaves the read cursor at the
@@ -571,7 +576,7 @@ final class UpgradeRunner
     /** @return list<Phase> the post-walk passes in run order, then the file_bin migration */
     public static function phases(): array
     {
-        return [new PasswordWrap, new ActivityTemplateTransform, new EmojiTransform, new SitePolicyMarkdownTransform, new TalkReadCursorBackfill, new BoardBumpBackfill, new ClassicThemeSelection, new FileBinMigration];
+        return [new PasswordWrap, new ActivityTemplateTransform, new EmojiTransform, new SitePolicyMarkdownTransform, new OperatorMarkdownTransform, new TalkReadCursorBackfill, new BoardBumpBackfill, new ClassicThemeSelection, new FileBinMigration];
     }
 
     /** Creates the epoch row with this run's manifest when the state is fresh; an existing row is this build's (the verdict said so). */

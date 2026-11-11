@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Gadgets\GadgetLayout;
+use App\Support\OperatorContentConversion;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
@@ -29,12 +30,18 @@ class GadgetConfigUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return sprintf('`gadget_id` IN (SELECT `id` FROM %s WHERE `type` IN (%s))', SourceRef::table('gadget'), $this->typeList());
+        // The name is this version's own, written after the walk, so a source row that happens to carry it is not copied.
+        return sprintf("`gadget_id` IN (SELECT `id` FROM %s WHERE `type` IN (%s)) AND `name` <> '%s'", SourceRef::table('gadget'), $this->typeList(), OperatorContentConversion::GADGET_MARKDOWN);
+    }
+
+    public function targetFilter(): ?string
+    {
+        return sprintf("`name` <> '%s'", OperatorContentConversion::GADGET_MARKDOWN);
     }
 
     public function filterColumns(): array
     {
-        return ['gadget_id'];
+        return ['gadget_id', 'name'];
     }
 
     public function gaps(): array
