@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Upgrade\Runner;
 
+use App\Support\MarkdownEscape;
 use League\HTMLToMarkdown\HtmlConverter;
 
 /**
@@ -20,32 +21,14 @@ final class Op3PolicyMarkdown
             return $op3;
         }
 
-        return self::hasMarkup($op3) ? self::fromHtml($op3) : self::escapePlain($op3);
+        // Not HtmlConverter for text without markup: it collapses whitespace runs and leaves a leading `>` or `-` unescaped.
+        return self::hasMarkup($op3) ? self::fromHtml($op3) : MarkdownEscape::plain($op3);
     }
 
     /** Whether the value carries HTML the browser would have rendered as markup under OpenPNE 3. */
     private static function hasMarkup(string $text): bool
     {
         return preg_match('~<[a-z!/][^>]*>~i', $text) === 1;
-    }
-
-    /**
-     * Not HtmlConverter: it collapses whitespace runs and leaves a leading `>` or `-` unescaped, so a
-     * `> quoted` or `- item` line would change meaning.
-     */
-    private static function escapePlain(string $text): string
-    {
-        // The backslash goes first so the escapes added below are not re-escaped.
-        $text = (string) preg_replace('/([\\\\`*_\[\]~])/u', '\\\\$1', $text);
-        // Block starters, which only bite at the head of a line: ATX heading, blockquote, bullet
-        // (`*` was already escaped above).
-        $text = (string) preg_replace('/^(\h*)([#>+-])/mu', '$1\\\\$2', $text);
-        // The backslash goes on the list marker's punctuation, not before the digits: an escape only
-        // holds before ASCII punctuation, so `\1.` would render literally.
-        $text = (string) preg_replace('/^(\h*\d+)([.)])/mu', '$1\\\\$2', $text);
-
-        // A line of `=` alone turns the line above it into a setext heading.
-        return (string) preg_replace('/^(\h*)(=+\h*)$/mu', '$1\\\\$2', $text);
     }
 
     private static function fromHtml(string $html): string

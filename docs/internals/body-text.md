@@ -152,6 +152,30 @@ once; the renderer treats both identically). The rich editor's schema equals the
 allowlist (authoring a construct the sanitizer would strip would lose it on save):
 [`editor-extensions.ts`](../../resources/js/components/compose/editor-extensions.ts) is the SSoT.
 
+## Operator text
+
+`MarkdownText::renderOperator()` is the same two-belt pipeline for Markdown an administrator writes.
+It differs from a member body in two ways, both of which OpenPNE 3 operator HTML relied on:
+
+- An image is drawn (`img` with `src`, `alt`, `title`), from an `http(s)` URL or a path on this site.
+  A `data:` URL is not, although CommonMark alone would let a raster one through.
+- A link may be relative or a `mailto:`. A URL with no scheme and no host resolves against this
+  site and opens in place, as does a `mailto:`; any other link follows "Where a link opens".
+
+Raw HTML in the source is escaped exactly as in a member body, so operator text cannot carry a
+`form`, an `id` or `name`, a `data-*` attribute, an inline style or an unclosed tag into the page.
+
+[`OperatorHtmlMarkdown`](../../app/Support/OperatorHtmlMarkdown.php) rewrites operator HTML into that
+Markdown. It reads the HTML with an HTML5 tree builder, so a stray `</br>` is the line break a
+browser made of it, and folds a newline between text lines into a space, since the browser showed no
+break there. `script`, `style`, `iframe`, `noscript`, `meta`, `link`, form controls and the like are
+removed with their content; any other tag without a Markdown form is dropped and its content kept.
+The result names what a reader loses, by removed element and by dropped attribute: colour, size,
+alignment, `class`, `id`, `target`, a link's `title`, and an `href` under a scheme the renderer
+refuses. Two losses go unreported: formatting tags closed out of order keep their text but may lose
+the formatting or link on the part a browser would have re-opened (the tree builder does not
+implement the adoption agency algorithm), and bare URLs in text become links.
+
 ## Excerpts and mail text
 
 `BodyRenderer::excerpt` produces the single-line feed excerpt (display width 108, no

@@ -28,9 +28,11 @@ use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
  */
 final class MarkdownText
 {
-    private static ?MarkdownConverter $converter = null;
+    /** @var array<int, MarkdownConverter> */
+    private static array $converters = [];
 
-    private static ?HtmlSanitizer $sanitizer = null;
+    /** @var array<int, HtmlSanitizer> */
+    private static array $sanitizers = [];
 
     /**
      * The anchor the sanitizer emits for every link, hardened for another site; retarget() reads this
@@ -43,10 +45,19 @@ final class MarkdownText
         return new HtmlString(self::retarget(self::sanitized($text)));
     }
 
-    /** Before retarget(), so text drawn from it carries no notice. */
-    private static function sanitized(?string $text): string
+    /**
+     * Text an administrator wrote: the member pipeline plus images and links relative to this site,
+     * which OpenPNE 3 operator HTML carried and its conversion keeps (docs/internals/body-text.md, "Operator text").
+     */
+    public static function renderOperator(?string $text): HtmlString
     {
-        return self::sanitizer()->sanitize(self::converter()->convert((string) $text)->getContent());
+        return new HtmlString(self::retarget(self::sanitized($text, operator: true), operator: true));
+    }
+
+    /** Before retarget(), so text drawn from it carries no notice. */
+    private static function sanitized(?string $text, bool $operator = false): string
+    {
+        return self::sanitizer($operator)->sanitize(self::converter($operator)->convert((string) $text)->getContent());
     }
 
     /**
@@ -121,19 +132,23 @@ final class MarkdownText
     }
 
     /** A link to this site loses the new tab the sanitizer forced; one to another site gains the notice. */
-    private static function retarget(string $html): string
+    private static function retarget(string $html, bool $operator = false): string
     {
-        return preg_replace_callback(self::SANITIZED_ANCHOR, function (array $m): string {
-            $target = LinkTarget::of(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5));
+        return preg_replace_callback(self::SANITIZED_ANCHOR, function (array $m) use ($operator): string {
+            $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5);
+            // A URL with no scheme and no host resolves against this page, and a mailto: opens no page at all.
+            $target = $operator && preg_match('#^\s*(?!mailto:)([a-z][a-z0-9+.-]*:|//)#i', $url) !== 1
+                ? LinkTarget::inPlace()
+                : LinkTarget::of($url);
 
             return '<a href="'.$m[1].'"'.$target->attributes().'>'.$m[2].$target->notice().'</a>';
         }, $html) ?? $html;
     }
 
-    private static function converter(): MarkdownConverter
+    private static function converter(bool $operator = false): MarkdownConverter
     {
-        if (self::$converter !== null) {
-            return self::$converter;
+        if (isset(self::$converters[(int) $operator])) {
+            return self::$converters[(int) $operator];
         }
 
         $environment = new Environment([
@@ -148,6 +163,10 @@ final class MarkdownText
         $environment->addExtension(new AutolinkExtension);
         $environment->addExtension(new StrikethroughExtension);
         $environment->addExtension(new TableExtension);
+
+        if ($operator) {
+            return self::$converters[1] = new MarkdownConverter($environment);
+        }
 
         // An image renders as its escaped alt text (priority 10 outranks the core ImageRenderer's 0):
         // the sanitizer allowlist has no img, and dropping the tag there would discard the alt text too.
@@ -170,13 +189,13 @@ final class MarkdownText
             }
         }, 10);
 
-        return self::$converter = new MarkdownConverter($environment);
+        return self::$converters[0] = new MarkdownConverter($environment);
     }
 
-    private static function sanitizer(): HtmlSanitizer
+    private static function sanitizer(bool $operator = false): HtmlSanitizer
     {
-        if (self::$sanitizer !== null) {
-            return self::$sanitizer;
+        if (isset(self::$sanitizers[(int) $operator])) {
+            return self::$sanitizers[(int) $operator];
         }
 
         $config = (new HtmlSanitizerConfig)
@@ -192,6 +211,15 @@ final class MarkdownText
             ->forceAttribute('a', 'rel', 'noopener noreferrer nofollow')
             ->forceAttribute('a', 'target', '_blank');
 
-        return self::$sanitizer = new HtmlSanitizer($config);
+        if ($operator) {
+            // The library's default media schemes include data:, so the list is spelled out.
+            $config = $config->allowLinkSchemes(['http', 'https', 'mailto'])
+                ->allowRelativeLinks()
+                ->allowElement('img', ['src', 'alt', 'title'])
+                ->allowMediaSchemes(['http', 'https'])
+                ->allowRelativeMedias();
+        }
+
+        return self::$sanitizers[(int) $operator] = new HtmlSanitizer($config);
     }
 }
