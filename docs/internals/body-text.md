@@ -152,6 +152,27 @@ once; the renderer treats both identically). The rich editor's schema equals the
 allowlist (authoring a construct the sanitizer would strip would lose it on save):
 [`editor-extensions.ts`](../../resources/js/components/compose/editor-extensions.ts) is the SSoT.
 
+## Operator text
+
+`MarkdownText::renderOperator()` is the same two-belt pipeline for Markdown an administrator writes.
+It differs from a member body in two ways, both of which OpenPNE 3 operator HTML relied on:
+
+- An image is drawn (`img` with `src`, `alt`, `title`), from an `http(s)` URL or a path on this site.
+  A `data:` URL is not, although CommonMark alone would let a raster one through.
+- A link may be relative. One that [`OperatorLink`](../../app/Support/OperatorLink.php) reads as a
+  path on this site opens in place; anything else follows "Where a link opens".
+
+Raw HTML in the source is escaped exactly as in a member body, so operator text cannot carry a
+`form`, an `id` or `name`, a `data-*` attribute, an inline style or an unclosed tag into the page.
+
+[`OperatorHtmlMarkdown`](../../app/Support/OperatorHtmlMarkdown.php) rewrites operator HTML into that
+Markdown. It parses as HTML5, so a misnested or stray tag takes the shape a browser gave it, and
+folds a newline between text lines into a space, since the browser showed no break there. `script`,
+`style`, `iframe`, `noscript`, `meta`, `link` and the like are removed with their content; any other
+tag without a Markdown form is dropped and its content kept. Colour, size, alignment, `class`, `id`
+and `target` have no Markdown form and are lost. The result names what was removed, by element and by
+attribute, for the caller to report.
+
 ## Excerpts and mail text
 
 `BodyRenderer::excerpt` produces the single-line feed excerpt (display width 108, no

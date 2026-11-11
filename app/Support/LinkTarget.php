@@ -22,6 +22,12 @@ final class LinkTarget
         return new self($site === null || $link === null || $site !== $link);
     }
 
+    /** A link the caller has already established stays on this site, such as a path with no host to compare. */
+    public static function inPlace(): self
+    {
+        return new self(false);
+    }
+
     /** The attributes after href: a new tab with $rel for a link that leaves, nothing for one that stays. */
     public function attributes(string $rel = self::REL): string
     {
