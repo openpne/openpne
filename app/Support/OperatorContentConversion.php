@@ -77,11 +77,9 @@ final class OperatorContentConversion
                 $this->assertFits("sns_settings:{$html->value}", $converted, $markdown->maxBytes());
             }
 
-            if ($selected && ! $dryRun) {
-                DB::table('sns_settings')->updateOrInsert(['key' => $markdown->value], ['value' => $converted->markdown]);
-            }
+            $written = $selected && ! $dryRun && $this->writeSetting($markdown, $converted->markdown, $force);
 
-            $items[] = new OperatorContentItem("sns_settings:{$html->value}", $converted, $selected, $selected && ! $dryRun);
+            $items[] = new OperatorContentItem("sns_settings:{$html->value}", $converted, $selected, $written);
         }
 
         return $items;
@@ -100,11 +98,9 @@ final class OperatorContentConversion
                 $this->assertFits("banners:{$banner->name}", $converted, self::MAX_BYTES);
             }
 
-            if ($selected && ! $dryRun) {
-                DB::table('banners')->where('id', $banner->id)->update(['markdown' => $converted->markdown]);
-            }
+            $written = $selected && ! $dryRun && $this->writeBanner((int) $banner->id, $converted->markdown, $force);
 
-            $items[] = new OperatorContentItem("banners:{$banner->name}", $converted, $selected, $selected && ! $dryRun);
+            $items[] = new OperatorContentItem("banners:{$banner->name}", $converted, $selected, $written);
         }
 
         return $items;
@@ -127,20 +123,51 @@ final class OperatorContentConversion
             $location = "gadgets:{$row->id} ({$row->name}, {$row->context}/{$row->zone})";
             $converted = OperatorHtmlMarkdown::convert((string) $row->value);
             $target = ['gadget_id' => $row->id, 'name' => self::GADGET_MARKDOWN];
-            $selected = $force || ! DB::table('gadget_configs')->where($target)->exists();
+            $stored = $dryRun
+                ? DB::table('gadget_configs')->where($target)->exists()
+                : GadgetConfigRow::lockedExists((int) $row->id, self::GADGET_MARKDOWN);
+            $selected = $force || ! $stored;
 
             if ($selected) {
                 $this->assertFits($location, $converted, self::MAX_BYTES);
             }
 
             if ($selected && ! $dryRun) {
-                DB::table('gadget_configs')->updateOrInsert($target, ['value' => $converted->markdown]);
+                $stored
+                    ? DB::table('gadget_configs')->where($target)->update(['value' => $converted->markdown])
+                    : DB::table('gadget_configs')->insert([...$target, 'value' => $converted->markdown]);
             }
 
             $items[] = new OperatorContentItem($location, $converted, $selected, $selected && ! $dryRun);
         }
 
         return $items;
+    }
+
+    /** @return bool false when a row stored since the check was kept */
+    private function writeSetting(SnsSettingKey $markdown, string $value, bool $force): bool
+    {
+        if ($force) {
+            DB::table('sns_settings')->updateOrInsert(['key' => $markdown->value], ['value' => $value]);
+
+            return true;
+        }
+
+        // The primary key decides, so a row another writer stored first is kept.
+        return DB::table('sns_settings')->insertOrIgnore(['key' => $markdown->value, 'value' => $value]) > 0;
+    }
+
+    /** @return bool false when Markdown stored since the check was kept */
+    private function writeBanner(int $id, string $value, bool $force): bool
+    {
+        if ($force) {
+            DB::table('banners')->where('id', $id)->update(['markdown' => $value]);
+
+            return true;
+        }
+
+        // The UPDATE re-reads the condition, so Markdown saved since the SELECT is kept.
+        return DB::table('banners')->where('id', $id)->whereNull('markdown')->update(['markdown' => $value]) > 0;
     }
 
     /** Only a value about to be written is held to the limit, so Markdown that is kept never fails the run. */
