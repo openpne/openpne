@@ -88,6 +88,15 @@ class ClassicConsentTest extends OAuthTestCase
         $this->assertNotSame('', $this->authTokenOf($screen));
     }
 
+    public function test_under_the_script_policy_the_form_may_follow_its_redirect_to_the_client(): void
+    {
+        config(['openpne.surface_mode' => 'classic_default', 'openpne.security.classic_script_policy' => true]);
+
+        $policy = $this->openClassic(Member::factory()->create())->headers->all('content-security-policy')[1] ?? '';
+
+        $this->assertStringEndsWith("; form-action 'self' ".parse_url(self::REDIRECT, PHP_URL_SCHEME).'://'.parse_url(self::REDIRECT, PHP_URL_HOST), $policy);
+    }
+
     public function test_classic_only_serves_the_classic_form_to_a_phone_and_over_a_modern_choice(): void
     {
         config(['openpne.surface_mode' => 'classic_only']);

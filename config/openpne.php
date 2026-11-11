@@ -285,10 +285,15 @@ return [
     | that proxy's forwarded headers is configured separately (TRUSTED_PROXIES,
     | see bootstrap/app.php and docs/internals/runtime.md).
     |
+    | 'classic_script_policy' is the host's switch that stops scripts written
+    | into the operator HTML fields from running (docs/internals/security.md,
+    | "Operator script policy"). No admin screen reads or writes it.
+    |
     */
 
     'security' => [
         'force_https' => (bool) env('OPENPNE_FORCE_HTTPS', env('APP_ENV') === 'production'),
+        'classic_script_policy' => (bool) env('OPENPNE_CLASSIC_SCRIPT_POLICY', false),
     ],
 
     /*

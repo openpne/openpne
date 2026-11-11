@@ -133,7 +133,9 @@ class DirectMessageListParityTest extends TestCase
         // OpenPNE 3's own labels — a visible parity element, held in both locales.
         $this->assertStringContainsString('>Check All</a> /', $body);
         $this->assertStringContainsString('>Clear All</a>', $body);
-        $this->assertSame(2, substr_count($body, 'c.checked='));
+        $this->assertStringContainsString('data-check-all="true">Check All</a>', $body);
+        $this->assertStringContainsString('data-check-all="false">Clear All</a>', $body);
+        $this->assertStringContainsString('js/classic-check-all.js', $body);
         // The header checkbox they replace is gone; only the row boxes remain.
         $this->assertSame(1, substr_count($body, 'type="checkbox"'));
 

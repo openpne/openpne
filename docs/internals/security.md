@@ -453,12 +453,51 @@ the baseline.
 
 Deliberately not set:
 
-- **A content CSP (`script-src`)** — the Vite/Inertia bundle has no nonce/hash
-  wiring, and the absence is also what lets the panel's inline Livewire/Alpine
-  scripts run.
+- **A content CSP (`script-src`) by default** — the Modern shell carries an
+  inline script, and the absence is also what lets the panel's inline
+  Livewire/Alpine scripts run. A host can switch one on for the Classic surface
+  (below).
 - **`Cross-Origin-Resource-Policy`** — web-public bytes (avatars, banners, and
   the images of a web-public diary or timeline post) are served for cross-origin
   embedding, which `same-origin` would break.
+
+### Operator script policy
+
+The Classic surface writes the administrator's HTML raw — the insertion slots, the footer, banner
+HTML and the `informationBox` / `freeArea` gadgets
+([classic-compatibility.md](classic-compatibility.md), "Design-customization compatibility") — on
+every page, the login screen included. A script in it runs with the member's session, which is more
+than the admin panel is otherwise given. A host whose site administrators are not trusted that far
+sets `OPENPNE_CLASSIC_SCRIPT_POLICY=true` (`openpne.security.classic_script_policy`, off by default;
+no admin screen reads or writes it). The HTML is still written as stored; the browser is told what
+may run.
+
+With the switch on, [`ClassicScriptPolicy`](../../app/Support/ClassicScriptPolicy.php) has
+`SecurityHeaders` add a second `Content-Security-Policy` header:
+
+```
+script-src 'nonce-<per request>' 'strict-dynamic'; object-src 'none'; worker-src blob:; form-action 'self'
+```
+
+- **Where.** Every member-realm response except one whose last-drawn shell is the Modern one
+  (`app.blade.php`) — so the Classic 4xx page, a fragment, and any future page outside the Classic
+  layout carry it without being listed. The admin realm is left alone.
+- **Nonce.** The framework's Vite nonce (`Vite::useCspNonce()`), so `@vite` tags take it by
+  themselves; every other Classic `<script>` takes it through the `@scriptNonce` Blade directive.
+  A script without it, an inline event handler and a `javascript:` URL do not run, so the Classic
+  views ship none of the latter two (`ClassicScriptNonceTest`). A script that a nonce-carrying
+  script loads is trusted in turn (`'strict-dynamic'`), which is what a package's third-party
+  loader needs ([layout-hooks.md](layout-hooks.md), "Script nonce").
+- **`worker-src blob:`** is for the captcha widget, which solves its challenge in workers it builds
+  from blobs; only a script that already runs can create one.
+- **`form-action 'self'`** stops a form in the administrator's HTML from posting what a member
+  types to another site. The one exception is the Classic OAuth consent screen, whose approve and
+  deny answers redirect to the client: browsers apply the directive to that redirect, so the screen
+  adds the origin of the `redirect_uri` it shows (a non-HTTP scheme as `scheme:`).
+
+Not stopped, and the same reach custom CSS already has: restyling or hiding parts of a page, a
+`<meta http-equiv="refresh">`, links, and loading images or frames from elsewhere. With the switch
+on and `APP_DEBUG` set, the framework's exception page loses its own inline scripts too.
 
 ## Inline delivery is re-encoded
 

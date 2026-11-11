@@ -7,6 +7,7 @@ namespace App\Mcp\OAuth;
 use App\Features\AiAccount\AiAccountSettings;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Member;
+use App\Support\ClassicScriptPolicy;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +20,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class ConsentPage
 {
-    public function __construct(private readonly AiAccountSettings $settings) {}
+    public function __construct(
+        private readonly AiAccountSettings $settings,
+        private readonly ClassicScriptPolicy $scriptPolicy,
+    ) {}
 
     /** @param  array{client: Client, user: Member, request: Request, authToken: string}  $params */
     public function render(array $params): Response
@@ -46,6 +50,9 @@ final class ConsentPage
         ];
 
         if (SurfaceResolver::resolve($request, 'mcp') === SurfaceResolver::CLASSIC) {
+            // Approve and deny both answer with a redirect to the client.
+            $this->scriptPolicy->allowFormTarget($redirect);
+
             return response()->view('auth.oauth-authorize', $props);
         }
 

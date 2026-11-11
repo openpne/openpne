@@ -20,7 +20,7 @@
         </style>
         {{-- Opening a row marks it read and leaves, so the copy the browser keeps for back is already
              wrong by the time the member presses it. See public/js/classic-refresh-on-restore.js. --}}
-        <script src="{{ asset('js/classic-refresh-on-restore.js') }}" defer></script>
+        <script src="{{ asset('js/classic-refresh-on-restore.js') }}" defer @scriptNonce></script>
     @endonce
     <x-classic.parts id="notification_feed" name="recentList" :title="__('Notifications')">
         <x-classic.stream-pager :older-url="$olderUrl" :newer-url="$newerUrl" />

@@ -9,7 +9,6 @@
 @section('content')
     @php($openRoute = $box->openRoute())
     @php($isTrash = $box === \App\Features\DirectMessage\DirectMessageBox::Trash)
-    @php($toggleAll = fn (string $checked): string => 'this.closest(\'form\').querySelectorAll(\'input[name="ids[]"]\').forEach(function(c){c.checked='.$checked.'});return false')
     <x-classic.parts id="message_list" name="searchResultList" :hand-written="true" :title="$box->heading()">
         @if ($messages->isEmpty())
             <div class="body">{{ __('There are no messages') }}</div>
@@ -64,8 +63,8 @@
                     <p>
                         {{-- OpenPNE 3's own labels (Check All / Clear All): a visible parity
                              element, so its screen wording wins over key reuse. --}}
-                        <a href="#" onclick="{{ $toggleAll('true') }}">{{ __('Check All') }}</a> /
-                        <a href="#" onclick="{{ $toggleAll('false') }}">{{ __('Clear All') }}</a>
+                        <a href="#" data-check-all="true">{{ __('Check All') }}</a> /
+                        <a href="#" data-check-all="false">{{ __('Clear All') }}</a>
                     </p>
                     <ul class="moreInfo button">
                         @if ($isTrash)
@@ -77,6 +76,7 @@
                     </ul>
                 </div>
             </form>
+            <script src="{{ asset('js/classic-check-all.js') }}" defer @scriptNonce></script>
         @endif
     </x-classic.parts>
 @endsection

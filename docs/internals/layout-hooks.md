@@ -63,6 +63,18 @@ React shell draws:
 
 The admin panel is not hooked (Filament has its own render hooks), nor is the 5xx layout, which reads nothing.
 
+## Script nonce
+
+When the host has switched on the operator script policy ([security.md](security.md), "Operator
+script policy"), a Classic page runs only scripts that carry the request's nonce. A package reads it
+with `Vite::cspNonce()` and writes it on every `<script>` it draws, inline or `src`; the value is
+null when the policy is off, and the attribute is then left out. A script that one of those scripts
+inserts runs without a nonce of its own; an inline event handler does not run at all.
+
+```blade
+<script @if ($nonce = Vite::cspNonce()) nonce="{{ $nonce }}" @endif src="https://loader.example/unit.js" async></script>
+```
+
 ## Modern
 
 The six React positions reach the client as the shared `layoutHooks` prop: position value to HTML,

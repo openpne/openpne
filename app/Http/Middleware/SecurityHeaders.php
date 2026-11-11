@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\ClassicScriptPolicy;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,8 +14,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SecurityHeaders
 {
+    public function __construct(private readonly ClassicScriptPolicy $scriptPolicy) {}
+
     public function handle(Request $request, Closure $next): Response
     {
+        $this->scriptPolicy->begin($request);
+
         $response = $next($request);
         $headers = $response->headers;
 
@@ -30,6 +35,11 @@ class SecurityHeaders
 
         if (! $headers->has('Content-Security-Policy')) {
             $headers->set('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'");
+        }
+
+        // A second policy rather than a merged one: a browser enforces every policy it is sent.
+        if (($scriptPolicy = $this->scriptPolicy->header()) !== null) {
+            $headers->set('Content-Security-Policy', $scriptPolicy, false);
         }
 
         if (! $headers->has('Referrer-Policy')) {

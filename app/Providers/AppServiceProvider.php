@@ -45,6 +45,7 @@ use App\Rules\NotContextWord;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Support\ClassicOnlyResponseFactory;
+use App\Support\ClassicScriptPolicy;
 use App\Support\SiteTimezone;
 use App\Support\ViewerRelations;
 use App\Translation\TermTranslator;
@@ -58,10 +59,12 @@ use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Rules\Password;
@@ -106,6 +109,7 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         // Request-scoped so the shell's nav badges and the dashboard notices reuse one set of counts.
+        $this->app->scoped(ClassicScriptPolicy::class);
         $this->app->scoped(UnreadCounts::class);
 
         // Likewise for the Classic header sprite's window: read once per request, however many
@@ -166,6 +170,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         SiteTimezone::assertUsable((string) config('app.timezone'));
+
+        View::composer('app', fn () => $this->app->make(ClassicScriptPolicy::class)->shellRendered(modern: true));
+        View::composer('layouts.classic', fn () => $this->app->make(ClassicScriptPolicy::class)->shellRendered(modern: false));
+        // Echoed at render time: a value compiled into the cached view would be one nonce for every request.
+        Blade::directive('scriptNonce', fn (): string => '<?php echo app(\App\Support\ClassicScriptPolicy::class)->nonceAttribute(); ?>');
 
         // Registered after the package providers' listeners (Livewire's asset injection among them), so it measures the body they leave.
         Event::listen(RequestHandled::class, DeclareContentLength::class);

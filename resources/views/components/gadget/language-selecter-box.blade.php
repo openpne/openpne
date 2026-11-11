@@ -11,5 +11,5 @@
     </select>
 </form>
 @once
-    <script src="{{ asset('js/classic-language.js') }}" defer></script>
+    <script src="{{ asset('js/classic-language.js') }}" defer @scriptNonce></script>
 @endonce

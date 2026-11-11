@@ -14,8 +14,8 @@
     ])
     <script type="application/json" id="classic-timeago-strings">@json($timeagoStrings, JSON_HEX_TAG | JSON_HEX_AMP)</script>
     @include('timeline._lightbox')
-    <script src="{{ asset('js/classic-timeline-replies.js') }}" defer></script>
-    <script src="{{ asset('js/classic-timeline-more.js') }}" defer></script>
-    <script src="{{ asset('js/classic-timeago.js') }}" defer></script>
-    <script src="{{ asset('js/classic-timeline-dialogs.js') }}" defer></script>
+    <script src="{{ asset('js/classic-timeline-replies.js') }}" defer @scriptNonce></script>
+    <script src="{{ asset('js/classic-timeline-more.js') }}" defer @scriptNonce></script>
+    <script src="{{ asset('js/classic-timeago.js') }}" defer @scriptNonce></script>
+    <script src="{{ asset('js/classic-timeline-dialogs.js') }}" defer @scriptNonce></script>
 @endonce

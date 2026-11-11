@@ -95,7 +95,7 @@
     @endif
     @if ($commentReplyLink && $canComment)
         @once
-            <script src="{{ asset('js/classic-comment-reply.js') }}" defer></script>
+            <script src="{{ asset('js/classic-comment-reply.js') }}" defer @scriptNonce></script>
         @endonce
     @endif
 

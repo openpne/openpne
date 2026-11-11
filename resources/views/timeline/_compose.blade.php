@@ -35,7 +35,7 @@
     </div>
 </form>
 @once
-    <script src="{{ asset('js/classic-timeline-compose.js') }}" defer></script>
+    <script src="{{ asset('js/classic-timeline-compose.js') }}" defer @scriptNonce></script>
 @endonce
 @include('timeline._mention-picker')
 @endif

@@ -6,5 +6,5 @@
     </style>
 @endonce
 @once('classic-notification-center-script')
-    <script src="{{ asset('js/classic-notification-center.js') }}" defer></script>
+    <script src="{{ asset('js/classic-notification-center.js') }}" defer @scriptNonce></script>
 @endonce

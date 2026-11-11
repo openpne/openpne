@@ -8,6 +8,6 @@
     @once
         {{-- data-push-member-id feeds the reconcile its owner: the script rebinds only on an ownership
              transition (a different member/endpoint), so it needs to know who is signed in now. --}}
-        <script src="{{ asset('js/push-reconcile.js') }}" data-push-member-id="{{ (int) request()->user('member')->getKey() }}" defer></script>
+        <script src="{{ asset('js/push-reconcile.js') }}" data-push-member-id="{{ (int) request()->user('member')->getKey() }}" defer @scriptNonce></script>
     @endonce
 @endif
