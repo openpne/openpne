@@ -25,7 +25,7 @@ final class OperatorContentConversion
 
     private const GADGETS = ['informationBox', 'freeArea'];
 
-    /** The TEXT columns the Markdown is written to. */
+    /** The TEXT columns the banner and gadget Markdown are written to. */
     private const MAX_BYTES = 65535;
 
     /** @param  string  $retry  what the oversize error tells the operator to do after shortening the HTML */
@@ -70,8 +70,12 @@ final class OperatorContentConversion
                 continue;
             }
 
-            $converted = $this->convert("sns_settings:{$html->value}", $source);
+            $converted = OperatorHtmlMarkdown::convert($source);
             $selected = $force || ! DB::table('sns_settings')->where('key', $markdown->value)->exists();
+
+            if ($selected) {
+                $this->assertFits("sns_settings:{$html->value}", $converted, $markdown->maxBytes());
+            }
 
             if ($selected && ! $dryRun) {
                 DB::table('sns_settings')->updateOrInsert(['key' => $markdown->value], ['value' => $converted->markdown]);
@@ -89,8 +93,12 @@ final class OperatorContentConversion
         $items = [];
 
         foreach (DB::table('banners')->whereNotNull('html')->orderBy('id')->get(['id', 'name', 'html', 'markdown']) as $banner) {
-            $converted = $this->convert("banners:{$banner->name}", (string) $banner->html);
+            $converted = OperatorHtmlMarkdown::convert((string) $banner->html);
             $selected = $force || $banner->markdown === null;
+
+            if ($selected) {
+                $this->assertFits("banners:{$banner->name}", $converted, self::MAX_BYTES);
+            }
 
             if ($selected && ! $dryRun) {
                 DB::table('banners')->where('id', $banner->id)->update(['markdown' => $converted->markdown]);
@@ -117,9 +125,13 @@ final class OperatorContentConversion
 
         foreach ($rows as $row) {
             $location = "gadgets:{$row->id} ({$row->name}, {$row->context}/{$row->zone})";
-            $converted = $this->convert($location, (string) $row->value);
+            $converted = OperatorHtmlMarkdown::convert((string) $row->value);
             $target = ['gadget_id' => $row->id, 'name' => self::GADGET_MARKDOWN];
             $selected = $force || ! DB::table('gadget_configs')->where($target)->exists();
+
+            if ($selected) {
+                $this->assertFits($location, $converted, self::MAX_BYTES);
+            }
 
             if ($selected && ! $dryRun) {
                 DB::table('gadget_configs')->updateOrInsert($target, ['value' => $converted->markdown]);
@@ -131,16 +143,14 @@ final class OperatorContentConversion
         return $items;
     }
 
-    private function convert(string $location, string $html): ConvertedOperatorHtml
+    /** Only a value about to be written is held to the limit, so Markdown that is kept never fails the run. */
+    private function assertFits(string $location, ConvertedOperatorHtml $converted, int $max): void
     {
-        $converted = OperatorHtmlMarkdown::convert($html);
         $bytes = strlen($converted->markdown);
 
         // Escaping can lengthen the text past the column, and a truncated value is worse than a failed run.
-        if ($bytes > self::MAX_BYTES) {
-            throw new RuntimeException("{$location}: the Markdown rewrite is {$bytes} bytes, over the ".self::MAX_BYTES.' the column holds — shorten the HTML, then '.$this->retry);
+        if ($bytes > $max) {
+            throw new RuntimeException("{$location}: the Markdown rewrite is {$bytes} bytes, over the {$max} the column holds — shorten the HTML, then ".$this->retry);
         }
-
-        return $converted;
     }
 }
