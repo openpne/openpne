@@ -1,6 +1,6 @@
 /**
- * Laravel sets a URL-encoded `XSRF-TOKEN` cookie and `VerifyCsrfToken` accepts its decoded value in
- * an `X-XSRF-TOKEN` header. Inertia handles its own, and there is no axios in the stack to do it for
+ * Laravel sets a URL-encoded XSRF cookie and its CSRF middleware accepts the decoded value in an
+ * `X-XSRF-TOKEN` header. Inertia handles its own, and there is no axios in the stack to do it for
  * the raw `fetch` calls.
  */
 

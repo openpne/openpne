@@ -13,7 +13,7 @@ use Illuminate\Contracts\Foundation\Application;
 class SessionGuard extends BaseSessionGuard
 {
     /**
-     * Mirrors AuthManager::createSessionDriver(), which builds the framework class by name.
+     * Must stay in step with AuthManager::createSessionDriver().
      *
      * @param  array<string, mixed>  $config
      */

@@ -35,6 +35,15 @@ class CookiePrefixTest extends TestCase
         $response->assertCookie('XSRF-TOKEN');
     }
 
+    public function test_no_provider_builds_the_cookie_jar_while_booting(): void
+    {
+        // The jar copies session.secure when it is built, and force_https only sets that during
+        // boot: a jar built earlier would issue the prefixed recaller without the Secure flag.
+        $this->refreshApplication();
+
+        $this->assertFalse($this->app->resolved('cookie'));
+    }
+
     public function test_a_secure_host_only_site_issues_both_cookies_under_the_host_prefix(): void
     {
         config(['session.driver' => 'database', 'session.secure' => true]);
