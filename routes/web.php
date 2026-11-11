@@ -3,6 +3,7 @@
 use App\Auth\PassportKeys;
 use App\Captcha\Captcha;
 use App\Features\AiAccount\AiAccountController;
+use App\Features\Auth\LoginCodeController;
 use App\Features\Auth\PasskeyLoginController;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
@@ -163,6 +164,15 @@ Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(functio
         ->middleware('guest:member')->name('two-factor.login');
     Route::post('/two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'store'])
         ->middleware(['guest:member', 'throttle:two-factor'])->name('two-factor.login.store');
+
+    // The resend carries no limiter of its own, so it never spends the guess budget; LoginCode's
+    // hourly issue budget bounds it (docs/internals/security.md, "Member passkeys").
+    Route::get('/login/code', [LoginCodeController::class, 'create'])
+        ->middleware('guest:member')->block()->name('login.code');
+    Route::post('/login/code', [LoginCodeController::class, 'store'])
+        ->middleware(['guest:member', 'throttle:login-code'])->block()->name('login.code.store');
+    Route::post('/login/code/resend', [LoginCodeController::class, 'resend'])
+        ->middleware('guest:member')->block()->name('login.code.resend');
 
     // The options GET carries no passkey limiter (the group's password-reset limiter is name-filtered
     // to the reset routes): the login page's autofill fetches it on every view.

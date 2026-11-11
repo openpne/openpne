@@ -40,7 +40,7 @@ function Explanation() {
                 <li>{t('You sign in the way you unlock your device: fingerprint, face or PIN.')}</li>
                 <li>{t('The check happens on your device, so your fingerprint and face never reach this site.')}</li>
             </ul>
-            <p className="text-sm text-muted-foreground">{t('Registering a passkey leaves your password working as before.')}</p>
+            <p className="text-sm text-muted-foreground">{t('Once you register a passkey, signing in with your password asks for one more check: your two-factor code, or a code sent to your email address if you have not set that up.')}</p>
             <p className="flex items-start gap-1.5 text-sm text-foreground">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
                 {t('Do not register one on a device you share: anyone who can unlock it can sign in as you.')}

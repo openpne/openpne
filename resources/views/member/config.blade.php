@@ -305,7 +305,7 @@
                         <li>{{ __('You sign in the way you unlock your device: fingerprint, face or PIN.') }}</li>
                         <li>{{ __('The check happens on your device, so your fingerprint and face never reach this site.') }}</li>
                     </ul>
-                    <p>{{ __('Registering a passkey leaves your password working as before.') }}</p>
+                    <p>{{ __('Once you register a passkey, signing in with your password asks for one more check: your two-factor code, or a code sent to your email address if you have not set that up.') }}</p>
                     <p class="error">{{ __('Do not register one on a device you share: anyone who can unlock it can sign in as you.') }}</p>
                     <h4>{{ __('Your passkeys') }}</h4>
                     @if (empty($passkeys['passkeys']))

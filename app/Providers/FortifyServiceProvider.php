@@ -6,8 +6,10 @@ use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
 use App\Actions\Fortify\Responses\NeutralPasswordResetLinkResponse;
+use App\Auth\RequireSecondLoginProof;
 use App\Captcha\Captcha;
-use App\Compat\RouteParityRegistry;
+use App\Features\Auth\AuthScreen;
+use App\Features\Auth\LoginCode;
 use App\Features\Auth\LoginFormData;
 use App\Features\Auth\LoginThrottle;
 use App\Features\Auth\PasskeyLoginController;
@@ -18,18 +20,15 @@ use App\Services\SnsSettingService;
 use App\Support\MarkdownText;
 use App\Support\SecurityLog;
 use App\Support\SnsSettingKey;
-use App\Support\SurfaceResolver;
-use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
+use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
 use Laravel\Passkeys\Http\Requests\PasskeyVerificationRequest;
@@ -49,6 +48,8 @@ class FortifyServiceProvider extends ServiceProvider
         $this->app->singleton(FailedPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
 
         $this->app->bind(PasskeyVerificationRequest::class, PasskeyLoginRequest::class);
+
+        $this->app->scoped(RedirectsIfTwoFactorAuthenticatable::class, RequireSecondLoginProof::class);
     }
 
     public function boot(): void
@@ -84,7 +85,7 @@ class FortifyServiceProvider extends ServiceProvider
             $props = LoginFormData::for($request);
             $gadgets = app(GadgetService::class);
 
-            return $this->screen($request, 'login', 'auth.login',
+            return AuthScreen::render($request, 'login', 'auth.login',
                 // The message is a Modern-only slot; Classic carries the same kind of copy in its
                 // login gadgets, so the settings tier is never read on the Classic path.
                 fn () => Inertia::render('auth/login', $props + ['loginMessage' => $this->loginMessage()]),
@@ -93,17 +94,17 @@ class FortifyServiceProvider extends ServiceProvider
                     'layout' => $gadgets->layoutLetter('login'),
                 ]);
         });
-        Fortify::requestPasswordResetLinkView(fn (Request $request) => $this->screen(
+        Fortify::requestPasswordResetLinkView(fn (Request $request) => AuthScreen::render(
             $request, 'password.request', 'auth.forgot-password',
             fn () => Inertia::render('auth/forgot-password'),
         ));
         Fortify::resetPasswordView(function (Request $request) {
             $props = ['email' => $request->string('email')->value(), 'token' => $request->route('token')];
 
-            return $this->screen($request, 'password.reset', 'auth.reset-password',
+            return AuthScreen::render($request, 'password.reset', 'auth.reset-password',
                 fn () => Inertia::render('auth/reset-password', $props), $props);
         });
-        Fortify::twoFactorChallengeView(fn (Request $request) => $this->screen(
+        Fortify::twoFactorChallengeView(fn (Request $request) => AuthScreen::render(
             $request, 'two-factor.login', 'auth.two-factor-challenge',
             fn () => Inertia::render('auth/two-factor-challenge'),
         ));
@@ -126,6 +127,11 @@ class FortifyServiceProvider extends ServiceProvider
         // one bucket and fails at challengedUser() anyway.
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by('two-factor|'.$request->session()->get('login.id'));
+        });
+
+        // Keyed like the two-factor limiter, for the same reason.
+        RateLimiter::for('login-code', function (Request $request) {
+            return Limit::perMinute(5)->by('login-code|'.$request->session()->get(LoginCode::SLOT.'.member_id'));
         });
 
         // Keyed by the member, not the IP: the adversary here already holds the session, so the
@@ -153,9 +159,9 @@ class FortifyServiceProvider extends ServiceProvider
                 return false;
             }
 
-            // A half-finished password login (TOTP challenge pending) must not outlive the session it
-            // started in.
-            $request->session()->forget('login.id');
+            // A half-finished password login (either challenge pending) must not outlive the session
+            // it started in.
+            $request->session()->forget(['login.id', LoginCode::SLOT]);
 
             return true;
         });
@@ -261,22 +267,5 @@ class FortifyServiceProvider extends ServiceProvider
         }
 
         return $request->attributes->get('login.captcha');
-    }
-
-    /**
-     * Surface seam for Fortify's view callbacks: Classic returns the OpenPNE 3 Blade shell with the
-     * route-parity body id and the pre-login `insecure_page` class; Modern returns the Inertia page.
-     * `$bodyIdRoute` is the parity's Laravel route name, passed explicitly so the body id is keyed on
-     * the contract, not on Fortify's view-callback request.
-     */
-    private function screen(Request $request, string $bodyIdRoute, string $classicView, Closure $modern, array $data = []): View|InertiaResponse
-    {
-        if (SurfaceResolver::resolve($request, 'auth') === SurfaceResolver::CLASSIC) {
-            return view($classicView, $data)
-                ->with('pageId', RouteParityRegistry::bodyId($bodyIdRoute))
-                ->with('pageClass', 'insecure_page');
-        }
-
-        return $modern();
     }
 }

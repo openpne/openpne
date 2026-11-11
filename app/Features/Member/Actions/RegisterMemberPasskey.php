@@ -2,6 +2,7 @@
 
 namespace App\Features\Member\Actions;
 
+use App\Auth\SessionRevocation;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,25 +17,40 @@ use Webauthn\PublicKeyCredentialCreationOptions;
 
 class RegisterMemberPasskey
 {
+    use SyncsCallerInstance;
+
     /** The `passkeys.credential_id` column width; webauthn-lib itself allows ids up to 1023 bytes. */
     private const CREDENTIAL_ID_MAX = 512;
 
     public function __construct(private readonly StorePasskey $store) {}
 
-    public function __invoke(Member $viewer, PublicKeyCredential $credential, PublicKeyCredentialCreationOptions $options): Passkey
+    public function __invoke(Member $viewer, PublicKeyCredential $credential, PublicKeyCredentialCreationOptions $options, string $exceptSessionId): Passkey
     {
         $this->refuseOverlongCredentialId($credential);
         $name = $this->deriveName($credential);
 
-        return DB::transaction(function () use ($viewer, $name, $credential, $options): Passkey {
+        [$passkey, $fresh] = DB::transaction(function () use ($viewer, $name, $credential, $options, $exceptSessionId): array {
             $fresh = Member::whereKey($viewer->getKey())->lockForUpdate()->firstOrFail();
 
             // An AI account has no session to reach here; the refusal is defense in depth, so a
             // credential-less row never gains a credential.
             abort_if($fresh->isAiAccount(), 403);
 
-            return ($this->store)($fresh, $name, $credential, $options);
+            $raisesPasswordFloor = ! $fresh->passkeys()->exists() && ! $fresh->hasEnabledTwoFactorAuthentication();
+            $passkey = ($this->store)($fresh, $name, $credential, $options);
+
+            // Sessions and recallers opened on the password alone end once it no longer signs in
+            // alone (docs/internals/security.md, "Member passkeys").
+            if ($raisesPasswordFloor) {
+                SessionRevocation::revokeMember($fresh, $exceptSessionId);
+            }
+
+            return [$passkey, $fresh];
         });
+
+        $this->syncCaller($viewer, $fresh);
+
+        return $passkey;
     }
 
     /**

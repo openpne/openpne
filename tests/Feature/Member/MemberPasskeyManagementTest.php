@@ -16,6 +16,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Passkeys\Actions\DeletePasskey;
+use Laravel\Passkeys\Actions\StorePasskey;
 use Laravel\Passkeys\Passkey;
 use Laravel\Passkeys\Support\WebAuthn;
 use PragmaRX\Google2FA\Google2FA;
@@ -397,6 +398,7 @@ class MemberPasskeyManagementTest extends TestCase
             $ai,
             WebAuthn::fromJson(json_encode($authenticator->attest($options)), PublicKeyCredential::class),
             WebAuthn::fromJson(session('passkey.registration_options'), PublicKeyCredentialCreationOptions::class),
+            'this-session',
         );
     }
 
@@ -488,7 +490,7 @@ class MemberPasskeyManagementTest extends TestCase
         Notification::assertSentToTimes($member, PasskeyRemovedNotification::class, 1);
     }
 
-    public function test_adding_a_passkey_revokes_nothing(): void
+    public function test_the_first_passkey_revokes_other_sessions_and_later_ones_do_not(): void
     {
         $member = Member::factory()->create();
         $this->insertOtherDeviceSession($member);
@@ -496,6 +498,52 @@ class MemberPasskeyManagementTest extends TestCase
 
         $this->register($member);
 
+        $this->assertSame(0, DB::table('sessions')->where('id', 'other-device-session')->count());
+        $afterFirst = $member->fresh()->remember_token;
+        $this->assertNotSame($before, $afterFirst);
+
+        $this->insertOtherDeviceSession($member);
+        $this->register($member);
+
+        $this->assertSame(1, DB::table('sessions')->where('id', 'other-device-session')->count());
+        $this->assertSame($afterFirst, $member->fresh()->remember_token);
+    }
+
+    public function test_the_store_request_passes_its_own_session_as_the_one_to_keep(): void
+    {
+        $member = Member::factory()->create();
+        $spy = new class(app(StorePasskey::class)) extends RegisterMemberPasskey
+        {
+            public ?string $except = null;
+
+            public function __invoke(Member $viewer, PublicKeyCredential $credential, PublicKeyCredentialCreationOptions $options, string $exceptSessionId): Passkey
+            {
+                $this->except = $exceptSessionId;
+
+                return parent::__invoke($viewer, $credential, $options, $exceptSessionId);
+            }
+        };
+        $this->app->instance(RegisterMemberPasskey::class, $spy);
+
+        $this->register($member);
+
+        $this->assertSame($this->app['session.store']->getId(), $spy->except);
+    }
+
+    public function test_the_first_passkey_of_a_member_with_totp_revokes_nothing(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $this->insertOtherDeviceSession($member);
+        $before = $member->fresh()->remember_token;
+
+        $this->actingAs($member)
+            ->post('/member/config/passkeys/reauth', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($member)
+            ->postJson('/member/config/passkeys', ['credential' => FakeAuthenticator::forApp()->attest($this->registrationOptions($member))])
+            ->assertOk();
+
+        $this->assertSame(1, $member->passkeys()->count());
         $this->assertSame(1, DB::table('sessions')->where('id', 'other-device-session')->count());
         $this->assertSame($before, $member->fresh()->remember_token);
     }
