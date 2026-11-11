@@ -10,6 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 // on every Modern page.
 import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
+import { currentXsrfCookieName } from '@/lib/csrf';
 import { conversationVisitOptions } from '@/lib/chat/opening-scroll';
 import { installHistoryRestore } from '@/lib/history-restore';
 import { installHttpExceptionHandling } from '@/lib/http-exception';
@@ -40,6 +41,7 @@ void createInertiaApp({
     // pages share no `unread`, so no prefix survives a SPA logout.
     title: (title, page) =>
         withUnreadPrefix(title ? `${title} - ${appName}` : appName, (page.props as PageProps).unread?.notifications ?? 0),
+    http: { xsrfCookieName: currentXsrfCookieName() },
     defaults: {
         // Inertia asks this for every visit, and it is the one place a destination can decline
         // being scrolled.

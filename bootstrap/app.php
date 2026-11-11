@@ -6,6 +6,7 @@ use App\Files\ImageProcessorUnavailableException;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\PreventRequestForgery as AppPreventRequestForgery;
 use App\Http\Middleware\RemoveCookiesFromPublicFileResponses;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
@@ -77,6 +78,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         ], append: [
             SetLocale::class,
             HandleInertiaRequests::class,
+        ], replace: [
+            PreventRequestForgery::class => AppPreventRequestForgery::class,
         ]);
         $middleware->appendToPriorityList(ShareErrorsFromSession::class, PreventRequestForgery::class);
         $middleware->prependToPriorityList(PreventRequestForgery::class, SetLocale::class);

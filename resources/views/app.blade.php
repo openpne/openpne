@@ -15,6 +15,7 @@
          chrome pads for the insets itself; Classic has no fixed bottom bar and keeps the default. --}}
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="xsrf-cookie" content="{{ \App\Http\Middleware\PreventRequestForgery::cookieName() }}">
     <meta name="theme-color" content="{{ $themeColor }}">
     @include('partials.site-icons')
     {{-- Apply the saved color mode before first paint so a dark-mode member never sees a light flash.
