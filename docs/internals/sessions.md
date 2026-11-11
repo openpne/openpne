@@ -31,21 +31,39 @@ Per request it pins, both ways:
   stamps `sessions.user_id` from the default guard, so admin-realm rows carry
   `admin_users` ids even on requests where Filament's own `Authenticate` never
   runs (login-screen Livewire updates, uploads, the locale switch).
-- the `__Secure-` cookie-name prefix — added to whichever realm cookie is
-  active, but only when `session.secure` is on (explicit `SESSION_SECURE_COOKIE`
-  or `force_https`); a browser rejects a `__Secure-` cookie that is not Secure
-  over HTTPS, so a plain-HTTP host must stay unprefixed or login breaks. The
-  prefix is not applied to the `XSRF-TOKEN` cookie (read by name from JS) or the
-  remember-me cookies (guard-named); those keep their Secure flag from
-  `session.secure` but no prefix.
-  A site already on HTTPS renames its session cookie on deploy, so everyone
-  re-logs in once. A `SESSION_COOKIE` / `SESSION_ADMIN_COOKIE` an operator has
-  already prefixed (`__Secure-`/`__Host-`) is passed through unchanged — the
-  operator then owns satisfying the browser's prefix invariants.
+- the cookie-name prefix of whichever realm cookie is active (below).
 - admin responses drop the `XSRF-TOKEN` cookie — one global cookie name, so the
   last responding realm would overwrite the member token and 419 the member
   realm's next Inertia POST. Nothing on the admin realm reads it (Livewire
   sends its page-embedded token).
+
+## Cookie-name prefix
+
+The two realm session cookies are renamed with a prefix the browser enforces,
+chosen from the session config on every request:
+
+| `session.secure` | `session.domain` | `session.path` | Name |
+|---|---|---|---|
+| off | any | any | the base name |
+| on | unset | `/` | `__Host-` + base |
+| on | set | any | `__Secure-` + base |
+| on | unset | not `/` | `__Secure-` + base |
+
+`session.secure` is on with an explicit `SESSION_SECURE_COOKIE` or with
+`force_https`. A browser accepts a `__Secure-` cookie only with the Secure
+attribute over HTTPS, and a `__Host-` cookie only when it also carries no Domain
+attribute and Path=/ — so a plain-HTTP host stays unprefixed or login breaks,
+and a site that scopes its cookie to a parent domain or a sub-path keeps
+`__Secure-`. A `__Host-` cookie belongs to the one host that set it: another
+host under the same parent domain cannot plant a cookie of that name for it.
+
+The prefix is not applied to the `XSRF-TOKEN` cookie (read by name from JS) or
+the remember-me cookies (guard-named); those keep their Secure flag from
+`session.secure` but no prefix. A change of prefix renames the session cookie,
+so everyone re-logs in once on the deploy that brings it. A `SESSION_COOKIE` /
+`SESSION_ADMIN_COOKIE` an operator has already prefixed (`__Secure-`/`__Host-`)
+is passed through unchanged — the operator then owns satisfying the browser's
+prefix terms.
 
 ## The previous URL
 

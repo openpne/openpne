@@ -13,6 +13,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Cookie;
 use Tests\TestCase;
 
@@ -101,10 +102,45 @@ class AdminSessionStoreTest extends TestCase
         $adminBase = config('session.admin_cookie');
 
         $this->handle('/dashboard');
+        $this->assertSame('__Host-'.$memberBase, config('session.cookie'));
+
+        $this->handle('/admin');
+        $this->assertSame('__Host-'.$adminBase, config('session.cookie'));
+    }
+
+    /** @param array<string, mixed> $scope */
+    #[DataProvider('scopedCookies')]
+    public function test_a_cookie_scoped_beyond_the_host_root_falls_back_to_the_secure_prefix(array $scope): void
+    {
+        // A browser drops a __Host- cookie that carries a Domain attribute or a path other than /.
+        config(['session.secure' => true] + $scope);
+        $memberBase = config('session.cookie');
+        $adminBase = config('session.admin_cookie');
+
+        $this->handle('/dashboard');
         $this->assertSame('__Secure-'.$memberBase, config('session.cookie'));
 
         $this->handle('/admin');
         $this->assertSame('__Secure-'.$adminBase, config('session.cookie'));
+    }
+
+    /** @return array<string, array{array<string, mixed>}> */
+    public static function scopedCookies(): array
+    {
+        return [
+            'parent domain' => [['session.domain' => '.example.test']],
+            'sub-path' => [['session.path' => '/sns']],
+        ];
+    }
+
+    public function test_an_empty_cookie_domain_counts_as_unset(): void
+    {
+        config(['session.secure' => true, 'session.domain' => '']);
+        $memberBase = config('session.cookie');
+
+        $this->handle('/dashboard');
+
+        $this->assertSame('__Host-'.$memberBase, config('session.cookie'));
     }
 
     public function test_no_secure_prefix_on_a_plain_http_host(): void
@@ -122,7 +158,7 @@ class AdminSessionStoreTest extends TestCase
     public function test_an_already_prefixed_base_name_is_left_untouched(): void
     {
         // An operator may set SESSION_COOKIE to a name that already carries a cookie-name
-        // prefix; neither is re-prefixed (a stricter __Host- would be demoted by __Secure-).
+        // prefix; neither is re-prefixed.
         foreach (['__Secure-custom', '__Host-custom'] as $name) {
             config(['session.secure' => true, 'session.cookie' => $name]);
             // The middleware captures the member base in its constructor, so re-resolve it
@@ -138,16 +174,19 @@ class AdminSessionStoreTest extends TestCase
     public function test_the_prefixed_cookie_is_secure_and_round_trips_a_login(): void
     {
         config(['session.driver' => 'database', 'session.secure' => true]);
-        $prefixed = '__Secure-'.config('session.cookie');
+        $prefixed = '__Host-'.config('session.cookie');
         $member = Member::factory()->create();
 
         $login = $this->post('/login', ['email' => $member->email, 'password' => 'password']);
         $login->assertRedirect();
         $login->assertCookie($prefixed);
-        $this->assertTrue($login->getCookie($prefixed, false)->isSecure());
+        $cookie = $login->getCookie($prefixed, false);
+        $this->assertTrue($cookie->isSecure());
+        $this->assertNull($cookie->getDomain());
+        $this->assertSame('/', $cookie->getPath());
         $sid = $login->getCookie($prefixed)->getValue();
 
-        // The browser would send the __Secure- cookie back over HTTPS; the prefixed name
+        // The browser would send the __Host- cookie back over HTTPS; the prefixed name
         // still authenticates.
         $this->freshRequestState();
         $this->withCookie($prefixed, $sid)->get('/dashboard')->assertOk();
@@ -158,7 +197,7 @@ class AdminSessionStoreTest extends TestCase
         // Response-level (not just the config pin): exercises StartSession + the CookieJar
         // for the admin realm, where the guest redirect still sets its session cookie.
         config(['session.driver' => 'database', 'session.secure' => true]);
-        $prefixed = '__Secure-'.config('session.admin_cookie');
+        $prefixed = '__Host-'.config('session.admin_cookie');
 
         $response = $this->get('/admin')->assertRedirect('/admin/login');
 

@@ -547,9 +547,9 @@ are the sidecar's to judge; a host that shares users puts the spool on a volume 
 ## Cookies
 
 When `session.secure` is on (explicit `SESSION_SECURE_COOKIE`, or `force_https`),
-the two realm session cookies are renamed with the `__Secure-` prefix
-([`UseAdminSessionStore`](../../app/Http/Middleware/UseAdminSessionStore.php)),
-which the browser accepts only over HTTPS with the Secure attribute. A
+the two realm session cookies are renamed with the `__Host-` prefix, or
+`__Secure-` where the site scopes its cookie to a parent domain or a sub-path
+([sessions.md](sessions.md#cookie-name-prefix)). A
 plain-HTTP host stays unprefixed so login still works. The `XSRF-TOKEN` cookie
 is read from JS by name and the remember-me cookies are guard-named, so neither
 takes a prefix — they carry the Secure flag from `session.secure` but not the
