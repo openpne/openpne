@@ -5,6 +5,7 @@ namespace App\Filament\Resources\BannerImages\Schemas;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Files\UploadLimit;
 use App\Models\BannerImage;
+use App\Support\OperatorLink;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Image;
@@ -68,9 +69,7 @@ class BannerImageForm
 
                 TextInput::make('url')
                     ->label(__('Link URL'))
-                    // OpenPNE 3 stored the link in a TEXT column with no length cap; only require a valid
-                    // URL (a stored http(s) link, rendered escaped in an <a href>).
-                    ->url(),
+                    ->rule(fn (): \Closure => OperatorLink::rule()),
 
                 TextInput::make('name')
                     ->label(__('Label'))

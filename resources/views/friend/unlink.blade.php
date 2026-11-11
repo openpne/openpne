@@ -2,9 +2,9 @@
 
 @section('title', __('Remove %friend%'))
 
-{{-- The heading is a sentence with the member's name linked inside it, so it is echoed raw; the
-     name is escaped here and the sentence itself comes from the catalog. --}}
+{{-- The heading is echoed raw to carry the name's link, so the sentence is escaped first: it holds a term an administrator typed. --}}
 @php($nameLink = '<a href="'.e(route('member.profile.show', $target)).'">'.e($target->name).'</a>')
+@php($question = str_replace(':name', $nameLink, e(__('Do you delete :name from %my_friend%?'))))
 
 @section('content')
     {{-- OpenPNE 3 unlinkInput.php's yesNo kind: the question is the heading, with one li per answer
@@ -12,7 +12,7 @@
          confirm page uses. --}}
     <x-classic.parts id="unlinkConfirmForm" name="yesNo">
         <x-slot:heading>
-            <h3>{!! __('Do you delete :name from %my_friend%?', ['name' => $nameLink]) !!}</h3>
+            <h3>{!! $question !!}</h3>
         </x-slot:heading>
         <div class="operation">
             <ul class="moreInfo button">

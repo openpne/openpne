@@ -53,6 +53,28 @@ class ClassicTopBannerTest extends TestCase
             ->assertDontSee('<a href="'.config('app.url').'/groups/1" target', false);
     }
 
+    public function test_a_banner_link_that_could_run_script_is_drawn_without_its_link(): void
+    {
+        // The upgrade copies banner_image.url from OpenPNE 3 as it stands, past the admin form's check.
+        $member = Member::factory()->create();
+        $image = $this->addImage(Banner::create(['name' => 'top_after']), 'javascript:alert(1)', 'Promo');
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('<div id="topBanner"><img src="'.e(route('banner.image', $image->file->name)).'" alt="Promo"></div>', false)
+            ->assertDontSee('javascript:alert(1)', false);
+    }
+
+    public function test_a_banner_linking_to_a_site_path_opens_in_place(): void
+    {
+        $member = Member::factory()->create();
+        $this->addImage(Banner::create(['name' => 'top_after']), '/groups/1', 'Promo');
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('<a href="/groups/1"><img', false);
+    }
+
     public function test_a_guest_sees_the_before_login_banner(): void
     {
         // The login page is guest-reachable and uses the Classic shell.

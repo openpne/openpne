@@ -14,6 +14,7 @@ use App\Support\ClassicThemes;
 use App\Support\LayoutHook;
 use App\Support\LayoutHooks;
 use App\Support\LinkTarget;
+use App\Support\OperatorLink;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\Schema;
 
@@ -227,10 +228,14 @@ if (! function_exists('classic_banner')) {
         }
 
         $img = sprintf('<img src="%s" alt="%s">', e(route('banner.image', $file->name)), e((string) $image->name));
-        $url = (string) $image->url;
+        $url = OperatorLink::href($image->url);
 
-        if ($url === '') {
+        if ($url === null) {
             return $img;
+        }
+
+        if (OperatorLink::isSitePath($url)) {
+            return sprintf('<a href="%s">%s</a>', e($url), $img);
         }
 
         $target = LinkTarget::of($url);

@@ -43,6 +43,21 @@ class ClassicHomeGadgetTest extends TestCase
             ->assertDontSee('id="home_index"', false); // the empty-state fallback is gone
     }
 
+    public function test_link_list_box_links_only_a_url_that_cannot_run_script(): void
+    {
+        $member = Member::factory()->create();
+        $this->makeGadget('home', 'contents', 'linkListBox', [
+            'url1' => 'https://example.com/a', 'text1' => 'Plain link',
+            'url2' => 'javascript:alert(1)', 'text2' => 'Scripted link',
+        ]);
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('<li><a href="https://example.com/a">Plain link</a></li>', false)
+            ->assertSee('<li>Scripted link</li>', false)
+            ->assertDontSee('javascript:alert(1)', false);
+    }
+
     public function test_sidemenu_zone_renders_the_left_column(): void
     {
         $member = Member::factory()->create(['name' => 'Hanako']);

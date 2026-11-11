@@ -7,6 +7,7 @@ use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKindRegistry;
 use App\Models\Gadget;
+use App\Support\OperatorLink;
 use Closure;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Radio;
@@ -163,6 +164,7 @@ class GadgetForm
             'select' => Select::make($key)->options($field->choices)->selectablePlaceholder(false),
             'radio' => Radio::make($key)->options($field->choices),
             'rich_textarea' => Textarea::make($key)->rows(6),
+            'url' => TextInput::make($key)->rule(fn (): Closure => OperatorLink::rule()),
             default => TextInput::make($key),
         };
 

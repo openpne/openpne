@@ -9,6 +9,7 @@ use App\Filament\Resources\BannerImages\Pages\ListBannerImages;
 use App\Filament\Resources\BannerImages\Schemas\BannerImageForm;
 use App\Filament\Resources\BannerImages\Tables\BannerImagesTable;
 use App\Models\BannerImage;
+use App\Support\OperatorLink;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -64,7 +65,7 @@ class BannerImageResource extends Resource
                 'title' => (string) ($image->name ?? ''),
                 'thumb' => $image->file !== null ? route('banner.image', $image->file->name) : '',
                 'dims' => $image->dimensionsLabel() !== null ? $image->dimensionsLabel().' px' : '',
-                'linkUrl' => (string) ($image->url ?? ''),
+                'linkUrl' => (string) OperatorLink::href($image->url),
             ])
             ->all();
     }
@@ -92,7 +93,7 @@ class BannerImageResource extends Resource
             'data-lb-src' => route('banner.image', $image->file->name),
             'data-lb-title' => (string) ($image->name ?? ''),
             'data-lb-dims' => $image->dimensionsLabel() !== null ? $image->dimensionsLabel().' px' : '',
-            'data-lb-url' => (string) ($image->url ?? ''),
+            'data-lb-url' => (string) OperatorLink::href($image->url),
             // .stop.prevent: the list row links to the edit page, so don't also navigate on a thumbnail click.
             'x-on:click.stop.prevent' => self::LIGHTBOX_CLICK,
             'title' => __('Enlarge'),
