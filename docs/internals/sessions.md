@@ -82,8 +82,9 @@ prefix terms.
 | `SESSION_MEMBER_LIFETIME` | 43200 (30 days) | idle minutes of a signed-in member's session |
 | `SESSION_MEMBER_ABSOLUTE_LIFETIME` | 576000 (400 days) | minutes from sign-in after which a member's session ends however recently it was used |
 
-A member value below the one above it in the table is raised to it, so neither
-signing in nor a blank setting shortens a session.
+A member value below the one above it in the table is raised to it: signing in
+never shortens a session, and the absolute lifetime is never below the idle one
+(a blank `SESSION_MEMBER_ABSOLUTE_LIFETIME` therefore means 30 days, not 400).
 
 A member stays signed in through the session alone: the `member` guard issues
 no remember-me cookie and ignores one a browser still holds (it answers with a
