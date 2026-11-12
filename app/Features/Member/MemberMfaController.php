@@ -34,10 +34,6 @@ class MemberMfaController extends Controller
     {
         $enable($this->viewer());
 
-        // The password was just verified (MfaManagementRequest); the stamp lets confirm finish
-        // the same sitting without asking for it a second time.
-        MfaSetupReauth::stamp($request->session());
-
         return $this->mfaRedirect($request);
     }
 
@@ -73,15 +69,7 @@ class MemberMfaController extends Controller
     {
         $viewer = $this->viewer();
 
-        // `requiresPassword()` is the FormRequest's snapshot, which the Action re-checks under the
-        // lock; `$wasEnabled` is the fresh state the branches below read.
-        $wasEnabled = $disable(
-            $viewer,
-            $request->requiresPassword(),
-            $request->validated('code'),
-            $request->validated('recovery_code'),
-            $request->session()->getId(),
-        );
+        $wasEnabled = $disable($viewer, $request->reauthProof(), $request->session()->getId());
 
         MfaSetupReauth::clear($request->session());
 
@@ -108,7 +96,7 @@ class MemberMfaController extends Controller
     {
         $viewer = $this->viewer();
 
-        $regenerate($viewer, (string) $request->validated('code'));
+        $regenerate($viewer, $request->reauthProof());
 
         SecurityLog::event('mfa.recovery_codes_regenerated', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 

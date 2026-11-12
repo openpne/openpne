@@ -25,8 +25,8 @@ class AiTokenRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // An empty field is "not provided", not a wrong password: the form submits it even inside
-        // the window, when the UI shows no password field at all (MfaManagementRequest precedent;
-        // ConvertEmptyStringsToNull has already turned '' into null by here).
+        // the window, when the UI shows no password field at all (ConvertEmptyStringsToNull has
+        // already turned '' into null by here).
         if (in_array($this->input('current_password'), [null, ''], true)) {
             $this->request->remove('current_password');
         }

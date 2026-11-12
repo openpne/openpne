@@ -2,25 +2,37 @@
 
 namespace App\Http\Requests\Member;
 
-use App\Features\Member\MfaSetupReauth;
+use App\Auth\Reauth\ReauthPurpose;
+use App\Auth\Reauth\RequiresReauth;
+use App\Models\Member;
+use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Confirming set-up proves authenticator possession with a TOTP code. The password is only
- * demanded when the enable step's re-auth window has lapsed (a pending set-up left behind and
- * picked up later) — in the normal sitting the member typed it moments ago at enable.
+ * `code` here is the pending factor's own code, proving the authenticator was set up; the password
+ * is asked again only once the set-up window has lapsed.
  */
-class ConfirmMfaRequest extends MfaManagementRequest
+class ConfirmMfaRequest extends FormRequest
 {
+    use RequiresReauth;
+
+    public function authorize(): bool
+    {
+        return $this->user() instanceof Member;
+    }
+
+    public function reauthPurpose(): ReauthPurpose
+    {
+        return ReauthPurpose::MfaSetup;
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return parent::rules() + [
-            'code' => ['required', 'string'],
-        ];
+        return ['code' => ['required', 'string']] + $this->reauthRules();
     }
 
-    public function requiresPassword(): bool
+    protected function asksSecondFactor(): bool
     {
-        return ! MfaSetupReauth::isFresh($this->session());
+        return false;
     }
 }

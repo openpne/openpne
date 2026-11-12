@@ -631,7 +631,9 @@ class MemberMfaManagementTest extends TestCase
 
         $this->actingAs($member)
             ->post('/member/config/mfa/disable')
-            ->assertSessionHasErrors('current_password');
+            ->assertSessionHasErrors([
+                'current_password' => __('Your two-factor settings changed while this page was open. Please try again.'),
+            ]);
 
         $fresh = $member->fresh();
         $this->assertNotNull($fresh->two_factor_secret);

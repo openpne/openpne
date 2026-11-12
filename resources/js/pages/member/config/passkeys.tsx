@@ -2,12 +2,11 @@ import { router, useForm } from '@inertiajs/react';
 import { usePasskeyRegister } from '@laravel/passkeys/react';
 import { KeyRound, TriangleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { REAUTH_DATA, ReauthFields } from '@/components/reauth-fields';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
-import { Field, FormActions, FormSection } from '@/components/ui/field';
+import { FormActions, FormSection } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
-import { Input } from '@/components/ui/input';
-import { OtpInput } from '@/components/ui/otp-input';
 import { useT } from '@/lib/i18n';
 import { PASSKEY_ROUTES, passkeyErrorKey } from '@/lib/passkeys';
 import { useDateFormat } from '@/lib/use-date-format';
@@ -52,13 +51,7 @@ function Explanation() {
 /** Password (+ second factor) first, so a wrong proof fails before the browser prompt. */
 function Reauth({ requiresSecondFactor }: { requiresSecondFactor: boolean }) {
     const t = useT();
-    const form = useForm({ current_password: '', code: '', recovery_code: '' });
-    const [useRecovery, setUseRecovery] = useState(false);
-
-    function toggleRecovery() {
-        form.resetAndClearErrors('code', 'recovery_code');
-        setUseRecovery((v) => !v);
-    }
+    const form = useForm(REAUTH_DATA);
 
     return (
         <form
@@ -69,48 +62,15 @@ function Reauth({ requiresSecondFactor }: { requiresSecondFactor: boolean }) {
             className="space-y-4"
         >
             <p className="text-sm text-foreground">{t('To add a passkey, first confirm it is you.')}</p>
-            <Field label={t('Current password')} htmlFor="current_password" error={form.errors.current_password}>
-                <Input
-                    id="current_password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={form.data.current_password}
-                    onChange={(e) => form.setData('current_password', e.target.value)}
-                />
-            </Field>
-            {requiresSecondFactor &&
-                (useRecovery ? (
-                    <Field
-                        label={t('Recovery code')}
-                        htmlFor="recovery_code"
-                        help={t('Each recovery code can be used once, if you no longer have your authenticator.')}
-                        error={form.errors.recovery_code}
-                    >
-                        <Input
-                            id="recovery_code"
-                            type="text"
-                            autoComplete="off"
-                            value={form.data.recovery_code}
-                            onChange={(e) => form.setData('recovery_code', e.target.value)}
-                        />
-                    </Field>
-                ) : (
-                    <Field
-                        label={t('Authentication code')}
-                        htmlFor="code"
-                        help={t('A passkey signs you in without this code, so adding one needs it once.')}
-                        error={form.errors.code}
-                    >
-                        <OtpInput label={t('Authentication code')} value={form.data.code} onChange={(code) => form.setData('code', code)} />
-                    </Field>
-                ))}
-            {requiresSecondFactor && (
-                <p className="text-sm">
-                    <button type="button" onClick={toggleRecovery} className="text-link hover:underline">
-                        {useRecovery ? t('Use an authentication code instead') : t('Use a recovery code instead')}
-                    </button>
-                </p>
-            )}
+            <ReauthFields
+                idPrefix="passkey_add"
+                data={form.data}
+                errors={form.errors}
+                onChange={form.setData}
+                onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                requiresSecondFactor={requiresSecondFactor}
+                codeHelp={t('A passkey signs you in without this code, so adding one needs it once.')}
+            />
             <FormActions>
                 <Button type="submit" loading={form.processing}>
                     {t('Continue')}
@@ -167,10 +127,10 @@ function Register() {
     );
 }
 
-function PasskeyCard({ passkey, last }: { passkey: PasskeyRow; last: boolean }) {
+function PasskeyCard({ passkey, last, requiresSecondFactor }: { passkey: PasskeyRow; last: boolean; requiresSecondFactor: boolean }) {
     const t = useT();
     const { absolute } = useDateFormat();
-    const form = useForm({ current_password: '' });
+    const form = useForm(REAUTH_DATA);
     const [confirming, setConfirming] = useState(false);
 
     return (
@@ -208,15 +168,14 @@ function PasskeyCard({ passkey, last }: { passkey: PasskeyRow; last: boolean }) 
                             ? t('Remove this passkey? You will sign in with your password from now on.')
                             : t('Remove this passkey? It will no longer sign you in; your other passkeys and your password still will.')}
                     </p>
-                    <Field label={t('Current password')} htmlFor={`delete_password_${passkey.id}`} error={form.errors.current_password}>
-                        <Input
-                            id={`delete_password_${passkey.id}`}
-                            type="password"
-                            autoComplete="current-password"
-                            value={form.data.current_password}
-                            onChange={(e) => form.setData('current_password', e.target.value)}
-                        />
-                    </Field>
+                    <ReauthFields
+                        idPrefix={`passkey_delete_${passkey.id}`}
+                        data={form.data}
+                        errors={form.errors}
+                        onChange={form.setData}
+                        onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                        requiresSecondFactor={requiresSecondFactor}
+                    />
                     <FormActions>
                         <Button type="submit" variant="destructive" size="sm" loading={form.processing}>
                             {t('Remove')}
@@ -248,7 +207,7 @@ export default function ConfigPasskeys({ passkeys, requiresPassword, requiresSec
                     ) : (
                         <ul className="divide-y divide-border">
                             {passkeys.map((passkey) => (
-                                <PasskeyCard key={passkey.id} passkey={passkey} last={passkeys.length === 1} />
+                                <PasskeyCard key={passkey.id} passkey={passkey} last={passkeys.length === 1} requiresSecondFactor={requiresSecondFactor} />
                             ))}
                         </ul>
                     )}
