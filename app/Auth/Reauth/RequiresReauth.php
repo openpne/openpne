@@ -109,7 +109,8 @@ trait RequiresReauth
         // An empty field is "not provided", not a wrong password: the form submits it even when the
         // UI shows no field, and dropping it lets requiredIf decide.
         if (in_array($this->input('current_password'), [null, ''], true)) {
-            $this->request->remove('current_password');
+            // A JSON body is read from its own bag, which `$this->request` is not.
+            $this->getInputSource()->remove('current_password');
         }
     }
 

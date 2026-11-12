@@ -68,12 +68,16 @@ function bindReauth(button: HTMLButtonElement): void {
 
             return;
         }
-        const form = button.closest('form');
-        // The server verifies a password whenever one is sent, so it is emptied before the form goes.
-        for (const field of form?.querySelectorAll<HTMLInputElement>('input[name="current_password"]') ?? []) {
+        // The server verifies a password whenever one is sent, and a disabled field is not sent.
+        for (const field of button.closest('form')?.querySelectorAll<HTMLInputElement>('input[name="current_password"]') ?? []) {
             field.value = '';
+            field.disabled = true;
         }
-        form?.requestSubmit();
+        button.hidden = true;
+        const proved = button.parentElement?.querySelector<HTMLElement>('[data-passkey-proved]');
+        if (proved) {
+            proved.hidden = false;
+        }
     });
 }
 

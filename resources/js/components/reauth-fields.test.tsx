@@ -65,9 +65,9 @@ test('the passkey button shows only for a member who holds one, on a browser tha
     expect(button()).not.toBeNull();
 });
 
-test('a verified passkey submits the form for its purpose with the typed password emptied', async () => {
+test('a verified passkey replaces the fields and empties the typed password, leaving the submit to the member', async () => {
     const onSubmit = vi.fn();
-    renderWithProviders(<Form onSubmit={onSubmit} />);
+    const { container } = renderWithProviders(<Form onSubmit={onSubmit} />);
 
     fireEvent.click(button()!);
     await act(() => Promise.resolve());
@@ -76,7 +76,11 @@ test('a verified passkey submits the form for its purpose with the typed passwor
         options: '/member/reauth/passkey/options?purpose=withdrawal',
         submit: '/member/reauth/passkey',
     });
-    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('status').textContent).toBe('Confirmed with your passkey. Please finish within two minutes.');
+    expect(container.querySelector('#t_password')).toBeNull();
+
+    fireEvent.submit(container.querySelector('form')!);
     expect(onSubmit.mock.calls[0]?.[0].current_password).toBe('');
 });
 

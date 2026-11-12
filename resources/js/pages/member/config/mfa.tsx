@@ -177,6 +177,7 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                         <ReauthFields
                             idPrefix="mfa_regen"
                             purpose="mfa-recovery-codes"
+                            codeBesidePasskey
                             data={regenerate.data}
                             errors={regenerate.errors}
                             onChange={regenerate.setData}

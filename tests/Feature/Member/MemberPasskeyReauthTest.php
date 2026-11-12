@@ -180,6 +180,19 @@ class MemberPasskeyReauthTest extends TestCase
         $this->assertNull(session(PasskeyProof::SLOT));
     }
 
+    /** The Modern forms post JSON with the password field always present, empty when unused. */
+    public function test_an_empty_password_in_a_json_body_is_no_password(): void
+    {
+        $member = Member::factory()->create();
+        $this->prove($member, ReauthPurpose::EmailChange);
+
+        $this->postJson('/member/config/email', ['new_email' => 'first@example.com', 'current_password' => ''])->assertRedirect();
+        $this->assertNull(session(PasskeyProof::SLOT));
+
+        $this->postJson('/member/config/email', ['new_email' => 'second@example.com', 'current_password' => ''])
+            ->assertUnprocessable()->assertJsonValidationErrors(['current_password' => __('validation.required', ['attribute' => __('validation.attributes.current_password')])]);
+    }
+
     public function test_a_proof_for_another_purpose_or_an_old_one_is_refused(): void
     {
         // Withdrawal refuses member id 1.

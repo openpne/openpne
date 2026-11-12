@@ -1,8 +1,7 @@
 import { Passkeys } from '@laravel/passkeys';
 import { usePage } from '@inertiajs/react';
 import { KeyRound } from 'lucide-react';
-import { useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -46,6 +45,8 @@ interface Props {
     /** Defaults to whether the signed-in member holds a confirmed factor. */
     requiresSecondFactor?: boolean;
     allowRecoveryCode?: boolean;
+    /** Where the operation's own demand is a TOTP code, which stays asked for after a passkey. */
+    codeBesidePasskey?: boolean;
     /** For a form the browser submits itself: the fields carry their names. */
     native?: boolean;
     passwordHelp?: string;
@@ -62,6 +63,7 @@ export function ReauthFields({
     onResetSecondFactor,
     requiresSecondFactor,
     allowRecoveryCode = true,
+    codeBesidePasskey = false,
     native = false,
     passwordHelp,
     codeHelp,
@@ -71,8 +73,8 @@ export function ReauthFields({
     const viewer = usePage<PageProps>().props.auth.user;
     const holdsFactor = viewer?.hasTwoFactor ?? false;
     const offersPasskey = (viewer?.hasPasskey ?? false) && Passkeys.isSupported();
-    const passkeyButton = useRef<HTMLButtonElement>(null);
     const [proving, setProving] = useState(false);
+    const [proved, setProved] = useState(false);
     const [passkeyFailure, setPasskeyFailure] = useState<string | null>(null);
 
     const proveWithPasskey = async () => {
@@ -88,14 +90,40 @@ export function ReauthFields({
 
             return;
         }
-        // The server verifies a password whenever one is sent, so it is emptied before the form goes.
-        flushSync(() => onChange('current_password', ''));
+        // The server verifies a password whenever one is sent, so what was typed is emptied.
+        onChange('current_password', '');
+        if (!codeBesidePasskey) {
+            onResetSecondFactor();
+        }
         setProving(false);
-        passkeyButton.current?.closest('form')?.requestSubmit();
+        setProved(true);
     };
+
     const asksSecondFactor = requiresSecondFactor ?? holdsFactor;
     // The server prefers a filled recovery code, so only the shown field is ever populated.
     const [useRecovery, setUseRecovery] = useState(false);
+
+    // The proof lasts two minutes and one request; the server asking for the password again means it is gone.
+    if (proved && !errors.current_password) {
+        return (
+            <>
+                <p className="text-sm" role="status">
+                    {t('Confirmed with your passkey. Please finish within two minutes.')}
+                </p>
+                {codeBesidePasskey && asksSecondFactor && (
+                    <Field
+                        label={t('Authentication code')}
+                        htmlFor={`${idPrefix}_code`}
+                        help={codeHelp ?? t('Enter the six-digit code shown in your authenticator app.')}
+                        error={errors.code}
+                    >
+                        <OtpInput label={t('Authentication code')} value={data.code} onChange={(code) => onChange('code', code)} />
+                        {native && <input type="hidden" name="code" value={data.code} />}
+                    </Field>
+                )}
+            </>
+        );
+    }
 
     return (
         <>
@@ -140,7 +168,7 @@ export function ReauthFields({
                 ))}
             {offersPasskey && (
                 <div className="space-y-2">
-                    <Button ref={passkeyButton} type="button" variant="outline" loading={proving} onClick={() => void proveWithPasskey()}>
+                    <Button type="button" variant="outline" loading={proving} onClick={() => void proveWithPasskey()}>
                         <KeyRound className="size-4" aria-hidden />
                         {t('Confirm with a passkey instead')}
                     </Button>

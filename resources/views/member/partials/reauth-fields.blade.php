@@ -39,6 +39,7 @@
                         data-options-url="{{ route('member.reauth.passkey.options', ['purpose' => $purpose]) }}"
                         data-submit-url="{{ route('member.reauth.passkey.store') }}"
                         data-messages="{{ $passkeyMessages }}">{{ __('Confirm with a passkey instead') }}</button>
+                <p role="status" data-passkey-proved hidden>{{ __('Confirmed with your passkey. Please finish within two minutes.') }}</p>
                 <p class="error" role="alert" data-passkey-error hidden></p>
             </td>
         </tr>
@@ -65,6 +66,7 @@
                     data-options-url="{{ route('member.reauth.passkey.options', ['purpose' => $purpose]) }}"
                     data-submit-url="{{ route('member.reauth.passkey.store') }}"
                     data-messages="{{ $passkeyMessages }}">{{ __('Confirm with a passkey instead') }}</button>
+            <span role="status" data-passkey-proved hidden>{{ __('Confirmed with your passkey. Please finish within two minutes.') }}</span>
             <span class="error" role="alert" data-passkey-error hidden></span>
         </span>
     @endif
