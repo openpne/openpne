@@ -86,10 +86,7 @@ interface RowHandlers {
     showReactors: (id: number, emoji?: string) => void;
 }
 
-/**
- * Every prop keeps its identity while the row's own facts stand, so a page render that changed
- * nothing about a row skips it: the page re-renders on scroll and on every poll.
- */
+/** Skipped by a page render only while every prop keeps its identity, so none may be built inline. */
 const TalkRow = memo(function TalkRow({
     message,
     chips,
