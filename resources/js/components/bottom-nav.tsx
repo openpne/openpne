@@ -15,6 +15,7 @@ import {
 } from '@/lib/member-chrome';
 import { badgePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
+import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
@@ -82,6 +83,7 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                     <li key={href} className="flex-1">
                         <Link
                             href={href}
+                            {...pressPrefetch(href)}
                             aria-current={active ? 'page' : undefined}
                             className={cn(
                                 'flex size-full flex-col items-center justify-center gap-1 transition',
@@ -146,6 +148,7 @@ function ZoneTab({ section, count = 0, shortLabel }: { section: NavSection; coun
         <li className="flex w-24 shrink-0 items-stretch">
             <Link
                 href={section.href}
+                {...pressPrefetch(section.href)}
                 className="flex size-full min-h-11 items-center justify-center gap-1.5 px-1 text-muted-foreground transition hover:text-foreground"
             >
                 <span className="relative inline-flex">

@@ -5,6 +5,7 @@ import { CountPill } from '@/components/count-pill';
 import { TALK_ROOMS_HREF, visibleNavSections } from '@/lib/member-chrome';
 import { badgePhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
+import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
 import type { ModernGroupListId, PageProps, TalkNavRooms } from '@/types';
 
@@ -27,6 +28,7 @@ export function NavItems({ onNavigate, rooms }: { onNavigate?: () => void; rooms
                     <li key={href}>
                         <Link
                             href={href}
+                            {...pressPrefetch(href)}
                             onClick={onNavigate}
                             aria-current={active ? 'page' : undefined}
                             className={

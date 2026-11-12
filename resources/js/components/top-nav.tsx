@@ -27,6 +27,7 @@ import {
     unifiedTabs,
 } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
+import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
@@ -201,6 +202,7 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
                         <Link
                             key={section.href}
                             href={section.href}
+                            {...pressPrefetch(section.href)}
                             aria-current={active ? 'page' : undefined}
                             className="group relative flex min-h-12 min-w-0 items-center px-3"
                         >
@@ -231,7 +233,7 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
                         : t(NOTIFICATIONS_SECTION.label.key)
                 }
             >
-                <Link href={NOTIFICATIONS_SECTION.href} className={cn(BAR_CONTROL, 'relative')}>
+                <Link href={NOTIFICATIONS_SECTION.href} {...pressPrefetch(NOTIFICATIONS_SECTION.href)} className={cn(BAR_CONTROL, 'relative')}>
                     <NOTIFICATIONS_SECTION.icon className="size-6" aria-hidden />
                     {notifications > 0 && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-selected" />}
                 </Link>
@@ -260,14 +262,14 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
             {/* Left-aligned, not centered: a trail reads from its root, and the root is the way home. */}
             {brand ? (
                 // No Tip: the site name beside the mark is the word a reader sees.
-                <Link href="/" className="flex min-h-12 min-w-0 items-center gap-2">
+                <Link href="/" {...pressPrefetch('/')} className="flex min-h-12 min-w-0 items-center gap-2">
                     <BrandMark size="sm" />
                     <BrandName className="truncate" />
                 </Link>
             ) : (
                 // BrandMark is aria-hidden in both its arms, so without this the link has no name at all.
                 <Tip label={t('Home')}>
-                    <Link href="/" className="flex min-h-12 shrink-0 items-center gap-2">
+                    <Link href="/" {...pressPrefetch('/')} className="flex min-h-12 shrink-0 items-center gap-2">
                         <BrandMark size="sm" />
                     </Link>
                 </Tip>
