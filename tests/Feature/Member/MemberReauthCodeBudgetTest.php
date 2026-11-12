@@ -163,6 +163,16 @@ class MemberReauthCodeBudgetTest extends TestCase
         $this->assertNull($this->member->fresh()->two_factor_secret);
     }
 
+    public function test_a_passkey_proof_survives_a_refusal_by_the_budget(): void
+    {
+        $this->wrongCodes(5);
+        PasskeyProof::issue(app('session.store'), $this->member, ReauthPurpose::MfaRecoveryCodes);
+
+        $this->post('/member/config/mfa/recovery-codes', ['code' => $this->otp()])->assertSessionHasErrors('code');
+
+        $this->assertTrue(PasskeyProof::stands(app('session.store'), $this->member, ReauthPurpose::MfaRecoveryCodes));
+    }
+
     public function test_the_pause_lifts_a_day_after_the_first_wrong_code(): void
     {
         $this->wrongCodes(ReauthCodeBudget::MAX_CONSECUTIVE + 1, secondsApart: 13);

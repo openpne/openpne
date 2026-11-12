@@ -125,7 +125,7 @@ trait RequiresReauth
 
         $proof = $this->reauthProof();
 
-        // Before the proof is spent, so a refusal here leaves it for the retry.
+        // Before the proof is spent, so a refusal by the budget leaves it for the retry.
         if ($proof->comparesCode()) {
             app(ReauthCodeBudget::class)->reserve($viewer, $this->session());
         }

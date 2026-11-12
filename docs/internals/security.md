@@ -421,7 +421,7 @@ step-ups compare, whichever operation asks.
   upper bound NIST SP 800-63B-4 (Sec. 3.2.2) sets for consecutive failures, but
   this is not that control: the pause lifts by itself, and the sign-in
   challenge, which checks the same secret, is outside it.
-- **Only a compared code counts.** A wrong password is refused by the rules
+- **Only a code about to be compared counts.** A wrong password is refused by the rules
   before the budget is touched, so a session holder who does not know the
   password cannot pause anything; a recovery code and a passkey proof are not
   guessable and spend nothing, so both still work during a pause — except for
