@@ -2,6 +2,7 @@
 
 namespace App\Listeners\Security;
 
+use App\Features\Member\ReauthPasskeyController;
 use App\Support\SecurityLog;
 use Laravel\Passkeys\Events\PasskeyVerified;
 
@@ -13,10 +14,12 @@ class LogPasskeyVerified
 {
     public function handle(PasskeyVerified $event): void
     {
+        $purpose = request()->attributes->get(ReauthPasskeyController::PURPOSE_ATTRIBUTE);
+
         SecurityLog::event('passkey.verified', [
             'guard' => 'member',
             'member_id' => $event->user->getAuthIdentifier(),
             'passkey_id' => $event->passkey->getKey(),
-        ]);
+        ] + ($purpose === null ? [] : ['via' => 'reauth', 'purpose' => $purpose]));
     }
 }

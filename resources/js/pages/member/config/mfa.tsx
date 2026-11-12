@@ -59,6 +59,7 @@ function Disabled() {
                 <p className="text-sm text-foreground">{t('To continue, first confirm it is you.')}</p>
                 <ReauthFields
                     idPrefix="mfa_enable"
+                    purpose="mfa-setup"
                     data={form.data}
                     errors={form.errors}
                     onChange={form.setData}
@@ -115,6 +116,7 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
                     {requiresPassword && (
                         <ReauthFields
                             idPrefix="mfa_confirm"
+                            purpose="mfa-setup"
                             data={form.data}
                             errors={form.errors}
                             onChange={form.setData}
@@ -174,6 +176,7 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                     >
                         <ReauthFields
                             idPrefix="mfa_regen"
+                            purpose="mfa-recovery-codes"
                             data={regenerate.data}
                             errors={regenerate.errors}
                             onChange={regenerate.setData}
@@ -205,6 +208,7 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                     >
                         <ReauthFields
                             idPrefix="mfa_disable"
+                            purpose="mfa-disable"
                             data={disable.data}
                             errors={disable.errors}
                             onChange={disable.setData}

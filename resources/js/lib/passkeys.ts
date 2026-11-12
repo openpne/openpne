@@ -4,6 +4,7 @@ import { NotSupportedError, PasskeyExistsError, UserCancelledError } from '@lara
 export const PASSKEY_ROUTES = {
     register: { options: '/member/config/passkeys/options', submit: '/member/config/passkeys' },
     login: { options: '/passkeys/login/options', submit: '/passkeys/login' },
+    reauth: { options: '/member/reauth/passkey/options', submit: '/member/reauth/passkey' },
 } as const;
 
 /** The framework's 429 body carries this literal; every other server message arrives already translated. */

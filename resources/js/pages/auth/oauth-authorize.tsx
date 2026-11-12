@@ -106,6 +106,7 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken, r
                 {requiresPassword && (
                     <ReauthFields
                         idPrefix="consent"
+                        purpose="oauth-consent"
                         native
                         data={reauth}
                         errors={errors}

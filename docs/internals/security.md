@@ -340,6 +340,13 @@ the operation's FormRequest:
 - **The proof is the account password, plus the confirmed TOTP factor when the
   member has one** — a current code or an unused recovery code. A member
   without a confirmed factor gives the password alone.
+- **A passkey stands in for both.** A member who holds one may assert it
+  instead (user verification required), and is then asked for neither the
+  password nor the second factor. The one exception is new recovery codes,
+  whose own demand is a TOTP code whichever way the member proved themselves.
+  Changing the password this way needs no current password.
+- **A password that was sent is always the path taken**, so a passkey proof
+  never excuses a wrong one and is left unspent.
 - **A proof serves one purpose.** Each request names a `ReauthPurpose`; a
   purpose either asks every time or opens its own 15-minute `ReauthWindow`, and
   no window opens another operation. A window is stamped only by a verified
@@ -363,6 +370,70 @@ the operation's FormRequest:
 - **Every route that asks is throttled** per member (5/min, the feature's own
   limiter or `member-reauth`), since the second factor is a six-digit code;
   `MemberReauthSeamTest` refuses a route without one.
+
+### The passkey proof
+
+`ReauthPasskeyController` runs the ceremony on two routes of its own
+(`/member/reauth/passkey/options?purpose=…`, `/member/reauth/passkey`), not the
+package's confirmation route, which stamps the framework-wide
+`auth.password_confirmed_at` and would open every operation at once.
+
+- **The purpose is fixed when the challenge is issued.** It is stored beside
+  the challenge in the session (`reauth.passkey_options`, a key the login
+  screen's ceremony never writes) and read back from there; the verify request
+  cannot name another. The assertion must come from one of the member's own
+  passkeys.
+- **A verified assertion leaves a proof in the session** (`PasskeyProof`): the
+  member, the purpose, a nonce and the time. The seam accepts it for that
+  member and purpose for two minutes.
+- **A proof opens one request.** The session is not locked, so parallel
+  requests read the same proof; the one whose `Cache::add` of the nonce
+  succeeds is the one that passes. The challenge is spent the same way, since a
+  request that began before the verify can save its stale session back over
+  the pulled slot. Both therefore rely on a cache store shared by every
+  process that serves the site (`CACHE_STORE=database`, the default, is one;
+  `array` is not).
+- A proof is not tied to the passkey that made it: removing that passkey from
+  another session inside the two minutes revokes this session, and with it the
+  proof.
+- The ceremony's two routes are serialized per session (`->block()`), and the
+  verify POST is throttled per member (`reauth-passkey`, 10/min). The challenge
+  GET is not, as for the other ceremonies.
+- A step-up assertion logs `passkey.verified` with `via: reauth` and the
+  purpose; a refused one logs `passkey.failed` with `via: reauth`.
+
+An accepted residual: someone who knows the device PIN of a member's unlocked
+device passes a passkey step-up. The notices mailed on a credential change are
+the compensation.
+
+### The code budget
+
+The route limiters bound each group of routes separately, so
+`ReauthCodeBudget` bounds what they add up to: how many TOTP codes one member's
+step-ups compare, whichever operation asks.
+
+- **Five comparisons a minute** per member and session. A sixth is refused
+  without being compared.
+- **A hundred wrong codes without a right one between them pause the codes**
+  until a day after the first of them: a step-up then refuses every TOTP code
+  unseen, logs `mfa.codes_paused` and mails the member once. A right code
+  resets the count, once its operation has committed. The figure borrows the
+  upper bound NIST SP 800-63B-4 (Sec. 3.2.2) sets for consecutive failures, but
+  this is not that control: the pause lifts by itself, and the sign-in
+  challenge, which checks the same secret, is outside it.
+- **Only a compared code counts.** A wrong password is refused by the rules
+  before the budget is touched, so a session holder who does not know the
+  password cannot pause anything; a recovery code and a passkey proof are not
+  guessable and spend nothing, so both still work during a pause — except for
+  new recovery codes, which only a TOTP code obtains.
+- **The count is taken before the comparison and outside the transaction** the
+  verdict runs in: the database cache store shares the default connection, so
+  a count taken inside would roll back with every wrong code.
+
+With a window of one step either side (three valid codes), a hundred guesses
+succeed about three times in ten thousand (RFC 4226, Sec. 6). The accepted
+cost: whoever holds a session and the password can keep the codes paused, and
+a member with neither a passkey nor a recovery code then waits it out.
 
 Every member step-up goes through the seam: the two-factor and passkey
 settings, password and email change, withdrawal, deleting an AI account,

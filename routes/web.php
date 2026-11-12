@@ -36,6 +36,7 @@ use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberPasskeyController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Member\MfaResetLinkController;
+use App\Features\Member\ReauthPasskeyController;
 use App\Features\Member\RowActionsHintController;
 use App\Features\Notifications\NotificationCenterController;
 use App\Features\Notifications\NotificationFeedController;
@@ -680,6 +681,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         });
         Route::get('/member/config/passkeys/options', 'options')->name('member.config.passkeys.options');
         Route::get('/member/config/passkeys', 'edit')->name('member.config.passkeys.edit');
+    });
+
+    // Blocked per session, since two ceremonies racing would overwrite each other's challenge.
+    Route::controller(ReauthPasskeyController::class)->group(function () {
+        Route::get('/member/reauth/passkey/options', 'options')->block()->name('member.reauth.passkey.options');
+        Route::post('/member/reauth/passkey', 'store')->middleware('throttle:reauth-passkey')->block()->name('member.reauth.passkey.store');
     });
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {

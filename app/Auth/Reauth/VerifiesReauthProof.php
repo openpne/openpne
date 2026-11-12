@@ -3,6 +3,7 @@
 namespace App\Auth\Reauth;
 
 use App\Models\Member;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
@@ -19,11 +20,11 @@ trait VerifiesReauthProof
     {
         // The request-boundary rule read the member as loaded when the request began; a password
         // changed since must not be proven by what was true then.
-        if ($proof->offered && ! Hash::check($proof->password, (string) $locked->password)) {
+        if ($proof->offered && ! $proof->viaPasskey && ! Hash::check($proof->password, (string) $locked->password)) {
             throw ValidationException::withMessages(['current_password' => __('validation.current_password')]);
         }
 
-        if ($proof->offered && $proof->secondFactorDemanded === null) {
+        if ($proof->offered && ($proof->secondFactorDemanded === null || ($proof->viaPasskey && ! $proof->secondFactorDemanded))) {
             return;
         }
 
@@ -40,7 +41,7 @@ trait VerifiesReauthProof
         }
 
         // A filled recovery code wins over a TOTP code, as the login challenge does.
-        if ((string) $proof->recoveryCode !== '') {
+        if (! $proof->comparesCode()) {
             $matched = collect($locked->recoveryCodes())
                 ->first(fn (string $code): bool => hash_equals($code, (string) $proof->recoveryCode));
 
@@ -62,5 +63,8 @@ trait VerifiesReauthProof
                 'code' => __('The provided two factor authentication code was invalid.'),
             ]);
         }
+
+        // After the commit, so an operation that rolls back leaves the count where the comparison put it.
+        DB::afterCommit(fn () => app(ReauthCodeBudget::class)->clear($locked));
     }
 }

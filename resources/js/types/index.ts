@@ -10,6 +10,8 @@ export interface AuthUser {
     isAi: boolean;
     /** Whether a confirmed two-factor factor exists, which a step-up then asks for. */
     hasTwoFactor?: boolean;
+    /** Whether a passkey is registered, which a step-up then offers in place of the password. */
+    hasPasskey?: boolean;
 }
 
 export interface SnsLogo {

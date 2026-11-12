@@ -37,6 +37,7 @@ enum MailTemplate: string
     case MfaResetLink = 'mfa-reset-link';
     case PasskeyRegistered = 'passkey-registered';
     case PasskeyRemoved = 'passkey-removed';
+    case MfaCodesPaused = 'mfa-codes-paused';
     case LoginCode = 'login-code';
     case MemberCapacityRequest = 'member-capacity-request';
 
@@ -276,6 +277,12 @@ enum MailTemplate: string
                 op3SourceName: null,
                 isConfigurable: false,
                 caption: 'Passkey removed',
+                variables: [],
+            ),
+            self::MfaCodesPaused => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Authentication codes paused',
                 variables: [],
             ),
             self::LoginCode => new MailTemplateDefinition(

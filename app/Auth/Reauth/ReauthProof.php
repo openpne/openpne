@@ -13,6 +13,7 @@ final readonly class ReauthProof
 {
     private function __construct(
         public bool $offered,
+        public bool $viaPasskey,
         #[SensitiveParameter] public string $password,
         public ?bool $secondFactorDemanded,
         public ?string $code,
@@ -22,11 +23,25 @@ final readonly class ReauthProof
     /** A request that was not asked to prove anything (a fresh window, an inert target). */
     public static function none(): self
     {
-        return new self(false, '', null, null, null);
+        return new self(false, false, '', null, null, null);
     }
 
     public static function password(#[SensitiveParameter] string $password, ?bool $secondFactorDemanded, ?string $code, ?string $recoveryCode): self
     {
-        return new self(true, $password, $secondFactorDemanded, $code, $recoveryCode);
+        return new self(true, false, $password, $secondFactorDemanded, $code, $recoveryCode);
+    }
+
+    /**
+     * Only for a passkey proof the request has already consumed. It stands for the second factor too,
+     * so `$codeDemanded` is true only where the operation itself asks for a TOTP code.
+     */
+    public static function passkey(bool $codeDemanded, ?string $code): self
+    {
+        return new self(true, true, '', $codeDemanded, $code, null);
+    }
+
+    public function comparesCode(): bool
+    {
+        return $this->secondFactorDemanded === true && (string) $this->recoveryCode === '';
     }
 }

@@ -34,6 +34,7 @@ export default function ConfigEmail({ email }: Props) {
                     </Field>
                     <ReauthFields
                         idPrefix="email_change"
+                        purpose="email-change"
                         data={form.data}
                         errors={form.errors}
                         onChange={(field, value) => form.setData(field, value)}

@@ -329,6 +329,7 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
                     {tokens.requiresPassword && (
                         <ReauthFields
                             idPrefix="ai_token"
+                            purpose="ai-token"
                             data={form.data}
                             errors={form.errors}
                             onChange={(field, value) => form.setData(field, value)}
@@ -523,6 +524,7 @@ export default function AiAccountShow() {
                     </p>
                     <ReauthFields
                         idPrefix="ai_delete"
+                        purpose="ai-account-delete"
                         data={deleteForm.data}
                         errors={deleteForm.errors}
                         onChange={(field, value) => deleteForm.setData(field, value)}

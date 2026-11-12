@@ -1,5 +1,5 @@
-// Classic surface lane: the passkey ceremonies behind `[data-passkey-register]` and
-// `[data-passkey-login]`, which the Blade views render with their route URLs in data attributes.
+// Classic surface lane: the passkey ceremonies behind `[data-passkey-register]`, `[data-passkey-login]`
+// and `[data-passkey-reauth]`, which the Blade views render with their route URLs in data attributes.
 import { Passkeys } from '@laravel/passkeys';
 import { passkeyErrorKey } from '@/lib/passkeys';
 
@@ -54,6 +54,29 @@ function bindLogin(button: HTMLButtonElement): void {
     });
 }
 
+function bindReauth(button: HTMLButtonElement): void {
+    const routes = { options: button.dataset.optionsUrl ?? '', submit: button.dataset.submitUrl ?? '' };
+
+    button.addEventListener('click', async () => {
+        report(button, '');
+        button.disabled = true;
+        try {
+            await Passkeys.verify({ routes });
+        } catch (error) {
+            report(button, translate(button, error));
+            button.disabled = false;
+
+            return;
+        }
+        const form = button.closest('form');
+        // The server verifies a password whenever one is sent, so it is emptied before the form goes.
+        for (const field of form?.querySelectorAll<HTMLInputElement>('input[name="current_password"]') ?? []) {
+            field.value = '';
+        }
+        form?.requestSubmit();
+    });
+}
+
 function boot(): void {
     const supported = Passkeys.isSupported();
     // Both buttons render hidden, since a no-JS or unsupported browser must never show a dead one.
@@ -67,6 +90,12 @@ function boot(): void {
         button.hidden = !supported;
         if (supported) {
             bindLogin(button);
+        }
+    }
+    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-passkey-reauth]')) {
+        if (supported) {
+            button.closest<HTMLElement>('[data-passkey-reauth-row]')?.removeAttribute('hidden');
+            bindReauth(button);
         }
     }
     if (!supported) {

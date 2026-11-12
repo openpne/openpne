@@ -23,6 +23,7 @@ export default function ConfigWithdrawal() {
                     </p>
                     <ReauthFields
                         idPrefix="withdrawal"
+                        purpose="withdrawal"
                         data={form.data}
                         errors={form.errors}
                         onChange={(field, value) => form.setData(field, value)}

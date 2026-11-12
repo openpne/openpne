@@ -472,6 +472,7 @@ export default function MemberConfig() {
                             <div className="space-y-4">
                                 <ReauthFields
                                     idPrefix="connection"
+                                    purpose="oauth-connection-revoke"
                                     data={connection.data}
                                     errors={connection.errors}
                                     onChange={(field, value) => connection.setData(field, value)}

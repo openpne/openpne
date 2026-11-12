@@ -59,6 +59,8 @@ class HandleInertiaRequests extends Middleware
                     // member reference, and one shape means one Avatar call everywhere.
                     'isAi' => $user->isAiAccount(),
                     'hasTwoFactor' => $user->hasEnabledTwoFactorAuthentication(),
+                    // Read only by the step-up screens, so no other page pays the query.
+                    'hasPasskey' => $request->routeIs('member.config', 'member.config.*', 'passport.authorizations.authorize') && $user->passkeys()->exists(),
                 ] : null,
             ],
             // A guest gets a constant all-false map in the same shape, so this prop discloses no toggle
