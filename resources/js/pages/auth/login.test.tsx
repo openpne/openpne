@@ -26,3 +26,10 @@ test('the email field anchors the browser passkey picker', () => {
 
     expect(screen.getByLabelText('Email').getAttribute('autocomplete')).toBe('email webauthn');
 });
+
+test('the form offers no remember-me choice', () => {
+    renderWithProviders(<Login loginMessage={null} />);
+
+    expect(screen.getByLabelText('Password')).toBeTruthy();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+});
