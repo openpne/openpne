@@ -135,6 +135,24 @@ The deployment side (nginx `real_ip` / passing `X-Forwarded-*`) is the
 operator's/hosting layer's responsibility; this app only consumes the headers
 once `TRUSTED_PROXIES` says the proxy may set them.
 
+## Static asset delivery
+
+The JavaScript and CSS under `public/build/assets/` are most of what a first visit downloads, and
+how the web server sends them decides how long that visit takes. Two things are expected of it:
+
+- **Compress static text files** (`.js`, `.css`, `.svg`, `.json`).
+- **Mark `public/build/assets/*` as `Cache-Control: public, max-age=31536000, immutable`.** Every
+  file there has a content hash in its name, so a new build is a new URL. Only a file that exists
+  may carry the header: a 404 for an asset that a deploy has not placed yet must stay uncached.
+
+[`public/.htaccess`](../../public/.htaccess) does both on Apache where `mod_deflate`, `mod_headers`
+and `mod_setenvif` are loaded, and nothing where they are not. Any other server (nginx, Caddy) needs
+the same two rules in its own configuration.
+
+The shipped rules leave responses from `index.php` alone. Compressing a page that carries a CSRF
+token next to reflected input is the BREACH side channel, so whether to compress dynamic responses
+is the operator's decision.
+
 ## Cache reads
 
 Site settings, terms, navigation rows and gadget rows are cached under one key each, and a request

@@ -23,3 +23,25 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Static files only: these rules leave a response from index.php as it is
+# (docs/internals/runtime.md, "Static asset delivery").
+<IfModule mod_deflate.c>
+    <IfModule mod_headers.c>
+        <FilesMatch "\.(?:js|css|svg|json|webmanifest)$">
+            SetOutputFilter DEFLATE
+        </FilesMatch>
+        # mod_deflate suffixes the ETag it sends and then fails to match it on the way back,
+        # so without this a compressed file is never answered with 304.
+        RequestHeader edit If-None-Match "-gzip\"" "\""
+    </IfModule>
+</IfModule>
+
+<IfModule mod_headers.c>
+    <IfModule mod_setenvif.c>
+        SetEnvIf Request_URI "/build/assets/[^/]+$" openpne_hashed_asset
+        <FilesMatch "\.(?:js|css|woff2?)$">
+            Header set Cache-Control "public, max-age=31536000, immutable" env=openpne_hashed_asset
+        </FilesMatch>
+    </IfModule>
+</IfModule>
