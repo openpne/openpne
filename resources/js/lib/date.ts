@@ -88,19 +88,19 @@ export function formatExact(iso: string, { locale, timeZone }: DateFormatContext
 }
 
 export function formatCivilMonth(year: number, month: number, { locale }: DateFormatContext): string {
-    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', timeZone: UTC }).format(
+    return formatter(locale, { year: 'numeric', month: 'long', timeZone: UTC }).format(
         Date.UTC(year, month - 1, 1),
     );
 }
 
 export function formatCivilMonthShort(month: number, { locale }: DateFormatContext): string {
-    return new Intl.DateTimeFormat(locale, { month: 'short', timeZone: UTC }).format(Date.UTC(2000, month - 1, 1));
+    return formatter(locale, { month: 'short', timeZone: UTC }).format(Date.UTC(2000, month - 1, 1));
 }
 
 /** `weekday` counts from Sunday, 0 to 6, as `Date#getUTCDay` does. */
 export function formatWeekday(weekday: number, { locale }: DateFormatContext, width: 'short' | 'long' = 'short'): string {
     // 2023-01-01 was a Sunday.
-    return new Intl.DateTimeFormat(locale, { weekday: width, timeZone: UTC }).format(Date.UTC(2023, 0, 1 + weekday));
+    return formatter(locale, { weekday: width, timeZone: UTC }).format(Date.UTC(2023, 0, 1 + weekday));
 }
 
 /** A civil month as Sunday-first weeks of day numbers, null where a week reaches outside the month. */
@@ -293,12 +293,7 @@ export function siteCurrentYear({ timeZone }: DateFormatContext, now: Date = new
  * own calendar or numerals would make "same day" depend on the display language.
  */
 function siteDayParts(date: Date, timeZone: string): { year: number; month: number; day: number } {
-    const parts = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        timeZone,
-    }).formatToParts(date);
+    const parts = formatter('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone }).formatToParts(date);
     const read = (type: string) => Number(parts.find((part) => part.type === type)?.value);
 
     return { year: read('year'), month: read('month'), day: read('day') };
@@ -315,7 +310,24 @@ function render(date: Date, raw: string, locale: string, options: Intl.DateTimeF
         return raw;
     }
 
-    return new Intl.DateTimeFormat(locale, options).format(date);
+    return formatter(locale, options).format(date);
+}
+
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Kept per locale and shape, because constructing one costs far more than formatting with it and a
+ * list builds several per row on every render.
+ */
+function formatter(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+    const key = `${locale}|${JSON.stringify(options)}`;
+    let held = formatters.get(key);
+    if (held === undefined) {
+        held = new Intl.DateTimeFormat(locale, options);
+        formatters.set(key, held);
+    }
+
+    return held;
 }
 
 /**

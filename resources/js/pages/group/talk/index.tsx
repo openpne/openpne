@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChatDayHeading } from '@/components/chat-day-heading';
 import { ChatScrollDay } from '@/components/chat-scroll-day';
 import { useConfirm } from '@/components/confirm-dialog';
@@ -33,6 +33,7 @@ import { SelectTextSheet } from '@/components/row/select-text-sheet';
 import { useRowSheet } from '@/components/row/use-row-sheet';
 import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { TalkUnreadDigestCard } from './unread-digest';
+import type { ChatReactionChip } from '@/lib/chat/types';
 import type { TalkMessage, TalkPage, TalkUnreadDigest, TalkUnreadSnapshot } from './types';
 
 interface TalkProps extends PageProps {
@@ -73,6 +74,62 @@ const appendMentions =
             form.append(`mentions[${index}][length]`, String(mention.length));
         });
     };
+
+const NO_CHIPS: ChatReactionChip[] = [];
+
+interface RowHandlers {
+    remove: (id: number) => void;
+    openActions: (id: number, row: HTMLElement) => void;
+    reply: (message: TalkMessage) => void;
+    jumpToReply: (parent: { id: number; cursor: string }) => void;
+    toggleReaction: (id: number, emoji: string, mine: boolean) => void;
+    showReactors: (id: number, emoji?: string) => void;
+}
+
+/** Skipped by a page render only while every prop keeps its identity, so none may be built inline. */
+const TalkRow = memo(function TalkRow({
+    message,
+    chips,
+    vocabulary,
+    canPost,
+    groupId,
+    highlighted,
+    grouped,
+    separatorAbove,
+    handlers,
+}: {
+    message: TalkMessage;
+    chips: ChatReactionChip[];
+    vocabulary: string[];
+    canPost: boolean;
+    groupId: number;
+    highlighted: boolean;
+    grouped: boolean;
+    separatorAbove: boolean;
+    handlers: RowHandlers;
+}) {
+    return (
+        <TalkMessageRow
+            message={message}
+            onDelete={handlers.remove}
+            onOpenActions={(row) => handlers.openActions(message.id, row)}
+            onReply={() => handlers.reply(message)}
+            onJumpToReply={handlers.jumpToReply}
+            canReply={canPost}
+            highlighted={highlighted}
+            grouped={grouped}
+            separatorAbove={separatorAbove}
+            reactions={{
+                chips,
+                vocabulary,
+                canReact: canPost,
+                onToggle: (emoji, mine) => handlers.toggleReaction(message.id, emoji, mine),
+                onShowReactors: (emoji) => handlers.showReactors(message.id, emoji),
+                reactorsUrl: `/groups/${groupId}/talk/messages/${message.id}/reactions`,
+            }}
+        />
+    );
+});
 
 export default function GroupTalkIndex() {
     const t = useT();
@@ -388,6 +445,33 @@ export default function GroupTalkIndex() {
         void stream.react(messageId, emoji, op).then(settle, settle);
     };
 
+    const latest = useRef<RowHandlers>(null!);
+    latest.current = {
+        remove: (id) => void remove(id),
+        openActions: (id, row) => {
+            hint.dismiss();
+            sheet.open(id, row);
+        },
+        reply: setReplyTo,
+        jumpToReply,
+        toggleReaction,
+        showReactors: (id, emoji) => setReactorsFor({ id, emoji }),
+    };
+    // One object for the page's life, each call reading the handlers of the render it lands in: a
+    // memoized row would otherwise keep the closures of the render it was last drawn by.
+    const rowHandlers = useMemo<RowHandlers>(
+        () => ({
+            remove: (id) => latest.current.remove(id),
+            openActions: (id, row) => latest.current.openActions(id, row),
+            reply: (message) => latest.current.reply(message),
+            jumpToReply: (parent) => latest.current.jumpToReply(parent),
+            toggleReaction: (id, emoji, mine) => latest.current.toggleReaction(id, emoji, mine),
+            showReactors: (id, emoji) => latest.current.showReactors(id, emoji),
+        }),
+        [],
+    );
+    const days = messages.map((message) => date.siteDay(message.createdAt));
+
     return (
         <>
             <Head title={t('Talk')} />
@@ -447,8 +531,7 @@ export default function GroupTalkIndex() {
                     <ul className="pb-3">
                         {messages.map((message, index) => {
                             const previous = messages[index - 1];
-                            const opensDay =
-                                previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
+                            const opensDay = previous === undefined || days[index] !== days[index - 1];
                             const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
                             // Whatever stands above the row holds its run open (message-grouping):
                             // the row says again who is speaking.
@@ -486,27 +569,16 @@ export default function GroupTalkIndex() {
                                         )}
                                     </li>
                                 )}
-                                <TalkMessageRow
+                                <TalkRow
                                     message={message}
-                                    onDelete={remove}
-                                    onOpenActions={(row) => {
-                                        hint.dismiss();
-                                        sheet.open(message.id, row);
-                                    }}
-                                    onReply={() => setReplyTo(message)}
-                                    onJumpToReply={jumpToReply}
-                                    canReply={canPost}
+                                    chips={chipsWithPending(message.reactions ?? NO_CHIPS, pendingReactions, message.id)}
+                                    vocabulary={reactionVocabulary}
+                                    canPost={canPost}
+                                    groupId={group.id}
                                     highlighted={message.id === highlightId}
                                     grouped={foldsInto(previous, message, restartsHere)}
                                     separatorAbove={restartsHere}
-                                    reactions={{
-                                        chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
-                                        vocabulary: reactionVocabulary,
-                                        canReact: canPost,
-                                        onToggle: (emoji, mine) => toggleReaction(message.id, emoji, mine),
-                                        onShowReactors: (emoji) => setReactorsFor({ id: message.id, emoji }),
-                                        reactorsUrl: `/groups/${group.id}/talk/messages/${message.id}/reactions`,
-                                    }}
+                                    handlers={rowHandlers}
                                 />
                             </Fragment>
                             );

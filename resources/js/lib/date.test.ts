@@ -281,3 +281,16 @@ test('a day label follows the site clock, not the viewer', () => {
     assert.equal(formatDayLabel(evening, { ...tokyo, locale: 'en' }, now), 'Mon, August 10');
     assert.equal(formatDayLabel(evening, { ...newYork, locale: 'en' }, now), 'Sun, August 9');
 });
+
+test('a formatter is built once per locale and shape, however many values pass through it', (context) => {
+    const built = context.mock.method(Intl, 'DateTimeFormat');
+    // A zone no other test here uses, so nothing is already held for it.
+    const chatham: DateFormatContext = { locale: 'en-NZ', timeZone: 'Pacific/Chatham' };
+
+    assert.equal(formatClockTime('2026-08-09T15:05:16+00:00', chatham), '03:50');
+    formatClockTime('2026-08-09T16:05:16+00:00', chatham);
+    siteDay('2026-08-09T15:05:16+00:00', chatham.timeZone);
+    siteDay('2026-08-10T15:05:16+00:00', chatham.timeZone);
+
+    assert.equal(built.mock.callCount(), 2);
+});
