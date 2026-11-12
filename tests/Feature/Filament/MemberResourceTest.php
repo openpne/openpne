@@ -18,7 +18,6 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Livewire\Livewire;
 use RuntimeException;
@@ -85,14 +84,12 @@ class MemberResourceTest extends TestCase
         $this->assertSame($this->admin->username, $context['admin_username']);
     }
 
-    public function test_ban_revokes_live_sessions_and_remember_tokens(): void
+    public function test_ban_revokes_live_sessions(): void
     {
-        // The freeze flag only blocks the NEXT login; the ban must also end what already
-        // exists — server-side sessions and remember-me cookies — immediately.
+        // The freeze flag only blocks the NEXT login; the ban must also end the sessions that
+        // already exist.
         config(['session.driver' => 'database']);
         $member = Member::factory()->create(['is_login_rejected' => false]);
-        $member->forceFill(['remember_token' => Str::random(60)])->save();
-        $before = $member->remember_token;
 
         DB::table('sessions')->insert([
             'id' => 'member-device', 'user_id' => $member->getKey(),
@@ -110,7 +107,6 @@ class MemberResourceTest extends TestCase
 
         $this->assertDatabaseMissing('sessions', ['id' => 'member-device']);
         $this->assertDatabaseHas('admin_sessions', ['id' => 'operator-device']);
-        $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 
     public function test_unban_allows_login(): void

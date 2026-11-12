@@ -412,7 +412,6 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertSame(1, Passkey::count());
 
         $this->insertOtherDeviceSession($member);
-        $before = $member->fresh()->remember_token;
 
         $this->actingAs($member)
             ->delete("/member/config/passkeys/{$passkey->getKey()}", ['current_password' => 'password'])
@@ -420,7 +419,6 @@ class MemberPasskeyManagementTest extends TestCase
 
         $this->assertSame(0, Passkey::count());
         $this->assertSame(0, DB::table('sessions')->where('id', 'other-device-session')->count());
-        $this->assertNotSame($before, $member->fresh()->remember_token);
         Notification::assertSentTo($member, PasskeyRemovedNotification::class);
         $this->assertSame((string) $passkey->getKey(), $this->assertOneSecurityEvent('passkey.removed')['passkey_id']);
     }
@@ -493,19 +491,15 @@ class MemberPasskeyManagementTest extends TestCase
     {
         $member = Member::factory()->create();
         $this->insertOtherDeviceSession($member);
-        $before = $member->fresh()->remember_token;
 
         $this->register($member);
 
         $this->assertSame(0, DB::table('sessions')->where('id', 'other-device-session')->count());
-        $afterFirst = $member->fresh()->remember_token;
-        $this->assertNotSame($before, $afterFirst);
 
         $this->insertOtherDeviceSession($member);
         $this->register($member);
 
         $this->assertSame(1, DB::table('sessions')->where('id', 'other-device-session')->count());
-        $this->assertSame($afterFirst, $member->fresh()->remember_token);
     }
 
     public function test_the_store_request_passes_its_own_session_as_the_one_to_keep(): void
@@ -533,7 +527,6 @@ class MemberPasskeyManagementTest extends TestCase
     {
         $member = $this->memberWithTwoFactor();
         $this->insertOtherDeviceSession($member);
-        $before = $member->fresh()->remember_token;
 
         $this->actingAs($member)
             ->post('/member/config/passkeys/reauth', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
@@ -544,7 +537,6 @@ class MemberPasskeyManagementTest extends TestCase
 
         $this->assertSame(1, $member->passkeys()->count());
         $this->assertSame(1, DB::table('sessions')->where('id', 'other-device-session')->count());
-        $this->assertSame($before, $member->fresh()->remember_token);
     }
 
     public function test_the_mutating_routes_share_one_budget_that_fits_a_registration(): void

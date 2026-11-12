@@ -263,7 +263,6 @@ class MemberMfaManagementTest extends TestCase
     public function test_confirm_turns_the_factor_on_and_revokes_other_sessions(): void
     {
         $member = $this->memberWithPendingSetup();
-        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
         $this->insertOtherDeviceSession($member);
 
         $response = $this->actingAs($member)->post('/member/config/mfa/confirm', [
@@ -275,7 +274,6 @@ class MemberMfaManagementTest extends TestCase
         $fresh = $member->fresh();
         $this->assertNotNull($fresh->two_factor_confirmed_at);
         $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
-        $this->assertNotSame('old-remember-token', $fresh->remember_token);
 
         $this->get('/member/config?category=mfa')->assertSee($fresh->recoveryCodes()[0], false);
         $this->get('/member/config?category=mfa')->assertDontSee($fresh->recoveryCodes()[0], false);
@@ -310,7 +308,6 @@ class MemberMfaManagementTest extends TestCase
     public function test_disable_clears_the_factor_and_revokes_other_sessions(): void
     {
         $member = $this->memberWithTwoFactor();
-        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
         $this->insertOtherDeviceSession($member);
 
         $this->actingAs($member)
@@ -322,7 +319,6 @@ class MemberMfaManagementTest extends TestCase
         $this->assertNull($fresh->two_factor_recovery_codes);
         $this->assertNull($fresh->two_factor_confirmed_at);
         $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
-        $this->assertNotSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_a_step_up_disable_drops_a_pending_admin_reset_link(): void
@@ -341,7 +337,7 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_disable_with_nothing_set_up_revokes_nothing(): void
     {
-        $member = Member::factory()->create(['remember_token' => 'old-remember-token']);
+        $member = Member::factory()->create();
         $this->insertOtherDeviceSession($member);
 
         $this->actingAs($member)
@@ -349,15 +345,12 @@ class MemberMfaManagementTest extends TestCase
             ->assertRedirect('/member/config?category=mfa');
 
         $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
-        $this->assertSame('old-remember-token', $member->fresh()->remember_token);
     }
 
     public function test_cancelling_a_pending_setup_clears_the_secret_without_a_password(): void
     {
-        // The cancel is password-free, so a walked-up session must not be able to trigger a purge or
-        // a token rotation.
+        // The cancel is password-free, so a walked-up session must not be able to trigger a purge.
         $member = $this->memberWithPendingSetup();
-        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
         $this->insertOtherDeviceSession($member);
 
         $this->actingAs($member)->post('/member/config/mfa/disable');
@@ -365,13 +358,11 @@ class MemberMfaManagementTest extends TestCase
         $fresh = $member->fresh();
         $this->assertNull($fresh->two_factor_secret);
         $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
-        $this->assertSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_regenerate_rotates_codes_without_revoking_sessions(): void
     {
         $member = $this->memberWithTwoFactor();
-        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
         $this->insertOtherDeviceSession($member);
         $oldCodes = $member->recoveryCodes();
 
@@ -383,7 +374,6 @@ class MemberMfaManagementTest extends TestCase
         $this->assertNotEquals($oldCodes, $fresh->recoveryCodes());
         $this->assertCount(8, $fresh->recoveryCodes());
         $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
-        $this->assertSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_regenerating_codes_drops_a_pending_admin_reset_link(): void
@@ -473,7 +463,6 @@ class MemberMfaManagementTest extends TestCase
     public function test_disabling_a_live_factor_with_an_invalid_code_changes_nothing(): void
     {
         $member = $this->memberWithTwoFactor();
-        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
         $this->insertOtherDeviceSession($member);
 
         $this->actingAs($member)
@@ -483,7 +472,6 @@ class MemberMfaManagementTest extends TestCase
         $fresh = $member->fresh();
         $this->assertNotNull($fresh->two_factor_secret);
         $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
-        $this->assertSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_disabling_a_live_factor_with_an_invalid_recovery_code_is_rejected(): void
@@ -502,7 +490,6 @@ class MemberMfaManagementTest extends TestCase
     public function test_disabling_a_live_factor_with_a_valid_recovery_code_removes_it(): void
     {
         $member = $this->memberWithTwoFactor();
-        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
         $this->insertOtherDeviceSession($member);
         $recovery = $member->recoveryCodes()[0];
 
@@ -514,7 +501,6 @@ class MemberMfaManagementTest extends TestCase
         $this->assertNull($fresh->two_factor_secret);
         $this->assertNull($fresh->two_factor_recovery_codes);
         $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
-        $this->assertNotSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_a_wrong_password_does_not_burn_the_regenerate_code(): void

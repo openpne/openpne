@@ -134,7 +134,7 @@ class LoginCodeChallengeTest extends TestCase
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('login.success')['member_id']);
     }
 
-    public function test_the_recaller_is_minted_only_after_the_code(): void
+    public function test_no_recaller_is_minted_after_the_code(): void
     {
         $member = $this->memberWithPasskey();
         $recaller = Auth::guard('member')->getRecallerName();
@@ -142,7 +142,7 @@ class LoginCodeChallengeTest extends TestCase
         $this->post('/login', ['email' => $member->email, 'password' => 'password', 'remember' => 'on'])
             ->assertCookieMissing($recaller);
 
-        $this->post('/login/code', ['code' => $this->mailedCode()])->assertCookie($recaller);
+        $this->post('/login/code', ['code' => $this->mailedCode()])->assertCookieMissing($recaller);
     }
 
     public function test_a_wrong_code_is_rejected_logged_and_can_be_retried(): void

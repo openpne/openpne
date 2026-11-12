@@ -28,7 +28,7 @@ class ForceDisableMemberMfa
             ($this->disable)($fresh);
 
             // Removing a factor is a credential change: end every session so a stolen one cannot outlive
-            // the reset, and rotate remember_token.
+            // the reset.
             SessionRevocation::revokeMember($fresh);
 
             // A reset link must never survive a change in the factor's lifecycle

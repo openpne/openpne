@@ -22,9 +22,9 @@ class CookiePrefixTest extends TestCase
         return 'remember_'.$guard.'_'.sha1(FrameworkSessionGuard::class);
     }
 
-    private function rememberedLogin(Member $member): TestResponse
+    private function login(Member $member): TestResponse
     {
-        return $this->post('/login', ['email' => $member->email, 'password' => 'password', 'remember' => '1'])->assertRedirect();
+        return $this->post('/login', ['email' => $member->email, 'password' => 'password'])->assertRedirect();
     }
 
     public function test_a_plain_http_site_keeps_the_framework_names(): void
@@ -44,54 +44,32 @@ class CookiePrefixTest extends TestCase
         $this->assertFalse($this->app->resolved('cookie'));
     }
 
-    public function test_a_secure_host_only_site_issues_both_cookies_under_the_host_prefix(): void
+    public function test_a_secure_host_only_site_names_both_cookies_under_the_host_prefix(): void
     {
         config(['session.driver' => 'database', 'session.secure' => true]);
-        $recaller = '__Host-'.$this->frameworkRecaller();
 
-        $response = $this->rememberedLogin(Member::factory()->create());
+        $response = $this->login(Member::factory()->create());
 
-        $this->assertSame($recaller, Auth::guard('member')->getRecallerName());
-        $response->assertCookieMissing($this->frameworkRecaller())->assertCookieMissing('XSRF-TOKEN');
-        foreach ([$recaller, '__Host-XSRF-TOKEN'] as $name) {
-            $cookie = $response->getCookie($name, false);
-            $this->assertNotNull($cookie, $name);
-            // The terms a browser holds a __Host- cookie to; one unmet and it drops the cookie.
-            $this->assertTrue($cookie->isSecure(), $name);
-            $this->assertNull($cookie->getDomain(), $name);
-            $this->assertSame('/', $cookie->getPath(), $name);
-        }
+        $this->assertSame('__Host-'.$this->frameworkRecaller(), Auth::guard('member')->getRecallerName());
+        $response->assertCookieMissing('XSRF-TOKEN');
+        $cookie = $response->getCookie('__Host-XSRF-TOKEN', false);
+        $this->assertNotNull($cookie);
+        // The terms a browser holds a __Host- cookie to; one unmet and it drops the cookie.
+        $this->assertTrue($cookie->isSecure());
+        $this->assertNull($cookie->getDomain());
+        $this->assertSame('/', $cookie->getPath());
     }
 
     public function test_a_cookie_scoped_to_a_parent_domain_falls_back_to_the_secure_prefix(): void
     {
         config(['session.driver' => 'database', 'session.secure' => true, 'session.domain' => '.example.test']);
 
-        $response = $this->rememberedLogin(Member::factory()->create());
+        $response = $this->login(Member::factory()->create());
 
-        foreach (['__Secure-'.$this->frameworkRecaller(), '__Secure-XSRF-TOKEN'] as $name) {
-            $cookie = $response->getCookie($name, false);
-            $this->assertNotNull($cookie, $name);
-            $this->assertTrue($cookie->isSecure(), $name);
-        }
-    }
-
-    public function test_only_the_prefixed_recaller_restores_a_login(): void
-    {
-        config(['session.driver' => 'database', 'session.secure' => true]);
-        $member = Member::factory()->create();
-        $prefixed = '__Host-'.$this->frameworkRecaller();
-        $value = $this->rememberedLogin($member)->getCookie($prefixed)->getValue();
-
-        // The name another host under the same parent domain can still plant; withCookie()
-        // encrypts under the name it is given, so only the name differs from the real cookie.
-        $this->freshRequestState();
-        $this->withCookie($this->frameworkRecaller(), $value)->get('/dashboard')->assertRedirect('/login');
-        $this->assertGuest('member');
-
-        $this->freshRequestState();
-        $this->withCookie($prefixed, $value)->get('/dashboard')->assertOk();
-        $this->assertAuthenticatedAs($member, 'member');
+        $this->assertSame('__Secure-'.$this->frameworkRecaller(), Auth::guard('member')->getRecallerName());
+        $cookie = $response->getCookie('__Secure-XSRF-TOKEN', false);
+        $this->assertNotNull($cookie);
+        $this->assertTrue($cookie->isSecure());
     }
 
     public function test_the_admin_realm_strips_the_prefixed_xsrf_cookie(): void

@@ -29,7 +29,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 
 | Event | Source | Context (beyond ip/user_agent) |
 |---|---|---|
-| `login.success` | listener `LogSuccessfulLogin` (`Login`) | `guard`, `remember`, `member_id`\|`username` |
+| `login.success` | listener `LogSuccessfulLogin` (`Login`) | `guard`, `remember` (always false: no guard issues a recaller), `member_id`\|`username` |
 | `login.failed` | listener `LogFailedLogin` (`Failed`) | `guard`, `identifier` |
 | `login.lockout` | listener `LogLockout` (`Lockout`) | `identifier` |
 | `logout` | listener `LogLogout` (`Logout`) | `guard`, `member_id`\|`username` |

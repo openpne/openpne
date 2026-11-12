@@ -102,7 +102,7 @@ class MfaResetLinkTest extends TestCase
     {
         Notification::fake();
         config()->set('session.driver', 'database');
-        $member = Member::factory()->create(['remember_token' => 'keep-me']);
+        $member = Member::factory()->create();
         $raw = $this->seedLink($member);
         $rowBefore = MfaResetRequest::where('member_id', $member->getKey())->sole()->getAttributes();
 
@@ -112,7 +112,6 @@ class MfaResetLinkTest extends TestCase
         $fresh = $member->fresh();
         $this->assertNull($fresh->two_factor_secret);
         $this->assertNull($fresh->two_factor_confirmed_at);
-        $this->assertSame('keep-me', $fresh->remember_token);
         $this->assertCount(0, $this->securityRecords('mfa.disabled'));
         Notification::assertNothingSent();
     }
@@ -122,8 +121,6 @@ class MfaResetLinkTest extends TestCase
         Notification::fake();
         config()->set('session.driver', 'database');
         $member = $this->memberWithLiveFactor();
-        $member->forceFill(['remember_token' => Str::random(60)])->save();
-        $before = $member->fresh()->remember_token;
         $raw = $this->seedLink($member);
 
         DB::table('sessions')->insert([
@@ -138,7 +135,6 @@ class MfaResetLinkTest extends TestCase
         $this->assertNull($fresh->two_factor_secret);
         $this->assertNull($fresh->two_factor_recovery_codes);
         $this->assertNull($fresh->two_factor_confirmed_at);
-        $this->assertNotSame($before, $fresh->remember_token); // rotated
         $this->assertDatabaseMissing('sessions', ['id' => 'device']); // all revoked
         $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]); // burned
 

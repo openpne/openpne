@@ -26,8 +26,7 @@ class DisableMemberMfaCommandTest extends TestCase
         config(['session.driver' => 'database']);
         $member = Member::factory()->create(['email' => 'amy@example.com']);
         app(EnableTwoFactorAuthentication::class)($member, force: true);
-        $member->forceFill(['two_factor_confirmed_at' => now(), 'remember_token' => Str::random(60)])->save();
-        $before = $member->fresh()->remember_token;
+        $member->forceFill(['two_factor_confirmed_at' => now()])->save();
 
         DB::table('sessions')->insert([
             'id' => 'device', 'user_id' => $member->getKey(),
@@ -42,7 +41,6 @@ class DisableMemberMfaCommandTest extends TestCase
         $this->assertNull($member->two_factor_recovery_codes);
         $this->assertNull($member->two_factor_confirmed_at);
         $this->assertDatabaseMissing('sessions', ['id' => 'device']);
-        $this->assertNotSame($before, $member->remember_token);
     }
 
     public function test_it_fails_for_an_unknown_email(): void
@@ -93,8 +91,6 @@ class DisableMemberMfaCommandTest extends TestCase
         config(['session.driver' => 'database']);
         $member = Member::factory()->create(['email' => 'amy@example.com']);
         app(EnableTwoFactorAuthentication::class)($member, force: true); // pending, never confirmed
-        $member->forceFill(['remember_token' => Str::random(60)])->save();
-        $before = $member->fresh()->remember_token;
 
         DB::table('sessions')->insert([
             'id' => 'device', 'user_id' => $member->getKey(),
@@ -104,7 +100,6 @@ class DisableMemberMfaCommandTest extends TestCase
         $this->artisan('openpne:member:disable-mfa', ['email' => 'amy@example.com'])->assertSuccessful();
 
         $this->assertDatabaseMissing('sessions', ['id' => 'device']);
-        $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 
     public function test_it_drops_a_pending_admin_reset_link(): void

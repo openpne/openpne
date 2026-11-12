@@ -238,10 +238,10 @@ class MemberEmailChangeTest extends TestCase
         $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id, 'new_email' => 'new@example.com']);
     }
 
-    public function test_confirming_an_email_change_rotates_remember_token_and_purges_other_sessions(): void
+    public function test_confirming_an_email_change_purges_other_sessions(): void
     {
         config()->set('session.driver', 'database');
-        $member = Member::factory()->create(['remember_token' => 'old-remember-token']);
+        $member = Member::factory()->create();
         DB::table('sessions')->insert([
             'id' => 'other-device-session', 'user_id' => $member->id,
             'ip_address' => '127.0.0.1', 'user_agent' => 'agent', 'payload' => 'x', 'last_activity' => 1700000000,
@@ -256,7 +256,6 @@ class MemberEmailChangeTest extends TestCase
 
         $fresh = $member->fresh();
         $this->assertSame('confirmed@example.com', $fresh->email);
-        $this->assertNotSame('old-remember-token', $fresh->remember_token);
         $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
     }
 

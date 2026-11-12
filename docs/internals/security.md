@@ -101,12 +101,9 @@ Differences from the admin posture, all deliberate:
   admin's set-up is a single modal, so it demands the password **and** a code
   inline with no window. Disabling and regenerating match the admin posture
   directly: the account password **and** a second-factor proof, inline, every time.
-- **"Remember me" stays available.** Fortify only mints the remember cookie
-  *after* the challenge succeeds, so a recaller is always evidence of a full
-  password + TOTP login — unlike Filament, whose recaller path would bypass the
-  challenge (why the admin login dropped it). The mailed-code challenge
-  ("Member passkeys") mints it at the same point. Enabling or disabling MFA rotates
-  `remember_token`, so recallers minted before MFA was enabled stop working.
+- **No "remember me" either.** A member stays signed in through the session
+  itself ("Session lifetime"), which exists only after the challenge succeeds;
+  the `member` guard issues and reads no recaller cookie.
 - **Recovery codes are encrypted but recoverable** (Fortify standard: a used
   code is compared in plaintext), not bcrypt-hashed like the admin's. They are
   displayed only right after confirmation or regeneration and are never stored
@@ -146,8 +143,7 @@ the factor without the app's re-auth and revocation contract:
   factor with no proof or minting recovery codes for a factor a parallel disable
   just removed.
 - **Live-factor changes revoke**: confirm and disabling a live factor revoke
-  the member's other sessions and rotate `remember_token` in the same
-  transaction. Regenerating recovery codes revokes nothing (the factor is
+  the member's other sessions in the same transaction. Regenerating recovery codes revokes nothing (the factor is
   unchanged), and neither does cancelling a pending set-up — being password- and
   proof-free, it must also stay side-effect-free. "Free" means no credentials and
   no mutation, not exempt from throttling: all four management POSTs share one
@@ -294,11 +290,10 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   authenticator that withholds its AAGUID, or one the bundled table does not list, leaves the name
   empty and the screen calls that one "passkey".
 - **Removing one revokes.** Deletion is a step-up asked inline and revokes
-  the member's other sessions and the remember token (a lost device is the
-  usual reason). Adding the first one, for a member with no confirmed TOTP
+  the member's other sessions (a lost device is the usual reason). Adding the first one, for a member with no confirmed TOTP
   factor, revokes the same way as confirming TOTP does: it changes what a
-  password sign-in must prove, so a session or recaller opened on the password
-  alone must not outlive it. Any other addition revokes nothing — the proof
+  password sign-in must prove, so a session opened on the password alone must
+  not outlive it. Any other addition revokes nothing — the proof
   was just given in this session and the new credential does not invalidate
   what other sessions were opened with.
 - **Every registration and removal is mailed** to the registered address
@@ -682,9 +677,28 @@ it, which on a host shared with other unix users leaves each upload readable to
 them for the length of one request — bytes whose header PHP could not read included, since those
 are the sidecar's to judge; a host that shares users puts the spool on a volume they do not see.
 
+## Session lifetime
+
+A signed-in member's session ends after 30 days idle or 400 days from sign-in,
+whichever comes first; an administrator's and a guest's end after
+`SESSION_LIFETIME` idle (120 minutes). The mechanism and the three settings are
+in [sessions.md](sessions.md#lifetimes).
+
+The member values exceed the reauthentication intervals NIST SP 800-63B-4
+recommends (SHOULD: 30 days overall at AAL1, 24 hours at AAL2). What bounds a
+long-lived member session instead:
+
+- a sensitive change asks for the credential again, whatever the session's age
+  ("Member re-authentication");
+- a change to what a sign-in must prove — a password, a TOTP factor, a passkey —
+  ends the member's other sessions, and a ban ends all of them;
+- the long lifetime exists only on the `database` session driver, the one where
+  those sessions can be ended row by row;
+- the administrator realm keeps the short lifetime.
+
 ## Cookies
 
-The realm session cookies, the remember-me cookie and the `XSRF-TOKEN` cookie
+The realm session cookies and the `XSRF-TOKEN` cookie
 carry a browser-enforced name prefix on an HTTPS site
 ([sessions.md](sessions.md#cookie-name-prefix)). Under `__Host-` — a site whose
 cookies are host-only at `/` — another host under the same parent domain cannot

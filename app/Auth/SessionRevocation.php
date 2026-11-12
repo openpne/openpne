@@ -4,8 +4,6 @@ namespace App\Auth;
 
 use App\Models\AdminUser;
 use App\Models\Member;
-use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -19,7 +17,6 @@ final class SessionRevocation
 {
     public static function revokeMember(Member $member, ?string $exceptSessionId = null): void
     {
-        self::rotateRememberToken($member);
         self::purgeMemberSessions((int) $member->getAuthIdentifier(), $exceptSessionId);
     }
 
@@ -29,10 +26,6 @@ final class SessionRevocation
         self::purgeAdminSessions((int) $admin->getAuthIdentifier(), $exceptSessionId);
     }
 
-    /**
-     * Purge without rotating remember_token, for a caller that rotates it in its own save or whose
-     * principal row is already gone.
-     */
     public static function purgeMemberSessions(int $memberId, ?string $exceptSessionId = null): void
     {
         self::purge((string) config('session.member_table'), $memberId, $exceptSessionId);
@@ -43,12 +36,8 @@ final class SessionRevocation
         self::purge((string) config('session.admin_table'), $adminId, $exceptSessionId);
     }
 
-    /**
-     * A null token is already the end state, since retrieveByToken() needs a stored token to compare
-     * against. Skipping it also keeps a ban working on an AI account, whose row the members CHECK
-     * forbids any credential, so a rotation there would abort the whole freeze.
-     */
-    private static function rotateRememberToken(Model&Authenticatable $user): void
+    /** A null token is already the end state: retrieveByToken() needs a stored token to compare against. */
+    private static function rotateRememberToken(AdminUser $user): void
     {
         if ($user->getRememberToken() === null || $user->getRememberToken() === '') {
             return;
