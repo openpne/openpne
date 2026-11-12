@@ -7,6 +7,7 @@ import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
+import { REAUTH_DATA, ReauthFields } from '@/components/reauth-fields';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FormActions } from '@/components/ui/field';
@@ -238,7 +239,7 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
     const t = useT();
     const confirm = useConfirm();
     const { absolute } = useDateFormat();
-    const form = useForm({ current_password: '', read_only: false });
+    const form = useForm({ ...REAUTH_DATA, read_only: false });
     const [busy, setBusy] = useState<string | null>(null);
 
     // No onSuccess reset of the password: useForm's callbacks close over the data as it was at
@@ -321,20 +322,14 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
                     the buttons above post this same field. */}
                 <div className="space-y-4 border-t border-border pt-5">
                     {tokens.requiresPassword && (
-                        <Field
-                            label={t('Current password')}
-                            htmlFor="ai_token_password"
-                            help={t('Issuing or revoking a token asks for your password.')}
-                            error={form.errors.current_password}
-                        >
-                            <Input
-                                id="ai_token_password"
-                                type="password"
-                                autoComplete="current-password"
-                                value={form.data.current_password}
-                                onChange={(e) => form.setData('current_password', e.target.value)}
-                            />
-                        </Field>
+                        <ReauthFields
+                            idPrefix="ai_token"
+                            data={form.data}
+                            errors={form.errors}
+                            onChange={(field, value) => form.setData(field, value)}
+                            onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                            passwordHelp={t('Issuing or revoking a token asks for your password.')}
+                        />
                     )}
                     <label className="flex items-center gap-2 text-sm text-foreground">
                         <Checkbox checked={form.data.read_only} onChange={(e) => form.setData('read_only', e.target.checked)} />
@@ -358,7 +353,7 @@ export default function AiAccountShow() {
     const [keyword, setKeyword] = useState(groups?.keyword ?? '');
     const [searching, setSearching] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
-    const deleteForm = useForm({ password: '' });
+    const deleteForm = useForm(REAUTH_DATA);
 
     const post = (url: string, key: string) =>
         router.post(url, {}, { preserveScroll: true, onStart: () => setBusy(key), onFinish: () => setBusy(null) });
@@ -387,7 +382,7 @@ export default function AiAccountShow() {
         ) {
             // Nothing to clear on success — that response leaves this page — so the reset is for the
             // refusals, which re-render the form with whatever was typed still in it.
-            deleteForm.post(`/member/config/ai/${account.id}/delete`, { onError: () => deleteForm.reset('password') });
+            deleteForm.post(`/member/config/ai/${account.id}/delete`, { onError: () => deleteForm.reset() });
         }
     };
 
@@ -521,15 +516,13 @@ export default function AiAccountShow() {
                     <p className="text-sm text-muted-foreground">
                         {t('Deleting is permanent. What it posted stays on the site, shown as by "%Withdrawn_member%".')}
                     </p>
-                    <Field label={t('Current password')} htmlFor="ai_delete_password" error={deleteForm.errors.password}>
-                        <Input
-                            id="ai_delete_password"
-                            type="password"
-                            autoComplete="current-password"
-                            value={deleteForm.data.password}
-                            onChange={(e) => deleteForm.setData('password', e.target.value)}
-                        />
-                    </Field>
+                    <ReauthFields
+                        idPrefix="ai_delete"
+                        data={deleteForm.data}
+                        errors={deleteForm.errors}
+                        onChange={(field, value) => deleteForm.setData(field, value)}
+                        onResetSecondFactor={() => deleteForm.resetAndClearErrors('code', 'recovery_code')}
+                    />
                     <FormActions>
                         <Button type="submit" variant="destructive" loading={deleteForm.processing}>
                             {t('Delete')}

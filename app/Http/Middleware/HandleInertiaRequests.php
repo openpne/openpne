@@ -58,6 +58,7 @@ class HandleInertiaRequests extends Middleware
                     // Always false in practice — an AI account cannot sign in — but the shape is a
                     // member reference, and one shape means one Avatar call everywhere.
                     'isAi' => $user->isAiAccount(),
+                    'hasTwoFactor' => $user->hasEnabledTwoFactorAuthentication(),
                 ] : null,
             ],
             // A guest gets a constant all-false map in the same shape, so this prop discloses no toggle

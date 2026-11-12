@@ -8,6 +8,8 @@ export interface AuthUser {
     avatarColor: string | null;
     /** Always false — an AI account has no credentials — but the shape is a member reference. */
     isAi: boolean;
+    /** Whether a confirmed two-factor factor exists, which a step-up then asks for. */
+    hasTwoFactor?: boolean;
 }
 
 export interface SnsLogo {

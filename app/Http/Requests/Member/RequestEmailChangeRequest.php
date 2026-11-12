@@ -2,32 +2,35 @@
 
 namespace App\Http\Requests\Member;
 
+use App\Auth\Reauth\ReauthPurpose;
+use App\Auth\Reauth\RequiresReauth;
 use App\Models\Member;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 
 /**
- * The request step of an email-address change. Re-authenticates with the current password
- * (current_password:member) per OWASP before touching the login identifier, then validates the new
- * address: format + a case-insensitive uniqueness check (whereRaw lower(email), mirroring
- * IssueRegistrationToken so an upgraded mixed-case row is not missed), and a no-op when it already
- * equals the member's current address.
+ * The uniqueness check is case-insensitive (`lower(email)`, as IssueRegistrationToken does), so an
+ * upgraded mixed-case row is not missed.
  */
 class RequestEmailChangeRequest extends FormRequest
 {
+    use RequiresReauth;
+
     public function authorize(): bool
     {
         return $this->user() instanceof Member;
     }
 
+    public function reauthPurpose(): ReauthPurpose
+    {
+        return ReauthPurpose::EmailChange;
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return [
-            'password' => ['required', 'current_password:member'],
-            'new_email' => ['required', 'string', 'email', 'max:255'],
-        ];
+        return ['new_email' => ['required', 'string', 'email', 'max:255']] + $this->reauthRules();
     }
 
     public function withValidator(Validator $validator): void

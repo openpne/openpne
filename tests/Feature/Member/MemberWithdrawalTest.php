@@ -15,7 +15,7 @@ class MemberWithdrawalTest extends TestCase
 
     public function test_a_guest_cannot_post_the_withdrawal(): void
     {
-        $this->post('/member/config/withdrawal', ['password' => 'password', 'confirm' => '1'])
+        $this->post('/member/config/withdrawal', ['current_password' => 'password', 'confirm' => '1'])
             ->assertRedirect('/login');
     }
 
@@ -25,7 +25,7 @@ class MemberWithdrawalTest extends TestCase
         $member = Member::factory()->create();
         $this->actingAs($member);
 
-        $this->post('/member/config/withdrawal', ['password' => 'password', 'confirm' => '1'])
+        $this->post('/member/config/withdrawal', ['current_password' => 'password', 'confirm' => '1'])
             ->assertRedirect(route('login'));
 
         $this->assertDatabaseMissing('members', ['id' => $member->id]);
@@ -38,9 +38,9 @@ class MemberWithdrawalTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/config/withdrawal', [
-            'password' => 'not-the-password',
+            'current_password' => 'not-the-password',
             'confirm' => '1',
-        ])->assertSessionHasErrors('password');
+        ])->assertSessionHasErrors('current_password');
 
         $this->assertModelExists($member);
     }
@@ -50,7 +50,7 @@ class MemberWithdrawalTest extends TestCase
         Member::factory()->create(['id' => 1]);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->post('/member/config/withdrawal', ['password' => 'password'])
+        $this->actingAs($member)->post('/member/config/withdrawal', ['current_password' => 'password'])
             ->assertSessionHasErrors('confirm');
 
         $this->assertModelExists($member);
@@ -62,7 +62,7 @@ class MemberWithdrawalTest extends TestCase
         $primary = Member::factory()->create(['id' => 1]);
 
         $this->actingAs($primary)->post('/member/config/withdrawal', [
-            'password' => 'password',
+            'current_password' => 'password',
             'confirm' => '1',
         ])->assertForbidden();
 
@@ -94,7 +94,7 @@ class MemberWithdrawalTest extends TestCase
         ]);
 
         $this->actingAs($member)->post('/member/config/withdrawal', [
-            'password' => 'password',
+            'current_password' => 'password',
             'confirm' => '1',
         ])->assertRedirect(route('login'));
 

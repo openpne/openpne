@@ -31,8 +31,8 @@ log it — a lost one is replaced, not recovered:
 - **From the server**, by `php artisan openpne:mcp:token {email}` or `--id` (an AI account has no
   address, so the id is how one is named here). Server access is the trust boundary.
 - **By an owner**, from `/member/config/ai/{id}` — and only for the AI accounts they own, never for
-  a person's account by hand. The POST re-authenticates with the owner's account password
-  ([security.md](security.md)).
+  a person's account by hand. The POST re-authenticates the owner
+  ([security.md](security.md), "Member re-authentication").
 
 Both go through the same [`IssueMcpToken`](../../app/Features/AiAccount/Actions/IssueMcpToken.php),
 which holds what the two must not answer differently: the abilities are named, and the mint is
@@ -94,7 +94,7 @@ spends the `/mcp` bucket of the same address.
 
 **The person chooses who the connection speaks for, and proves it is them.** The consent screen
 offers the AI accounts they own — or creating one there, under the site's usual offer and cap —
-and, as the other choice, themselves; approving asks for their password, once within a 15-minute window
+and, as the other choice, themselves; approving re-authenticates them, once within a 15-minute window
 ([security.md](security.md), "AI account access tokens"). A token so minted names that member as
 its subject and is, from the endpoint's side,
 indistinguishable from a personal one: it carries `mcp:read` and, unless *read-only* was ticked,
@@ -121,7 +121,7 @@ the database on every request, so a deleted row is refused at once whatever the 
 (and Classic's AI category) lists the live connections of the member and of the AI accounts they
 own — one per client and subject however many token rows rotation has left, with who it speaks
 for, whether it may write and when its token was last renewed — and ends one on the member's
-password, through a window of its own ([`Connections`](../../app/Mcp/OAuth/Connections.php)).
+re-authentication, through a window of its own ([`Connections`](../../app/Mcp/OAuth/Connections.php)).
 Ending it deletes every code and token of that pair on the subject's locked row, the order a refresh
 takes, so a rotation in flight cannot leave a fresh pair behind; the next request from that client
 is refused, with no unit gate in the way: a grant can be ended while the endpoint is switched off,
@@ -374,7 +374,7 @@ Ownership is the whole authorization story: [`MemberPolicy::manageAiAccount`](..
 answers `404` for anyone else's account and for a member who is not one, and the link is written once
 at creation with no path to re-parent it.
 
-Deleting one re-authenticates with the owner's current password, the way account withdrawal does —
+Deleting one re-authenticates the owner, the way account withdrawal does —
 it is the same `WithdrawMember`, and it takes the account's tokens and group seats with it. The
 ownership gate is route middleware, so it runs ahead of that password check: a wrong password
 against someone else's account id has to read like an id naming nothing.

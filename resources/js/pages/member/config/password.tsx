@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { REAUTH_DATA, ReauthFields } from '@/components/reauth-fields';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
 import { Field, FormActions } from '@/components/ui/field';
@@ -7,7 +8,7 @@ import { useT } from '@/lib/i18n';
 
 export default function ConfigPassword() {
     const t = useT();
-    const form = useForm({ current_password: '', password: '', password_confirmation: '' });
+    const form = useForm({ ...REAUTH_DATA, password: '', password_confirmation: '' });
 
     return (
         <SettingsSubpage title={t('Change password')}>
@@ -18,15 +19,13 @@ export default function ConfigPassword() {
                 }}
             >
                 <div className="space-y-4">
-                    <Field label={t('Current password')} htmlFor="current_password" error={form.errors.current_password}>
-                        <Input
-                            id="current_password"
-                            type="password"
-                            autoComplete="current-password"
-                            value={form.data.current_password}
-                            onChange={(e) => form.setData('current_password', e.target.value)}
-                        />
-                    </Field>
+                    <ReauthFields
+                        idPrefix="password_change"
+                        data={form.data}
+                        errors={form.errors}
+                        onChange={(field, value) => form.setData(field, value)}
+                        onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                    />
                     <Field label={t('New password')} htmlFor="password" error={form.errors.password}>
                         <Input
                             id="password"

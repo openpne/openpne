@@ -361,15 +361,16 @@ the operation's FormRequest:
 - Starting or confirming a TOTP set-up asks for the password only: both refuse
   a member who already holds a confirmed factor.
 
-The seam covers the two-factor and passkey settings. The other step-ups
-(password, email, withdrawal, AI accounts and tokens, OAuth consent and
-connections) still verify the password directly.
+Every member step-up goes through the seam: the two-factor and passkey
+settings, password and email change, withdrawal, deleting an AI account,
+minting or revoking its tokens, OAuth consent and ending a connection.
+`MemberReauthSeamTest` keeps the member password rule and a raw password check
+out of every other file.
 
 ## AI account access tokens
 
 An owner minting or revoking one of their AI account's MCP tokens
-([mcp.md](mcp.md)) re-authenticates inline with the account password
-(`current_password:member`, [`AiTokenRequest`](../../app/Http/Requests/AiAccount/AiTokenRequest.php)),
+([mcp.md](mcp.md)) re-authenticates ([Member re-authentication](#member-re-authentication)),
 verified once and then carried for 15 minutes by a window of its own
 ([`AiTokenReauth`](../../app/Features/AiAccount/AiTokenReauth.php)). The window
 is per flow, never shared: confirming a two-factor set-up must not also open the
@@ -379,7 +380,7 @@ as the recovery codes above — a browser may re-show that render from its own
 history state.
 
 The OAuth consent screen ([mcp.md](mcp.md), "Signing in from a client") asks
-for the same password, whoever the connection will speak for, through a window
+for the same proof, whoever the connection will speak for, through a window
 of its own ([`ConsentReauth`](../../app/Mcp/OAuth/ConsentReauth.php)): a grant
 is a credential like a minted token, and a signed-in session alone does not
 make one. A password change or reset ends every OAuth grant of the member, with

@@ -45,14 +45,12 @@
                     <td><label><input type="checkbox" name="read_only" value="1" @checked(old('read_only'))> {{ __('Read-only: it can read but not post') }}</label></td>
                 </tr>
                 @if ($requiresPassword)
-                    <tr>
-                        <th><label for="current_password">{{ __('Current password') }}</label></th>
-                        <td><input type="password" id="current_password" name="current_password" class="input_text" autocomplete="current-password" required>
-                            <p>{{ __('Connecting asks for your password.') }}</p>
-                            @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror</td>
-                    </tr>
+                    @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'consent', 'passwordHelp' => __('Connecting asks for your password.')])
                 @endif
             </table>
+            @if ($requiresPassword)
+                @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'consent'])
+            @endif
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Connect') }}"></li>

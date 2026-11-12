@@ -1,8 +1,10 @@
+import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { OtpInput } from '@/components/ui/otp-input';
 import { useT } from '@/lib/i18n';
+import type { PageProps } from '@/types';
 
 export interface ReauthData {
     current_password: string;
@@ -20,8 +22,11 @@ interface Props {
     onChange: (field: keyof ReauthData, value: string) => void;
     /** Clears both second-factor fields and their errors when the member switches between them. */
     onResetSecondFactor: () => void;
-    requiresSecondFactor: boolean;
+    /** Defaults to whether the signed-in member holds a confirmed factor. */
+    requiresSecondFactor?: boolean;
     allowRecoveryCode?: boolean;
+    /** For a form the browser submits itself: the fields carry their names. */
+    native?: boolean;
     passwordHelp?: string;
     codeHelp?: string;
     autoFocus?: boolean;
@@ -35,11 +40,14 @@ export function ReauthFields({
     onResetSecondFactor,
     requiresSecondFactor,
     allowRecoveryCode = true,
+    native = false,
     passwordHelp,
     codeHelp,
     autoFocus = false,
 }: Props) {
     const t = useT();
+    const holdsFactor = usePage<PageProps>().props.auth.user?.hasTwoFactor ?? false;
+    const asksSecondFactor = requiresSecondFactor ?? holdsFactor;
     // The server prefers a filled recovery code, so only the shown field is ever populated.
     const [useRecovery, setUseRecovery] = useState(false);
 
@@ -48,6 +56,7 @@ export function ReauthFields({
             <Field label={t('Current password')} htmlFor={`${idPrefix}_password`} help={passwordHelp} error={errors.current_password}>
                 <Input
                     id={`${idPrefix}_password`}
+                    name={native ? 'current_password' : undefined}
                     type="password"
                     autoComplete="current-password"
                     autoFocus={autoFocus}
@@ -55,7 +64,7 @@ export function ReauthFields({
                     onChange={(e) => onChange('current_password', e.target.value)}
                 />
             </Field>
-            {requiresSecondFactor &&
+            {asksSecondFactor &&
                 (useRecovery ? (
                     <Field
                         label={t('Recovery code')}
@@ -65,6 +74,7 @@ export function ReauthFields({
                     >
                         <Input
                             id={`${idPrefix}_recovery_code`}
+                            name={native ? 'recovery_code' : undefined}
                             type="text"
                             autoComplete="off"
                             value={data.recovery_code}
@@ -79,9 +89,10 @@ export function ReauthFields({
                         error={errors.code}
                     >
                         <OtpInput label={t('Authentication code')} value={data.code} onChange={(code) => onChange('code', code)} />
+                        {native && <input type="hidden" name="code" value={data.code} />}
                     </Field>
                 ))}
-            {requiresSecondFactor && allowRecoveryCode && (
+            {asksSecondFactor && allowRecoveryCode && (
                 <p className="text-sm">
                     <button
                         type="button"

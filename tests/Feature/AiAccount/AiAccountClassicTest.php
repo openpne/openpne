@@ -97,7 +97,7 @@ class AiAccountClassicTest extends TestCase
             ->assertSee('id="member_ai_account_groups"', false)
             ->assertSee('id="member_ai_account_join"', false)
             ->assertSee('id="member_ai_account_delete"', false)
-            ->assertSee('name="password"', false)
+            ->assertSee('name="current_password"', false)
             ->assertSee('Open group');
     }
 
@@ -109,9 +109,9 @@ class AiAccountClassicTest extends TestCase
 
         // Back to the page the form is on, where @error('password') is waiting for the message.
         $this->actingAs($owner)->from($page)
-            ->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'not-the-password'])
+            ->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['current_password' => 'not-the-password'])
             ->assertRedirect($page)
-            ->assertSessionHasErrors('password');
+            ->assertSessionHasErrors('current_password');
 
         $this->assertNotNull($aiAccount->fresh());
     }
@@ -221,7 +221,7 @@ class AiAccountClassicTest extends TestCase
             ->assertRedirect($page);
         $this->assertFalse(GroupMembership::isMember($group, $aiAccount));
 
-        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'password'])
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['current_password' => 'password'])
             ->assertRedirect(route('member.config', ['category' => 'ai']));
         $this->assertNull(Member::find($aiAccount->getKey()));
     }

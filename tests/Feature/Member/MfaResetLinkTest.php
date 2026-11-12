@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use PragmaRX\Google2FA\Google2FA;
 use RuntimeException;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
@@ -262,6 +263,7 @@ class MfaResetLinkTest extends TestCase
 
         $this->actingAs($member)->post('/member/config/password', [
             'current_password' => 'password',
+            'code' => app(Google2FA::class)->getCurrentOtp(decrypt($member->two_factor_secret)),
             'password' => 'new-secret-pass',
             'password_confirmation' => 'new-secret-pass',
         ])->assertSessionHasNoErrors();

@@ -113,10 +113,10 @@ class AiAccountSelfServiceTest extends TestCase
 
         // Four POSTs, inside the ai-manage budget of five: a 429 would hide what is being asserted.
         foreach (['password', 'not-the-password'] as $password) {
-            $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/delete", ['password' => $password])
+            $this->actingAs($viewer)->post("/member/config/ai/{$theirs->getKey()}/delete", ['current_password' => $password])
                 ->assertNotFound()
                 ->assertSessionHasNoErrors();
-            $this->actingAs($viewer)->post("/member/config/ai/{$unused}/delete", ['password' => $password])
+            $this->actingAs($viewer)->post("/member/config/ai/{$unused}/delete", ['current_password' => $password])
                 ->assertNotFound()
                 ->assertSessionHasNoErrors();
         }
@@ -131,7 +131,7 @@ class AiAccountSelfServiceTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/config/ai/{$other->getKey()}")->assertNotFound();
         $this->actingAs($viewer)->get("/member/config/ai/{$viewer->getKey()}")->assertNotFound();
-        $this->actingAs($viewer)->post("/member/config/ai/{$other->getKey()}/delete", ['password' => 'password'])
+        $this->actingAs($viewer)->post("/member/config/ai/{$other->getKey()}/delete", ['current_password' => 'password'])
             ->assertNotFound();
     }
 
@@ -154,7 +154,7 @@ class AiAccountSelfServiceTest extends TestCase
         $owner = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($owner)->create();
 
-        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'password'])
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['current_password' => 'password'])
             ->assertRedirect(route('member.config.ai'));
 
         $this->assertNull(Member::find($aiAccount->getKey()));
@@ -166,11 +166,11 @@ class AiAccountSelfServiceTest extends TestCase
         $aiAccount = Member::factory()->aiAccount($owner)->create();
         $url = "/member/config/ai/{$aiAccount->getKey()}/delete";
 
-        $this->actingAs($owner)->post($url)->assertSessionHasErrors('password');
-        $this->actingAs($owner)->post($url, ['password' => 'not-the-password'])->assertSessionHasErrors('password');
+        $this->actingAs($owner)->post($url)->assertSessionHasErrors('current_password');
+        $this->actingAs($owner)->post($url, ['current_password' => 'not-the-password'])->assertSessionHasErrors('current_password');
         $this->assertNotNull($aiAccount->fresh());
 
-        $this->actingAs($owner)->post($url, ['password' => 'password'])->assertRedirect(route('member.config.ai'));
+        $this->actingAs($owner)->post($url, ['current_password' => 'password'])->assertRedirect(route('member.config.ai'));
         $this->assertNull(Member::find($aiAccount->getKey()));
     }
 
@@ -189,7 +189,7 @@ class AiAccountSelfServiceTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('enabled', false)->where('canCreate', false)->has('accounts', 1));
         $this->actingAs($owner)->get("/member/config/ai/{$aiAccount->getKey()}")->assertOk();
-        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['password' => 'password'])
+        $this->actingAs($owner)->post("/member/config/ai/{$aiAccount->getKey()}/delete", ['current_password' => 'password'])
             ->assertRedirect();
         $this->assertNull(Member::find($aiAccount->getKey()));
     }

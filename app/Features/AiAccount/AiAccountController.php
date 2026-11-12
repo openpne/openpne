@@ -203,8 +203,6 @@ class AiAccountController extends Controller
     {
         Gate::authorize('manageAiAccount', $member);
 
-        $this->stampReauth($request);
-
         $back = $this->accountRedirect($member);
 
         try {
@@ -239,8 +237,6 @@ class AiAccountController extends Controller
     {
         Gate::authorize('manageAiAccount', $member);
 
-        $this->stampReauth($request);
-
         abort_unless($revoke($member, $token), 404);
 
         SecurityLog::event('token.revoked', [
@@ -252,16 +248,6 @@ class AiAccountController extends Controller
         ]);
 
         return $this->accountRedirect($member)->with('status', __('Access token revoked.'));
-    }
-
-    /**
-     * The window runs from the proof rather than sliding forward with each token minted.
-     */
-    private function stampReauth(AiTokenRequest $request): void
-    {
-        if ($request->requiresPassword()) {
-            AiTokenReauth::stamp($request->session());
-        }
     }
 
     public function joinGroup(Request $request, Member $member, Group $group, JoinGroup $join): RedirectResponse
