@@ -431,9 +431,10 @@ step-ups compare, whichever operation asks.
   a count taken inside would roll back with every wrong code.
 - The framework's limiter can drop a few counts in the instant a counter is
   created, when parallel first hits race (measured on MySQL, not on SQLite).
-  The pause count is created at most once a day, so the hundred moves by no
-  more than that one burst; the minute budget can give way by as much each
-  minute, which is why it is not the bound.
+  The pause count is created anew only after a right code or a day, neither
+  of which a guesser brings about, so the hundred moves by no more than one
+  such burst; the minute budget can give way by as much each minute, which is
+  why it is not the bound.
 
 With a window of one step either side (three valid codes), a hundred guesses
 succeed about three times in ten thousand (RFC 4226, Sec. 6). The accepted

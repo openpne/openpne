@@ -43,7 +43,8 @@ class PasskeyProof
 
         $session->forget(self::SLOT);
 
-        return Cache::add('reauth-proof|'.$member->getKey().'|'.$nonce, 1, self::TTL_SECONDS);
+        // Kept past the proof's own age limit: the database store drops an entry in the second it expires.
+        return Cache::add('reauth-proof|'.$member->getKey().'|'.$nonce, 1, self::TTL_SECONDS * 2);
     }
 
     private static function pending(Session $session, Member $member, ReauthPurpose $purpose): ?string

@@ -58,8 +58,8 @@ class ReauthPasskeyController extends Controller
             request()->attributes->set(self::PURPOSE_ATTRIBUTE, $purpose->value);
 
             // The session is saved whole, so a request that began before the pull can write the slot
-            // back; the cache refuses the challenge a second time.
-            if (! Cache::add('reauth-ceremony|'.$viewer->getKey().'|'.hash('sha256', $options->challenge), 1, self::CEREMONY_SECONDS)) {
+            // back; the cache refuses the challenge a second time, for longer than the slot stays fresh.
+            if (! Cache::add('reauth-ceremony|'.$viewer->getKey().'|'.hash('sha256', $options->challenge), 1, self::CEREMONY_SECONDS * 2)) {
                 throw ValidationException::withMessages(['credential' => __('Passkey verification session expired. Please try again.')]);
             }
 

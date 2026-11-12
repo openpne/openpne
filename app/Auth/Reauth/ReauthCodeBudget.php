@@ -24,8 +24,8 @@ class ReauthCodeBudget
      */
     public function reserve(Member $member, Session $session): void
     {
-        // Checked first, so a burst this refuses never brings the pause closer.
-        if (RateLimiter::hit('reauth-code|'.$member->getKey().'|'.$session->getId(), 60) > self::PER_MINUTE) {
+        // Checked first, so a burst this refuses never brings the pause closer; hashed, so the cache holds no session id.
+        if (RateLimiter::hit('reauth-code|'.$member->getKey().'|'.hash('sha256', $session->getId()), 60) > self::PER_MINUTE) {
             throw ValidationException::withMessages([
                 'code' => __('Too many authentication codes were tried. Please wait a minute and try again.'),
             ]);

@@ -236,6 +236,39 @@ class MemberPasskeyReauthTest extends TestCase
         $this->post('/member/config/email', ['new_email' => 'second@example.com'])->assertSessionHasErrors('current_password');
     }
 
+    /** The database store drops an entry in the very second it expires, which is the last second the proof's age allows. */
+    public function test_a_spent_proof_stays_spent_through_its_last_second(): void
+    {
+        config(['cache.default' => 'database']);
+        $this->freezeSecond();
+        $member = Member::factory()->create();
+        $this->prove($member, ReauthPurpose::EmailChange);
+        $issued = session(PasskeyProof::SLOT);
+
+        $this->post('/member/config/email', ['new_email' => 'first@example.com'])->assertSessionHasNoErrors();
+
+        $this->travel(120)->seconds();
+        $this->withSession([PasskeyProof::SLOT => $issued]);
+        $this->post('/member/config/email', ['new_email' => 'second@example.com'])->assertSessionHasErrors('current_password');
+    }
+
+    public function test_a_used_challenge_stays_used_through_its_last_second(): void
+    {
+        config(['cache.default' => 'database']);
+        $this->freezeSecond();
+        $member = Member::factory()->create();
+        $authenticator = $this->registeredPasskey($member);
+        $this->actingAs($member, 'member');
+        $options = $this->ceremonyOptions('withdrawal');
+        $slot = session(ReauthPasskeyController::OPTIONS_SLOT);
+
+        $this->postJson('/member/reauth/passkey', ['credential' => $authenticator->assert($options)])->assertOk();
+
+        $this->travel(ReauthPasskeyController::CEREMONY_SECONDS)->seconds();
+        $this->withSession([ReauthPasskeyController::OPTIONS_SLOT => $slot]);
+        $this->postJson('/member/reauth/passkey', ['credential' => $authenticator->assert($options)])->assertUnprocessable();
+    }
+
     public function test_a_password_that_was_sent_is_verified_and_leaves_the_proof_alone(): void
     {
         $member = Member::factory()->create();
