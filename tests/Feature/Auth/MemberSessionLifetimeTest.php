@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
+use App\Auth\SessionGuard;
 use App\Models\AdminUser;
 use App\Models\Member;
 use App\Session\MemberSessionLifetime;
 use App\Session\RealmDatabaseSessionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
@@ -265,6 +267,26 @@ class MemberSessionLifetimeTest extends TestCase
         $key = Auth::guard('admin')->getName();
 
         $this->withSession([$key => $admin->getKey(), $key.'_at' => 1])->get('/admin')->assertOk();
+    }
+
+    /**
+     * Member names no remember-token column, so the member guard alone cannot show what its
+     * recaller switch does; the administrators' provider still stores a token.
+     */
+    public function test_a_guard_with_the_recaller_off_ignores_a_cookie_its_provider_would_honour(): void
+    {
+        $admin = AdminUser::factory()->create(['remember_token' => 'stored-token']);
+        $cookie = fn (SessionGuard $guard): array => [$guard->getRecallerName() => $admin->getKey().'|stored-token|'.$admin->getAuthPassword()];
+        $build = function (bool $recaller) use ($cookie): SessionGuard {
+            $guard = SessionGuard::make($this->app, 'probe', ['provider' => 'admins', 'recaller' => $recaller]);
+            $guard->setRequest(Request::create('/', 'GET', [], $cookie($guard)));
+
+            return $guard;
+        };
+
+        // In this order: a restore writes the login into the session both guards share.
+        $this->assertFalse($build(false)->check());
+        $this->assertTrue($build(true)->check());
     }
 
     public function test_a_once_valid_recaller_restores_nobody_and_is_cleared(): void

@@ -304,7 +304,7 @@ final class StepRegistry
             'api_key' => 'Dropped: API authentication is handled by the framework, not member_config.',
             'mail_address_hash' => 'Dropped: derived lookup hash, recomputable when needed.',
             'is_admin_invited' => 'Dropped: registration-flow flag with no OpenPNE 4 successor.',
-            'remember_key' => 'Dropped: superseded by the framework remember_token column.',
+            'remember_key' => 'Dropped: a member login is kept by its session, not a remember-me token.',
             'register_token' => 'Dropped: registration/confirmation-flow token, transient.',
             'register_auth_mode' => 'Dropped: registration-flow state, transient.',
             'pc_address_pre' => 'Dropped: pending email-change confirmation, handled by Laravel verification.',
