@@ -57,11 +57,24 @@ script moves inherits the modality of the last input, so a dialog's focus is vis
 and not after a tap — the keyboard's tooltip stays, the tap's goes. The trigger's `onFocus` calls
 `preventDefault` otherwise, the flag Radix's composed handler checks before opening.
 
+## Where nothing can hover
+
+On a device with no input that hovers (`any-hover: none` — a phone), `Tip` renders the named control
+and no Radix tooltip around it. Nothing there could raise the panel except a keyboard attached to a
+touch-only device, and a list of rows with several icon controls each paid for those tooltips on
+every first render.
+
+The query is read when the control mounts and not followed afterwards. Swapping the wrapper under a
+mounted control changes the element type at that position, React rebuilds the control, and a focus
+it held is lost. A pointer attached later raises panels on controls mounted from then on.
+
 ## What is deliberately not covered
 
 - **Touch.** No tooltip is raised by a finger, on any platform. This is why `label` lands on the
   element regardless: the control must be usable knowing only what it paints, and a long-press sheet
   is where a phone puts the words.
+- **A keyboard on a touch-only device.** The control keeps its name; the panel is not raised (see
+  "Where nothing can hover").
 - **Disabled controls.** A `disabled` element takes no pointer events and no focus, so nothing is
   raised over one. Moving them to `aria-disabled` plus a click guard was considered and dropped: the
   behavior change is real and the reward is a control's own name, when what a disabled control needs
@@ -79,6 +92,8 @@ and not after a tap — the keyboard's tooltip stays, the tap's goes. The trigge
   makes the second of two neighbouring icons open instantly.
 - **The accessible name does not depend on the panel ever opening.** `tooltip.test.tsx` pins the name
   and the absent description in both states.
+- **A control keeps the wrapper it mounted with.** `tooltip.test.tsx` pins that a later change of
+  the hover query does not rebuild it.
 - **Only a visible focus raises the panel.** `tooltip.test.tsx` pins both arms: a `:focus-visible`
   focus opens it, one the browser draws no ring for does not.
 - **Not machine-enforced.** "Icon-only" is not decidable from source: a glyph, a truncating label and
