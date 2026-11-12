@@ -45,7 +45,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -219,11 +218,7 @@ class MemberConfigController extends Controller
         $viewer = $this->viewer();
         $newPassword = $request->validated('password');
 
-        // Set the new password and rotate remember_token so old "remember me" cookies die.
-        $viewer->forceFill([
-            'password' => Hash::make($newPassword),
-            'remember_token' => Str::random(60),
-        ])->save();
+        $viewer->forceFill(['password' => Hash::make($newPassword)])->save();
 
         // After the save, since it verifies against the current hash: the other devices are bounced on
         // their next request rather than having their session rows deleted.
@@ -264,8 +259,6 @@ class MemberConfigController extends Controller
     {
         $member = $this->viewer();
 
-        // Before the delete: a logout cycles `remember_token` through the provider, which afterwards
-        // would re-insert the withdrawn row.
         Auth::guard('member')->logout();
 
         $withdraw($member);

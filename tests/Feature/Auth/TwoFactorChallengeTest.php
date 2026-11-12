@@ -94,6 +94,7 @@ class TwoFactorChallengeTest extends TestCase
 
         $response->assertRedirect('/');
         $this->assertAuthenticatedAs($member);
+        $this->assertIsInt(session(Auth::guard('member')->getName().'_at'));
         $this->assertNull(session('login.id'));
         // Completing the challenge is the authentication moment, so it must be fixation-safe.
         $this->assertNotSame($sessionIdBeforeChallenge, session()->getId());
@@ -141,15 +142,13 @@ class TwoFactorChallengeTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_remember_me_survives_the_challenge(): void
+    public function test_no_recaller_is_minted_after_the_challenge(): void
     {
-        // The recaller is only minted here, after the full password + TOTP login — the basis for
-        // keeping remember-me available to members (docs/internals/security.md).
         $member = $this->memberWithTwoFactor();
         $this->startChallenge($member, remember: true);
 
         $this->post('/two-factor-challenge', ['code' => $this->currentOtp($member)])
-            ->assertCookie(Auth::guard('member')->getRecallerName());
+            ->assertCookieMissing(Auth::guard('member')->getRecallerName());
     }
 
     public function test_the_challenge_post_is_throttled_but_the_get_render_is_not(): void

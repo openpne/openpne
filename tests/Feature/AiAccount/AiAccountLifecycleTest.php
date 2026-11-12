@@ -58,8 +58,6 @@ class AiAccountLifecycleTest extends TestCase
 
     public function test_an_admin_can_freeze_an_ai_account_directly(): void
     {
-        // The ban's remember-token rotation would be a credential write on a row the members
-        // constraint admits none on.
         $owner = Member::factory()->create();
         $aiAccount = Member::factory()->aiAccount($owner)->create();
         $aiAccount->createToken('mcp', ['mcp:read']);
@@ -68,20 +66,7 @@ class AiAccountLifecycleTest extends TestCase
 
         $fresh = $aiAccount->fresh();
         $this->assertTrue($fresh->is_login_rejected);
-        $this->assertNull($fresh->remember_token);
         $this->assertSame(0, $this->tokenCount($aiAccount));
-    }
-
-    public function test_freezing_an_ordinary_member_still_rotates_their_remember_token(): void
-    {
-        // The control for the skip above: a member who does hold a remember-me cookie has it ended.
-        $member = Member::factory()->create();
-        $before = $member->remember_token;
-
-        app(RejectMemberLogin::class)($member);
-
-        $this->assertNotNull($before);
-        $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 
     public function test_a_frozen_owner_closes_the_endpoint_to_an_ai_accounts_surviving_token(): void

@@ -9,7 +9,6 @@ use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
@@ -47,12 +46,10 @@ class RejectMemberLoginTest extends TestCase
         $this->assertTrue($member->fresh()->is_login_rejected);
     }
 
-    public function test_revokes_live_sessions_and_rotates_the_remember_token(): void
+    public function test_revokes_live_sessions(): void
     {
         config(['session.driver' => 'database']);
         $member = Member::factory()->create(['is_login_rejected' => false]);
-        $member->forceFill(['remember_token' => Str::random(60)])->save();
-        $before = $member->remember_token;
 
         DB::table('sessions')->insert([
             'id' => 'member-device', 'user_id' => $member->getKey(),
@@ -62,7 +59,6 @@ class RejectMemberLoginTest extends TestCase
         $this->reject($member);
 
         $this->assertDatabaseMissing('sessions', ['id' => 'member-device']);
-        $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 
     public function test_deletes_every_personal_access_token(): void
@@ -95,8 +91,7 @@ class RejectMemberLoginTest extends TestCase
         // Unreachable through the UI, which hides the action for id 1.
         config(['session.driver' => 'database']);
         $primary = Member::findOrFail(1);
-        $primary->forceFill(['is_login_rejected' => false, 'remember_token' => Str::random(60)])->save();
-        $before = $primary->remember_token;
+        $primary->forceFill(['is_login_rejected' => false])->save();
         DB::table('sessions')->insert([
             'id' => 'primary-device', 'user_id' => $primary->getKey(),
             'payload' => base64_encode('{}'), 'last_activity' => time(),
@@ -110,7 +105,6 @@ class RejectMemberLoginTest extends TestCase
         }
 
         $this->assertFalse($primary->fresh()->is_login_rejected);
-        $this->assertSame($before, $primary->fresh()->remember_token);
         $this->assertDatabaseHas('sessions', ['id' => 'primary-device']);
         $this->assertCount(0, $this->securityRecords('member.banned'));
     }

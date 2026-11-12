@@ -10,7 +10,6 @@ use App\Models\Member;
 use App\Notifications\Member\PasswordChangedNotification;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
@@ -33,12 +32,8 @@ class ResetMemberPassword implements ResetsUserPasswords
             'password' => $this->passwordRules(),
         ])->validate();
 
-        // A reset answers a possible compromise, so remember_token rotates in the same save as the
-        // password and every session is purged with none exempted.
-        $member->forceFill([
-            'password' => Hash::make($input['password']),
-            'remember_token' => Str::random(60),
-        ])->save();
+        // A reset answers a possible compromise, so every session is purged with none exempted.
+        $member->forceFill(['password' => Hash::make($input['password'])])->save();
 
         SessionRevocation::purgeMemberSessions((int) $member->getAuthIdentifier());
 

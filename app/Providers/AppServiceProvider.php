@@ -45,6 +45,8 @@ use App\Rules\NotCommonPassword;
 use App\Rules\NotContextWord;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
+use App\Session\MemberSessionLifetime;
+use App\Session\RealmDatabaseSessionHandler;
 use App\Support\ClassicOnlyResponseFactory;
 use App\Support\SiteTimezone;
 use App\Support\ViewerRelations;
@@ -62,6 +64,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Translation\Translator;
@@ -187,6 +190,15 @@ class AppServiceProvider extends ServiceProvider
         // another, holding no credential of its own — is not retrievable by session id, remember-me
         // cookie or credentials (see MemberUserProvider).
         Auth::provider('member-eloquent', fn ($app, array $config): MemberUserProvider => new MemberUserProvider($app['hash'], $config['model']));
+
+        // Must not ask the guard: it would re-enter the driver being built.
+        Session::extend('database', fn ($app): RealmDatabaseSessionHandler => new RealmDatabaseSessionHandler(
+            $app['db']->connection($app['config']->get('session.connection')),
+            (string) $app['config']->get('session.table'),
+            (int) $app['config']->get('session.lifetime'),
+            $app,
+            $app['config']->get('session.table') === $app['config']->get('session.admin_table') ? null : MemberSessionLifetime::idleMinutes(),
+        ));
 
         Auth::extend('session', fn ($app, string $name, array $config): SessionGuard => SessionGuard::make($app, $name, $config));
         Auth::extend('passport-if-keyed', fn ($app, string $name, array $config) => PassportGuard::make($app, $config));

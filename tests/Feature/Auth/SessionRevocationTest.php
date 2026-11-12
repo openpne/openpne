@@ -36,10 +36,9 @@ class SessionRevocationTest extends TestCase
         ]);
     }
 
-    public function test_member_revocation_purges_member_rows_only_and_rotates_the_token(): void
+    public function test_member_revocation_purges_member_rows_only(): void
     {
         $member = Member::factory()->create();
-        $before = $member->remember_token;
         $this->seedRow('sessions', 'member-device', (int) $member->getKey());
         // An administrator whose id collides with the member's id must be unaffected.
         $this->seedRow('admin_sessions', 'admin-device', (int) $member->getKey());
@@ -48,7 +47,6 @@ class SessionRevocationTest extends TestCase
 
         $this->assertDatabaseMissing('sessions', ['id' => 'member-device']);
         $this->assertDatabaseHas('admin_sessions', ['id' => 'admin-device']);
-        $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 
     public function test_admin_revocation_purges_admin_rows_only_and_honors_the_exception(): void
@@ -71,14 +69,10 @@ class SessionRevocationTest extends TestCase
     {
         config(['session.driver' => 'file']);
         $member = Member::factory()->create();
-        $before = $member->remember_token;
         $this->seedRow('sessions', 'member-device', (int) $member->getKey());
 
         SessionRevocation::revokeMember($member);
 
-        // The token still rotates (remember-me cookies die on every driver); only the
-        // row purge is driver-specific.
         $this->assertDatabaseHas('sessions', ['id' => 'member-device']);
-        $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 }

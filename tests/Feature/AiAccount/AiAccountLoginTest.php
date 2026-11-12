@@ -11,13 +11,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * Three doors into a member row: a password attempt, a session carrying its id, and a remember-me
- * cookie. The members constraint shuts only the first and the third, so these pin the refusals that
- * still stand with it lifted and the session door, which needs no credential at all.
+ * Two doors into a member row: a password attempt and a session carrying its id. The members
+ * constraint shuts only the first, so these pin the refusal that still stands with it lifted and the
+ * session door, which needs no credential at all.
  */
 class AiAccountLoginTest extends TestCase
 {
@@ -53,15 +52,6 @@ class AiAccountLoginTest extends TestCase
     private function sessionKey(): string
     {
         return Auth::guard('member')->getName();
-    }
-
-    /** A remember-me cookie as the guard writes it: `id|token|password hash`, under its own name. */
-    private function withRecaller(Member $member, string $token): static
-    {
-        return $this->withCookie(
-            Auth::guard('member')->getRecallerName(),
-            $member->getKey().'|'.$token.'|'.(string) $member->getAuthPassword(),
-        );
     }
 
     public function test_an_ai_account_is_refused_even_holding_a_valid_password(): void
@@ -109,37 +99,6 @@ class AiAccountLoginTest extends TestCase
         $member = Member::factory()->create();
 
         $this->withSession([$this->sessionKey() => $member->getKey()])
-            ->get('/')
-            ->assertOk();
-
-        $this->assertAuthenticatedAs($member, 'member');
-    }
-
-    public function test_a_remember_me_cookie_for_an_ai_account_restores_nobody(): void
-    {
-        // The other credential-free door: a recaller is matched against `members.remember_token`
-        // alone, and this pins the refusal for a row that somehow holds one.
-        $this->liftTheCredentialConstraint();
-
-        $aiAccount = Member::factory()->aiAccount()->create();
-        $token = Str::random(60);
-        $aiAccount->forceFill(['remember_token' => $token])->save();
-
-        $this->withRecaller($aiAccount, $token)
-            ->get('/')
-            ->assertRedirect('/login');
-
-        $this->assertGuest('member');
-    }
-
-    public function test_a_remember_me_cookie_for_an_ordinary_member_restores_them(): void
-    {
-        // The control: the cookie above is well-formed and under the right name — this one restores.
-        $member = Member::factory()->create();
-        $token = Str::random(60);
-        $member->forceFill(['remember_token' => $token])->save();
-
-        $this->withRecaller($member, $token)
             ->get('/')
             ->assertOk();
 

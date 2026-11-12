@@ -115,32 +115,8 @@ class RecordLastLoginTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertAuthenticated();
+        $this->assertIsInt(session(auth()->guard('member')->getName().'_at'));
         $this->assertNotNull(Member::where('email', 'newcomer@example.com')->sole()->last_login_at);
-    }
-
-    public function test_a_remember_me_restore_records_the_time_as_a_login(): void
-    {
-        $member = Member::factory()->create();
-        $recallerName = auth()->guard('member')->getRecallerName();
-        $recaller = $this->post('/login', ['email' => $member->email, 'password' => 'password', 'remember' => '1'])
-            ->getCookie($recallerName);
-        $this->assertNotNull($recaller);
-
-        // A later visit from a browser whose session has expired: no session, only the recaller cookie.
-        Member::withoutTimestamps(fn () => $member->forceFill(['last_login_at' => null])->saveQuietly());
-        $this->freshRequestState();
-        $seen = [];
-        Event::listen(Login::class, function (Login $event) use (&$seen): void {
-            $seen[] = $event;
-        });
-
-        // getCookie() hands back the decrypted value; withCookie() encrypts it again for the request.
-        $this->withCookie($recallerName, $recaller->getValue())->get('/');
-
-        $this->assertAuthenticatedAs($member);
-        $this->assertNotNull($member->fresh()->last_login_at);
-        $this->assertCount(1, $seen);
-        $this->assertTrue($seen[0]->remember);
     }
 
     public function test_a_session_in_use_refreshes_the_time_on_the_first_request_of_a_new_day(): void

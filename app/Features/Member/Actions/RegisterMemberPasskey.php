@@ -39,8 +39,8 @@ class RegisterMemberPasskey
             $raisesPasswordFloor = ! $fresh->passkeys()->exists() && ! $fresh->hasEnabledTwoFactorAuthentication();
             $passkey = ($this->store)($fresh, $name, $credential, $options);
 
-            // Sessions and recallers opened on the password alone end once it no longer signs in
-            // alone (docs/internals/security.md, "Member passkeys").
+            // Sessions opened on the password alone end once it no longer signs in alone
+            // (docs/internals/security.md, "Member passkeys").
             if ($raisesPasswordFloor) {
                 SessionRevocation::revokeMember($fresh, $exceptSessionId);
             }

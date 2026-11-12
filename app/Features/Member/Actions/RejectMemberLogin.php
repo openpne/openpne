@@ -20,8 +20,8 @@ class RejectMemberLogin
             throw new RuntimeException('The primary member cannot have login rejected.');
         }
 
-        // One transaction: the flag only blocks the next login, so live sessions, remember-me cookies
-        // and tokens must die with it.
+        // One transaction: the flag only blocks the next login, so live sessions and tokens must die
+        // with it.
         DB::transaction(function () use ($member): void {
             // Direct assignment: is_login_rejected is outside the model's mass-assignable set.
             $member->is_login_rejected = true;

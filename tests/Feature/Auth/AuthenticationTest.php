@@ -62,7 +62,7 @@ class AuthenticationTest extends TestCase
             ->assertSee('name="remember"', false);
     }
 
-    public function test_checking_remember_me_issues_the_recaller_cookie(): void
+    public function test_a_login_issues_no_recaller_cookie_even_when_asked(): void
     {
         $member = Member::factory()->create();
 
@@ -73,21 +73,8 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticatedAs($member);
-        $response->assertCookie(auth()->guard()->getRecallerName());
-        $this->assertNotNull($member->fresh()->remember_token);
-    }
-
-    public function test_leaving_remember_me_unchecked_issues_no_recaller_cookie(): void
-    {
-        $member = Member::factory()->create();
-
-        $response = $this->post('/login', [
-            'email' => $member->email,
-            'password' => 'password',
-        ]);
-
-        $this->assertAuthenticatedAs($member);
         $response->assertCookieMissing(auth()->guard()->getRecallerName());
+        $this->assertNull($member->fresh()->remember_token);
     }
 
     public function test_a_successful_login_verifies_credentials_exactly_once(): void

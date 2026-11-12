@@ -34,6 +34,11 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
+    // A signed-in member's session on the database driver: minutes it may sit idle, and minutes
+    // after sign-in at which it ends regardless (docs/internals/sessions.md, "Lifetimes").
+    'member_lifetime' => (int) env('SESSION_MEMBER_LIFETIME', 43200),
+    'member_absolute_lifetime' => (int) env('SESSION_MEMBER_ABSOLUTE_LIFETIME', 576000),
+
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*

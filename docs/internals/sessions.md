@@ -39,8 +39,7 @@ Per request it pins, both ways:
 
 ## Cookie-name prefix
 
-The two realm session cookies, the remember-me cookie and the `XSRF-TOKEN`
-cookie are all issued under the session config's path, domain and Secure flag,
+The two realm session cookies and the `XSRF-TOKEN` cookie are all issued under the session config's path, domain and Secure flag,
 and all take a prefix the browser enforces, chosen from that config on every
 request ([`CookiePrefix`](../../app/Support/CookiePrefix.php)):
 
@@ -61,11 +60,8 @@ host under the same parent domain cannot plant a cookie of that name for it.
 
 A `__Secure-` cookie carries no such guarantee: on a site that scopes its
 cookies to a parent domain or a sub-path, another host under that domain can
-still plant a remember-me or `XSRF-TOKEN` cookie.
+still plant an `XSRF-TOKEN` cookie.
 
-The remember-me name is the guard's
-([`App\Auth\SessionGuard`](../../app/Auth/SessionGuard.php)); only the prefixed
-name is read, so a cookie planted under the unprefixed name restores no login.
 The `XSRF-TOKEN` name is the CSRF middleware's
 ([`PreventRequestForgery`](../../app/Http/Middleware/PreventRequestForgery.php)),
 and the Modern shell declares it in `<meta name="xsrf-cookie">` for the JS that
@@ -73,11 +69,49 @@ echoes the cookie in `X-XSRF-TOKEN`; Classic and the admin realm send the
 page-embedded token instead.
 
 A change of prefix renames the cookies: everyone re-logs in once on the deploy
-that brings a session-cookie prefix, and a remembered login is not restored
-once on the deploy that brings the remember-me prefix. A `SESSION_COOKIE` /
+that brings a session-cookie prefix. A `SESSION_COOKIE` /
 `SESSION_ADMIN_COOKIE` an operator has already prefixed (`__Secure-`/`__Host-`)
 is passed through unchanged — the operator then owns satisfying the browser's
 prefix terms.
+
+## Lifetimes
+
+| Setting | Default | Applies to |
+|---|---|---|
+| `SESSION_LIFETIME` | 120 | idle minutes of a guest's session, of the admin realm, and of every session on a driver other than `database` |
+| `SESSION_MEMBER_LIFETIME` | 43200 (30 days) | idle minutes of a signed-in member's session |
+| `SESSION_MEMBER_ABSOLUTE_LIFETIME` | 576000 (400 days) | minutes from sign-in after which a member's session ends however recently it was used |
+
+A member value below the one above it in the table is raised to it: signing in
+never shortens a session, and the absolute lifetime is never below the idle one
+(a blank `SESSION_MEMBER_ABSOLUTE_LIFETIME` therefore means 30 days, not 400).
+
+A member stays signed in through the session alone: the `member` guard issues
+no remember-me cookie and ignores one a browser still holds (it answers with a
+cookie that clears it), and `Member` names no remember-token column, so nothing
+writes `members.remember_token`. Why the member values are what they are is in
+[security.md](security.md#session-lifetime).
+
+- **Idle lifetime is per row.**
+  [`RealmDatabaseSessionHandler`](../../app/Session/RealmDatabaseSessionHandler.php)
+  replaces the framework's `database` handler and reads `sessions.user_id`: a
+  row that names a member is live, and swept, by the member lifetime, any other
+  row by `SESSION_LIFETIME`. The handler built for `admin_sessions` carries no
+  member lifetime.
+- **The cookies follow.** The session cookie and `XSRF-TOKEN` of a response to a
+  signed-in member, outside the admin realm, expire at the member lifetime
+  ([`MemberSessionLifetime`](../../app/Session/MemberSessionLifetime.php)). With
+  `SESSION_EXPIRE_ON_CLOSE` both keep the framework's expiry.
+- **Only the `database` driver.** On any other driver nothing above applies and
+  a member's session idles out at `SESSION_LIFETIME`: those drivers cannot end
+  one member's sessions, which the long lifetime depends on
+  (`App\Auth\SessionRevocation`).
+- **The absolute lifetime is the guard's.**
+  [`App\Auth\SessionGuard`](../../app/Auth/SessionGuard.php) stamps the session at
+  login and, before it resolves a user, drops the login from a session whose
+  stamp is older than the limit. The session is not invalidated, so the request
+  that finds it expired is answered as a guest's. A session that predates the
+  stamp starts its clock at its next request. This check runs on every driver.
 
 ## The previous URL
 
@@ -152,7 +186,7 @@ to the store, so the request is wrapped to keep it.
    still enforced on read.
 6. **`members.last_login_at` names the calendar day of the member's last activity**:
    `App\Listeners\Auth\RecordLastLogin` writes it on every `member`-guard `Login`
-   (password, passkey, two-factor, post-registration, remember-me restore) and
+   (password, passkey, two-factor, post-registration) and
    again on the first `Authenticated` of each later day (site timezone), because
    a session kept alive by polling never logs in again. A failed write is
    reported, not thrown, so it cannot block a login. The write leaves
@@ -160,6 +194,7 @@ to the store, so the request is wrapped to keep it.
    NULL. Site operators read it (`MAX(last_login_at)`, the admin member list);
    members see each other's only as a calendar day in member search
    (`App\Features\Member\LastLoginLabel`).
-
-A per-realm idle lifetime (shorter admin sessions) would slot into the same
-middleware pin.
+7. **A member's long idle lifetime rests on `sessions.user_id`**, which the
+   database handler stamps from the default guard on every write. A member-realm
+   request served under another default guard would write the row as a guest's
+   and cut the session to `SESSION_LIFETIME`.

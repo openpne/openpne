@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Session\MemberSessionLifetime;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
+use Illuminate\Support\Facades\Date;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -18,18 +20,26 @@ class StartSession extends FrameworkStartSession
 {
     private const RESPONSE = 'app.start_session.response';
 
+    private ?Request $request = null;
+
     /**
      * The framework calls storeCurrentUrl once the response exists but does not hand it over; it is
      * kept on the request so the store can ask what was answered.
      */
     protected function handleStatefulRequest(Request $request, $session, Closure $next)
     {
-        return parent::handleStatefulRequest($request, $session, function (Request $request) use ($next) {
-            $response = $next($request);
-            $request->attributes->set(self::RESPONSE, $response);
+        $this->request = $request;
 
-            return $response;
-        });
+        try {
+            return parent::handleStatefulRequest($request, $session, function (Request $request) use ($next) {
+                $response = $next($request);
+                $request->attributes->set(self::RESPONSE, $response);
+
+                return $response;
+            });
+        } finally {
+            $this->request = null;
+        }
     }
 
     protected function storeCurrentUrl(Request $request, $session)
@@ -53,6 +63,14 @@ class StartSession extends FrameworkStartSession
         if (method_exists($session, 'setPreviousRoute')) {
             $session->setPreviousRoute($route->getName());
         }
+    }
+
+    /** A signed-in member's cookie outlives the framework's (docs/internals/sessions.md, "Lifetimes"). */
+    protected function getCookieExpirationDate()
+    {
+        $minutes = $this->request === null ? null : MemberSessionLifetime::cookieMinutes($this->request);
+
+        return $minutes === null ? parent::getCookieExpirationDate() : Date::instance(now()->addMinutes($minutes));
     }
 
     private function isPageNavigation(Request $request): bool

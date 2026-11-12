@@ -44,6 +44,10 @@ return [
         'member' => [
             'driver' => 'session',
             'provider' => 'members',
+            // No remember-me cookie: the session itself is long-lived
+            // (docs/internals/sessions.md, "Lifetimes").
+            'recaller' => false,
+            'absolute_lifetime' => true,
         ],
 
         // Administrators authenticate through the Filament `/admin` panel against

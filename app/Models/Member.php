@@ -47,6 +47,15 @@ class Member extends Authenticatable implements PasskeyUser
     use TwoFactorAuthenticatable;
 
     /**
+     * Empty, so nothing in the framework or Fortify reads or writes a remember token
+     * (docs/internals/sessions.md, "Lifetimes").
+     */
+    public function getRememberTokenName()
+    {
+        return '';
+    }
+
+    /**
      * laravel/passkeys reads the owner from `passkeys.user_id` (its model, actions and controller), but
      * its trait's hasMany would infer `member_id` from this class.
      *

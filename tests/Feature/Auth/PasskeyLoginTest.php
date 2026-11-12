@@ -54,13 +54,14 @@ class PasskeyLoginTest extends TestCase
             ->assertJsonPath('redirect', url('/'));
 
         $this->assertAuthenticatedAs($member);
+        $this->assertIsInt(session(Auth::guard('member')->getName().'_at'));
         $this->assertNotSame($sessionBefore, app('session.store')->getId());
         $this->assertNotNull(Passkey::where('credential_id', $authenticator->credentialId())->value('last_used_at'));
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('login.success')['member_id']);
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('passkey.verified')['member_id']);
     }
 
-    public function test_remember_mints_a_recaller(): void
+    public function test_remember_mints_no_recaller(): void
     {
         $member = Member::factory()->create();
         $authenticator = $this->registeredPasskey($member);
@@ -68,7 +69,7 @@ class PasskeyLoginTest extends TestCase
         $response = $this->postJson('/passkeys/login', ['credential' => $authenticator->assert($this->loginOptions()), 'remember' => true])
             ->assertOk();
 
-        $this->assertNotNull($response->getCookie(Auth::guard('member')->getRecallerName(), false));
+        $this->assertNull($response->getCookie(Auth::guard('member')->getRecallerName(), false));
     }
 
     public function test_a_member_with_a_confirmed_totp_factor_lands_without_the_challenge(): void
