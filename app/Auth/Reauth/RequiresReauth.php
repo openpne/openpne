@@ -112,8 +112,9 @@ trait RequiresReauth
             app(VerifyReauthProof::class)($viewer, $this->reauthProof());
         }
 
+        // The window runs from the proof that was asked for, not forward with each password sent inside it.
         $window = $this->reauthPurpose()->window();
-        if ($window !== null) {
+        if ($window !== null && $this->reauthRequired()) {
             $window::stamp($this->session());
         }
     }

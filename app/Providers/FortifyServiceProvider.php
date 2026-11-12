@@ -140,6 +140,11 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('mfa-manage|'.($request->user()?->getKey() ?? $request->ip()));
         });
 
+        // A step-up checks a six-digit code, so every route that asks for one carries a guess budget.
+        RateLimiter::for('member-reauth', function (Request $request) {
+            return Limit::perMinute(5)->by('member-reauth|'.($request->user()?->getKey() ?? $request->ip()));
+        });
+
         RateLimiter::for('passkey-manage', function (Request $request) {
             return Limit::perMinute(5)->by('passkey-manage|'.($request->user()?->getKey() ?? $request->ip()));
         });

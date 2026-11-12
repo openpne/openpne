@@ -343,8 +343,8 @@ the operation's FormRequest:
 - **A proof serves one purpose.** Each request names a `ReauthPurpose`; a
   purpose either asks every time or opens its own 15-minute `ReauthWindow`, and
   no window opens another operation. A window is stamped only by a verified
-  proof, and a `current_password` that is sent is verified even inside a fresh
-  window.
+  proof that was asked for: a `current_password` sent inside a fresh window is
+  still verified, but does not push the window's end back.
 - **Ordering is structural.** The validation rules check the password and only
   the *presence* of the second factor. Its value is checked after every rule
   has passed, so a wrong password never marks a TOTP code used in Fortify's
@@ -360,6 +360,9 @@ the operation's FormRequest:
   runs.
 - Starting or confirming a TOTP set-up asks for the password only: both refuse
   a member who already holds a confirmed factor.
+- **Every route that asks is throttled** per member (5/min, the feature's own
+  limiter or `member-reauth`), since the second factor is a six-digit code;
+  `MemberReauthSeamTest` refuses a route without one.
 
 Every member step-up goes through the seam: the two-factor and passkey
 settings, password and email change, withdrawal, deleting an AI account,

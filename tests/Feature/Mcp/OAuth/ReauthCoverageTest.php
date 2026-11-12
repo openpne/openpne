@@ -151,7 +151,7 @@ class ReauthCoverageTest extends OAuthTestCase
 
         [$method, $uri, $form] = $this->operation($key, $member);
         $proof = ['current_password' => 'password'] + ($factor === 'confirmed' ? ['code' => $this->otp($member)] : []);
-        $this->{$method}($uri, $form + $proof)->assertSessionHasNoErrors();
+        $this->{$method}($uri, $form + $proof)->assertSessionHasNoErrors()->assertRedirect();
     }
 
     #[DataProvider('secondFactorOperations')]
@@ -166,7 +166,7 @@ class ReauthCoverageTest extends OAuthTestCase
         $this->{$method}($uri, $form + ['current_password' => 'password', 'code' => '000000'])->assertSessionHasErrors('code');
 
         [$method, $uri, $form] = $this->operation($key, $member);
-        $this->{$method}($uri, $form + ['current_password' => 'password', 'code' => $this->otp($member)])->assertSessionHasNoErrors();
+        $this->{$method}($uri, $form + ['current_password' => 'password', 'code' => $this->otp($member)])->assertSessionHasNoErrors()->assertRedirect();
     }
 
     #[DataProvider('windowedOperations')]
@@ -179,7 +179,7 @@ class ReauthCoverageTest extends OAuthTestCase
         $this->assertFalse($window::isFresh(app('session.store')));
 
         [$method, $uri, $form] = $this->operation($key, $member);
-        $this->{$method}($uri, $form + ['current_password' => 'password', 'code' => $this->otp($member)])->assertSessionHasNoErrors();
+        $this->{$method}($uri, $form + ['current_password' => 'password', 'code' => $this->otp($member)])->assertSessionHasNoErrors()->assertRedirect();
         $this->assertTrue($window::isFresh(app('session.store')));
 
         [$method, $uri, $form] = $this->operation($key, $member);
@@ -189,7 +189,12 @@ class ReauthCoverageTest extends OAuthTestCase
         [$method, $uri, $form] = $this->operation($key, $member);
         $this->{$method}($uri, $form + ['current_password' => 'wrong-password'])->assertSessionHasErrors('current_password');
 
-        $this->travel(16)->minutes();
+        // A proof sent inside the window is verified but does not push the window's end back.
+        $this->travel(10)->minutes();
+        [$method, $uri, $form] = $this->operation($key, $member);
+        $this->{$method}($uri, $form + ['current_password' => 'password', 'code' => $this->otp($member)])->assertSessionHasNoErrors();
+
+        $this->travel(6)->minutes();
         [$method, $uri, $form] = $this->operation($key, $member);
         $this->{$method}($uri, $form)->assertSessionHasErrors('current_password');
     }

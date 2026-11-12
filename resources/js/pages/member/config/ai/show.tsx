@@ -244,12 +244,17 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
 
     // No onSuccess reset of the password: useForm's callbacks close over the data as it was at
     // submit time, so resetting from one would quietly undo a choice made after it.
-    const submit = (url: string, key: string) =>
-        form.post(url, {
+    const submit = (url: string, key: string) => {
+        // Inside the window the proof fields are not shown, and a code left in them from the request
+        // that opened it would be verified again and refused as already used.
+        form.transform((data) => (tokens.requiresPassword ? data : { read_only: data.read_only }));
+
+        return form.post(url, {
             preserveScroll: true,
             onStart: () => setBusy(key),
             onFinish: () => setBusy(null),
         });
+    };
 
     const revoke = async (id: number) => {
         if (

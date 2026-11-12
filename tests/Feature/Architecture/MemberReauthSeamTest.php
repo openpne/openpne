@@ -7,6 +7,9 @@ namespace Tests\Feature\Architecture;
 use App\Auth\Reauth\ReauthPurpose;
 use App\Auth\Reauth\RequiresReauth;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Route;
+use ReflectionMethod;
+use ReflectionNamedType;
 use Symfony\Component\Finder\Finder;
 use Tests\TestCase;
 
@@ -34,7 +37,7 @@ class MemberReauthSeamTest extends TestCase
 
     public function test_a_raw_password_check_stays_in_the_listed_files(): void
     {
-        $this->assertSame(self::HASH_CHECK, $this->filesMatching('/Hash::check\(|->check\(\$[a-zA-Z>-]*[pP]assword/'));
+        $this->assertSame(self::HASH_CHECK, $this->filesMatching('/Hash::(driver\([^)]*\)->)?check\(|password_verify\(|->check\(\$[a-zA-Z>-]*[pP]assword/'));
     }
 
     public function test_every_purpose_is_asked_by_a_request(): void
@@ -49,6 +52,28 @@ class MemberReauthSeamTest extends TestCase
 
         $missing = array_udiff(ReauthPurpose::cases(), $asked, fn (ReauthPurpose $a, ReauthPurpose $b): int => $a->value <=> $b->value);
         $this->assertSame([], array_map(fn (ReauthPurpose $p): string => $p->value, array_values($missing)));
+    }
+
+    public function test_every_route_that_asks_for_a_proof_is_throttled(): void
+    {
+        $unthrottled = [];
+        foreach (Route::getRoutes() as $route) {
+            $action = $route->getAction('uses');
+            if (! is_string($action) || ! str_contains($action, '@')) {
+                continue;
+            }
+            [$class, $method] = explode('@', $action);
+            foreach ((new ReflectionMethod($class, $method))->getParameters() as $parameter) {
+                $type = $parameter->getType();
+                if ($type instanceof ReflectionNamedType && ! $type->isBuiltin()
+                    && in_array(RequiresReauth::class, class_uses_recursive($type->getName()), true)
+                    && ! collect($route->gatherMiddleware())->contains(fn ($m): bool => is_string($m) && str_starts_with($m, 'throttle:'))) {
+                    $unthrottled[] = $route->uri();
+                }
+            }
+        }
+
+        $this->assertSame([], $unthrottled);
     }
 
     /** @return list<string> */

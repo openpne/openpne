@@ -601,8 +601,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // grant can be ended while the endpoint is switched off, as a token can.
     Route::post('/member/config/connections/{client}/{subject}/delete', [MemberConfigController::class, 'destroyConnection'])
         ->whereUuid('client')->whereNumber('subject')->middleware('throttle:ai-manage')->name('member.config.connections.destroy');
-    Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
-    Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])->name('member.config.withdrawal');
+    Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])
+        ->middleware('throttle:member-reauth')->name('member.config.password');
+    Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])
+        ->middleware('throttle:member-reauth')->name('member.config.withdrawal');
     Route::post('/member/config/email', [MemberConfigController::class, 'updateEmail'])
         ->middleware('throttle:email-change')->name('member.config.email');
 
