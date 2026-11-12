@@ -28,7 +28,7 @@ class RequireSecondLoginProof extends RedirectIfTwoFactorAuthenticatable
             return $next($request);
         }
 
-        if (! app(LoginCode::class)->issue($request->session(), $member, $request->boolean('remember'))) {
+        if (! app(LoginCode::class)->issue($request->session(), $member)) {
             throw ValidationException::withMessages([
                 Fortify::username() => __('Too many confirmation codes have been sent. Please try again later.'),
             ]);

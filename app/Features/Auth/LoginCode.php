@@ -23,7 +23,7 @@ class LoginCode
     private const ISSUES_PER_HOUR = 5;
 
     /** False when the member's hourly budget is spent; nothing is stored or mailed then. */
-    public function issue(Session $session, Member $member, bool $remember): bool
+    public function issue(Session $session, Member $member): bool
     {
         if (RateLimiter::hit('login-code-issue|'.$member->getKey(), 3600) > self::ISSUES_PER_HOUR) {
             return false;
@@ -34,7 +34,6 @@ class LoginCode
         $session->forget('login.id');
         $session->put(self::SLOT, [
             'member_id' => $member->getKey(),
-            'remember' => $remember,
             'nonce' => Str::random(40),
             'hash' => $this->mac($code),
             'password' => $this->mac((string) $member->password),
@@ -52,7 +51,7 @@ class LoginCode
         return true;
     }
 
-    /** @return array{member_id: int, remember: bool, nonce: string, hash: string, password: string, email: string, expires_at: int}|null */
+    /** @return array{member_id: int, nonce: string, hash: string, password: string, email: string, expires_at: int}|null */
     public function pending(Session $session): ?array
     {
         $slot = $session->get(self::SLOT);
@@ -127,7 +126,7 @@ class LoginCode
             return null;
         }
 
-        return $this->issue($session, $member, (bool) $slot['remember']);
+        return $this->issue($session, $member);
     }
 
     /**

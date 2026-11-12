@@ -14,7 +14,7 @@ vi.mock('@inertiajs/react', () => ({
     Head: () => null,
     Link: ({ href, children }: { href: string; children?: ReactNode }) => <a href={href}>{children}</a>,
     router: { post: vi.fn() },
-    useForm: () => ({ data: { email: '', password: '', remember: false, altcha: '' }, setData: vi.fn(), post: vi.fn(), processing: false, errors: {}, reset: vi.fn() }),
+    useForm: () => ({ data: { email: '', password: '', altcha: '' }, setData: vi.fn(), post: vi.fn(), processing: false, errors: {}, reset: vi.fn() }),
     usePage: () => ({ props: { flash: {}, locale: 'en', name: 'OpenPNE', snsLogo: { url: null, color: '#1d4ed8' }, terms: {} } }),
 }));
 

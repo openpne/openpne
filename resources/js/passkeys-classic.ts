@@ -38,14 +38,12 @@ function bindRegister(button: HTMLButtonElement): void {
 
 function bindLogin(button: HTMLButtonElement): void {
     const routes = { options: button.dataset.optionsUrl ?? '', submit: button.dataset.submitUrl ?? '' };
-    // The button's own form, not a document-wide id: a site may place the login gadget twice.
-    const remember = button.closest('form')?.querySelector<HTMLInputElement>('input[name="remember"]') ?? null;
 
     button.addEventListener('click', async () => {
         report(button, '');
         button.disabled = true;
         try {
-            const response = await Passkeys.verify({ routes, remember: () => remember?.checked ?? false });
+            const response = await Passkeys.verify({ routes });
             window.location.assign(response.redirect ?? '/');
         } catch (error) {
             report(button, translate(button, error));

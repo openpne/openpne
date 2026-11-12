@@ -200,7 +200,7 @@ class MemberRouteParity extends RouteParity
             // member/login → _partsLogin.php (.loginForm) → resources/views/auth/login.blade.php
             'login' => [
                 new ScreenElement('mail address + password inputs', L::One, S::Ported, 'opAuthLoginFormMailAddress (mail_address, password)', 'field names not preserved (email/password, Level 3); the ids are (authMailAddress_mail_address / authMailAddress_password), and like OpenPNE 3 the inputs carry no widget class'),
-                new ScreenElement('remember-me checkbox', L::Two, S::Ported, 'opAuthLoginForm is_remember_me', 'field name not preserved (remember, Level 3) — Fortify reads it; the id is (authMailAddress_is_remember_me)'),
+                new ScreenElement('remember-me checkbox', L::Two, S::Deferred, 'opAuthLoginForm is_remember_me', 'not offered: every member login is kept by the session itself, so there is nothing to opt into (docs/internals/sessions.md, "Lifetimes")'),
                 new ScreenElement('login button', L::Two, S::Ported, '_partsLogin input_submit'),
                 new ScreenElement('password reminder link', L::One, S::Ported, 'link_to help_login_error_action', 'links to /forgot-password (password.request)'),
                 new ScreenElement('self-registration link', L::Two, S::Ported, 'link_to self_invite_action', 'shown when open registration is on, mirroring OpenPNE 3\'s invite_mode==2 + enable_registration gate'),

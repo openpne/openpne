@@ -9,7 +9,7 @@ import { PASSKEY_ROUTES, passkeyErrorKey } from '@/lib/passkeys';
  * Arms the browser's passkey picker on the page's `autocomplete="email webauthn"` field and offers
  * the explicit button; renders nothing where WebAuthn is unsupported.
  */
-export function PasskeySignIn({ remember }: { remember: () => boolean }) {
+export function PasskeySignIn() {
     const t = useT();
     const [failure, setFailure] = useState<string | null>(null);
     // Arming the picker reports its own failure through the callback a refused ceremony uses.
@@ -36,7 +36,6 @@ export function PasskeySignIn({ remember }: { remember: () => boolean }) {
     const passkey = usePasskeyVerify({
         autofill: anchored,
         routes: PASSKEY_ROUTES.login,
-        remember,
         onSuccess: (response) => window.location.assign(response.redirect ?? '/'),
         // Reached from the button and from the armed autofill alike; the client already swallows an
         // unsupported or dismissed picker, so what arrives here is a refusal worth showing.

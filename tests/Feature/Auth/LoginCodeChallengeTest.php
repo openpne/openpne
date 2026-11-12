@@ -46,13 +46,9 @@ class LoginCodeChallengeTest extends TestCase
         return $member->fresh();
     }
 
-    private function startChallenge(Member $member, bool $remember = false): void
+    private function startChallenge(Member $member): void
     {
-        $this->post('/login', array_filter([
-            'email' => $member->email,
-            'password' => 'password',
-            'remember' => $remember ? 'on' : null,
-        ]))->assertRedirect('/login/code');
+        $this->post('/login', ['email' => $member->email, 'password' => 'password'])->assertRedirect('/login/code');
 
         $this->assertGuest();
     }
