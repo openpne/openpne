@@ -477,6 +477,7 @@ export default function MemberConfig() {
                                     errors={connection.errors}
                                     onChange={(field, value) => connection.setData(field, value)}
                                     onResetSecondFactor={() => connection.resetAndClearErrors('code', 'recovery_code')}
+                                    onProved={() => connection.clearErrors('current_password')}
                                     passwordHelp={t('Ending a connection asks for your password.')}
                                 />
                             </div>

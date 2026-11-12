@@ -35,6 +35,8 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken, r
     const [account, setAccount] = useState<string>(hasAccounts ? `ai:${actors.aiAccounts[0]?.id}` : NEW);
     const [submitting, setSubmitting] = useState(false);
     const [reauth, setReauth] = useState(REAUTH_DATA);
+    // These errors are page props, which only the next page load replaces.
+    const [passwordErrorSeen, setPasswordErrorSeen] = useState(false);
     const actor = kind === 'self' ? 'self' : account;
     const title = t('Connect :host', { host: client.host });
 
@@ -109,8 +111,9 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken, r
                         purpose="oauth-consent"
                         native
                         data={reauth}
-                        errors={errors}
+                        errors={passwordErrorSeen ? { ...errors, current_password: undefined } : errors}
                         onChange={(field, value) => setReauth((data) => ({ ...data, [field]: value }))}
+                        onProved={() => setPasswordErrorSeen(true)}
                         onResetSecondFactor={() => setReauth((data) => ({ ...data, code: '', recovery_code: '' }))}
                         passwordHelp={t('Connecting asks for your password.')}
                     />

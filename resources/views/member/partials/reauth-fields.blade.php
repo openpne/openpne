@@ -38,6 +38,7 @@
                         data-passkey-reauth
                         data-options-url="{{ route('member.reauth.passkey.options', ['purpose' => $purpose]) }}"
                         data-submit-url="{{ route('member.reauth.passkey.store') }}"
+                        @if ($codeBesidePasskey ?? false) data-keeps-code @endif
                         data-messages="{{ $passkeyMessages }}">{{ __('Confirm with a passkey instead') }}</button>
                 <p role="status" data-passkey-proved hidden>{{ __('Confirmed with your passkey. Please finish within two minutes.') }}</p>
                 <p class="error" role="alert" data-passkey-error hidden></p>

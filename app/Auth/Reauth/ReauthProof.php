@@ -32,10 +32,10 @@ final readonly class ReauthProof
     }
 
     /**
-     * Only for a passkey proof the request has already consumed. It stands for the second factor too,
-     * so `$codeDemanded` is true only where the operation itself asks for a TOTP code.
+     * Verified only once the request has consumed its passkey proof. It stands for the second factor too,
+     * so `$codeDemanded` is null unless the operation itself asks for a TOTP code.
      */
-    public static function passkey(bool $codeDemanded, ?string $code): self
+    public static function passkey(?bool $codeDemanded, ?string $code): self
     {
         return new self(true, true, '', $codeDemanded, $code, null);
     }

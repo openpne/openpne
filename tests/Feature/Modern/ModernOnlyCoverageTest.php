@@ -53,6 +53,7 @@ class ModernOnlyCoverageTest extends TestCase
         'message.chat.recipients',
         'message.chat.withdrawn.messages',
         'member.config.passkeys.options',
+        'member.reauth.passkey.options',
     ];
 
     /**

@@ -417,7 +417,7 @@ step-ups compare, whichever operation asks.
 - **A hundred wrong codes without a right one between them pause the codes**
   until a day after the first of them: a step-up then refuses every TOTP code
   unseen, logs `mfa.codes_paused` and mails the member once. A right code
-  resets the count, once its operation has committed. The figure borrows the
+  resets the count, once the transaction that verified it has committed. The figure borrows the
   upper bound NIST SP 800-63B-4 (Sec. 3.2.2) sets for consecutive failures, but
   this is not that control: the pause lifts by itself, and the sign-in
   challenge, which checks the same secret, is outside it.

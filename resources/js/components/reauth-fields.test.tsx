@@ -24,8 +24,9 @@ afterEach(() => {
     passkeys.verify.mockResolvedValue({});
 });
 
-function Form({ onSubmit }: { onSubmit: (data: ReauthData) => void }) {
+function Form({ onSubmit, error }: { onSubmit: (data: ReauthData) => void; error?: string }) {
     const [data, setData] = useState<ReauthData>({ ...REAUTH_DATA, current_password: 'typed' });
+    const [errors, setErrors] = useState<{ current_password?: string }>({ current_password: error });
 
     return (
         <form
@@ -38,9 +39,10 @@ function Form({ onSubmit }: { onSubmit: (data: ReauthData) => void }) {
                 idPrefix="t"
                 purpose="withdrawal"
                 data={data}
-                errors={{}}
+                errors={errors}
                 onChange={(field, value) => setData((d) => ({ ...d, [field]: value }))}
                 onResetSecondFactor={() => {}}
+                onProved={() => setErrors({})}
             />
         </form>
     );
@@ -82,6 +84,17 @@ test('a verified passkey replaces the fields and empties the typed password, lea
 
     fireEvent.submit(container.querySelector('form')!);
     expect(onSubmit.mock.calls[0]?.[0].current_password).toBe('');
+});
+
+test('a passkey confirmed after a wrong password replaces the fields and their error', async () => {
+    renderWithProviders(<Form onSubmit={() => {}} error="The password is incorrect." />);
+    expect(screen.getByText('The password is incorrect.')).toBeTruthy();
+
+    fireEvent.click(button()!);
+    await act(() => Promise.resolve());
+
+    expect(screen.queryByText('The password is incorrect.')).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('Confirmed with your passkey. Please finish within two minutes.');
 });
 
 test('a refused ceremony is reported and submits nothing', async () => {

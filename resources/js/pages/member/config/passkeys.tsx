@@ -69,6 +69,7 @@ function Reauth({ requiresSecondFactor }: { requiresSecondFactor: boolean }) {
                 errors={form.errors}
                 onChange={form.setData}
                 onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                onProved={() => form.clearErrors('current_password')}
                 requiresSecondFactor={requiresSecondFactor}
                 codeHelp={t('A passkey signs you in without this code, so adding one needs it once.')}
             />
@@ -176,6 +177,7 @@ function PasskeyCard({ passkey, last, requiresSecondFactor }: { passkey: Passkey
                         errors={form.errors}
                         onChange={form.setData}
                         onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                        onProved={() => form.clearErrors('current_password')}
                         requiresSecondFactor={requiresSecondFactor}
                     />
                     <FormActions>

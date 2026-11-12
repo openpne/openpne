@@ -3,12 +3,15 @@
 namespace Tests\Feature\Member;
 
 use App\Auth\Reauth\PasskeyProof;
+use App\Auth\Reauth\ReauthProof;
 use App\Auth\Reauth\ReauthPurpose;
+use App\Features\Member\Actions\RegenerateMemberRecoveryCodes;
 use App\Features\Member\ReauthPasskeyController;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
 use Laravel\Passkeys\Actions\StorePasskey;
@@ -282,6 +285,22 @@ class MemberPasskeyReauthTest extends TestCase
         $this->post('/member/config/mfa/recovery-codes', ['code' => app(Google2FA::class)->getCurrentOtp(decrypt($member->two_factor_secret))])
             ->assertSessionHasNoErrors();
         $this->assertNotSame($before, $member->fresh()->two_factor_recovery_codes);
+    }
+
+    /** The request saw no factor and asked for no code; one confirmed since must not get codes without it. */
+    public function test_new_recovery_codes_fail_closed_when_a_factor_went_live_after_the_passkey_request_was_validated(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $before = $member->two_factor_recovery_codes;
+
+        try {
+            app(RegenerateMemberRecoveryCodes::class)($member, ReauthProof::passkey(false, null));
+            $this->fail('The proof was meant to be refused.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('current_password', $e->errors());
+        }
+
+        $this->assertSame($before, $member->fresh()->two_factor_recovery_codes);
     }
 
     public function test_the_ceremony_routes_are_throttled_per_member(): void

@@ -69,7 +69,8 @@ function bindReauth(button: HTMLButtonElement): void {
             return;
         }
         // The server verifies a password whenever one is sent, and a disabled field is not sent.
-        for (const field of button.closest('form')?.querySelectorAll<HTMLInputElement>('input[name="current_password"]') ?? []) {
+        const spent = button.dataset.keepsCode === undefined ? 'input[name="current_password"], input[name="code"], input[name="recovery_code"]' : 'input[name="current_password"]';
+        for (const field of button.closest('form')?.querySelectorAll<HTMLInputElement>(spent) ?? []) {
             field.value = '';
             field.disabled = true;
         }

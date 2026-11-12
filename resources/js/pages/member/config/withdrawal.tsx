@@ -28,6 +28,7 @@ export default function ConfigWithdrawal() {
                         errors={form.errors}
                         onChange={(field, value) => form.setData(field, value)}
                         onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                        onProved={() => form.clearErrors('current_password')}
                     />
                     <CheckboxField
                         label={t('Yes, delete my account.')}

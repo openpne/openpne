@@ -513,7 +513,7 @@
                         <input type="hidden" name="_mfa_form" value="regenerate">
                         {{-- `code` is a key shared with the disable form below, so errors are gated on the submitted form. --}}
                         <table>
-                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_regen', 'purpose' => 'mfa-recovery-codes', 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'regenerate'])
+                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_regen', 'purpose' => 'mfa-recovery-codes', 'codeBesidePasskey' => true, 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'regenerate'])
                         </table>
                         <div class="operation">
                             <ul class="moreInfo button">

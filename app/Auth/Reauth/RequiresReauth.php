@@ -44,7 +44,7 @@ trait RequiresReauth
         }
 
         if ($this->reauthPath() === 'passkey') {
-            return ReauthProof::passkey($this->asksCodeBesidePasskey() && $this->requiresSecondFactor(), $this->input('code'));
+            return ReauthProof::passkey($this->asksCodeBesidePasskey() ? $this->requiresSecondFactor() : null, $this->input('code'));
         }
 
         return ReauthProof::password(
@@ -123,14 +123,15 @@ trait RequiresReauth
         $viewer = $this->user();
         assert($viewer instanceof Member);
 
-        if ($this->reauthPath() === 'passkey' && ! PasskeyProof::consume($this->session(), $viewer, $this->reauthPurpose())) {
-            throw ValidationException::withMessages(['current_password' => __('Please confirm it is you again.')]);
-        }
-
         $proof = $this->reauthProof();
 
+        // Before the proof is spent, so a refusal here leaves it for the retry.
         if ($proof->comparesCode()) {
             app(ReauthCodeBudget::class)->reserve($viewer, $this->session());
+        }
+
+        if ($this->reauthPath() === 'passkey' && ! PasskeyProof::consume($this->session(), $viewer, $this->reauthPurpose())) {
+            throw ValidationException::withMessages(['current_password' => __('Please confirm it is you again.')]);
         }
 
         if (! $this->verifiesReauthInAction()) {

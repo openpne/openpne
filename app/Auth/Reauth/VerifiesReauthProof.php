@@ -24,7 +24,7 @@ trait VerifiesReauthProof
             throw ValidationException::withMessages(['current_password' => __('validation.current_password')]);
         }
 
-        if ($proof->offered && ($proof->secondFactorDemanded === null || ($proof->viaPasskey && ! $proof->secondFactorDemanded))) {
+        if ($proof->offered && $proof->secondFactorDemanded === null) {
             return;
         }
 
@@ -64,7 +64,7 @@ trait VerifiesReauthProof
             ]);
         }
 
-        // After the commit, so an operation that rolls back leaves the count where the comparison put it.
+        // After the commit, so an Action that verifies inside its own transaction keeps the count when it rolls back.
         DB::afterCommit(fn () => app(ReauthCodeBudget::class)->clear($locked));
     }
 }

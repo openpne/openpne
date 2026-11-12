@@ -334,6 +334,7 @@ function TokenPanel({ account, tokens }: { account: MemberRef; tokens: Tokens })
                             errors={form.errors}
                             onChange={(field, value) => form.setData(field, value)}
                             onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                            onProved={() => form.clearErrors('current_password')}
                             passwordHelp={t('Issuing or revoking a token asks for your password.')}
                         />
                     )}
@@ -529,6 +530,7 @@ export default function AiAccountShow() {
                         errors={deleteForm.errors}
                         onChange={(field, value) => deleteForm.setData(field, value)}
                         onResetSecondFactor={() => deleteForm.resetAndClearErrors('code', 'recovery_code')}
+                        onProved={() => deleteForm.clearErrors('current_password')}
                     />
                     <FormActions>
                         <Button type="submit" variant="destructive" loading={deleteForm.processing}>

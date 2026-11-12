@@ -42,6 +42,8 @@ interface Props {
     onChange: (field: keyof ReauthData, value: string) => void;
     /** Clears both second-factor fields and their errors when the member switches between them. */
     onResetSecondFactor: () => void;
+    /** Must clear the `current_password` error: a later one then means the server no longer holds the proof. */
+    onProved: () => void;
     /** Defaults to whether the signed-in member holds a confirmed factor. */
     requiresSecondFactor?: boolean;
     allowRecoveryCode?: boolean;
@@ -61,6 +63,7 @@ export function ReauthFields({
     errors,
     onChange,
     onResetSecondFactor,
+    onProved,
     requiresSecondFactor,
     allowRecoveryCode = true,
     codeBesidePasskey = false,
@@ -95,6 +98,7 @@ export function ReauthFields({
         if (!codeBesidePasskey) {
             onResetSecondFactor();
         }
+        onProved();
         setProving(false);
         setProved(true);
     };
@@ -103,7 +107,7 @@ export function ReauthFields({
     // The server prefers a filled recovery code, so only the shown field is ever populated.
     const [useRecovery, setUseRecovery] = useState(false);
 
-    // The proof lasts two minutes and one request; the server asking for the password again means it is gone.
+    // The proof lasts two minutes and one request.
     if (proved && !errors.current_password) {
         return (
             <>

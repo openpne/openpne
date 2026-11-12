@@ -64,6 +64,7 @@ function Disabled() {
                     errors={form.errors}
                     onChange={form.setData}
                     onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                    onProved={() => form.clearErrors('current_password')}
                     requiresSecondFactor={false}
                     autoFocus
                 />
@@ -121,6 +122,7 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
                             errors={form.errors}
                             onChange={form.setData}
                             onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                            onProved={() => form.clearErrors('current_password')}
                             requiresSecondFactor={false}
                             passwordHelp={t('Some time has passed since you started, so please confirm it is you: enter your current password as well.')}
                         />
@@ -182,6 +184,7 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                             errors={regenerate.errors}
                             onChange={regenerate.setData}
                             onResetSecondFactor={() => regenerate.resetAndClearErrors('code', 'recovery_code')}
+                            onProved={() => regenerate.clearErrors('current_password')}
                             requiresSecondFactor
                             allowRecoveryCode={false}
                         />
@@ -214,6 +217,7 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                             errors={disable.errors}
                             onChange={disable.setData}
                             onResetSecondFactor={() => disable.resetAndClearErrors('code', 'recovery_code')}
+                            onProved={() => disable.clearErrors('current_password')}
                             requiresSecondFactor
                         />
                         <FormActions>

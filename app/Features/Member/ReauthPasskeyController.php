@@ -49,13 +49,14 @@ class ReauthPasskeyController extends Controller
     public function store(PasskeyProofRequest $request, VerifyPasskey $verify): JsonResponse
     {
         $viewer = $this->viewer();
-        [$options, $purpose] = $request->ceremony();
-
-        // Read by LogPasskeyVerified off the container's request, since the package's event carries
-        // only the member and the passkey.
-        request()->attributes->set(self::PURPOSE_ATTRIBUTE, $purpose->value);
 
         try {
+            [$options, $purpose] = $request->ceremony();
+
+            // Read by LogPasskeyVerified off the container's request, since the package's event
+            // carries only the member and the passkey.
+            request()->attributes->set(self::PURPOSE_ATTRIBUTE, $purpose->value);
+
             // The session is saved whole, so a request that began before the pull can write the slot
             // back; the cache refuses the challenge a second time.
             if (! Cache::add('reauth-ceremony|'.$viewer->getKey().'|'.hash('sha256', $options->challenge), 1, self::CEREMONY_SECONDS)) {
