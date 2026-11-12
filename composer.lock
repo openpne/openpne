@@ -13427,20 +13427,19 @@
         },
         {
             "name": "laravel-lang/native-currency-names",
-            "version": "1.10.0",
+            "version": "1.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Laravel-Lang/native-currency-names.git",
-                "reference": "7ebe95a9942bebf6afd61986fa18c82dade3d583"
+                "reference": "bc8548ecd9fc2956ad0fd1b4275ed1fe23085bfe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Laravel-Lang/native-currency-names/zipball/7ebe95a9942bebf6afd61986fa18c82dade3d583",
-                "reference": "7ebe95a9942bebf6afd61986fa18c82dade3d583",
+                "url": "https://api.github.com/repos/Laravel-Lang/native-currency-names/zipball/bc8548ecd9fc2956ad0fd1b4275ed1fe23085bfe",
+                "reference": "bc8548ecd9fc2956ad0fd1b4275ed1fe23085bfe",
                 "shasum": ""
             },
             "require": {
-                "dragon-code/support": "^6.11",
                 "ext-json": "*",
                 "illuminate/collections": "^10.0 || ^11.0 || ^12.0 || ^13.0",
                 "php": "^8.1"
@@ -13502,7 +13501,7 @@
                     "type": "yoomoney"
                 }
             ],
-            "time": "2026-06-20T16:50:37+00:00"
+            "time": "2026-11-11T18:05:32+00:00"
         },
         {
             "name": "laravel-lang/native-locale-names",

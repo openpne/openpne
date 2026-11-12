@@ -135,6 +135,12 @@
         },
         "platform": {
             "php": "8.3"
+        },
+        "audit": {
+            "ignore-abandoned": {
+                "dragon-code/support": "Transitive via laravel-lang/*; upstream still requires it",
+                "dragon-code/contracts": "Transitive via dragon-code/support"
+            }
         }
     },
     "minimum-stability": "stable",
