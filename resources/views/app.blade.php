@@ -33,7 +33,9 @@
     </script>
     <title inertia>{{ sns_title() ?: sns_name() }}</title>
     @viteReactRefresh
-    @vite(['resources/css/app.css', 'resources/js/app.tsx'])
+    {{-- The page module is an entry of its own so its chunks load in parallel with the app's;
+         the app's later import() of the same URL reuses the instance. --}}
+    @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
     @inertiaHead
     {!! layout_hook(\App\Support\LayoutHook::ModernHead) !!}
 </head>
