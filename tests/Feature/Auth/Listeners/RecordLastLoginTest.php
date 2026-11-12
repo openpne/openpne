@@ -115,6 +115,7 @@ class RecordLastLoginTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertAuthenticated();
+        $this->assertIsInt(session(auth()->guard('member')->getName().'_at'));
         $this->assertNotNull(Member::where('email', 'newcomer@example.com')->sole()->last_login_at);
     }
 

@@ -30,12 +30,16 @@ class StartSession extends FrameworkStartSession
     {
         $this->request = $request;
 
-        return parent::handleStatefulRequest($request, $session, function (Request $request) use ($next) {
-            $response = $next($request);
-            $request->attributes->set(self::RESPONSE, $response);
+        try {
+            return parent::handleStatefulRequest($request, $session, function (Request $request) use ($next) {
+                $response = $next($request);
+                $request->attributes->set(self::RESPONSE, $response);
 
-            return $response;
-        });
+                return $response;
+            });
+        } finally {
+            $this->request = null;
+        }
     }
 
     protected function storeCurrentUrl(Request $request, $session)

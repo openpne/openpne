@@ -5,8 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    // The member guard no longer issues or reads a remember-me cookie; a stored token would still
-    // make every logout write the row.
+    // Member no longer names a remember-token column, so what earlier logins stored is dead data.
     public function up(): void
     {
         DB::table('members')->whereNotNull('remember_token')->update(['remember_token' => null]);

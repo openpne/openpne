@@ -54,6 +54,7 @@ class PasskeyLoginTest extends TestCase
             ->assertJsonPath('redirect', url('/'));
 
         $this->assertAuthenticatedAs($member);
+        $this->assertIsInt(session(Auth::guard('member')->getName().'_at'));
         $this->assertNotSame($sessionBefore, app('session.store')->getId());
         $this->assertNotNull(Passkey::where('credential_id', $authenticator->credentialId())->value('last_used_at'));
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('login.success')['member_id']);

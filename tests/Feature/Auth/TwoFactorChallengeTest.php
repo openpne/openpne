@@ -94,6 +94,7 @@ class TwoFactorChallengeTest extends TestCase
 
         $response->assertRedirect('/');
         $this->assertAuthenticatedAs($member);
+        $this->assertIsInt(session(Auth::guard('member')->getName().'_at'));
         $this->assertNull(session('login.id'));
         // Completing the challenge is the authentication moment, so it must be fixation-safe.
         $this->assertNotSame($sessionIdBeforeChallenge, session()->getId());

@@ -2,6 +2,7 @@
 
 namespace App\Auth;
 
+use App\Session\MemberSessionLifetime;
 use App\Support\CookiePrefix;
 use Illuminate\Auth\SessionGuard as BaseSessionGuard;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -44,7 +45,7 @@ class SessionGuard extends BaseSessionGuard
         }
 
         $guard->recallerEnabled = (bool) ($config['recaller'] ?? true);
-        $guard->absoluteMinutes = isset($config['absolute_lifetime']) ? (int) $config['absolute_lifetime'] : null;
+        $guard->absoluteMinutes = empty($config['absolute_lifetime']) ? null : MemberSessionLifetime::absoluteMinutes();
 
         return $guard;
     }

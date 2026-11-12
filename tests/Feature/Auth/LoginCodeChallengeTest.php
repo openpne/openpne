@@ -129,6 +129,7 @@ class LoginCodeChallengeTest extends TestCase
         $this->post('/login/code', ['code' => $this->mailedCode()])->assertRedirect('/');
 
         $this->assertAuthenticatedAs($member);
+        $this->assertIsInt(session(Auth::guard('member')->getName().'_at'));
         $this->assertNull(session('login.code'));
         $this->assertNotSame($sessionIdBefore, session()->getId());
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('login.success')['member_id']);

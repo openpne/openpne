@@ -47,7 +47,7 @@ return [
             // No remember-me cookie: the session itself is long-lived
             // (docs/internals/sessions.md, "Lifetimes").
             'recaller' => false,
-            'absolute_lifetime' => (int) env('SESSION_MEMBER_ABSOLUTE_LIFETIME', 576000),
+            'absolute_lifetime' => true,
         ],
 
         // Administrators authenticate through the Filament `/admin` panel against

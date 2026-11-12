@@ -144,6 +144,24 @@ class MemberSessionLifetimeTest extends TestCase
         $this->assertSame(self::GUEST_MINUTES, MemberSessionLifetime::idleMinutes());
     }
 
+    public function test_the_absolute_lifetime_is_never_below_the_idle_lifetime(): void
+    {
+        config(['session.member_absolute_lifetime' => 0]);
+
+        $this->assertSame(self::MEMBER_MINUTES, MemberSessionLifetime::absoluteMinutes());
+    }
+
+    public function test_the_guard_reads_the_configured_absolute_lifetime(): void
+    {
+        config(['session.member_absolute_lifetime' => self::MEMBER_MINUTES + 10]);
+        $member = Member::factory()->create();
+
+        $this->withSession([
+            $this->loginKey() => $member->getKey(),
+            $this->loginKey().'_at' => now()->subMinutes(self::MEMBER_MINUTES + 11)->getTimestamp(),
+        ])->get('/dashboard')->assertRedirect('/login');
+    }
+
     public function test_a_signed_in_response_carries_both_cookies_for_the_member_lifetime(): void
     {
         $response = $this->login(Member::factory()->create());
@@ -207,8 +225,10 @@ class MemberSessionLifetimeTest extends TestCase
             $this->loginKey().'_at' => now()->subMinutes(576001)->getTimestamp(),
         ];
 
-        $this->withSession($session)->get('/dashboard')->assertRedirect('/login');
+        $this->withSession($session + ['_token' => 'standing-token'])->get('/dashboard')->assertRedirect('/login');
         $this->assertGuest('member');
+        // Kept, so a POST that finds the login expired passes the CSRF check and lands on the login.
+        $this->assertSame('standing-token', session()->token());
 
         $this->freshRequestState();
         $this->withSession($session)->post('/member/config/password', [
@@ -250,7 +270,7 @@ class MemberSessionLifetimeTest extends TestCase
     public function test_a_once_valid_recaller_restores_nobody_and_is_cleared(): void
     {
         $member = Member::factory()->create();
-        $member->forceFill(['remember_token' => 'stored-token'])->save();
+        DB::table('members')->where('id', $member->getKey())->update(['remember_token' => 'stored-token']);
         $recaller = Auth::guard('member')->getRecallerName();
 
         $response = $this->withCookie($recaller, $member->getKey().'|stored-token|'.$member->getAuthPassword())

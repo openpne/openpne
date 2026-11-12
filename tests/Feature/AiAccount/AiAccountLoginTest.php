@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 /**
- * Three doors into a member row: a password attempt, a session carrying its id, and a remember-me
- * cookie. The members constraint shuts only the first and the third, so these pin the refusals that
- * still stand with it lifted and the session door, which needs no credential at all.
+ * Two doors into a member row: a password attempt and a session carrying its id. The members
+ * constraint shuts only the first, so these pin the refusal that still stands with it lifted and the
+ * session door, which needs no credential at all.
  */
 class AiAccountLoginTest extends TestCase
 {

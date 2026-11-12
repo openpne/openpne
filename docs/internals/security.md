@@ -690,8 +690,10 @@ long-lived member session instead:
 
 - a sensitive change asks for the credential again, whatever the session's age
   ("Member re-authentication");
-- a change to what a sign-in must prove — a password, a TOTP factor, a passkey —
-  ends the member's other sessions, and a ban ends all of them;
+- a password change signs the member's other devices out, confirming or
+  removing a TOTP factor and removing a passkey end the member's other sessions,
+  as does a first passkey added without a TOTP factor, and a ban ends all of
+  them;
 - the long lifetime exists only on the `database` session driver, the one where
   those sessions can be ended row by row;
 - the administrator realm keeps the short lifetime.

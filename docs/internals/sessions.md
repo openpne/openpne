@@ -82,9 +82,13 @@ prefix terms.
 | `SESSION_MEMBER_LIFETIME` | 43200 (30 days) | idle minutes of a signed-in member's session |
 | `SESSION_MEMBER_ABSOLUTE_LIFETIME` | 576000 (400 days) | minutes from sign-in after which a member's session ends however recently it was used |
 
+A member value below the one above it in the table is raised to it, so neither
+signing in nor a blank setting shortens a session.
+
 A member stays signed in through the session alone: the `member` guard issues
 no remember-me cookie and ignores one a browser still holds (it answers with a
-cookie that clears it). Why the member values are what they are is in
+cookie that clears it), and `Member` names no remember-token column, so nothing
+writes `members.remember_token`. Why the member values are what they are is in
 [security.md](security.md#session-lifetime).
 
 - **Idle lifetime is per row.**
@@ -92,8 +96,7 @@ cookie that clears it). Why the member values are what they are is in
   replaces the framework's `database` handler and reads `sessions.user_id`: a
   row that names a member is live, and swept, by the member lifetime, any other
   row by `SESSION_LIFETIME`. The handler built for `admin_sessions` carries no
-  member lifetime. A member lifetime set below `SESSION_LIFETIME` is raised to
-  it, so signing in never shortens a session.
+  member lifetime.
 - **The cookies follow.** The session cookie and `XSRF-TOKEN` of a response to a
   signed-in member, outside the admin realm, expire at the member lifetime
   ([`MemberSessionLifetime`](../../app/Session/MemberSessionLifetime.php)). With

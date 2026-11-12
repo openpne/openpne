@@ -15,6 +15,12 @@ final class MemberSessionLifetime
         return max((int) config('session.member_lifetime'), (int) config('session.lifetime'));
     }
 
+    /** Never below the idle lifetime, which an unset or zero value would otherwise undercut. */
+    public static function absoluteMinutes(): int
+    {
+        return max((int) config('session.member_absolute_lifetime'), self::idleMinutes());
+    }
+
     /**
      * Null wherever the framework's lifetime stands. Asks the guard, so it must not run while the
      * session driver is being built.
