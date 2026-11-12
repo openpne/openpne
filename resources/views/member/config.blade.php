@@ -275,15 +275,16 @@
                                         @csrf
                                         {{ $c['host'] ?: $c['clientName'] }}「{{ $c['clientName'] }}」 — {{ $c['actor'] ? __('As :name', ['name' => $c['actor']['name']]) : __('As yourself') }}@if ($c['readOnly']) · {{ __('Read-only') }}@endif
                                         @if ($connections['requiresPassword'])
-                                            <label for="connection_password_{{ $loop->index }}">{{ __('Current password') }}</label>
-                                            <input type="password" id="connection_password_{{ $loop->index }}" name="current_password" class="input_text" autocomplete="current-password">
+                                            @include('member.partials.reauth-fields', ['part' => 'inline', 'idPrefix' => 'connection_'.$loop->index])
                                         @endif
                                         <input type="submit" class="input_submit" value="{{ __('End') }}">
                                     </form>
                                 </li>
                             @endforeach
                         </ul>
-                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                        @foreach (['current_password', 'code', 'recovery_code'] as $field)
+                            @error($field)<p class="error" role="alert">{{ $message }}</p>@enderror
+                        @endforeach
                     </div>
                 </x-classic.parts>
             @endif
@@ -402,13 +403,7 @@
                 <form method="POST" action="{{ route('member.config.password') }}">
                     @csrf
                     <table>
-                        <tr>
-                            <th><label for="current_password">{{ __('Current password') }}</label></th>
-                            <td>
-                                <input type="password" id="current_password" name="current_password" autocomplete="current-password">
-                                @error('current_password')<p class="error">{{ $message }}</p>@enderror
-                            </td>
-                        </tr>
+                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'password_change'])
                         <tr>
                             <th><label for="password">{{ __('New password') }}</label></th>
                             <td>
@@ -423,6 +418,7 @@
                             </td>
                         </tr>
                     </table>
+                    @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'password_change'])
                     <div class="operation">
                         <ul class="moreInfo button">
                             <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
@@ -564,14 +560,9 @@
                                 @error('new_email')<p class="error">{{ $message }}</p>@enderror
                             </td>
                         </tr>
-                        <tr>
-                            <th><label for="email_password">{{ __('Current password') }}</label></th>
-                            <td>
-                                <input type="password" id="email_password" name="password" autocomplete="current-password">
-                                @error('password')<p class="error">{{ $message }}</p>@enderror
-                            </td>
-                        </tr>
+                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'email_change'])
                     </table>
+                    @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'email_change'])
                     <p>{{ __('A confirmation link will be sent to the new address. The change takes effect once you open it.') }}</p>
                     <div class="operation">
                         <ul class="moreInfo button">
@@ -589,13 +580,7 @@
                     @csrf
                     <p>{{ __('Withdrawing permanently deletes your account and cannot be undone.') }}</p>
                     <table>
-                        <tr>
-                            <th><label for="withdraw_password">{{ __('Current password') }}</label></th>
-                            <td>
-                                <input type="password" id="withdraw_password" name="password" autocomplete="current-password">
-                                @error('password')<p class="error">{{ $message }}</p>@enderror
-                            </td>
-                        </tr>
+                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'withdrawal'])
                         <tr>
                             <th></th>
                             <td>
@@ -607,6 +592,7 @@
                             </td>
                         </tr>
                     </table>
+                    @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'withdrawal'])
                     <div class="operation">
                         <ul class="moreInfo button">
                             <li><input type="submit" class="input_submit" value="{{ __('Withdraw from this site') }}"></li>

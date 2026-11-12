@@ -348,10 +348,6 @@ class MemberConfigController extends Controller
     {
         $viewer = $this->viewer();
 
-        if ($request->requiresPassword()) {
-            ConnectionReauth::stamp($request->session());
-        }
-
         abort_unless(Connections::revoke($viewer, $client, $subject), 404);
 
         SecurityLog::event('token.revoked', [

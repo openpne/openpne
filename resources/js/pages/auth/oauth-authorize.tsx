@@ -1,6 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { FlashMessage } from '@/components/flash-message';
+import { REAUTH_DATA, ReauthFields } from '@/components/reauth-fields';
 import { Button } from '@/components/ui/button';
 import { CheckboxField, Field, FormActions, RadioCardGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,7 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken, r
     const [kind, setKind] = useState<'ai' | 'self'>(offersAi ? 'ai' : 'self');
     const [account, setAccount] = useState<string>(hasAccounts ? `ai:${actors.aiAccounts[0]?.id}` : NEW);
     const [submitting, setSubmitting] = useState(false);
+    const [reauth, setReauth] = useState(REAUTH_DATA);
     const actor = kind === 'self' ? 'self' : account;
     const title = t('Connect :host', { host: client.host });
 
@@ -102,9 +104,15 @@ export default function OAuthAuthorize({ client, actors, authToken, csrfToken, r
                 <CheckboxField name="read_only" value="1" label={t('Read-only: it can read but not post')} />
 
                 {requiresPassword && (
-                    <Field label={t('Current password')} htmlFor="current_password" help={t('Connecting asks for your password.')} error={errors.current_password} required>
-                        <Input id="current_password" name="current_password" type="password" autoComplete="current-password" />
-                    </Field>
+                    <ReauthFields
+                        idPrefix="consent"
+                        native
+                        data={reauth}
+                        errors={errors}
+                        onChange={(field, value) => setReauth((data) => ({ ...data, [field]: value }))}
+                        onResetSecondFactor={() => setReauth((data) => ({ ...data, code: '', recovery_code: '' }))}
+                        passwordHelp={t('Connecting asks for your password.')}
+                    />
                 )}
 
                 <FormActions className="justify-end">

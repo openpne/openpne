@@ -1,13 +1,13 @@
 import { useForm } from '@inertiajs/react';
+import { REAUTH_DATA, ReauthFields } from '@/components/reauth-fields';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
-import { CheckboxField, Field, FormActions } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { CheckboxField, FormActions } from '@/components/ui/field';
 import { useT } from '@/lib/i18n';
 
 export default function ConfigWithdrawal() {
     const t = useT();
-    const form = useForm({ password: '', confirm: false });
+    const form = useForm({ ...REAUTH_DATA, confirm: false });
 
     return (
         <SettingsSubpage title={t('Account withdrawal')} danger>
@@ -21,15 +21,13 @@ export default function ConfigWithdrawal() {
                     <p className="text-sm text-muted-foreground">
                         {t('Withdrawing permanently deletes your account and cannot be undone.')}
                     </p>
-                    <Field label={t('Current password')} htmlFor="withdraw_password" error={form.errors.password}>
-                        <Input
-                            id="withdraw_password"
-                            type="password"
-                            autoComplete="current-password"
-                            value={form.data.password}
-                            onChange={(e) => form.setData('password', e.target.value)}
-                        />
-                    </Field>
+                    <ReauthFields
+                        idPrefix="withdrawal"
+                        data={form.data}
+                        errors={form.errors}
+                        onChange={(field, value) => form.setData(field, value)}
+                        onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                    />
                     <CheckboxField
                         label={t('Yes, delete my account.')}
                         checked={form.data.confirm}

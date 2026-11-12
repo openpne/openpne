@@ -166,7 +166,11 @@
             @unless ($tokens['mcpEnabled'])
                 <p>{{ __('This site has the MCP endpoint switched off, so a token cannot be used until an administrator turns it back on.') }}</p>
             @endunless
-            @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+            @if (old('_ai_form') !== 'delete')
+                @foreach (['current_password', 'code', 'recovery_code'] as $field)
+                    @error($field)<p class="error" role="alert">{{ $message }}</p>@enderror
+                @endforeach
+            @endif
             @if (count($tokens['tokens']) === 0)
                 <p>{{ __('This AI account has no tokens.') }}</p>
             @else
@@ -179,9 +183,7 @@
                             <form method="POST" action="{{ route('member.config.ai.tokens.destroy', ['member' => $aiAccount->getKey(), 'token' => $token['id']]) }}">
                                 @csrf
                                 @if ($tokens['requiresPassword'])
-                                    <label for="ai_token_revoke_password_{{ $token['id'] }}">{{ __('Current password') }}</label>
-                                    <input type="password" id="ai_token_revoke_password_{{ $token['id'] }}" name="current_password"
-                                           class="input_text" autocomplete="current-password">
+                                    @include('member.partials.reauth-fields', ['part' => 'inline', 'idPrefix' => 'ai_token_revoke_'.$token['id']])
                                 @endif
                                 <input type="submit" class="input_submit" value="{{ __('Revoke') }}">
                             </form>
@@ -194,19 +196,16 @@
             @csrf
             <table>
                 @if ($tokens['requiresPassword'])
-                    <tr>
-                        <th><label for="ai_token_password">{{ __('Current password') }}</label></th>
-                        <td>
-                            <input type="password" id="ai_token_password" name="current_password" class="input_text" autocomplete="current-password">
-                            <p>{{ __('Issuing or revoking a token asks for your password.') }}</p>
-                        </td>
-                    </tr>
+                    @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'ai_token', 'showErrors' => false, 'passwordHelp' => __('Issuing or revoking a token asks for your password.')])
                 @endif
                 <tr>
                     <th><label for="ai_token_read_only">{{ __('Read-only: it can read but not post') }}</label></th>
                     <td><input type="checkbox" id="ai_token_read_only" name="read_only" value="1" @checked(old('read_only'))></td>
                 </tr>
             </table>
+            @if ($tokens['requiresPassword'])
+                @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'ai_token', 'showErrors' => false])
+            @endif
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Issue a token') }}"></li>
@@ -219,16 +218,12 @@
     <x-classic.parts id="member_ai_account_delete" name="form" :title="__('Delete this AI account')">
         <form method="POST" action="{{ route('member.config.ai.destroy', ['member' => $aiAccount->getKey()]) }}">
             @csrf
+            <input type="hidden" name="_ai_form" value="delete">
             <p>{{ __('Deleting is permanent. What it posted stays on the site, shown as by "%Withdrawn_member%".') }}</p>
             <table>
-                <tr>
-                    <th><label for="ai_delete_password">{{ __('Current password') }}</label></th>
-                    <td>
-                        <input type="password" id="ai_delete_password" name="password" autocomplete="current-password">
-                        @error('password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                    </td>
-                </tr>
+                @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'ai_delete', 'showErrors' => old('_ai_form') === 'delete'])
             </table>
+            @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'ai_delete', 'showErrors' => old('_ai_form') === 'delete'])
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>

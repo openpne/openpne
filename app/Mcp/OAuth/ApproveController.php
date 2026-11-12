@@ -48,10 +48,6 @@ class ApproveController
     public function consent(ConsentRequest $request, ResponseInterface $psrResponse): Response
     {
         $authRequest = $this->authRequestFromSession($request);
-        // The window runs from the proof rather than sliding forward with each connection.
-        if ($request->requiresPassword()) {
-            ConsentReauth::stamp($request->session());
-        }
         /** @var Member $viewer */
         $viewer = $request->user();
         $actor = $request->actor();

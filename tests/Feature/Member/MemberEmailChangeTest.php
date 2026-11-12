@@ -20,7 +20,7 @@ class MemberEmailChangeTest extends TestCase
 
     public function test_a_guest_cannot_request_an_email_change(): void
     {
-        $this->post('/member/config/email', ['password' => 'password', 'new_email' => 'new@example.com'])
+        $this->post('/member/config/email', ['current_password' => 'password', 'new_email' => 'new@example.com'])
             ->assertRedirect('/login');
     }
 
@@ -32,7 +32,7 @@ class MemberEmailChangeTest extends TestCase
         $old = $member->email;
 
         $this->actingAs($member)->post('/member/config/email', [
-            'password' => 'password',
+            'current_password' => 'password',
             'new_email' => 'new@example.com',
         ])->assertRedirect(route('member.config', ['category' => 'email']));
 
@@ -65,9 +65,9 @@ class MemberEmailChangeTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/config/email', [
-            'password' => 'not-the-password',
+            'current_password' => 'not-the-password',
             'new_email' => 'new@example.com',
-        ])->assertSessionHasErrors('password');
+        ])->assertSessionHasErrors('current_password');
 
         $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
     }
@@ -77,7 +77,7 @@ class MemberEmailChangeTest extends TestCase
         $member = Member::factory()->create(['email' => 'me@example.com']);
 
         $this->actingAs($member)->post('/member/config/email', [
-            'password' => 'password',
+            'current_password' => 'password',
             'new_email' => 'ME@example.com', // case-insensitive match to the current address
         ])->assertSessionHasErrors('new_email');
 
@@ -90,7 +90,7 @@ class MemberEmailChangeTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/config/email', [
-            'password' => 'password',
+            'current_password' => 'password',
             'new_email' => 'TAKEN@example.com', // case-insensitive collision
         ])->assertSessionHasErrors('new_email');
 
@@ -231,7 +231,7 @@ class MemberEmailChangeTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/config/email', [
-            'password' => 'password',
+            'current_password' => 'password',
             'new_email' => 'new@example.com',
         ])->assertRedirect(route('member.config'));
 

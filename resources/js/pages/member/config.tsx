@@ -5,11 +5,11 @@ import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
 import { useConfirm } from '@/components/confirm-dialog';
 import { ActionLink } from '@/components/ui/action-link';
+import { REAUTH_DATA, ReauthFields } from '@/components/reauth-fields';
 import { Button } from '@/components/ui/button';
 import { DangerLink } from '@/components/ui/danger-link';
-import { Field, FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
+import { FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
-import { Input } from '@/components/ui/input';
 import { RadioCard } from '@/components/ui/radio-card';
 import { RadioPill } from '@/components/ui/radio-pill';
 import { type ColorMode, useColorMode } from '@/lib/color-mode';
@@ -123,7 +123,7 @@ export default function MemberConfig() {
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
     const autoplay = useForm({ autoplay_animations: form.autoplayAnimations?.value ?? '' });
-    const connection = useForm({ current_password: '' });
+    const connection = useForm(REAUTH_DATA);
     const confirm = useConfirm();
     const { absolute } = useDateFormat();
     const [ending, setEnding] = useState<string | null>(null);
@@ -469,20 +469,16 @@ export default function MemberConfig() {
                     ))}
                     {form.connections.requiresPassword && (
                         <GroupItem>
-                            <Field
-                                label={t('Current password')}
-                                htmlFor="connection_password"
-                                help={t('Ending a connection asks for your password.')}
-                                error={connection.errors.current_password}
-                            >
-                                <Input
-                                    id="connection_password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    value={connection.data.current_password}
-                                    onChange={(e) => connection.setData('current_password', e.target.value)}
+                            <div className="space-y-4">
+                                <ReauthFields
+                                    idPrefix="connection"
+                                    data={connection.data}
+                                    errors={connection.errors}
+                                    onChange={(field, value) => connection.setData(field, value)}
+                                    onResetSecondFactor={() => connection.resetAndClearErrors('code', 'recovery_code')}
+                                    passwordHelp={t('Ending a connection asks for your password.')}
                                 />
-                            </Field>
+                            </div>
                         </GroupItem>
                     )}
                 </SettingsGroup>
