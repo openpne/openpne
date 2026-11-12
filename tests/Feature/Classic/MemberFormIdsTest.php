@@ -26,12 +26,10 @@ class MemberFormIdsTest extends TestCase
             'id="authMailAddress_mail_address" name="email"',
             '<label for="authMailAddress_password">',
             'id="authMailAddress_password" name="password"',
-            '<label for="authMailAddress_is_remember_me">',
-            'id="authMailAddress_is_remember_me" name="remember"',
         ], false);
         // OpenPNE 3's login inputs carried no widget class; the skin reaches them through #MailAddressLogin.
         $response->assertDontSee('id="authMailAddress_mail_address" name="email" value="" class=', false);
-        $response->assertDontSee('class="input_checkbox" id="authMailAddress_is_remember_me"', false);
+        $response->assertDontSee('authMailAddress_is_remember_me', false);
     }
 
     public function test_the_invite_form_is_a_table_under_the_member_config_ids(): void

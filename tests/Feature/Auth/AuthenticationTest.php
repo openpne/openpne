@@ -54,12 +54,12 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect('/'); // surface-aware root landing
     }
 
-    public function test_the_classic_login_form_offers_the_remember_me_checkbox(): void
+    public function test_the_classic_login_form_offers_no_remember_me_checkbox(): void
     {
         $this->get('/login')
             ->assertStatus(200)
-            ->assertSee('<label for="authMailAddress_is_remember_me">Remember me</label>', false)
-            ->assertSee('name="remember"', false);
+            ->assertSee('name="password"', false)
+            ->assertDontSee('name="remember"', false);
     }
 
     public function test_a_login_issues_no_recaller_cookie_even_when_asked(): void

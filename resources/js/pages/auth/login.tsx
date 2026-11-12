@@ -5,7 +5,6 @@ import { FlashMessage } from '@/components/flash-message';
 import { PasskeySignIn } from '@/components/passkey-sign-in';
 import { RichBody } from '@/components/rich-body';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/layouts/auth-layout';
@@ -28,7 +27,6 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
-        remember: false,
         altcha: '',
     });
 
@@ -84,12 +82,7 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
                     <Input id="password" type="password" name="password" autoComplete="current-password" required value={data.password} onChange={(e) => setData('password', e.target.value)} />
                 </Field>
 
-                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                    <label className="flex items-center gap-2 text-sm text-foreground">
-                        <Checkbox name="remember" checked={data.remember} onChange={(e) => setData('remember', e.target.checked)} />
-                        {t('Remember me')}
-                    </label>
-
+                <div className="flex justify-end">
                     <Link href="/forgot-password" className="text-sm text-link hover:underline">
                         {t('Forgot your password?')}
                     </Link>
@@ -106,7 +99,7 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
                     {signIn}
                 </Button>
 
-                <PasskeySignIn remember={() => data.remember} />
+                <PasskeySignIn />
 
                 {registrationOpen && (
                     <p className="text-center text-sm text-muted-foreground">

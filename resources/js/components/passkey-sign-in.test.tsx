@@ -9,7 +9,7 @@ vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 const hook = vi.hoisted(() => ({
     isSupported: true,
     verify: vi.fn(async () => {}),
-    options: undefined as undefined | { onError?: (e: Error) => void; onSuccess?: (r: { redirect?: string }) => void; autofill?: boolean; remember?: () => boolean },
+    options: undefined as undefined | { onError?: (e: Error) => void; onSuccess?: (r: { redirect?: string }) => void; autofill?: boolean },
 }));
 
 vi.mock('@laravel/passkeys/react', () => ({
@@ -29,27 +29,25 @@ afterEach(() => {
 
 test('renders nothing where WebAuthn is unsupported', () => {
     hook.isSupported = false;
-    renderWithProviders(<PasskeySignIn remember={() => false} />);
+    renderWithProviders(<PasskeySignIn />);
 
     expect(screen.queryByRole('button')).toBeNull();
 });
 
 test('leaves the picker unarmed when the page has no field to anchor it to', () => {
-    renderWithProviders(<PasskeySignIn remember={() => false} />);
+    renderWithProviders(<PasskeySignIn />);
 
     expect(hook.options?.autofill).toBe(false);
     expect(screen.getByRole('button', { name: 'Sign in with a passkey' })).toBeTruthy();
 });
 
-test('arms autofill with the remember box and runs the ceremony from the button', async () => {
-    const remember = () => true;
+test('arms autofill and runs the ceremony from the button', async () => {
     const anchor = document.createElement('input');
     anchor.setAttribute('autocomplete', 'email webauthn');
     document.body.append(anchor);
-    renderWithProviders(<PasskeySignIn remember={remember} />);
+    renderWithProviders(<PasskeySignIn />);
 
     expect(hook.options?.autofill).toBe(true);
-    expect(hook.options?.remember).toBe(remember);
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
     await act(() => Promise.resolve());
@@ -60,7 +58,7 @@ test('arms autofill with the remember box and runs the ceremony from the button'
 test('a verified passkey sends the member where the server said', async () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { assign });
-    renderWithProviders(<PasskeySignIn remember={() => false} />);
+    renderWithProviders(<PasskeySignIn />);
 
     act(() => hook.options?.onSuccess?.({ redirect: 'https://example.test/home' }));
     expect(assign).toHaveBeenCalledWith('https://example.test/home');
@@ -70,7 +68,7 @@ test('a verified passkey sends the member where the server said', async () => {
 });
 
 test('a refusal that follows the member picking a passkey is shown', () => {
-    renderWithProviders(<PasskeySignIn remember={() => false} />);
+    renderWithProviders(<PasskeySignIn />);
     // Opening the browser's picker starts with a gesture on the page.
     fireEvent.pointerDown(document.body);
 
@@ -80,7 +78,7 @@ test('a refusal that follows the member picking a passkey is shown', () => {
 });
 
 test('a refusal after a click alone is shown, without a pointer or a key', async () => {
-    renderWithProviders(<PasskeySignIn remember={() => false} />);
+    renderWithProviders(<PasskeySignIn />);
 
     screen.getByRole('button', { name: 'Sign in with a passkey' }).click();
     await act(() => Promise.resolve());
@@ -90,7 +88,7 @@ test('a refusal after a click alone is shown, without a pointer or a key', async
 });
 
 test('a failure while arming the picker stays quiet', () => {
-    renderWithProviders(<PasskeySignIn remember={() => false} />);
+    renderWithProviders(<PasskeySignIn />);
 
     act(() => hook.options?.onError?.(new Error('Failed to fetch')));
 
@@ -98,7 +96,7 @@ test('a failure while arming the picker stays quiet', () => {
 });
 
 test('a refusal message clears when the button is tried again', async () => {
-    renderWithProviders(<PasskeySignIn remember={() => false} />);
+    renderWithProviders(<PasskeySignIn />);
     fireEvent.pointerDown(document.body);
     act(() => hook.options?.onError?.(new Error('Too Many Attempts.')));
     expect(screen.getByRole('alert').textContent).toBe('Too many attempts. Please wait a moment and try again.');

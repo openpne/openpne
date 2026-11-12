@@ -47,7 +47,7 @@ class LoginCodeController extends Controller
                 : back()->withErrors(['code' => __('The confirmation code is incorrect.')]);
         }
 
-        Auth::guard('member')->login($member, (bool) $slot['remember']);
+        Auth::guard('member')->login($member);
         $request->session()->regenerate();
 
         return app(TwoFactorLoginResponse::class)->toResponse($request);
