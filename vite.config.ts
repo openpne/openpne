@@ -31,6 +31,22 @@ export default defineConfig(({ mode }) => {
             react(),
             tailwindcss(),
         ],
+        build: {
+            rolldownOptions: {
+                output: {
+                    // Ungrouped, every module two pages share becomes its own file; only what a fifth of the
+                    // pages share joins the first load, so single-page code such as the editor stays lazy.
+                    codeSplitting: {
+                        minShareCount: 20,
+                        groups: [
+                            { name: 'icons', test: /node_modules[\\/]lucide-react/, priority: 3, minShareCount: 1 },
+                            { name: 'vendor', test: /node_modules/, priority: 2 },
+                            { name: 'shared', test: /resources[\\/]js[\\/](components|layouts|lib)[\\/]/, priority: 1 },
+                        ],
+                    },
+                },
+            },
+        },
         resolve: {
             alias: {
                 '@': path.resolve(__dirname, 'resources/js'),
