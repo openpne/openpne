@@ -39,6 +39,22 @@ class ChromeContextCoverageTest extends TestCase
         );
     }
 
+    /**
+     * The root view hands the component name to @vite, which throws on a name the manifest lacks;
+     * the suite runs without Vite, so only this scan sees a controller naming a missing page.
+     */
+    public function test_every_routed_modern_component_has_a_page_module(): void
+    {
+        $components = $this->routedComponents();
+        $this->assertGreaterThan(50, count($components));
+
+        $missing = array_values(array_filter(
+            $components,
+            fn (string $component): bool => ! is_file(resource_path("js/pages/{$component}.tsx")),
+        ));
+        $this->assertSame([], $missing);
+    }
+
     /** Every Inertia component name routed from app/**\/*.php (Inertia::render, plus the slash-form screen() helper). @return list<string> */
     private function routedComponents(): array
     {

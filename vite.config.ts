@@ -34,8 +34,8 @@ export default defineConfig(({ mode }) => {
         build: {
             rolldownOptions: {
                 output: {
-                    // Ungrouped, every module two pages share becomes its own file; only what a fifth of the
-                    // pages share joins the first load, so single-page code such as the editor stays lazy.
+                    // Ungrouped, each set of pages sharing a module gets its own, mostly sub-kilobyte, file;
+                    // these groups put widely shared code and every icon in three first-load files instead.
                     codeSplitting: {
                         minShareCount: 20,
                         groups: [
