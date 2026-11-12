@@ -25,7 +25,7 @@ class PasskeyProofRequest extends PasskeyVerificationRequest
         $slot = $this->session()->pull(ReauthPasskeyController::OPTIONS_SLOT);
         $purpose = is_array($slot) && is_string($slot['purpose'] ?? null) ? ReauthPurpose::tryFrom($slot['purpose']) : null;
 
-        $fresh = is_array($slot) && is_int($slot['at'] ?? null) && now()->getTimestamp() - $slot['at'] <= ReauthPasskeyController::CEREMONY_SECONDS;
+        $fresh = is_array($slot) && is_int($slot['at'] ?? null) && $slot['at'] <= now()->getTimestamp() && now()->getTimestamp() - $slot['at'] <= ReauthPasskeyController::CEREMONY_SECONDS;
 
         if ($purpose === null || ! $fresh || ! is_string($slot['options'] ?? null)) {
             throw ValidationException::withMessages([

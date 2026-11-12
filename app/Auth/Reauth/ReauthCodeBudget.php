@@ -6,7 +6,7 @@ use App\Models\Member;
 use App\Notifications\Member\MfaCodesPausedNotification;
 use App\Support\SecurityLog;
 use Illuminate\Contracts\Session\Session;
-use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 /** See docs/internals/security.md, "Member re-authentication". */
@@ -25,13 +25,13 @@ class ReauthCodeBudget
     public function reserve(Member $member, Session $session): void
     {
         // Checked first, so a burst this refuses never brings the pause closer.
-        if (RateLimiter::hit('reauth-code|'.$member->getKey().'|'.hash('sha256', $session->getId()), 60) > self::PER_MINUTE) {
+        if (self::count('reauth-code|'.$member->getKey().'|'.hash('sha256', $session->getId()), 60) > self::PER_MINUTE) {
             throw ValidationException::withMessages([
                 'code' => __('Too many authentication codes were tried. Please wait a minute and try again.'),
             ]);
         }
 
-        $failures = RateLimiter::hit(self::pauseKey($member), self::PAUSE_SECONDS);
+        $failures = self::count(self::pauseKey($member), self::PAUSE_SECONDS);
 
         if ($failures <= self::MAX_CONSECUTIVE) {
             return;
@@ -50,7 +50,25 @@ class ReauthCodeBudget
 
     public function clear(Member $member): void
     {
-        RateLimiter::clear(self::pauseKey($member));
+        Cache::forget(self::pauseKey($member));
+    }
+
+    /**
+     * Not `RateLimiter::hit`, whose first-hit correction can write a counter back to 1 over hits
+     * made in parallel. The window runs from the first hit, and a count that cannot be taken refuses.
+     */
+    private static function count(string $key, int $seconds): int
+    {
+        Cache::add($key, 0, $seconds);
+        $count = Cache::increment($key);
+
+        // The entry expired between the two calls.
+        if (! is_int($count)) {
+            Cache::add($key, 0, $seconds);
+            $count = Cache::increment($key);
+        }
+
+        return is_int($count) ? $count : PHP_INT_MAX;
     }
 
     private static function pauseKey(Member $member): string

@@ -429,12 +429,12 @@ step-ups compare, whichever operation asks.
 - **The count is taken before the comparison and outside the transaction** the
   verdict runs in: the database cache store shares the default connection, so
   a count taken inside would roll back with every wrong code.
-- The framework's limiter can drop a few counts in the instant a counter is
-  created, when parallel first hits race (measured on MySQL, not on SQLite).
-  The pause count is created anew only after a right code or a day, neither
-  of which a guesser brings about, so the hundred moves by no more than one
-  such burst; the minute budget can give way by as much each minute, which is
-  why it is not the bound.
+- **The counts are the cache's own atomic increment**, not the framework's
+  rate limiter: its first-hit correction can write a counter back to 1 over
+  hits made in parallel (measured on MySQL), which would undo the pause.
+- Parallel requests that hold one passkey proof for new recovery codes each
+  count before the proof picks its winner, so the losers count a code that was
+  never compared. Only the member's own passkey gets that far.
 
 With a window of one step either side (three valid codes), a hundred guesses
 succeed about three times in ten thousand (RFC 4226, Sec. 6). The accepted

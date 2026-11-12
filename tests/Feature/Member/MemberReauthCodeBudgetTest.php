@@ -9,8 +9,8 @@ use App\Models\Member;
 use App\Notifications\Member\MfaCodesPausedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use PragmaRX\Google2FA\Google2FA;
@@ -51,7 +51,7 @@ class MemberReauthCodeBudgetTest extends TestCase
 
     private function failures(): int
     {
-        return (int) RateLimiter::attempts('reauth-code-failures|'.$this->member->getKey());
+        return (int) Cache::get('reauth-code-failures|'.$this->member->getKey(), 0);
     }
 
     private function otp(): string
