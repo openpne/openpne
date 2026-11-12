@@ -1,0 +1,110 @@
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { afterEach, expect, test, vi } from 'vitest';
+import { REAUTH_DATA, ReauthFields, type ReauthData } from './reauth-fields';
+import { fakeT } from '@/lib/test-i18n';
+import { renderWithProviders } from '@/lib/test-render';
+
+vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
+
+const page = vi.hoisted(() => ({ user: { hasTwoFactor: false, hasPasskey: true } }));
+vi.mock('@inertiajs/react', () => ({ usePage: () => ({ props: { auth: { user: page.user } } }) }));
+
+const passkeys = vi.hoisted(() => ({ supported: true, verify: vi.fn<(options: { routes: { options: string; submit: string } }) => Promise<object>>(async () => ({})) }));
+vi.mock('@laravel/passkeys', async (original) => ({
+    ...(await original<typeof import('@laravel/passkeys')>()),
+    Passkeys: { isSupported: () => passkeys.supported, verify: passkeys.verify },
+}));
+
+afterEach(() => {
+    cleanup();
+    page.user = { hasTwoFactor: false, hasPasskey: true };
+    passkeys.supported = true;
+    passkeys.verify.mockReset();
+    passkeys.verify.mockResolvedValue({});
+});
+
+function Form({ onSubmit, error }: { onSubmit: (data: ReauthData) => void; error?: string }) {
+    const [data, setData] = useState<ReauthData>({ ...REAUTH_DATA, current_password: 'typed' });
+    const [errors, setErrors] = useState<{ current_password?: string }>({ current_password: error });
+
+    return (
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                onSubmit(data);
+            }}
+        >
+            <ReauthFields
+                idPrefix="t"
+                purpose="withdrawal"
+                data={data}
+                errors={errors}
+                onChange={(field, value) => setData((d) => ({ ...d, [field]: value }))}
+                onResetSecondFactor={() => {}}
+                onProved={() => setErrors({})}
+            />
+        </form>
+    );
+}
+
+const button = () => screen.queryByRole('button', { name: 'Confirm with a passkey instead' });
+
+test('the passkey button shows only for a member who holds one, on a browser that can use it', () => {
+    page.user = { hasTwoFactor: false, hasPasskey: false };
+    const first = renderWithProviders(<Form onSubmit={() => {}} />);
+    expect(button()).toBeNull();
+    first.unmount();
+
+    page.user = { hasTwoFactor: false, hasPasskey: true };
+    passkeys.supported = false;
+    const second = renderWithProviders(<Form onSubmit={() => {}} />);
+    expect(button()).toBeNull();
+    second.unmount();
+
+    passkeys.supported = true;
+    renderWithProviders(<Form onSubmit={() => {}} />);
+    expect(button()).not.toBeNull();
+});
+
+test('a verified passkey replaces the fields and empties the typed password, leaving the submit to the member', async () => {
+    const onSubmit = vi.fn();
+    const { container } = renderWithProviders(<Form onSubmit={onSubmit} />);
+
+    fireEvent.click(button()!);
+    await act(() => Promise.resolve());
+
+    expect(passkeys.verify.mock.calls[0]?.[0].routes).toEqual({
+        options: '/member/reauth/passkey/options?purpose=withdrawal',
+        submit: '/member/reauth/passkey',
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('status').textContent).toBe('Confirmed with your passkey. Please finish within two minutes.');
+    expect(container.querySelector('#t_password')).toBeNull();
+
+    fireEvent.submit(container.querySelector('form')!);
+    expect(onSubmit.mock.calls[0]?.[0].current_password).toBe('');
+});
+
+test('a passkey confirmed after a wrong password replaces the fields and their error', async () => {
+    renderWithProviders(<Form onSubmit={() => {}} error="The password is incorrect." />);
+    expect(screen.getByText('The password is incorrect.')).toBeTruthy();
+
+    fireEvent.click(button()!);
+    await act(() => Promise.resolve());
+
+    expect(screen.queryByText('The password is incorrect.')).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('Confirmed with your passkey. Please finish within two minutes.');
+});
+
+test('a refused ceremony is reported and submits nothing', async () => {
+    passkeys.verify.mockRejectedValue(new Error('Passkey not recognized.'));
+    const onSubmit = vi.fn();
+    renderWithProviders(<Form onSubmit={onSubmit} />);
+
+    fireEvent.click(button()!);
+    await act(() => Promise.resolve());
+
+    expect(screen.getByRole('alert').textContent).toBe('Passkey not recognized.');
+    expect(onSubmit).not.toHaveBeenCalled();
+});

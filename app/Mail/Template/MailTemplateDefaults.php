@@ -113,6 +113,10 @@ final class MailTemplateDefaults
             'en' => 'A passkey was removed from your account',
             'ja' => 'パスキーが削除されました',
         ],
+        'mfa-codes-paused' => [
+            'en' => 'Authentication codes are paused for your account',
+            'ja' => '認証コードでの確認を一時停止しました',
+        ],
         'login-code' => [
             'en' => 'Your sign-in confirmation code',
             'ja' => 'ログインの確認コード',

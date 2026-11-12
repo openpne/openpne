@@ -275,7 +275,7 @@
                                         @csrf
                                         {{ $c['host'] ?: $c['clientName'] }}「{{ $c['clientName'] }}」 — {{ $c['actor'] ? __('As :name', ['name' => $c['actor']['name']]) : __('As yourself') }}@if ($c['readOnly']) · {{ __('Read-only') }}@endif
                                         @if ($connections['requiresPassword'])
-                                            @include('member.partials.reauth-fields', ['part' => 'inline', 'idPrefix' => 'connection_'.$loop->index])
+                                            @include('member.partials.reauth-fields', ['part' => 'inline', 'idPrefix' => 'connection_'.$loop->index, 'purpose' => 'oauth-connection-revoke'])
                                         @endif
                                         <input type="submit" class="input_submit" value="{{ __('End') }}">
                                     </form>
@@ -328,7 +328,7 @@
                                         @csrf
                                         @method('DELETE')
                                         <input type="hidden" name="_passkey_form" value="destroy-{{ $passkey['id'] }}">
-                                        @php($reauth = ['idPrefix' => 'passkey_delete_'.$passkey['id'], 'requiresSecondFactor' => $passkeys['requiresSecondFactor'], 'showErrors' => old('_passkey_form') === 'destroy-'.$passkey['id']])
+                                        @php($reauth = ['idPrefix' => 'passkey_delete_'.$passkey['id'], 'purpose' => 'passkey-remove', 'requiresSecondFactor' => $passkeys['requiresSecondFactor'], 'showErrors' => old('_passkey_form') === 'destroy-'.$passkey['id']])
                                         <details @if ($reauth['showErrors'] && $errors->hasAny(['current_password', 'code', 'recovery_code'])) open @endif>
                                             <summary>{{ __('Remove') }}</summary>
                                             <p>
@@ -362,7 +362,7 @@
                     <form method="POST" action="{{ route('member.config.passkeys.reauth') }}">
                         @csrf
                         <input type="hidden" name="_passkey_form" value="reauth">
-                        @php($reauth = ['idPrefix' => 'passkey_add', 'requiresSecondFactor' => $passkeys['requiresSecondFactor'], 'showErrors' => old('_passkey_form', 'reauth') === 'reauth', 'codeHelp' => __('A passkey signs you in without this code, so adding one needs it once.')])
+                        @php($reauth = ['idPrefix' => 'passkey_add', 'purpose' => 'passkey-add', 'requiresSecondFactor' => $passkeys['requiresSecondFactor'], 'showErrors' => old('_passkey_form', 'reauth') === 'reauth', 'codeHelp' => __('A passkey signs you in without this code, so adding one needs it once.')])
                         <table>
                             @include('member.partials.reauth-fields', ['part' => 'rows'] + $reauth)
                         </table>
@@ -403,7 +403,7 @@
                 <form method="POST" action="{{ route('member.config.password') }}">
                     @csrf
                     <table>
-                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'password_change'])
+                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'password_change', 'purpose' => 'password-change'])
                         <tr>
                             <th><label for="password">{{ __('New password') }}</label></th>
                             <td>
@@ -438,7 +438,7 @@
                     <form method="POST" action="{{ route('member.config.mfa.enable') }}">
                         @csrf
                         <table>
-                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_enable', 'requiresSecondFactor' => false])
+                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_enable', 'purpose' => 'mfa-setup', 'requiresSecondFactor' => false])
                         </table>
                         <div class="operation">
                             <ul class="moreInfo button">
@@ -465,7 +465,7 @@
                                 </td>
                             </tr>
                             @if ($mfa['requiresPassword'])
-                                @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_confirm', 'requiresSecondFactor' => false, 'passwordHelp' => __('Some time has passed since you started, so please confirm it is you: enter your current password as well.')])
+                                @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_confirm', 'purpose' => 'mfa-setup', 'requiresSecondFactor' => false, 'passwordHelp' => __('Some time has passed since you started, so please confirm it is you: enter your current password as well.')])
                             @endif
                         </table>
                         <div class="operation">
@@ -513,7 +513,7 @@
                         <input type="hidden" name="_mfa_form" value="regenerate">
                         {{-- `code` is a key shared with the disable form below, so errors are gated on the submitted form. --}}
                         <table>
-                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_regen', 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'regenerate'])
+                            @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'mfa_regen', 'purpose' => 'mfa-recovery-codes', 'codeBesidePasskey' => true, 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'regenerate'])
                         </table>
                         <div class="operation">
                             <ul class="moreInfo button">
@@ -527,7 +527,7 @@
                     <form method="POST" action="{{ route('member.config.mfa.disable') }}">
                         @csrf
                         <input type="hidden" name="_mfa_form" value="disable">
-                        @php($reauth = ['idPrefix' => 'mfa_disable', 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'disable'])
+                        @php($reauth = ['idPrefix' => 'mfa_disable', 'purpose' => 'mfa-disable', 'requiresSecondFactor' => true, 'showErrors' => $submittedForm === 'disable'])
                         <table>
                             @include('member.partials.reauth-fields', ['part' => 'rows'] + $reauth)
                         </table>
@@ -560,7 +560,7 @@
                                 @error('new_email')<p class="error">{{ $message }}</p>@enderror
                             </td>
                         </tr>
-                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'email_change'])
+                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'email_change', 'purpose' => 'email-change'])
                     </table>
                     @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'email_change'])
                     <p>{{ __('A confirmation link will be sent to the new address. The change takes effect once you open it.') }}</p>
@@ -580,7 +580,7 @@
                     @csrf
                     <p>{{ __('Withdrawing permanently deletes your account and cannot be undone.') }}</p>
                     <table>
-                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'withdrawal'])
+                        @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'withdrawal', 'purpose' => 'withdrawal'])
                         <tr>
                             <th></th>
                             <td>

@@ -183,7 +183,7 @@
                             <form method="POST" action="{{ route('member.config.ai.tokens.destroy', ['member' => $aiAccount->getKey(), 'token' => $token['id']]) }}">
                                 @csrf
                                 @if ($tokens['requiresPassword'])
-                                    @include('member.partials.reauth-fields', ['part' => 'inline', 'idPrefix' => 'ai_token_revoke_'.$token['id']])
+                                    @include('member.partials.reauth-fields', ['part' => 'inline', 'idPrefix' => 'ai_token_revoke_'.$token['id'], 'purpose' => 'ai-token'])
                                 @endif
                                 <input type="submit" class="input_submit" value="{{ __('Revoke') }}">
                             </form>
@@ -196,7 +196,7 @@
             @csrf
             <table>
                 @if ($tokens['requiresPassword'])
-                    @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'ai_token', 'showErrors' => false, 'passwordHelp' => __('Issuing or revoking a token asks for your password.')])
+                    @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'ai_token', 'purpose' => 'ai-token', 'showErrors' => false, 'passwordHelp' => __('Issuing or revoking a token asks for your password.')])
                 @endif
                 <tr>
                     <th><label for="ai_token_read_only">{{ __('Read-only: it can read but not post') }}</label></th>
@@ -221,7 +221,7 @@
             <input type="hidden" name="_ai_form" value="delete">
             <p>{{ __('Deleting is permanent. What it posted stays on the site, shown as by "%Withdrawn_member%".') }}</p>
             <table>
-                @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'ai_delete', 'showErrors' => old('_ai_form') === 'delete'])
+                @include('member.partials.reauth-fields', ['part' => 'rows', 'idPrefix' => 'ai_delete', 'purpose' => 'ai-account-delete', 'showErrors' => old('_ai_form') === 'delete'])
             </table>
             @include('member.partials.reauth-fields', ['part' => 'recovery', 'idPrefix' => 'ai_delete', 'showErrors' => old('_ai_form') === 'delete'])
             <div class="operation">

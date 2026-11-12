@@ -472,10 +472,12 @@ export default function MemberConfig() {
                             <div className="space-y-4">
                                 <ReauthFields
                                     idPrefix="connection"
+                                    purpose="oauth-connection-revoke"
                                     data={connection.data}
                                     errors={connection.errors}
                                     onChange={(field, value) => connection.setData(field, value)}
                                     onResetSecondFactor={() => connection.resetAndClearErrors('code', 'recovery_code')}
+                                    onProved={() => connection.clearErrors('current_password')}
                                     passwordHelp={t('Ending a connection asks for your password.')}
                                 />
                             </div>

@@ -4,6 +4,7 @@ namespace App\Auth\Reauth;
 
 use App\Models\Member;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The one place a member request demands a step-up
@@ -13,6 +14,8 @@ use Illuminate\Validation\Rule;
 trait RequiresReauth
 {
     private ?bool $reauthRequired = null;
+
+    private ?string $reauthPath = null;
 
     abstract public function reauthPurpose(): ReauthPurpose;
 
@@ -36,8 +39,12 @@ trait RequiresReauth
 
     public function reauthProof(): ReauthProof
     {
-        if (! $this->reauthRequired() && ! $this->filled('current_password')) {
+        if ($this->reauthPath() === 'none') {
             return ReauthProof::none();
+        }
+
+        if ($this->reauthPath() === 'passkey') {
+            return ReauthProof::passkey($this->asksCodeBesidePasskey() ? $this->requiresSecondFactor() : null, $this->input('code'));
         }
 
         return ReauthProof::password(
@@ -66,6 +73,12 @@ trait RequiresReauth
         return true;
     }
 
+    /** True only where the operation's own demand is a TOTP code, which a passkey does not stand in for. */
+    protected function asksCodeBesidePasskey(): bool
+    {
+        return false;
+    }
+
     /** True when the Action verifies the proof inside the lock it mutates under. */
     protected function verifiesReauthInAction(): bool
     {
@@ -78,11 +91,11 @@ trait RequiresReauth
         // requiredIf is implicit, so `nullable` does not defeat it and only lets the field pass when not demanded.
         return [
             'current_password' => [
-                Rule::requiredIf(fn (): bool => $this->reauthRequired()),
+                Rule::requiredIf(fn (): bool => $this->reauthPath() === 'password'),
                 'current_password:member',
             ],
             'code' => [
-                Rule::requiredIf(fn (): bool => $this->offersPassword() && $this->requiresSecondFactor()
+                Rule::requiredIf(fn (): bool => $this->reauthPath() === 'password' && $this->requiresSecondFactor()
                     && ! ($this->allowsRecoveryCode() && $this->filled('recovery_code'))),
                 'nullable',
                 'string',
@@ -96,20 +109,33 @@ trait RequiresReauth
         // An empty field is "not provided", not a wrong password: the form submits it even when the
         // UI shows no field, and dropping it lets requiredIf decide.
         if (in_array($this->input('current_password'), [null, ''], true)) {
-            $this->request->remove('current_password');
+            // A JSON body is read from its own bag, which `$this->request` is not.
+            $this->getInputSource()->remove('current_password');
         }
     }
 
     protected function passedValidation(): void
     {
-        if (! $this->offersPassword()) {
+        if ($this->reauthPath() === 'none') {
             return;
         }
 
+        $viewer = $this->user();
+        assert($viewer instanceof Member);
+
+        $proof = $this->reauthProof();
+
+        // Before the proof is spent, so a refusal by the budget leaves it for the retry.
+        if ($proof->comparesCode()) {
+            app(ReauthCodeBudget::class)->reserve($viewer, $this->session());
+        }
+
+        if ($this->reauthPath() === 'passkey' && ! PasskeyProof::consume($this->session(), $viewer, $this->reauthPurpose())) {
+            throw ValidationException::withMessages(['current_password' => __('Please confirm it is you again.')]);
+        }
+
         if (! $this->verifiesReauthInAction()) {
-            $viewer = $this->user();
-            assert($viewer instanceof Member);
-            app(VerifyReauthProof::class)($viewer, $this->reauthProof());
+            app(VerifyReauthProof::class)($viewer, $proof);
         }
 
         // The window runs from the proof that was asked for, not forward with each password sent inside it.
@@ -119,8 +145,24 @@ trait RequiresReauth
         }
     }
 
-    private function offersPassword(): bool
+    /**
+     * Decided once per request, like `reauthRequired()`. A password that was sent is always the path
+     * taken, so a passkey proof never excuses a wrong one.
+     */
+    private function reauthPath(): string
     {
-        return $this->reauthRequired() || $this->filled('current_password');
+        if ($this->reauthPath !== null) {
+            return $this->reauthPath;
+        }
+
+        $viewer = $this->user();
+        assert($viewer instanceof Member);
+
+        return $this->reauthPath = match (true) {
+            $this->filled('current_password') => 'password',
+            ! $this->reauthRequired() => 'none',
+            PasskeyProof::stands($this->session(), $viewer, $this->reauthPurpose()) => 'passkey',
+            default => 'password',
+        };
     }
 }

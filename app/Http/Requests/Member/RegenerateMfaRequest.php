@@ -36,6 +36,11 @@ class RegenerateMfaRequest extends FormRequest
         return false;
     }
 
+    protected function asksCodeBesidePasskey(): bool
+    {
+        return true;
+    }
+
     protected function verifiesReauthInAction(): bool
     {
         return true;

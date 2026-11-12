@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp\OAuth;
 
+use App\Auth\Reauth\PasskeyProof;
+use App\Auth\Reauth\ReauthPurpose;
 use App\Features\AiAccount\AiTokenReauth;
 use App\Mcp\McpAbilities;
 use App\Mcp\OAuth\ConnectionReauth;
 use App\Mcp\OAuth\ConsentReauth;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
@@ -119,6 +122,29 @@ class ReauthCoverageTest extends OAuthTestCase
         ];
     }
 
+    /** @return array<string, array{string, string, ReauthPurpose}> */
+    public static function purposes(): array
+    {
+        $purposes = [
+            'mfa enable' => ReauthPurpose::MfaSetup,
+            'mfa confirm' => ReauthPurpose::MfaSetup,
+            'mfa disable' => ReauthPurpose::MfaDisable,
+            'recovery codes' => ReauthPurpose::MfaRecoveryCodes,
+            'passkey add' => ReauthPurpose::PasskeyAdd,
+            'passkey remove' => ReauthPurpose::PasskeyRemove,
+            'password change' => ReauthPurpose::PasswordChange,
+            'email change' => ReauthPurpose::EmailChange,
+            'withdrawal' => ReauthPurpose::Withdrawal,
+            'ai account delete' => ReauthPurpose::AiAccountDelete,
+            'ai token mint' => ReauthPurpose::AiToken,
+            'ai token revoke' => ReauthPurpose::AiToken,
+            'oauth consent' => ReauthPurpose::OAuthConsent,
+            'connection end' => ReauthPurpose::OAuthConnectionRevoke,
+        ];
+
+        return array_map(fn (array $row): array => [$row[0], $row[1], $purposes[$row[0]]], self::operations());
+    }
+
     /** @return array<string, array{string}> */
     public static function secondFactorOperations(): array
     {
@@ -167,6 +193,30 @@ class ReauthCoverageTest extends OAuthTestCase
 
         [$method, $uri, $form] = $this->operation($key, $member);
         $this->{$method}($uri, $form + ['current_password' => 'password', 'code' => $this->otp($member)])->assertSessionHasNoErrors()->assertRedirect();
+    }
+
+    #[DataProvider('purposes')]
+    public function test_a_passkey_proof_opens_only_the_operation_it_was_made_for(string $key, string $factor, ReauthPurpose $purpose): void
+    {
+        // Twelve refusals in a row would otherwise meet the route limiters first.
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $member = $this->member($factor);
+        // New recovery codes ask for a TOTP code whichever way the member proved themselves.
+        $code = $key === 'recovery codes' ? ['code' => $this->otp($member)] : [];
+
+        foreach (ReauthPurpose::cases() as $other) {
+            if ($other === $purpose) {
+                continue;
+            }
+            [$method, $uri, $form] = $this->operation($key, $member);
+            PasskeyProof::issue(app('session.store'), $member, $other);
+            $this->{$method}($uri, $form)->assertSessionHasErrors('current_password');
+        }
+
+        [$method, $uri, $form] = $this->operation($key, $member);
+        PasskeyProof::issue(app('session.store'), $member, $purpose);
+        $this->{$method}($uri, $form + $code)->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertNull(session(PasskeyProof::SLOT));
     }
 
     #[DataProvider('windowedOperations')]

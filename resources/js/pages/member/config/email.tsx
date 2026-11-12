@@ -34,10 +34,12 @@ export default function ConfigEmail({ email }: Props) {
                     </Field>
                     <ReauthFields
                         idPrefix="email_change"
+                        purpose="email-change"
                         data={form.data}
                         errors={form.errors}
                         onChange={(field, value) => form.setData(field, value)}
                         onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                        onProved={() => form.clearErrors('current_password')}
                         passwordHelp={t('A confirmation link will be sent to the new address. The change takes effect once you open it.')}
                     />
                     <FormActions>

@@ -21,10 +21,12 @@ export default function ConfigPassword() {
                 <div className="space-y-4">
                     <ReauthFields
                         idPrefix="password_change"
+                        purpose="password-change"
                         data={form.data}
                         errors={form.errors}
                         onChange={(field, value) => form.setData(field, value)}
                         onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                        onProved={() => form.clearErrors('current_password')}
                     />
                     <Field label={t('New password')} htmlFor="password" error={form.errors.password}>
                         <Input

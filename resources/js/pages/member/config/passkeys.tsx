@@ -64,10 +64,12 @@ function Reauth({ requiresSecondFactor }: { requiresSecondFactor: boolean }) {
             <p className="text-sm text-foreground">{t('To add a passkey, first confirm it is you.')}</p>
             <ReauthFields
                 idPrefix="passkey_add"
+                purpose="passkey-add"
                 data={form.data}
                 errors={form.errors}
                 onChange={form.setData}
                 onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                onProved={() => form.clearErrors('current_password')}
                 requiresSecondFactor={requiresSecondFactor}
                 codeHelp={t('A passkey signs you in without this code, so adding one needs it once.')}
             />
@@ -170,10 +172,12 @@ function PasskeyCard({ passkey, last, requiresSecondFactor }: { passkey: Passkey
                     </p>
                     <ReauthFields
                         idPrefix={`passkey_delete_${passkey.id}`}
+                        purpose="passkey-remove"
                         data={form.data}
                         errors={form.errors}
                         onChange={form.setData}
                         onResetSecondFactor={() => form.resetAndClearErrors('code', 'recovery_code')}
+                        onProved={() => form.clearErrors('current_password')}
                         requiresSecondFactor={requiresSecondFactor}
                     />
                     <FormActions>
