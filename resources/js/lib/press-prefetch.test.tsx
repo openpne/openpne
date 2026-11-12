@@ -4,13 +4,13 @@ import { pressPrefetch } from './press-prefetch';
 
 const inertia = vi.hoisted(() => ({
     pending: false,
-    listeners: [] as [string, () => void][],
+    listeners: [] as [string, (event: { detail: { page: { url: string } } }) => void][],
     router: {
         prefetch: vi.fn(),
         getPrefetching: vi.fn(),
         getCached: vi.fn(),
-        flushAll: vi.fn(),
-        on: (name: string, listener: () => void) => {
+        flush: vi.fn(),
+        on: (name: string, listener: (event: { detail: { page: { url: string } } }) => void) => {
             inertia.listeners.push([name, listener]);
         },
     },
@@ -73,13 +73,22 @@ test('the page module named by the response is loaded with it, whichever shape t
     expect(pages.load).toHaveBeenCalledTimes(2);
 });
 
-test('every completed navigation empties the cache, and the listener is installed once', () => {
+test.each(['', '<html><body>502 Bad Gateway</body></html>', 'null', '[]', '{"component":7}'])('a body that is not a page is ignored rather than thrown on: %j', (data) => {
+    pressPrefetch('/notifications').onTouchStart();
+    const { onPrefetched } = inertia.router.prefetch.mock.calls[0]?.[1] as { onPrefetched: (response: unknown) => void };
+
+    expect(() => onPrefetched({ data })).not.toThrow();
+    expect(pages.load).not.toHaveBeenCalled();
+});
+
+test('a completed navigation drops the entry for the page it reached, and the listener is installed once', () => {
     pressPrefetch('/notifications').onTouchStart();
     inertia.pending = false;
     pressPrefetch('/timeline').onTouchStart();
 
     const navigate = inertia.listeners.filter(([name]) => name === 'navigate');
     expect(navigate).toHaveLength(1);
-    navigate[0]?.[1]();
-    expect(inertia.router.flushAll).toHaveBeenCalledTimes(1);
+    navigate[0]?.[1]({ detail: { page: { url: '/notifications' } } });
+    expect(inertia.router.flush).toHaveBeenCalledTimes(1);
+    expect(inertia.router.flush).toHaveBeenCalledWith('/notifications');
 });

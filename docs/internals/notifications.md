@@ -354,10 +354,10 @@ its shape.
 
 ## Key invariants
 
-- **Only a destination that writes nothing on GET is prefetched.** A landing page spends its rows on
-  GET, so the Modern chrome sends a link's request on the press
-  ([`press-prefetch.ts`](../../resources/js/lib/press-prefetch.ts)) for section tops only — a press
-  that turns into a scroll would otherwise mark a page read that was never opened.
+- **A page that spends rows on GET is never prefetched.** The Modern chrome sends a link's request on
+  the press ([`press-prefetch.ts`](../../resources/js/lib/press-prefetch.ts)) for section tops only,
+  none of which spends a row — a press that turns into a scroll would otherwise mark a landing page
+  read that was never opened.
 - `NotificationKind` is the only kind list; the stored `kind` column holds its case value.
 - An absent settings row means the kind's `defaultEnabled($channel)`. An explicit choice is stored
   even when it equals the default (the UI saves what the member picked; the upgrade copies source

@@ -5,14 +5,26 @@ import { pageModules, pagePath } from '@/lib/page-modules';
 /** Long enough to span a press and its click, short enough that no later visit is answered from it. */
 const HOLD = '2s';
 
-let flushing = false;
+let singleUse = false;
+
+/** Null for anything but a page object: a version mismatch answers 409 with an empty body, a proxy with HTML. */
+function componentOf(data: unknown): string | null {
+    try {
+        const page: unknown = typeof data === 'string' ? JSON.parse(data) : data;
+        const component = (page as { component?: unknown } | null)?.component;
+
+        return typeof component === 'string' ? component : null;
+    } catch {
+        return null;
+    }
+}
 
 function prefetch(href: string): void {
-    if (!flushing) {
-        flushing = true;
-        // Inertia never expires an entry whose response arrived after the click that used it, and
-        // would answer every later visit to that URL from it.
-        router.on('navigate', () => router.flushAll());
+    if (!singleUse) {
+        singleUse = true;
+        // Until HOLD runs out Inertia answers any visit to the URL from the entry, including one
+        // made after the member changed something on that page.
+        router.on('navigate', (event) => router.flush(event.detail.page.url));
     }
     // A touch press is followed by a synthesized mousedown; the request it started is the one to keep.
     if (router.getPrefetching(href) ?? router.getCached(href)) {
@@ -22,10 +34,9 @@ function prefetch(href: string): void {
         href,
         {
             onPrefetched: (response) => {
-                const raw = (response as { data?: unknown }).data;
-                const page = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { component?: string } | undefined;
+                const component = componentOf((response as { data?: unknown }).data);
                 // Inertia caches the page data only; the page module would otherwise load after the click.
-                void (page?.component ? pageModules[pagePath(page.component)] : undefined)?.();
+                void (component === null ? undefined : pageModules[pagePath(component)])?.();
             },
         },
         { cacheFor: HOLD },
@@ -33,8 +44,8 @@ function prefetch(href: string): void {
 }
 
 /**
- * Spread onto a `<Link>` whose target is a section top: the GET goes out on the press, so only a
- * destination that writes nothing on GET may carry it (docs/internals/notifications.md, "Key invariants").
+ * Spread onto a `<Link>` whose target is a section top: the GET goes out on the press, so a page that
+ * spends notification rows on GET must not carry it (docs/internals/notifications.md, "Key invariants").
  */
 export function pressPrefetch(href: string) {
     return {
