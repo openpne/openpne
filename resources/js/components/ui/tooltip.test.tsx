@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { Tip } from './tooltip';
 import { renderWithProviders } from '@/lib/test-render';
@@ -9,7 +9,13 @@ afterEach(() => {
     // its fake timers or its DEV stub into the next one.
     vi.useRealTimers();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
 });
+
+/** Answers `(any-hover: none)` the way a phone does, or the way a desktop does. */
+function stubHover(none: boolean) {
+    vi.stubGlobal('matchMedia', (query: string) => ({ media: query, matches: none && query === '(any-hover: none)' }));
+}
 
 /** Past any provider delay: what these tests are about is what a raised panel says, not when. */
 function hover(element: HTMLElement) {
@@ -182,4 +188,40 @@ test('a focus that moved by itself raises nothing', () => {
     });
 
     expect(screen.queryByRole('tooltip')).toBeNull();
+});
+
+/** Rendered with no provider: Radix throws without one, so not throwing is the tooltip's absence. */
+test('where nothing can hover the control is named and no tooltip stands around it', () => {
+    stubHover(true);
+    render(
+        <Tip label="Reply">
+            <button type="button" />
+        </Tip>,
+    );
+    const button = screen.getByRole('button', { name: 'Reply' });
+
+    act(() => {
+        button.focus();
+    });
+
+    expect(screen.queryByRole('tooltip')).toBeNull();
+});
+
+test('a control keeps the wrapper it mounted with when the hover answer changes', () => {
+    // A fresh element each time: handed the same one, React skips the render this is about.
+    const tip = () => (
+        <Tip label="Reply">
+            <button type="button" />
+        </Tip>
+    );
+    stubHover(true);
+    const { rerender } = renderWithProviders(tip());
+    const button = screen.getByRole('button');
+    button.focus();
+
+    stubHover(false);
+    rerender(tip());
+
+    expect(screen.getByRole('button')).toBe(button);
+    expect(document.activeElement).toBe(button);
 });

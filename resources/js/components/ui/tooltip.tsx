@@ -1,4 +1,4 @@
-import { cloneElement, type ComponentProps, type FocusEvent, type ReactElement } from 'react';
+import { cloneElement, type ComponentProps, type FocusEvent, type ReactElement, useState } from 'react';
 import { Slot as SlotPrimitive, Tooltip as TooltipPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +44,11 @@ function KeepOwnDescription(props: ComponentProps<typeof SlotPrimitive.Root>) {
     return <SlotPrimitive.Root {...props} aria-describedby={undefined} />;
 }
 
+/** False where the query cannot be asked, so the panel is the default. */
+function nothingHovers(): boolean {
+    return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(any-hover: none)').matches;
+}
+
 /**
  * Names an icon-only control twice over: as its accessible name, and as the panel raised beside it
  * (docs/internals/icon-labels.md, "Naming icon-only controls"). Layered on another Radix trigger both
@@ -63,9 +68,17 @@ export function Tip({
     silent?: boolean;
     children: ReactElement<{ 'aria-label'?: string }>;
 }) {
+    // Read once and never again: changing the wrapper under a mounted control rebuilds it, and the
+    // focus it held goes with it (docs/internals/icon-labels.md, "Where nothing can hover").
+    const [bare] = useState(nothingHovers);
+
     // Before the clone, or the check would be reading the label this very call just injected.
     if (import.meta.env.DEV && children.props['aria-label'] !== undefined) {
         throw new Error(`<Tip label="${label}"> wraps a child that already has aria-label="${children.props['aria-label']}". Pass the name to Tip and remove it from the child.`);
+    }
+
+    if (bare) {
+        return cloneElement(children, { 'aria-label': label });
     }
 
     return (
