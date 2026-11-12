@@ -7,6 +7,7 @@ import { LayoutHook } from '@/components/layout-hook';
 import { NavItems } from '@/components/nav-items';
 import { ActionLink } from '@/components/ui/action-link';
 import { useT } from '@/lib/i18n';
+import { pressPrefetch } from '@/lib/press-prefetch';
 import type { PageProps } from '@/types';
 
 export function LeftNav() {
@@ -19,6 +20,7 @@ export function LeftNav() {
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-2 border-r border-border px-2 py-4 pt-safe-4 pb-safe-4 lg:flex">
             <Link
                 href="/"
+                {...pressPrefetch('/')}
                 className="flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent"
             >
                 <BrandMark size="md" />

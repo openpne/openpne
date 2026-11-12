@@ -8,6 +8,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { NavItems } from '@/components/nav-items';
 import { lookSpec } from '@/lib/member-chrome';
+import { pressPrefetch } from '@/lib/press-prefetch';
 import type { PageProps } from '@/types';
 
 /**
@@ -65,6 +66,7 @@ export function NavDrawer({ labeled = false }: { labeled?: boolean }) {
                 <DialogTitle asChild>
                     <Link
                         href="/"
+                        {...pressPrefetch('/')}
                         onClick={() => setOpen(false)}
                         className={
                             labeled
