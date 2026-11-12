@@ -140,7 +140,7 @@ once `TRUSTED_PROXIES` says the proxy may set them.
 The JavaScript and CSS under `public/build/assets/` are most of what a first visit downloads, and
 how the web server sends them decides how long that visit takes. Two things are expected of it:
 
-- **Compress static text files** (`.js`, `.css`, `.svg`, `.json`).
+- **Compress static text files** (`.js`, `.css`, `.svg`).
 - **Mark `public/build/assets/*` as `Cache-Control: public, max-age=31536000, immutable`.** Every
   file there has a content hash in its name, so a new build is a new URL. Only a file that exists
   may carry the header: a 404 for an asset that a deploy has not placed yet must stay uncached.
