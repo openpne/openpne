@@ -88,7 +88,7 @@ class AttachmentImageSerializationTest extends TestCase
             ['url' => $file->thumbnailUrl(640, 640, outputFormat: 'webp'), 'box' => 640],
             ['url' => $file->thumbnailUrl(1200, 1200, outputFormat: 'webp'), 'box' => 1200],
         ], $entry['fitSources']);
-        $this->assertStringEndsWith('.webp', $entry['fitSources'][1]['url']);
+        $this->assertSame('.webp', substr((string) parse_url($entry['fitSources'][1]['url'], PHP_URL_PATH), -5));
         $this->assertSame(1600, $entry['width']);
         $this->assertSame(900, $entry['height']);
     }
@@ -197,7 +197,7 @@ class AttachmentImageSerializationTest extends TestCase
 
         $this->assertSame($file->thumbnailUrl(640, 640), $entry['fitSources'][1]['url']);
         $this->assertSame($file->thumbnailUrl(300, 400, square: true), $entry['cropSources']['tall'][0]['url']);
-        $this->assertStringEndsWith('.png', $entry['fitSources'][1]['url']);
+        $this->assertSame('.png', substr((string) parse_url($entry['fitSources'][1]['url'], PHP_URL_PATH), -4));
     }
 
     /** @param  callable(File): array<string, mixed>  $serialize */

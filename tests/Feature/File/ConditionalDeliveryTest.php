@@ -38,7 +38,7 @@ class ConditionalDeliveryTest extends TestCase
         $first->assertOk();
         $etag = (string) $first->headers->get('ETag');
         $this->assertSame(ImageTransform::fromGeometry('w120_h120_sq')->etag($file->name, 'png'), $etag);
-        $this->assertCacheControl($first, ['private' => true, 'max-age' => '86400']);
+        $this->assertCacheControl($first, ['private' => true, 'max-age' => '31536000', 'immutable' => true]);
 
         // Nothing is read for a match: the tag is computed, not derived from the bytes.
         $this->mock(ImageCache::class)->shouldNotReceive('bytes');
@@ -46,12 +46,39 @@ class ConditionalDeliveryTest extends TestCase
         $again->assertStatus(304);
         $this->assertSame('', $again->getContent());
         $this->assertSame($etag, $again->headers->get('ETag'));
-        $this->assertCacheControl($again, ['private' => true, 'max-age' => '86400']);
+        $this->assertCacheControl($again, ['private' => true, 'max-age' => '31536000', 'immutable' => true]);
         $this->forgetMock(ImageCache::class);
 
         $stale = $this->withHeader('If-None-Match', '"stale"')->get($url);
         $stale->assertOk();
         $this->assertNotSame('', $stale->getContent());
+    }
+
+    public function test_a_thumbnail_url_naming_no_encoder_or_another_one_is_kept_for_a_day(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner);
+        $bare = route('image.show', ['format' => 'png', 'geometry' => 'w120_h120_sq', 'name' => $file->name, 'ext' => 'png']);
+
+        foreach ([$bare, $bare.'?v=', $bare.'?v=00000000', $bare.'?v[]='.ImageTransform::version()] as $url) {
+            $response = $this->actingAs($owner)->get($url)->assertOk();
+            $this->assertCacheControl($response, ['private' => true, 'max-age' => '86400']);
+            $this->assertFalse($response->headers->hasCacheControlDirective('immutable'), $url);
+        }
+    }
+
+    public function test_a_thumbnail_url_issued_under_another_encoder_is_no_longer_kept_for_good(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner);
+        $url = $file->thumbnailUrl(120, 120, square: true);
+
+        config(['openpne.images.quality' => config('openpne.images.quality') - 1]);
+
+        $response = $this->actingAs($owner)->get($url)->assertOk();
+        $this->assertCacheControl($response, ['private' => true, 'max-age' => '86400']);
+        $this->assertFalse($response->headers->hasCacheControlDirective('immutable'));
+        $this->assertNotSame($url, $file->thumbnailUrl(120, 120, square: true));
     }
 
     public function test_the_thumbnail_tag_differs_by_geometry(): void
