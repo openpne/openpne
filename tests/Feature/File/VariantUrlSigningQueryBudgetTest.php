@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class VariantUrlSigningQueryBudgetTest extends TestCase
@@ -34,6 +35,8 @@ class VariantUrlSigningQueryBudgetTest extends TestCase
         $this->app->useStoragePath($this->storage);
         Storage::fake('image_cache');
         config(['openpne.surface_mode' => 'modern_only', 'app.url' => 'http://localhost']);
+        // The URLs a page draws take their host from here, whatever APP_URL the developer's .env holds.
+        URL::forceRootUrl('http://localhost');
     }
 
     protected function tearDown(): void
@@ -86,7 +89,7 @@ class VariantUrlSigningQueryBudgetTest extends TestCase
         DB::disableQueryLog();
 
         $this->assertStringContainsString('s=', (string) $row['inReplyTo']['thumbnailUrl']);
-        $this->assertSame([], array_values(array_filter($read, fn (string $sql): bool => str_contains($sql, '"group_messages"'))));
+        $this->assertSame([], array_values(array_filter($read, fn (string $sql): bool => preg_match('/from\W+group_messages\b/', $sql) === 1)));
     }
 
     /** Queries the page takes with the fast path on, less the same page with it off. */

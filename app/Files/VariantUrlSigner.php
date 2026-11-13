@@ -52,7 +52,6 @@ class VariantUrlSigner
         $pair = $viewer->getKey().':'.$id;
 
         if (! isset($this->allowed[$pair])) {
-            // One read for the page: the policy asks whether each picture's owner blocks the viewer.
             app(ViewerRelations::class)->warmEveryBlockOf($viewer);
             $this->allowed[$pair] = Gate::forUser($viewer)->allows('view', $file);
         }

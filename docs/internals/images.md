@@ -372,7 +372,7 @@ and rely on the route to refuse them. The policy is asked once a file and viewer
 reads who blocks the viewer once, and a serializer hands the policy the owner rows it already holds
 (`FileOwners`): `MemberRefSerializer` the member behind an avatar, the talk serializer each message
 and the message it answers. Those pages gain a fixed number of queries; a surface that draws a file
-whose owner it has not noted gains one read an owner. No signature is issued without a member on the
+whose owner it has not noted gains at least one read an owner. No signature is issued without a member on the
 `member` guard and a session — so not to a guest, the admin realm or a token request — and code that
 runs with that member still set, a queued job run inline included, signs as the page would.
 
@@ -414,9 +414,8 @@ What follows from deciding at render time rather than at fetch time:
   cookie ends, whatever changed since: a block, a group left, a narrowed audience, a feature switched
   off, or `files.animated` recorded as false after an `_a` variant was made. A deleted File's variants
   are purged ([file-storage.md](file-storage.md), "Deleting a file").
-- A device whose session row was removed (the device list, an administrator) keeps its image cookie
-  until it next asks the application for a page, so the same holds for it until then or until the
-  cookie expires. So does a browser that receives a response signed before a logout after the
+- A device whose session row was removed (the device list, an administrator) keeps its image cookie,
+  so the same holds for it until that cookie expires or a member signs in there. So does a browser that receives a response signed before a logout after the
   logout's own.
 - Switching the fast path off takes effect at the next request the application answers, or when the
   command is run. While workers of two releases share a storage directory each rewrites the file, and

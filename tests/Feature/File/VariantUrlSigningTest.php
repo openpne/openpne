@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Cookie as ResponseCookie;
@@ -40,6 +41,8 @@ class VariantUrlSigningTest extends TestCase
 
         Storage::fake('image_cache');
         config(['openpne.images.fast_path' => true, 'app.url' => 'http://localhost']);
+        // The URLs a page draws take their host from here, whatever APP_URL the developer's .env holds.
+        URL::forceRootUrl('http://localhost');
 
         // What a page does: the body is the URL it would put in an <img>.
         Route::middleware('web')->get('/_probe/url/{file:name}', fn (File $file): string => $file->thumbnailUrl(120, 120, square: true));
