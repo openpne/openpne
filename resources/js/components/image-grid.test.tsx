@@ -146,3 +146,16 @@ test('a guest — no switch in the props — is a still, and an empty set render
     const empty = render(<ImageGrid images={[]} variant="post" />);
     expect(empty.container.innerHTML).toBe('');
 });
+
+test('a picture waits for the viewport wherever its box is reserved, and only there', () => {
+    const sized = render(<ImageGrid images={[hero(1200, 630)]} variant="boxed" />);
+    expect(sized.container.querySelector('img')?.getAttribute('loading')).toBe('lazy');
+
+    cleanup();
+    const unsized = render(<ImageGrid images={[{ ...hero(1, 1), width: null, height: null }]} variant="boxed" />);
+    expect(unsized.container.querySelector('img')?.hasAttribute('loading')).toBe(false);
+
+    cleanup();
+    const cells = render(<ImageGrid images={[hero(1200, 630), { ...hero(1, 1), id: 2, width: null, height: null }]} variant="boxed" />);
+    expect(Array.from(cells.container.querySelectorAll('img')).map((img) => img.getAttribute('loading'))).toEqual(['lazy', 'lazy']);
+});
