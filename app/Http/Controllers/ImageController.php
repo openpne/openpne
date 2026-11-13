@@ -45,11 +45,14 @@ class ImageController extends Controller
         // A processor that cannot write WebP is asked for none, so a host without it answers as today.
         abort_unless($format === $imageFormat || $processor->intake()->writesWebp(), 404);
 
+        // A URL naming another encoder, or none, may be answered with different bytes later, so only the current one is kept for good.
+        $pinned = $request->query('v') === ImageTransform::version();
+
         // Checked after the policy so a viewer who may no longer see the file is answered 404, never 304.
         $response = response('', 200, [
             'Content-Type' => ImageSpec::mimeFor($format),
             'X-Content-Type-Options' => 'nosniff',
-            'Cache-Control' => 'private, max-age=86400',
+            'Cache-Control' => $pinned ? 'private, max-age=31536000, immutable' : 'private, max-age=86400',
             'ETag' => $transform->etag($file->name, $format),
         ]);
 

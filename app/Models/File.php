@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Files\ImageSpec;
+use App\Files\ImageTransform;
 use Database\Factories\FileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -80,6 +81,6 @@ class File extends Model
         $format = $outputFormat ?? $this->imageFormat() ?? 'jpg';
         $geometry = "w{$width}_h{$height}".($square ? '_sq' : '').($animated ? '_a' : '');
 
-        return route('image.show', ['format' => $format, 'geometry' => $geometry, 'name' => $this->name, 'ext' => $format]);
+        return route('image.show', ['format' => $format, 'geometry' => $geometry, 'name' => $this->name, 'ext' => $format, 'v' => ImageTransform::version()]);
     }
 }

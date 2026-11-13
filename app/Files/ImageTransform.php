@@ -72,9 +72,23 @@ final class ImageTransform
      */
     public static function encoderPrefix(string $name): string
     {
+        return self::directory($name).'/'.self::encoder();
+    }
+
+    /**
+     * Names the encoder in a variant URL: it changes exactly when every cache key does, so a URL
+     * carrying the current one names bytes that never change (docs/internals/images.md, "Key invariants").
+     */
+    public static function version(): string
+    {
+        return substr(hash('sha1', self::encoder()), 0, 8);
+    }
+
+    private static function encoder(): string
+    {
         $encoder = config('openpne.images.processor').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
 
-        return self::directory($name).'/g'.self::GENERATION."/{$encoder}";
+        return 'g'.self::GENERATION."/{$encoder}";
     }
 
     /**

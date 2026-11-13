@@ -400,3 +400,11 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
   is not shortened for it — revalidating every image would cost a PHP request each. Only the
   link-card image route carries no validator (it is `no-store` by design).
+- **A variant URL the app writes is kept by the browser for a year, without revalidation.**
+  `File::thumbnailUrl()` adds `?v=` (`ImageTransform::version()`, a hash of the generation and the
+  encoder — the parts of the cache key that are not in the path), and `/cache/img/…` answers
+  `private, max-age=31536000, immutable` only while `v` is the current one. A URL without it (an
+  OpenPNE 3 link) or with a superseded one keeps `private, max-age=86400`: the same path may be answered
+  with other bytes after a `GENERATION` bump or an encoder change, and the pages written since carry
+  the new `v`. A viewer who loses access to a picture therefore keeps the copies their browser already
+  holds for as long as it keeps them; `FilePolicy` governs every request that reaches the server.
