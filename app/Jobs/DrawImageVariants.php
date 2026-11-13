@@ -11,9 +11,12 @@ use App\Files\ImageProcessingException;
 use App\Files\ImageProcessorUnavailableException;
 use App\Models\File;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Draws a posted picture's still rungs before anyone asks for one, and only where a worker takes
@@ -28,19 +31,27 @@ class DrawImageVariants implements ShouldQueue
     /** A rung left undrawn is drawn by its first view, so nothing here is worth a retry. */
     public int $tries = 1;
 
+    /** Long enough for what the post queues after its commit to be taken first by a lone worker. */
+    private const HEAD_START_SECONDS = 10;
+
     public function __construct(public readonly int $fileId) {}
 
-    /** afterCommit: the upload's row is written inside the post's transaction, which may yet roll back. */
+    /**
+     * Queued once the post's transaction has committed, and a push the queue refuses is reported, never
+     * thrown: the caller's compensation would take it for a rollback and delete a committed post's bytes.
+     */
     public static function for(File $file): void
     {
         $driver = config('queue.connections.'.config('queue.default').'.driver');
 
-        // Either driver would draw in the posting request's own process, ahead of the notifications queued after it.
-        if (in_array($driver, ['sync', 'deferred'], true) || $file->imageFormat() === null) {
+        // These draw, or may fall back to drawing, in the posting request's own process or one spawned per picture.
+        if (in_array($driver, ['sync', 'deferred', 'background', 'failover'], true) || $file->imageFormat() === null) {
             return;
         }
 
-        self::dispatch((int) $file->getKey())->afterCommit();
+        $id = (int) $file->getKey();
+
+        DB::afterCommit(fn () => rescue(fn () => app(Dispatcher::class)->dispatch((new self($id))->delay(self::HEAD_START_SECONDS))));
     }
 
     public function handle(ImageCache $cache): void
@@ -52,14 +63,20 @@ class DrawImageVariants implements ShouldQueue
         }
 
         foreach (ImageLadder::stills($file) as [$transform, $format]) {
-            // ImageCache::bytes() removes what it published for a deleted file; this only spares drawing the rest.
-            if (! File::query()->whereKey($this->fileId)->exists()) {
-                return;
-            }
-
             try {
                 $cache->bytes($file, $transform, $format);
             } catch (CanonicalUnavailableException|ImageProcessingException|ImageProcessorUnavailableException) {
+                return;
+            } catch (Throwable $e) {
+                // A delete takes the stored bytes and the canonical with it, and reading either then throws whatever the backend throws.
+                if (File::query()->whereKey($this->fileId)->exists()) {
+                    throw $e;
+                }
+
+                return;
+            }
+
+            if (! File::query()->whereKey($this->fileId)->exists()) {
                 return;
             }
         }

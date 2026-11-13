@@ -81,13 +81,18 @@ a post — a timeline post, a diary or its comment, a topic, an event or their c
 message, a direct message — has the still rungs of its ladder (the 120px square, the three fit boxes
 and the four crops) drawn by a queued job
 ([`DrawImageVariants`](../../app/Jobs/DrawImageVariants.php)) once the post has committed, so the
-members who open it find them made. The job is queued only where a worker takes the queue: under
-`QUEUE_CONNECTION=deferred` it would draw in the posting request's own process, ahead of that
-post's notifications and inside its `max_execution_time` ([runtime.md](runtime.md), "Queue"), so
-there the first view draws as before. It asks `ImageCache` for each rung as a view does and decides
+members who open it later find them made. The job is not queued under `QUEUE_CONNECTION=sync`,
+`deferred`, `background` or `failover`: the first two would draw in the posting request's own
+process, inside its `max_execution_time` ([runtime.md](runtime.md), "Queue"), the third in a process
+spawned per picture, and the last may fall back to either, so there the first view draws as before.
+A queue that refuses the job is reported and the post stands. It is queued ten seconds ahead, which lets a lone
+worker take the post's notifications first; a member who opens the post before the worker reaches
+it draws what they ask for themselves. It asks `ImageCache` for each rung as a view does and decides
 nothing about who may see the picture; a rung it does not reach — the worker stopped, the processor
 down, the file deleted meanwhile — is drawn by its first view, and nothing is retried. The `_a`
-rungs are left to the hero that asks for them, each costing about a canonical. An avatar, a group's
+rungs are left to the hero that asks for them, each costing about a canonical. The eight stills are
+on the cache disk for every such picture whether or not anyone asks for them, about half a
+canonical's bytes together for a photograph. An avatar, a group's
 picture, a banner and a link card's picture are not drawn ahead, and neither is a picture stored
 before this ran or under another encoder: `openpne:image-cache warm` makes canonicals only.
 

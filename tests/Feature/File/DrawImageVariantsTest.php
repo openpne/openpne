@@ -4,10 +4,13 @@ namespace Tests\Feature\File;
 
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Data\TimelinePostFormData;
+use App\Files\CanonicalUnavailableException;
+use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
 use App\Files\ImageIntake;
 use App\Files\ImageLadder;
+use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -19,13 +22,17 @@ use App\Models\File;
 use App\Models\Member;
 use App\Support\Visibility;
 use Closure;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
+use Throwable;
 
 class DrawImageVariantsTest extends TestCase
 {
@@ -94,6 +101,45 @@ class DrawImageVariantsTest extends TestCase
         $this->assertSame(1, $asked);
     }
 
+    /** @return array<string, array{Throwable}> */
+    public static function refusals(): array
+    {
+        return [
+            'canonical refused' => [new CanonicalUnavailableException('refused')],
+            'rung refused' => [new ImageProcessingException('refused')],
+        ];
+    }
+
+    #[DataProvider('refusals')]
+    public function test_a_refusal_ends_the_run_without_failing_the_job(Throwable $refusal): void
+    {
+        $file = $this->picture();
+        $cache = Mockery::mock(ImageCache::class);
+        $cache->shouldReceive('bytes')->once()->andThrow($refusal);
+
+        (new DrawImageVariants((int) $file->getKey()))->handle($cache);
+    }
+
+    public function test_a_read_that_fails_because_the_file_was_deleted_ends_the_run_and_any_other_failure_is_thrown(): void
+    {
+        $file = $this->picture();
+        $cache = Mockery::mock(ImageCache::class);
+        $cache->shouldReceive('bytes')->once()->andReturnUsing(function () use ($file): never {
+            File::query()->whereKey($file->getKey())->delete();
+
+            throw new RuntimeException('No stored bytes');
+        });
+
+        (new DrawImageVariants((int) $file->getKey()))->handle($cache);
+
+        $kept = $this->picture();
+        $cache = Mockery::mock(ImageCache::class);
+        $cache->shouldReceive('bytes')->once()->andThrow(new RuntimeException('the disk failed'));
+
+        $this->expectExceptionMessage('the disk failed');
+        (new DrawImageVariants((int) $kept->getKey()))->handle($cache);
+    }
+
     /** @return array<string, array{string}> */
     public static function ladderTypes(): array
     {
@@ -112,7 +158,7 @@ class DrawImageVariantsTest extends TestCase
         $file = app(PostImages::class)->compensating(fn (callable $store): File => $store(UploadedFile::fake()->image('a.png', 40, 20), $type, 1));
 
         Queue::assertPushed(DrawImageVariants::class, 1);
-        Queue::assertPushed(fn (DrawImageVariants $job): bool => $job->fileId === $file->getKey() && $job->afterCommit === true);
+        Queue::assertPushed(fn (DrawImageVariants $job): bool => $job->fileId === $file->getKey() && $job->delay === 10);
     }
 
     public function test_posting_with_a_picture_queues_its_drawing(): void
@@ -137,6 +183,19 @@ class DrawImageVariantsTest extends TestCase
         });
 
         $this->assertDatabaseCount('jobs', 1);
+    }
+
+    public function test_a_queue_that_refuses_the_job_leaves_the_committed_post_and_its_bytes(): void
+    {
+        config(['queue.default' => 'database', 'queue.connections.database.table' => 'no_such_table']);
+        Exceptions::fake();
+
+        $file = app(PostImages::class)->compensating(fn (callable $store): File => $store(UploadedFile::fake()->image('a.png', 40, 20), 'diary', 1));
+
+        Exceptions::assertReported(QueryException::class);
+        $this->assertDatabaseHas('files', ['id' => $file->getKey()]);
+        $this->assertNotSame('', stream_get_contents(app(FileStorage::class)->readStream($file)));
+        $this->assertTrue(app(ImageCache::class)->hasCanonical($file));
     }
 
     public function test_a_post_that_rolls_back_queues_nothing(): void
@@ -169,7 +228,7 @@ class DrawImageVariantsTest extends TestCase
     /** @return array<string, array{string}> */
     public static function driversWithoutAWorker(): array
     {
-        return ['sync' => ['sync'], 'deferred' => ['deferred']];
+        return ['sync' => ['sync'], 'deferred' => ['deferred'], 'background' => ['background'], 'failover' => ['failover']];
     }
 
     public function test_a_picture_that_is_not_a_posts_is_not_queued(): void
