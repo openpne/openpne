@@ -75,7 +75,7 @@ class FilePolicy extends BasePolicy
             $owner instanceof TimelinePost => TimelineAccess::canView($viewer, $owner),
             // No per-message gate: talk shows every surviving message to whoever may read the group,
             // and its attachments follow.
-            $owner instanceof GroupMessage => $viewer !== null && GroupTalkAccess::canView($owner->group, $viewer),
+            $owner instanceof GroupMessage => $viewer !== null && GroupTalkAccess::canView($this->groupOf($owner), $viewer),
             default => false,
         };
     }
@@ -97,6 +97,18 @@ class FilePolicy extends BasePolicy
             $owner instanceof GroupMessage => Feature::GroupTalk,
             default => null,
         };
+    }
+
+    /** Through the owner memo, so a page of talk pictures reads their one group once rather than once a message. */
+    private function groupOf(GroupMessage $message): Group
+    {
+        if ($message->relationLoaded('group')) {
+            return $message->group;
+        }
+
+        $group = app(FileOwners::class)->find(Group::class, (int) $message->group_id);
+
+        return $group instanceof Group ? $group : $message->group;
     }
 
     /** Null (unlinked, unknown morph alias, or deleted) denies unless explicit_visibility is 'public'. */

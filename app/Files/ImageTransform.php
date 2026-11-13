@@ -84,7 +84,8 @@ final class ImageTransform
         return substr(hash('sha1', self::encoder()), 0, 8);
     }
 
-    private static function encoder(): string
+    /** The cache key's segment between a file's directory and its variants. */
+    public static function encoder(): string
     {
         $encoder = config('openpne.images.processor').'-q'.config('openpne.images.quality').(config('openpne.images.exif') ? '' : '-noexif');
 

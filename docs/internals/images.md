@@ -355,6 +355,63 @@ member as a temporary failure; on a read it is a 503 with `Retry-After: 30`
 included, and every canonical already made keeps being served. A canonical that keeps its frames can outgrow the source cap where a GD still
 would not, and is then refused like any other over it.
 
+## The fast path
+
+A generated variant costs a whole framework boot to serve, which on a small host is most of the time a
+page of pictures takes. So a variant URL the app writes for a signed-in member carries a signature,
+and [`bootstrap/image-fast-path.php`](../../bootstrap/image-fast-path.php), called from
+`public/index.php` ahead of the autoloader, answers it from the cache disk when everything below
+holds. Anything else — and any doubt — falls through to the application, whose route and `FilePolicy`
+are unchanged.
+
+**Signing.** [`VariantUrlSigner`](../../app/Files/VariantUrlSigner.php) is called from
+`File::thumbnailUrl()`, the only place a variant URL is built, and signs only when the viewer is a
+member signed in on the member realm and `FilePolicy` lets that member view the file now. This check
+matters: pages draw URLs for files their viewer may not see (the avatar of someone who blocks them)
+and rely on the route to refuse them. The policy is asked once a file per request, and a talk page
+hands it the message rows it already holds (`FileOwners`), so signing adds a fixed number of queries
+to a page. A guest, the admin realm, a console and a token request get no signature.
+
+**The signature** is HMAC-SHA256 over `<format>/<geometry>/<name>`, `v` and the image cookie's value,
+cut to 128 bits, under a key derived from `APP_KEY`. It has no expiry, so the URL is stable and the
+year-long browser cache below keeps working; what ends it is the cookie.
+
+**The image cookie** (`openpne-img`, `__Host-openpne-img` where `session.secure` is on) holds 32 random
+bytes. It is host-only with `Path=/` whatever `session.domain` says, `HttpOnly`, `SameSite=Lax`,
+exempt from cookie encryption so the check can read it, and lives as long as the session cookie of
+the same response ([sessions.md](sessions.md), "Lifetimes"). A member login replaces it and a member
+logout expires it under both names; an admin signing in or out leaves it alone.
+
+**The published file.** [`ImageFastPath::sync()`](../../app/Files/ImageFastPath.php) writes
+`storage/framework/image-fast-path.json` — the derived key, `APP_URL`'s host, the cache disk's root,
+the encoder directory, `v` and the cookie's name — mode 0600, through a temp file and a rename. It
+runs on every web request, when the signer is first used, and from `php artisan
+openpne:image-fast-path`; the signer signs only when the file on disk says what this process would
+write. Where the fast path cannot apply the file is removed and nothing is signed:
+`OPENPNE_IMAGE_FAST_PATH=false`, a cache disk that is not a local one, or an `APP_URL` with no host.
+
+**The check** answers only a `GET` or `HEAD` with no `If-None-Match`, whose `Host` is the published
+one, whose path ends in a variant of a token-named file (not the `w_h` canonical, not an OpenPNE 3
+name), whose `v` is the published one, whose cookie is present, and whose signature matches. Every
+input is checked for type, length and alphabet first and any error is a fall-through. It then opens
+the cached file; a variant not yet generated, or purged since, is the application's to answer. The
+response carries the application's `Content-Type` and `ETag`, `nosniff`, and `private,
+max-age=31536000, immutable`, and none of the page-oriented headers `SecurityHeaders` adds.
+
+What follows from deciding at render time rather than at fetch time:
+
+- A signed URL is of no use without the image cookie of the browser it was drawn for.
+- A viewer who could see a picture when a page was drawn can fetch its variants until their image
+  cookie ends, whatever changed since: a block, a group left, a narrowed audience, a feature switched
+  off, or `files.animated` recorded as false after an `_a` variant was made. A deleted File's variants
+  are purged ([file-storage.md](file-storage.md), "Deleting a file").
+- A device whose session was revoked without a logout keeps its image cookie, so the same holds for it
+  until that cookie expires.
+- Switching the fast path off takes effect at the next request the application answers, or when the
+  command is run. While workers of two releases share a storage directory each rewrites the file, and
+  a URL that does not match the file of the moment falls through.
+- Whoever can read the published file can sign any generated variant for their own cookie.
+
 ## Classic is not part of this
 
 A Classic `<img>` carries no width or height, so the variant it requests *is* the rendered size and
@@ -396,7 +453,7 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
 - **Clearing the cache disk no longer reaches browsers**: every inline raster answer — `/cache/img/…`
   variants, the `w_h` original, `/file/{name}`, the banner and public routes — carries the canonical's
   or the variant's key hashed as its `ETag` (`ImageTransform::etag`). A non-raster attachment and the
-  admin raw route carry the file token hashed (`FileResponse::etag`), whose bytes never change. Each is checked after the route's own gate
+  admin raw route carry the file token hashed (`FileResponse::etag`), whose bytes never change. In the application each is checked after the route's own gate
   (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
   is not shortened for it — revalidating every image would cost a PHP request each. Only the
   link-card image route carries no validator (it is `no-store` by design).
@@ -408,4 +465,5 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
   with other bytes after a `GENERATION` bump or an encoder change, and the pages written since carry
   the new `v`. Bytes remade under an unchanged key — `rebuild`, or a library change without a
   `GENERATION` bump — do not reach a browser that holds the old ones. A viewer who loses access to a picture therefore keeps the copies their browser already
-  holds for as long as it keeps them; `FilePolicy` governs every request that reaches the server.
+  holds for as long as it keeps them; `FilePolicy` governs every request the application answers, and
+  [the fast path](#the-fast-path) answers the rest.

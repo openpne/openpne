@@ -7,6 +7,7 @@ use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Files\AttachmentShape;
+use App\Files\FileOwners;
 use App\Files\ImageLadder;
 use App\Files\PostAttachments;
 use App\LinkCard\LinkCardSerializer;
@@ -34,6 +35,11 @@ class GroupMessageSerializer
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions, array $parents): array
     {
+        // The row in hand is the one FilePolicy would otherwise read again for each picture it signs.
+        if ($message->images->isNotEmpty()) {
+            app(FileOwners::class)->note($message);
+        }
+
         return [
             'id' => $message->getKey(),
             'body' => $message->body,

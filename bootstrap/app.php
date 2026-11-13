@@ -59,6 +59,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
             subdomains: false,
         );
 
+        // Read as sent by the check that runs before the framework boots; both names, literal, because
+        // this runs before the configuration that picks one (docs/internals/images.md, "The fast path").
+        $middleware->encryptCookies(except: ['openpne-img', '__Host-openpne-img']);
+
         // Global, ahead of every group: it must pin the session store (cookie + table)
         // and default guard for the request's realm before anything resolves the
         // session driver — including the web group's StartSession, which also serves

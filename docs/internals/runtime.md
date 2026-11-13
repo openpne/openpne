@@ -40,7 +40,10 @@ refreshing.
 4. Stored bytes are never served from a bare disk URL: every file, thumbnail and
    the custom stylesheet streams through the app, so an install never needs
    `storage:link` and the storage path can live anywhere `LARAVEL_STORAGE_PATH`
-   points.
+   points. The image fast path keeps this: it runs inside `public/index.php`, reads the cache disk
+   by its filesystem path, and finds its own file under the same `LARAVEL_STORAGE_PATH`
+   ([images.md](images.md), "The fast path"). A deploy that wants the file in place before the first
+   request, or gone the moment the fast path is switched off, runs `php artisan openpne:image-fast-path`.
 
 ## Site timezone
 

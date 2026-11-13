@@ -7,10 +7,12 @@ use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\GdImageProcessor;
 use App\Files\GeneratedIconRaster;
+use App\Files\ImageFastPath;
 use App\Files\ImageProcessor;
 use App\Files\Imgproxy\ImgproxyImageProcessor;
 use App\Files\Imgproxy\ImgproxyUrl;
 use App\Files\UploadLimit;
+use App\Files\VariantUrlSigner;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
@@ -40,6 +42,8 @@ class FilesServiceProvider extends ServiceProvider
         // Scoped: one per request, so the raster's existence is read once however many URLs a page builds.
         $this->app->scoped(GeneratedIconRaster::class);
 
+        $this->app->scoped(VariantUrlSigner::class);
+
         // Bound (not singleton) so each resolution reflects the current
         // openpne.files.disk; the implementations are stateless and cheap to build.
         $this->app->bind(FileStorage::class, function (): FileStorage {
@@ -67,6 +71,12 @@ class FilesServiceProvider extends ServiceProvider
     public function boot(): void
     {
         File::observe(FileObserver::class);
+
+        // Once every provider has booted (`session.secure` is settled there), and on every web request:
+        // switching the fast path off must take effect without waiting for a page that draws a picture.
+        if (! $this->app->runningInConsole()) {
+            $this->app->booted(static fn (): bool => ImageFastPath::sync());
+        }
     }
 
     /** Settings that were removed fail the boot while still set, rather than look honoured. */

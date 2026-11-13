@@ -27,10 +27,15 @@ final class MemberSessionLifetime
      */
     public static function cookieMinutes(Request $request): ?int
     {
+        return Auth::guard('member')->check() ? self::memberCookieMinutes($request) : null;
+    }
+
+    /** cookieMinutes() for a caller that already knows the request is a signed-in member's, such as a Login listener the guard has not yet set its user for. */
+    public static function memberCookieMinutes(Request $request): ?int
+    {
         if (config('session.driver') !== 'database'
             || config('session.expire_on_close')
-            || AdminRealm::matches($request)
-            || ! Auth::guard('member')->check()) {
+            || AdminRealm::matches($request)) {
             return null;
         }
 

@@ -706,6 +706,10 @@ carry a browser-enforced name prefix on an HTTPS site
 cookies are host-only at `/` — another host under the same parent domain cannot
 plant any of them; a site that falls back to `__Secure-` has no such guarantee.
 
+The image cookie binds a signed variant URL to the browser it was drawn for, so the URL alone fetches
+nothing. It is always host-only, and the one cookie exempt from encryption: the check that reads it
+runs before the framework and its value is itself the secret ([images.md](images.md), "The fast path").
+
 ## Administrator content
 
 An administrator writes four kinds of page content for Classic: the page inserts, the footer, a

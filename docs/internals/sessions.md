@@ -58,6 +58,10 @@ and a site that scopes its cookie to a parent domain or a sub-path keeps
 `__Secure-`. A `__Host-` cookie belongs to the one host that set it: another
 host under the same parent domain cannot plant a cookie of that name for it.
 
+The image cookie ([images.md](images.md), "The fast path") is not under this rule: it ignores
+`session.domain` and `session.path`, so it is host-only at `/` on every site and takes `__Host-`
+wherever `session.secure` is on.
+
 A `__Secure-` cookie carries no such guarantee: on a site that scopes its
 cookies to a parent domain or a sub-path, another host under that domain can
 still plant an `XSRF-TOKEN` cookie.
