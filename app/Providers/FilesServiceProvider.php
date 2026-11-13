@@ -19,6 +19,7 @@ use Illuminate\Support\ServiceProvider;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
 use InvalidArgumentException;
+use RuntimeException;
 
 class FilesServiceProvider extends ServiceProvider
 {
@@ -75,7 +76,11 @@ class FilesServiceProvider extends ServiceProvider
         // Once every provider has booted (`session.secure` is settled there), and on every web request:
         // switching the fast path off must take effect without waiting for a page that draws a picture.
         if (! $this->app->runningInConsole()) {
-            $this->app->booted(static fn (): bool => ImageFastPath::sync());
+            $this->app->booted(static function (): void {
+                if (! ImageFastPath::sync() && ImageFastPath::lingers()) {
+                    report(new RuntimeException('The image fast path is off but its file could not be removed: '.ImageFastPath::path()));
+                }
+            });
         }
     }
 

@@ -35,10 +35,9 @@ class GroupMessageSerializer
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions, array $parents): array
     {
-        // The row in hand is the one FilePolicy would otherwise read again for each picture it signs.
-        if ($message->images->isNotEmpty()) {
-            app(FileOwners::class)->note($message);
-        }
+        // The rows in hand are the ones FilePolicy would otherwise read again for each picture it signs.
+        self::noteOwners($message);
+        self::noteOwners($parents[(int) $message->in_reply_to_id] ?? null);
 
         return [
             'id' => $message->getKey(),
@@ -165,6 +164,13 @@ class GroupMessageSerializer
             'url' => $file?->url() ?? '',
             ...ImageLadder::of($file),
         ];
+    }
+
+    private static function noteOwners(?GroupMessage $message): void
+    {
+        if ($message?->images->isNotEmpty()) {
+            app(FileOwners::class)->note($message);
+        }
     }
 
     /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool}|null */

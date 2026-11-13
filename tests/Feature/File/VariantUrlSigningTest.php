@@ -4,6 +4,8 @@ namespace Tests\Feature\File;
 
 use App\Files\FileUploader;
 use App\Files\ImageFastPath;
+use App\Files\ImageTransform;
+use App\Files\VariantUrlSigner;
 use App\Listeners\Auth\RotateImageCookie;
 use App\Models\AdminUser;
 use App\Models\File;
@@ -13,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -47,6 +50,11 @@ class VariantUrlSigningTest extends TestCase
         });
         Route::middleware('web')->get('/_probe/logout', function (): string {
             Auth::guard('member')->logout();
+
+            return 'bye';
+        });
+        Route::middleware('web')->get('/_probe/logout-device', function (): string {
+            Auth::guard('member')->logoutCurrentDevice();
 
             return 'bye';
         });
@@ -144,6 +152,7 @@ class VariantUrlSigningTest extends TestCase
             $asked += $ability === 'view' && ($arguments[0] ?? null) instanceof File && $arguments[0]->is($file) ? 1 : 0;
         });
 
+        request()->setLaravelSession($this->app['session.store']);
         $this->actingAs($owner);
         $first = $file->thumbnailUrl(120, 120, square: true);
         $second = $file->thumbnailUrl(76, 76, square: true);
@@ -187,8 +196,75 @@ class VariantUrlSigningTest extends TestCase
         }
     }
 
+    /** `auth.session` signs a device out this way after a password change elsewhere, and fires no Logout. */
+    public function test_a_device_signed_out_without_a_logout_event_loses_the_cookie_too(): void
+    {
+        $response = $this->actingAs(Member::factory()->create())
+            ->withUnencryptedCookies([ImageFastPath::COOKIE => str_repeat('a', 64)])
+            ->get('/_probe/logout-device')
+            ->assertOk();
+
+        $this->assertTrue($this->imageCookie($response, ImageFastPath::COOKIE)->isCleared());
+    }
+
+    public function test_one_viewers_answer_is_never_reused_for_another_in_the_same_request(): void
+    {
+        $owner = Member::factory()->create();
+        $blocked = Member::factory()->create();
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $blocked->getKey(), 'created_at' => now()]);
+        $file = $this->avatar($owner);
+        request()->setLaravelSession($this->app['session.store']);
+        $signer = app(VariantUrlSigner::class);
+
+        Auth::guard('member')->setUser($owner);
+        $this->assertNotNull($signer->sign($file, 'png/w120_h120_sq/'.$file->name, ImageTransform::version()));
+
+        Auth::guard('member')->setUser($blocked);
+        $this->assertNull($signer->sign($file, 'png/w120_h120_sq/'.$file->name, ImageTransform::version()));
+    }
+
+    /** A value kept across a login while the file was absent would verify the previous member's URLs once it is back. */
+    public function test_a_login_rotates_the_cookie_while_the_fast_path_is_off(): void
+    {
+        $first = Member::factory()->create();
+        $second = Member::factory()->create();
+        $file = $this->avatar($first);
+
+        $before = $this->actingAs($first)->get("/_probe/url/{$file->name}")->assertOk();
+        $old = (string) $this->imageCookie($before, ImageFastPath::COOKIE)->getValue();
+        $this->get($before->getContent())->assertOk();
+
+        config(['openpne.images.fast_path' => false]);
+        $this->app->forgetScopedInstances();
+        Cookie::flushQueuedCookies();
+        $login = $this->withUnencryptedCookie(ImageFastPath::COOKIE, $old)->get("/_probe/login/{$second->getKey()}/{$file->name}")->assertOk();
+        $new = (string) $this->imageCookie($login, ImageFastPath::COOKIE)->getValue();
+        $this->assertNotSame($old, $new);
+
+        config(['openpne.images.fast_path' => true]);
+        $this->assertTrue(ImageFastPath::sync());
+        $this->assertNull($this->fastPath($before->getContent(), [ImageFastPath::COOKIE => $new]));
+    }
+
+    /** Without the `__Host-` prefix a sibling host can set this cookie, so the value signed for is never the one a request brought. */
+    public function test_a_cookie_the_request_brought_is_not_what_a_url_is_signed_for(): void
+    {
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner);
+        $planted = str_repeat('e', 64);
+
+        $page = $this->actingAs($owner)->withUnencryptedCookie(ImageFastPath::COOKIE, $planted)->get("/_probe/url/{$file->name}")->assertOk();
+        $this->get($page->getContent())->assertOk();
+
+        $issued = (string) $this->imageCookie($page, ImageFastPath::COOKIE)->getValue();
+        $this->assertNotSame($planted, $issued);
+        $this->assertNull($this->fastPath($page->getContent(), [ImageFastPath::COOKIE => $planted]));
+        $this->assertNotNull($this->fastPath($page->getContent(), [ImageFastPath::COOKIE => $issued]));
+    }
+
     public function test_an_admin_signing_in_leaves_the_members_cookie_alone(): void
     {
+        request()->setLaravelSession($this->app['session.store']);
         app(RotateImageCookie::class)->handleLogin(new Login('admin', AdminUser::factory()->create(), false));
 
         $this->assertFalse(Cookie::hasQueued(ImageFastPath::COOKIE));
@@ -204,11 +280,14 @@ class VariantUrlSigningTest extends TestCase
         $file = $this->avatar($owner);
         $this->travelTo(now()->startOfSecond());
 
-        // Off the database driver the session cookie is the framework's, so this one ends with the browser session too.
-        $this->assertSame(0, $this->expiryUnder(['session.driver' => 'array'], $owner, $file));
+        $this->assertSame(
+            now()->addMinutes(90)->getTimestamp(),
+            $this->expiryUnder(['session.driver' => 'array', 'session.lifetime' => 90], $owner, $file),
+        );
+        $this->assertSame(0, $this->expiryUnder(['session.driver' => 'array', 'session.expire_on_close' => true], $owner, $file));
         $this->assertSame(
             now()->addMinutes(43200)->getTimestamp(),
-            $this->expiryUnder(['session.driver' => 'database', 'session.member_lifetime' => 43200], $owner, $file),
+            $this->expiryUnder(['session.driver' => 'database', 'session.expire_on_close' => false, 'session.member_lifetime' => 43200], $owner, $file),
         );
         $this->assertSame(0, $this->expiryUnder(['session.driver' => 'database', 'session.expire_on_close' => true], $owner, $file));
     }
@@ -223,7 +302,10 @@ class VariantUrlSigningTest extends TestCase
 
         $page = $this->actingAs($owner)->get("/_probe/url/{$file->name}")->assertOk();
 
-        return $this->imageCookie($page, ImageFastPath::COOKIE)->getExpiresTime();
+        $expires = $this->imageCookie($page, ImageFastPath::COOKIE)->getExpiresTime();
+        $this->assertSame($this->imageCookie($page, (string) config('session.cookie'))->getExpiresTime(), $expires, json_encode($settings));
+
+        return $expires;
     }
 
     public function test_the_published_file_is_private_to_its_owner_and_leaves_no_temp_behind(): void
@@ -278,6 +360,33 @@ class VariantUrlSigningTest extends TestCase
         $this->assertSame([], $this->published());
     }
 
+    public function test_a_published_file_others_can_read_is_written_again(): void
+    {
+        $this->assertTrue(ImageFastPath::sync());
+        chmod(ImageFastPath::path(), 0644);
+        clearstatcache();
+
+        $this->assertTrue(ImageFastPath::sync());
+        clearstatcache();
+        $this->assertSame(0600, fileperms(ImageFastPath::path()) & 0777);
+    }
+
+    public function test_a_file_that_cannot_be_removed_is_a_failure_and_not_an_off_switch(): void
+    {
+        $this->assertTrue(ImageFastPath::sync());
+        config(['openpne.images.fast_path' => false]);
+        chmod($this->storage.'/framework', 0500);
+
+        $this->assertFalse(ImageFastPath::sync());
+        $this->assertFileExists(ImageFastPath::path());
+        $this->assertTrue(ImageFastPath::lingers());
+        $this->artisan('openpne:image-fast-path')->assertFailed();
+
+        chmod($this->storage.'/framework', 0700);
+        $this->artisan('openpne:image-fast-path')->assertSuccessful();
+        $this->assertFalse(ImageFastPath::lingers());
+    }
+
     public function test_a_file_another_release_wrote_never_answers_for_this_ones_urls(): void
     {
         $owner = Member::factory()->create();
@@ -296,6 +405,32 @@ class VariantUrlSigningTest extends TestCase
         $this->assertNotSame($ours, file_get_contents(ImageFastPath::path()));
 
         $this->assertNull($this->fastPath($url, $cookies));
+    }
+
+    /** The suite runs as a console, where the provider leaves the file alone, so this boots one application as a web one. */
+    public function test_every_web_boot_brings_the_file_in_line_without_a_picture_being_drawn(): void
+    {
+        $this->assertTrue(ImageFastPath::sync());
+        $path = ImageFastPath::path();
+        $before = [$_ENV['APP_RUNNING_IN_CONSOLE'] ?? null, $_ENV['LARAVEL_STORAGE_PATH'] ?? null];
+        $_ENV['APP_RUNNING_IN_CONSOLE'] = 'false';
+        $_ENV['LARAVEL_STORAGE_PATH'] = $this->storage;
+        mkdir($this->storage.'/framework/views');
+
+        try {
+            // phpunit.xml switches the fast path off, which is what the fresh application reads.
+            $this->refreshApplication();
+            $this->assertSame($path, ImageFastPath::path());
+            $this->assertFileDoesNotExist($path);
+        } finally {
+            foreach (['APP_RUNNING_IN_CONSOLE', 'LARAVEL_STORAGE_PATH'] as $i => $name) {
+                if ($before[$i] === null) {
+                    unset($_ENV[$name]);
+                } else {
+                    $_ENV[$name] = $before[$i];
+                }
+            }
+        }
     }
 
     public function test_the_command_reports_what_it_left_on_disk(): void

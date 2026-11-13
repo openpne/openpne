@@ -368,31 +368,40 @@ are unchanged.
 `File::thumbnailUrl()`, the only place a variant URL is built, and signs only when the viewer is a
 member signed in on the member realm and `FilePolicy` lets that member view the file now. This check
 matters: pages draw URLs for files their viewer may not see (the avatar of someone who blocks them)
-and rely on the route to refuse them. The policy is asked once a file per request, and a talk page
-hands it the message rows it already holds (`FileOwners`), so signing adds a fixed number of queries
-to a page. A guest, the admin realm, a console and a token request get no signature.
+and rely on the route to refuse them. The policy is asked once a file and viewer per request. Signing
+reads who blocks the viewer once, and a serializer hands the policy the owner rows it already holds
+(`FileOwners`): `MemberRefSerializer` the member behind an avatar, the talk serializer each message
+and the message it answers. Those pages gain a fixed number of queries; a surface that draws a file
+whose owner it has not noted gains one read an owner. No signature is issued without a member on the
+`member` guard and a session — so not to a guest, the admin realm or a token request — and code that
+runs with that member still set, a queued job run inline included, signs as the page would.
 
 **The signature** is HMAC-SHA256 over `<format>/<geometry>/<name>`, `v` and the image cookie's value,
 cut to 128 bits, under a key derived from `APP_KEY`. It has no expiry, so the URL is stable and the
-year-long browser cache below keeps working; what ends it is the cookie.
+year-long browser cache below keeps working; what ends it is the cookie. A login therefore changes
+every signed URL, and the browser fetches each picture once more under its new one.
 
 **The image cookie** (`openpne-img`, `__Host-openpne-img` where `session.secure` is on) holds 32 random
-bytes. It is host-only with `Path=/` whatever `session.domain` says, `HttpOnly`, `SameSite=Lax`,
-exempt from cookie encryption so the check can read it, and lives as long as the session cookie of
-the same response ([sessions.md](sessions.md), "Lifetimes"). A member login replaces it and a member
-logout expires it under both names; an admin signing in or out leaves it alone.
+bytes. The value is kept in the member's session and only sent in the cookie: a URL is never signed
+for a value the request brought, which without the `__Host-` prefix another host of the same site
+could have planted. It is host-only with `Path=/` whatever `session.domain` says, `HttpOnly`,
+`SameSite=Lax`, exempt from cookie encryption so the check can read it, and expires when the session
+cookie of the same response does ([sessions.md](sessions.md), "Lifetimes"). A member login replaces
+it whether or not the fast path is on; a member logout, and the sign-out `auth.session` forces on a
+device after a password change, expire it under both names. An admin signing in or out leaves it alone.
 
 **The published file.** [`ImageFastPath::sync()`](../../app/Files/ImageFastPath.php) writes
 `storage/framework/image-fast-path.json` — the derived key, `APP_URL`'s host, the cache disk's root,
 the encoder directory, `v` and the cookie's name — mode 0600, through a temp file and a rename. It
 runs on every web request, when the signer is first used, and from `php artisan
 openpne:image-fast-path`; the signer signs only when the file on disk says what this process would
-write. Where the fast path cannot apply the file is removed and nothing is signed:
+write, with that mode. Where the fast path cannot apply the file is removed and nothing is signed:
 `OPENPNE_IMAGE_FAST_PATH=false`, a cache disk that is not a local one, or an `APP_URL` with no host.
+A file that cannot be removed keeps answering, so the command fails and each web request reports it.
 
 **The check** answers only a `GET` or `HEAD` with no `If-None-Match`, whose `Host` is the published
-one, whose path ends in a variant of a token-named file (not the `w_h` canonical, not an OpenPNE 3
-name), whose `v` is the published one, whose cookie is present, and whose signature matches. Every
+one, whose path ends in a sized variant (not the `w_h` canonical) of a file whose name is only
+letters, digits, `_` and `-` — a token, or an OpenPNE 3 name of that shape — whose `v` is the published one, whose cookie is present, and whose signature matches. Every
 input is checked for type, length and alphabet first and any error is a fall-through. It then opens
 the cached file; a variant not yet generated, or purged since, is the application's to answer. The
 response carries the application's `Content-Type` and `ETag`, `nosniff`, and `private,
@@ -405,8 +414,10 @@ What follows from deciding at render time rather than at fetch time:
   cookie ends, whatever changed since: a block, a group left, a narrowed audience, a feature switched
   off, or `files.animated` recorded as false after an `_a` variant was made. A deleted File's variants
   are purged ([file-storage.md](file-storage.md), "Deleting a file").
-- A device whose session was revoked without a logout keeps its image cookie, so the same holds for it
-  until that cookie expires.
+- A device whose session row was removed (the device list, an administrator) keeps its image cookie
+  until it next asks the application for a page, so the same holds for it until then or until the
+  cookie expires. So does a browser that receives a response signed before a logout after the
+  logout's own.
 - Switching the fast path off takes effect at the next request the application answers, or when the
   command is run. While workers of two releases share a storage directory each rewrites the file, and
   a URL that does not match the file of the moment falls through.

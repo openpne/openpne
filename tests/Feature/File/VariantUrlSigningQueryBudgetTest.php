@@ -4,9 +4,15 @@ namespace Tests\Feature\File;
 
 use App\Features\Group\GroupRole;
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
+use App\Features\GroupTalk\GroupTalkPermissions;
+use App\Features\GroupTalk\Queries\GroupTalkMessages;
+use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
+use App\Files\FileUploader;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupMessage;
 use App\Models\Member;
+use App\Models\MemberImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -37,21 +43,54 @@ class VariantUrlSigningQueryBudgetTest extends TestCase
         parent::tearDown();
     }
 
-    /** Signing asks FilePolicy about every picture on the page, which must not turn into a query a message. */
+    /**
+     * Every message has its own author with an avatar and answers the one before it, so a query an
+     * author, a picture or a reply parent would each show as a difference between the two lengths.
+     */
     public function test_signing_a_talk_page_costs_a_fixed_number_of_queries_whatever_its_length(): void
     {
         [$viewer, $group] = $this->talk(messages: 4);
-        $short = $this->signingCost($viewer, $group);
+        $short = $this->signingCost($viewer, "/groups/{$group->getKey()}/talk");
 
         [$viewer, $group] = $this->talk(messages: 12);
-        $long = $this->signingCost($viewer, $group);
+        $long = $this->signingCost($viewer, "/groups/{$group->getKey()}/talk");
 
         $this->assertSame($short, $long);
-        $this->assertLessThanOrEqual(2, $long);
+        $this->assertLessThanOrEqual(3, $long);
+    }
+
+    public function test_signing_a_list_of_members_costs_a_fixed_number_of_queries_whatever_its_length(): void
+    {
+        $viewer = $this->members(5)[0];
+        $short = $this->signingCost($viewer, '/member/search');
+
+        $this->members(10);
+        $long = $this->signingCost($viewer, '/member/search');
+
+        $this->assertSame($short, $long);
+        $this->assertLessThanOrEqual(3, $long);
+    }
+
+    /** A page's older half arrives without the messages it answers, so the answered one is known only as a parent. */
+    public function test_a_reply_parent_outside_the_page_is_signed_without_being_read_again(): void
+    {
+        [$viewer, $group] = $this->talk(messages: 2);
+        config(['openpne.images.fast_path' => true]);
+        $this->actingAs($viewer);
+        request()->setLaravelSession($this->app['session.store']);
+
+        [$parent, $reply] = GroupMessage::query()->with(GroupTalkMessages::WITH)->orderBy('id')->get()->all();
+        DB::enableQueryLog();
+        $row = GroupMessageSerializer::message($reply, GroupTalkPermissions::for($group, $viewer), [], [(int) $parent->getKey() => $parent]);
+        $read = array_column(DB::getQueryLog(), 'query');
+        DB::disableQueryLog();
+
+        $this->assertStringContainsString('s=', (string) $row['inReplyTo']['thumbnailUrl']);
+        $this->assertSame([], array_values(array_filter($read, fn (string $sql): bool => str_contains($sql, '"group_messages"'))));
     }
 
     /** Queries the page takes with the fast path on, less the same page with it off. */
-    private function signingCost(Member $viewer, Group $group): int
+    private function signingCost(Member $viewer, string $url): int
     {
         $counts = [];
 
@@ -61,7 +100,7 @@ class VariantUrlSigningQueryBudgetTest extends TestCase
             $this->app->forgetScopedInstances();
             DB::flushQueryLog();
             DB::enableQueryLog();
-            $page = $this->actingAs($viewer)->get("/groups/{$group->getKey()}/talk")->assertOk();
+            $page = $this->actingAs($viewer)->get($url)->assertOk();
             $counts[(int) $on] = count(DB::getQueryLog());
             DB::disableQueryLog();
 
@@ -74,19 +113,29 @@ class VariantUrlSigningQueryBudgetTest extends TestCase
     /** @return array{Member, Group} */
     private function talk(int $messages): array
     {
-        $members = Member::factory()->count(3)->create();
+        $members = $this->members($messages);
         $group = Group::factory()->create();
+        $post = app(CreateGroupMessage::class);
+        $previous = null;
 
         foreach ($members as $i => $member) {
             GroupMember::query()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey(), 'role' => $i === 0 ? GroupRole::Admin : GroupRole::Member]);
-        }
-
-        $post = app(CreateGroupMessage::class);
-
-        for ($i = 0; $i < $messages; $i++) {
-            $post($members[$i % 3], $group, "m{$i}", [], [UploadedFile::fake()->image("a{$i}.png", 240, 120), UploadedFile::fake()->image("b{$i}.png", 240, 120)]);
+            $previous = $post($member, $group, "m{$i}", [], [UploadedFile::fake()->image("a{$i}.png", 240, 120), UploadedFile::fake()->image("b{$i}.png", 240, 120)], inReplyTo: $previous);
         }
 
         return [$members[0], $group];
+    }
+
+    /** @return list<Member> each with an avatar */
+    private function members(int $count): array
+    {
+        $members = Member::factory()->count($count)->create()->all();
+
+        foreach ($members as $member) {
+            $avatar = app(FileUploader::class)->store(UploadedFile::fake()->image('me.png', 240, 120), 'member', (int) $member->getKey());
+            MemberImage::factory()->create(['member_id' => $member->getKey(), 'file_id' => $avatar->getKey()]);
+        }
+
+        return $members;
     }
 }

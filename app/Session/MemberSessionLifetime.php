@@ -30,7 +30,7 @@ final class MemberSessionLifetime
         return Auth::guard('member')->check() ? self::memberCookieMinutes($request) : null;
     }
 
-    /** cookieMinutes() for a caller that already knows the request is a signed-in member's, such as a Login listener the guard has not yet set its user for. */
+    /** cookieMinutes() without asking the guard, which fires Login before it holds the user. */
     public static function memberCookieMinutes(Request $request): ?int
     {
         if (config('session.driver') !== 'database'

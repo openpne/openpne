@@ -59,7 +59,15 @@ final class ImageFastPath
         ];
     }
 
-    /** Asked of the disk in use rather than its configuration, which a disk swapped at runtime no longer describes. */
+    /** The fast path is meant to be off and its file is still there, so the check keeps answering from it. */
+    public static function lingers(): bool
+    {
+        clearstatcache(true, self::path());
+
+        return self::desired() === null && (file_exists(self::path()) || is_link(self::path()));
+    }
+
+    /** The root is the disk object's, not the configured one: a disk swapped at runtime keeps its configuration and not its path. */
     private static function localRoot(string $name): ?string
     {
         if (config("filesystems.disks.{$name}.driver") !== 'local') {
@@ -83,8 +91,10 @@ final class ImageFastPath
         $current = is_file($path) ? @file_get_contents($path) : false;
 
         if ($desired === null) {
-            if ($current !== false) {
+            // Asked of the path and not of what could be read: an unreadable file may still be the one the check reads.
+            if (file_exists($path) || is_link($path)) {
                 @unlink($path);
+                clearstatcache(true, $path);
             }
 
             return false;
@@ -92,7 +102,7 @@ final class ImageFastPath
 
         $json = json_encode($desired, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
-        if ($current === $json) {
+        if ($current === $json && (fileperms($path) & 0777) === 0600) {
             return true;
         }
 

@@ -20,6 +20,9 @@ final class ViewerRelations
     /** @var array<string, bool> "viewer:owner" → whether the owner blocks the viewer */
     private array $blocks = [];
 
+    /** @var array<int|string, array<int, true>> viewer → everyone who blocks them, where that was read whole */
+    private array $blockers = [];
+
     /** @var array<string, bool> "viewer:other" → whether the two are friends */
     private array $friends = [];
 
@@ -43,7 +46,13 @@ final class ViewerRelations
 
         // array_key_exists, not `??`: a pair read and found unrelated is stored as false and must not
         // read as unread.
-        return array_key_exists($key, $this->blocks) ? $this->blocks[$key] : null;
+        if (array_key_exists($key, $this->blocks)) {
+            return $this->blocks[$key];
+        }
+
+        $blockers = $this->blockers[$viewer->getKey()] ?? null;
+
+        return $blockers === null ? null : isset($blockers[$owner->getKey()]);
     }
 
     /** Whether $viewer and $other are friends, or null when that pair has not been read. */
@@ -95,6 +104,17 @@ final class ViewerRelations
             ->pluck('blocker_id');
 
         $this->fill($this->blocks, $viewer, $ids, $this->set($blocking));
+    }
+
+    /**
+     * Read in one query everyone who blocks $viewer, for a page that cannot name its owners ahead of
+     * asking about them; every later {@see ownerBlocksViewer()} for this viewer is then answered.
+     */
+    public function warmEveryBlockOf(Member $viewer): void
+    {
+        $this->blockers[$viewer->getKey()] ??= $this->set(
+            DB::table('member_blocks')->where('blocked_id', $viewer->getKey())->pluck('blocker_id'),
+        );
     }
 
     /**
@@ -150,6 +170,7 @@ final class ViewerRelations
     private function reset(): void
     {
         $this->blocks = [];
+        $this->blockers = [];
         $this->friends = [];
         $this->roles = [];
     }

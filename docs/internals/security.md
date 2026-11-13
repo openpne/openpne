@@ -708,7 +708,9 @@ plant any of them; a site that falls back to `__Secure-` has no such guarantee.
 
 The image cookie binds a signed variant URL to the browser it was drawn for, so the URL alone fetches
 nothing. It is always host-only, and the one cookie exempt from encryption: the check that reads it
-runs before the framework and its value is itself the secret ([images.md](images.md), "The fast path").
+runs before the framework and its value is itself the secret. That value comes from the member's
+session and never from the request, so a cookie planted under the unprefixed name signs nothing
+([images.md](images.md), "The fast path").
 
 ## Administrator content
 

@@ -106,7 +106,7 @@ class ImageFastPathTest extends TestCase
             'oversized cookie' => [[], null, ['openpne-img' => str_repeat('b', 4096)]],
             'cookie under the other name' => [[], null, ['__Host-openpne-img' => self::BINDING]],
             'the canonical' => [['REQUEST_URI' => '/cache/img/png/w_h/'.self::NAME.'.png'], ['s' => self::signature('png/w_h/'.self::NAME)] + $query, null],
-            'an OpenPNE 3 name' => [['REQUEST_URI' => '/cache/img/png/w120_h120_sq/m1_abc.def.png'], ['s' => self::signature('png/w120_h120_sq/m1_abc.def')] + $query, null],
+            'a name with a dot' => [['REQUEST_URI' => '/cache/img/png/w120_h120_sq/m1_abc.def.png'], ['s' => self::signature('png/w120_h120_sq/m1_abc.def')] + $query, null],
             'a climbing name' => [['REQUEST_URI' => '/cache/img/png/w120_h120_sq/..%2F..%2Fx.png'], null, null],
             'mismatched extension' => [['REQUEST_URI' => '/cache/img/png/w120_h120_sq/'.self::NAME.'.jpg'], null, null],
             'a suffix after the path' => [['REQUEST_URI' => $path.'/x'], null, null],

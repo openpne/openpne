@@ -3,6 +3,7 @@
 namespace App\Listeners\Auth;
 
 use App\Files\VariantUrlSigner;
+use Illuminate\Auth\Events\CurrentDeviceLogout;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 
@@ -19,6 +20,14 @@ class RotateImageCookie
     }
 
     public function handleLogout(Logout $event): void
+    {
+        if ($event->guard === 'member') {
+            $this->signer->forget();
+        }
+    }
+
+    /** What `auth.session` fires, instead of Logout, on a device signed out by a password change elsewhere. */
+    public function handleCurrentDeviceLogout(CurrentDeviceLogout $event): void
     {
         if ($event->guard === 'member') {
             $this->signer->forget();

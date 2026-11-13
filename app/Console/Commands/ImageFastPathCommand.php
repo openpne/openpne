@@ -25,6 +25,12 @@ class ImageFastPathCommand extends Command
             return self::SUCCESS;
         }
 
+        if (ImageFastPath::lingers()) {
+            $this->error('The image fast path is off but its file could not be removed, so it still answers: '.ImageFastPath::path());
+
+            return self::FAILURE;
+        }
+
         if (ImageFastPath::desired() === null) {
             $this->info('The image fast path is off; its file is removed.');
 
