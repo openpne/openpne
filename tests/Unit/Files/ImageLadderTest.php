@@ -94,6 +94,22 @@ class ImageLadderTest extends TestCase
         $this->assertSame([], ImageLadder::of($file)['animatedSources']);
     }
 
+    public function test_the_stills_are_the_rungs_the_ladder_offers_apart_from_the_animated_ones(): void
+    {
+        $this->keepFrames();
+        $file = File::factory()->make(['type' => 'image/gif', 'animated' => true]);
+        $ladder = ImageLadder::of($file);
+
+        $offered = [$ladder['thumbnailUrl'], ...array_column($ladder['fitSources'], 'url'), ...array_column($ladder['cropSources']['tall'], 'url'), ...array_column($ladder['cropSources']['wide'], 'url')];
+        $stills = array_map(
+            fn (array $still): string => $file->thumbnailUrl($still[0]->width, $still[0]->height, square: $still[0]->square, outputFormat: $still[1] === 'gif' ? null : $still[1]),
+            ImageLadder::stills($file),
+        );
+
+        $this->assertSame($offered, $stills);
+        $this->assertSame([], ImageLadder::stills(File::factory()->make(['type' => 'application/pdf'])));
+    }
+
     public function test_no_file_is_an_empty_ladder_with_every_key(): void
     {
         $ladder = ImageLadder::of(null);

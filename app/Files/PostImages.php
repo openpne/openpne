@@ -2,6 +2,7 @@
 
 namespace App\Files;
 
+use App\Jobs\DrawImageVariants;
 use App\Models\File;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,12 @@ class PostImages
 {
     /** OpenPNE 3 app_community_topic/event_max_image_file_num (default): images per post. */
     public const MAX_IMAGES = 3;
+
+    /** The related types whose serializers ship ImageLadder, so the rungs drawn ahead are the ones a page asks for. */
+    private const LADDER_TYPES = [
+        'timelinePost', 'diary', 'diaryComment', 'groupTopic', 'groupTopicComment',
+        'groupEvent', 'groupEventComment', 'directMessage', 'groupMessage',
+    ];
 
     public function __construct(
         private readonly FileUploader $uploader,
@@ -44,6 +51,10 @@ class PostImages
                 throw $this->processingFailed($relatedType, count($stored), $e);
             }
             $stored[] = $file;
+
+            if (in_array($relatedType, self::LADDER_TYPES, true)) {
+                DrawImageVariants::for($file);
+            }
 
             return $file;
         };

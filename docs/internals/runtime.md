@@ -234,13 +234,15 @@ Classic navigation keep their OpenPNE 3 rendering
 
 ## Queue
 
-Notifications, mail, web push and the link-card fetch are queued, on the `database`
+Notifications, mail, web push, the link-card fetch and the drawing of a posted picture's
+variants ([images.md](images.md), "Drawn when posted") are queued, on the `database`
 connection by default, which needs a worker (`php artisan queue:work`; job timeouts
 need `ext-pcntl`, and a worker is restarted by `queue:restart` after a deploy). A
 host that cannot keep one running sets `QUEUE_CONNECTION=deferred`: each job then
 runs in the same process **after the response has been sent**, so a post answers
 once its rows are written and pays for its notifications, its push sends and its
-link-card fetch afterwards, out of the member's wait. Each deferred job runs on its
+link-card fetch afterwards, out of the member's wait (a posted picture's variants are
+not drawn there at all). Each deferred job runs on its
 own and a failure is logged, not retried and not kept in `failed_jobs`; the jobs of a
 request that failed (a 4xx or 5xx, even after its writes committed) are dropped
 with it, and a job queued by a console command runs only when the command exits
