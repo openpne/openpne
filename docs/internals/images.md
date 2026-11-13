@@ -406,5 +406,6 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
   `private, max-age=31536000, immutable` only while `v` is the current one. A URL without it (an
   OpenPNE 3 link) or with a superseded one keeps `private, max-age=86400`: the same path may be answered
   with other bytes after a `GENERATION` bump or an encoder change, and the pages written since carry
-  the new `v`. A viewer who loses access to a picture therefore keeps the copies their browser already
+  the new `v`. Bytes remade under an unchanged key — `rebuild`, or a library change without a
+  `GENERATION` bump — do not reach a browser that holds the old ones. A viewer who loses access to a picture therefore keeps the copies their browser already
   holds for as long as it keeps them; `FilePolicy` governs every request that reaches the server.

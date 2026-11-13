@@ -76,8 +76,8 @@ final class ImageTransform
     }
 
     /**
-     * Names the encoder in a variant URL: it changes exactly when every cache key does, so a URL
-     * carrying the current one names bytes that never change (docs/internals/images.md, "Key invariants").
+     * Names the encoder in a variant URL, and changes exactly when every cache key does
+     * (docs/internals/images.md, "Key invariants").
      */
     public static function version(): string
     {
