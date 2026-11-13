@@ -129,6 +129,8 @@ class VariantUrlSigningTest extends TestCase
         $this->assertStringNotContainsString('s=', $file->thumbnailUrl(120, 120, square: true));
 
         Route::middleware('web')->get('/admin/_probe/url/{file:name}', fn (File $file): string => $file->thumbnailUrl(120, 120, square: true));
+        // A request of its own, as each is outside a test: the signer reads the realm once.
+        $this->app->forgetScopedInstances();
         $admin = $this->actingAs(Member::factory()->create())->get("/admin/_probe/url/{$file->name}");
         $this->assertStringNotContainsString('s=', (string) $admin->getContent());
     }

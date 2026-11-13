@@ -28,6 +28,8 @@ class VariantUrlSigner
 
     private bool $queued = false;
 
+    private ?bool $adminRealm = null;
+
     /** Null leaves the URL unsigned, which the application route answers under FilePolicy as before. */
     public function sign(File $file, string $resource, string $version): ?string
     {
@@ -79,7 +81,8 @@ class VariantUrlSigner
 
     private function viewer(): ?Member
     {
-        if (AdminRealm::matches(request())) {
+        // The realm is the request's and cannot change under it; the member can, at a login or a logout.
+        if ($this->adminRealm ??= AdminRealm::matches(request())) {
             return null;
         }
 
