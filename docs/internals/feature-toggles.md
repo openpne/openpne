@@ -138,8 +138,8 @@ and are never gated; a member-owned file that is not the avatar (an OpenPNE 3 up
 login in the policy itself, not by a unit.
 
 The refusal is the application's. A variant URL already signed for a member, on a page drawn while the
-unit was on, is still answered ahead of the framework until that member's image cookie ends
-([images.md](images.md), "The fast path").
+unit was on, is still answered ahead of the framework while that member's browser sends the image
+cookie it was signed for ([images.md](images.md), "The fast path").
 
 The admin file monitor reads through its own route (`AdminFileController`, admin guard, no policy),
 so an operator keeps moderating a unit they switched off.
