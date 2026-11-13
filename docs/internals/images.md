@@ -410,13 +410,18 @@ max-age=31536000, immutable`, and none of the page-oriented headers `SecurityHea
 What follows from deciding at render time rather than at fetch time:
 
 - A signed URL is of no use without the image cookie of the browser it was drawn for.
-- A viewer who could see a picture when a page was drawn can fetch its variants until their image
-  cookie ends, whatever changed since: a block, a group left, a narrowed audience, a feature switched
-  off, or `files.animated` recorded as false after an `_a` variant was made. A deleted File's variants
-  are purged ([file-storage.md](file-storage.md), "Deleting a file").
+- A viewer who could see a picture when a page was drawn can fetch its variants for as long as their
+  browser sends the image cookie's value, whatever changed since: a block, a group left, a narrowed
+  audience, a feature switched off, or `files.animated` recorded as false after an `_a` variant was
+  made.
+- The check compares the cookie with the signature and keeps nothing per member or session.
+  Expiring or replacing the cookie ends this for a browser that obeys it; a member who kept the value
+  can send it again with the URLs signed for them, after a logout too. Those URLs stop being answered
+  when the File is deleted ([file-storage.md](file-storage.md), "Deleting a file"), and for as long
+  as the published `v` or `APP_KEY` differs from the one they were signed under.
 - A device whose session row was removed (the device list, an administrator) keeps its image cookie,
-  so the same holds for it until that cookie expires or a member signs in there. So does a browser that receives a response signed before a logout after the
-  logout's own.
+  so the same holds for it until that cookie expires or a member signs in there. So does a browser
+  that receives a response signed before a logout after the logout's own.
 - Switching the fast path off takes effect at the next request the application answers, or when the
   command is run. While workers of two releases share a storage directory each rewrites the file, and
   a URL that does not match the file of the moment falls through.
