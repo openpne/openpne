@@ -56,6 +56,20 @@ space. A write that spans several files inside a wider transaction needs
 tracks every file it stored, deleting their bytes and purging their cache when it fails
 ([group-talk.md](group-talk.md)).
 
+## Deleting a file
+
+A File is deleted through the model, so [`FileObserver`](../../app/Observers/FileObserver.php) runs.
+Before the SQL DELETE it purges the image cache and then deletes the stored bytes; a cache disk that
+refuses the purge stops the delete, with the row and the bytes still in place, because derived files
+left behind would outlive the row that gates them.
+
+A request that passed the gate before the delete can still be drawing a variant, and would publish it
+after that purge. Two steps close this in either order: the observer purges again once the delete has
+committed, and [`ImageCache`](../../app/Files/ImageCache.php) re-reads the row after publishing a
+variant and purges when it is gone. What remains is a cache disk that fails the purge after the
+commit — the delete stands and the failure is reported — and a variant drawn inside a transaction
+whose snapshot predates the delete.
+
 ## Ownerless files
 
 A `files` row with no `related_entity_type` and no `explicit_visibility` is readable by nobody:
