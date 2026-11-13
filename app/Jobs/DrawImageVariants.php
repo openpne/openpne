@@ -31,7 +31,7 @@ class DrawImageVariants implements ShouldQueue
     /** A rung left undrawn is drawn by its first view, so nothing here is worth a retry. */
     public int $tries = 1;
 
-    /** Long enough for what the post queues after its commit to be taken first by a lone worker. */
+    /** Lets a lone worker with an empty queue take what the post queues after its commit first. */
     private const HEAD_START_SECONDS = 10;
 
     public function __construct(public readonly int $fileId) {}
@@ -73,10 +73,6 @@ class DrawImageVariants implements ShouldQueue
                     throw $e;
                 }
 
-                return;
-            }
-
-            if (! File::query()->whereKey($this->fileId)->exists()) {
                 return;
             }
         }
