@@ -372,9 +372,7 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
   size as an error, and nothing may invent one.
 - A recorded size is the size the picture renders at, EXIF Orientation applied.
 - An `ImageGrid` picture is `loading="lazy"` wherever its box is reserved before the bytes arrive — a
-  sized hero and every grid cell — so a long page asks only for the pictures near the viewport, each
-  one a PHP request. A hero of unknown size loads eagerly: arriving late it would move the rows
-  under the reader.
+  sized hero and every grid cell. A hero of unknown size loads eagerly.
 - A fit variant is at most the source's own size; a crop variant is always exactly its box, source
   permitting or not.
 - `animatedSources` has one producer, `ImageLadder`, and one consumer, the hero; it is empty under a
