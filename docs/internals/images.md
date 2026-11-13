@@ -414,11 +414,11 @@ What follows from deciding at render time rather than at fetch time:
   browser sends the image cookie's value, whatever changed since: a block, a group left, a narrowed
   audience, a feature switched off, or `files.animated` recorded as false after an `_a` variant was
   made.
-- The check compares the cookie with the signature and with nothing the server holds. Expiring or
-  replacing the cookie ends this for a browser that obeys it; a member who kept the value can send it
-  again with the URLs signed for them, after a logout too. What ends those URLs for good is the
-  variant leaving the cache: the File deleted ([file-storage.md](file-storage.md), "Deleting a
-  file"), or a new `v` or `APP_KEY`.
+- The check compares the cookie with the signature and keeps nothing per member or session.
+  Expiring or replacing the cookie ends this for a browser that obeys it; a member who kept the value
+  can send it again with the URLs signed for them, after a logout too. Those URLs stop being answered
+  when the File is deleted ([file-storage.md](file-storage.md), "Deleting a file"), and for as long
+  as the published `v` or `APP_KEY` differs from the one they were signed under.
 - A device whose session row was removed (the device list, an administrator) keeps its image cookie,
   so the same holds for it until that cookie expires or a member signs in there. So does a browser
   that receives a response signed before a logout after the logout's own.
