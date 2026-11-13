@@ -74,6 +74,23 @@ Safari 16.4); Classic keeps every picture in its own format. Under `gd`, `OPENPN
 makes every WebP variant lossless (intervention/image's mapping), several times the size of the
 same rung at the default quality.
 
+## Drawn when posted
+
+A variant is otherwise drawn by the first request for it, inside that request. A picture attached to
+a post — a timeline post, a diary or its comment, a topic, an event or their comments, a talk
+message, a direct message — has the still rungs of its ladder (the 120px square, the three fit boxes
+and the four crops) drawn by a queued job
+([`DrawImageVariants`](../../app/Jobs/DrawImageVariants.php)) once the post has committed, so the
+members who open it find them made. The job is queued only where a worker takes the queue: under
+`QUEUE_CONNECTION=deferred` it would draw in the posting request's own process, ahead of that
+post's notifications and inside its `max_execution_time` ([runtime.md](runtime.md), "Queue"), so
+there the first view draws as before. It asks `ImageCache` for each rung as a view does and decides
+nothing about who may see the picture; a rung it does not reach — the worker stopped, the processor
+down, the file deleted meanwhile — is drawn by its first view, and nothing is retried. The `_a`
+rungs are left to the hero that asks for them, each costing about a canonical. An avatar, a group's
+picture, a banner and a link card's picture are not drawn ahead, and neither is a picture stored
+before this ran or under another encoder: `openpne:image-cache warm` makes canonicals only.
+
 ## Which placements animate
 
 [`ImageLadder`](../../app/Files/ImageLadder.php) builds every Modern picture payload and is the one
