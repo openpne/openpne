@@ -13,12 +13,14 @@ use App\Files\ImageTransform;
 use App\Files\ProcessedImage;
 use App\Models\File;
 use App\Models\Member;
+use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class ImageCacheDeletionTest extends TestCase
@@ -94,44 +96,75 @@ class ImageCacheDeletionTest extends TestCase
         $this->assertTrue($this->disk()->exists($transform->cacheKey($file->name, 'png')));
     }
 
-    public function test_a_cache_disk_that_refuses_the_purge_stops_the_delete_with_the_bytes_in_place(): void
+    public function test_a_delete_that_lands_just_ahead_of_the_write_is_still_seen_by_the_re_read(): void
     {
         $file = $this->picture();
-        $this->refusePurges();
+        $real = $this->disk();
+        $transform = ImageTransform::fromGeometry('w120_h120_sq');
 
-        try {
-            $file->delete();
-            $this->fail('The delete went through.');
-        } catch (ImageCachePurgeException) {
-        }
+        // The row goes just ahead of the variant's write: a re-read made before the publish would still see it.
+        $disk = Mockery::mock($real);
+        $disk->shouldReceive('put')->andReturnUsing(function (string $path, string $contents) use ($real, $file): bool {
+            File::query()->whereKey($file->getKey())->first()?->delete();
 
-        $this->assertDatabaseHas('files', ['id' => $file->getKey()]);
-        $this->assertTrue(app(FileStorage::class)->exists($file));
+            return $real->put($path, $contents);
+        });
+        Storage::set('image_cache', $disk);
+
+        app(ImageCache::class)->bytes($file, $transform, 'png');
+
+        $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
+        $this->assertSame([], $real->allFiles(ImageTransform::directory($file->name)));
     }
 
-    public function test_a_purge_that_fails_after_the_commit_is_reported_and_the_delete_stands(): void
+    public function test_a_refused_purge_neither_stops_the_delete_nor_goes_unreported(): void
     {
         Exceptions::fake();
         $file = $this->picture();
-        $this->refusePurges(after: 1);
+        $attempts = $this->refusePurges();
 
         $file->delete();
 
         $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
+        $this->assertFalse(app(FileStorage::class)->exists($file));
+        // One before the DELETE, three after the commit.
+        $this->assertSame(4, $attempts());
         Exceptions::assertReported(ImageCachePurgeException::class);
     }
 
-    /** The first $after purges go through; every later one is refused, as a disk that has gone read-only would. */
-    private function refusePurges(int $after = 0): void
+    public function test_a_purge_that_overlapped_a_publish_once_is_retried_and_not_reported(): void
+    {
+        Exceptions::fake();
+        $file = $this->picture();
+        $attempts = $this->refusePurges(failures: 2);
+
+        $file->delete();
+
+        $this->assertSame(3, $attempts());
+        Exceptions::assertNotReported(ImageCachePurgeException::class);
+        $this->assertSame([], $this->disk()->allFiles(ImageTransform::directory($file->name)));
+    }
+
+    /**
+     * The first $failures purges are refused, as an overlapping publish makes them; null refuses every one.
+     *
+     * @return Closure(): int the number of purges attempted so far
+     */
+    private function refusePurges(?int $failures = null): Closure
     {
         $real = $this->disk();
-        $disk = $this->partialMock($real::class, function ($mock) use ($real, $after): void {
-            $calls = 0;
-            $mock->shouldReceive('deleteDirectory')->andReturnUsing(function (string $directory) use (&$calls, $real, $after): bool {
-                return ++$calls <= $after ? $real->deleteDirectory($directory) : false;
-            });
+        $calls = 0;
+        $disk = Mockery::mock($real);
+        $disk->shouldReceive('deleteDirectory')->andReturnUsing(function (string $directory) use (&$calls, $real, $failures): bool {
+            $calls++;
+
+            return $failures !== null && $calls > $failures ? $real->deleteDirectory($directory) : false;
         });
         Storage::set('image_cache', $disk);
+
+        return function () use (&$calls): int {
+            return $calls;
+        };
     }
 
     private function picture(): File

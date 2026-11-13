@@ -210,14 +210,13 @@ class ImageCache
         $this->publishOrReport($this->canonicalKey($file), $processed->bytes);
     }
 
-    /** Remove every cached variant, canonical and marker of $file (idempotent; true when none exist), false when the cache disk refused. */
+    /**
+     * Remove every cached variant, canonical and marker of $file (idempotent; true when none exist). False when the disk
+     * refused or a publish into the directory overlapped the removal, which a caller cannot tell apart.
+     */
     public function purge(File $file): bool
     {
-        try {
-            return $this->disk()->deleteDirectory(ImageTransform::directory($file->name));
-        } catch (Throwable) {
-            return false;
-        }
+        return $this->disk()->deleteDirectory(ImageTransform::directory($file->name));
     }
 
     public function hasCanonical(File $file): bool

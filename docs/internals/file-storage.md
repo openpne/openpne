@@ -58,17 +58,25 @@ tracks every file it stored, deleting their bytes and purging their cache when i
 
 ## Deleting a file
 
-A File is deleted through the model, so [`FileObserver`](../../app/Observers/FileObserver.php) runs.
-Before the SQL DELETE it purges the image cache and then deletes the stored bytes; a cache disk that
-refuses the purge stops the delete, with the row and the bytes still in place, because derived files
-left behind would outlive the row that gates them.
+A File must be deleted through the model: [`FileObserver`](../../app/Observers/FileObserver.php) is
+what removes the stored bytes and purges the image cache, and a query-builder delete leaves both
+behind. It runs before the SQL DELETE.
 
 A request that passed the gate before the delete can still be drawing a variant, and would publish it
 after that purge. Two steps close this in either order: the observer purges again once the delete has
 committed, and [`ImageCache`](../../app/Files/ImageCache.php) re-reads the row after publishing a
-variant and purges when it is gone. What remains is a cache disk that fails the purge after the
-commit — the delete stands and the failure is reported — and a variant drawn inside a transaction
-whose snapshot predates the delete.
+variant and purges when it is gone.
+
+A purge never stops a delete. Callers delete files after their own transaction has committed, so an
+exception there would strand the remaining files and skip what follows; and a purge fails whenever a
+publish into the same directory overlaps it, with nothing wrong on the disk. The post-commit purge is
+tried three times and then reported.
+
+What can remain on the cache disk after a delete:
+
+- every derived file, when the disk itself refuses the purge (reported);
+- a variant drawn inside a transaction whose snapshot predates the delete;
+- a canonical or an app icon published after the delete — only a variant is re-read.
 
 ## Ownerless files
 
