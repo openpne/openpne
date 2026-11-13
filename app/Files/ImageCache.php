@@ -57,6 +57,11 @@ class ImageCache
         $bytes = $this->processor->process($this->canonical($file, $maxBytes), $file->type, $spec)->bytes;
         $this->publishOrReport($key, $bytes);
 
+        // Read after the publish, not before: a delete that committed while the variant was being drawn has already purged, and nothing else would remove this one (docs/internals/file-storage.md, "Deleting a file").
+        if (! File::query()->whereKey($file->getKey())->exists()) {
+            $this->purge($file);
+        }
+
         return $bytes;
     }
 
@@ -205,10 +210,18 @@ class ImageCache
         $this->publishOrReport($this->canonicalKey($file), $processed->bytes);
     }
 
-    /** Remove every cached variant, canonical and marker of $file (idempotent; a no-op when none exist). */
-    public function purge(File $file): void
+    /**
+     * Remove every cached variant, canonical and marker of $file (idempotent; true when none exist). False, never an
+     * exception, when the disk refused or a publish or another purge of the directory overlapped this one.
+     */
+    public function purge(File $file): bool
     {
-        $this->disk()->deleteDirectory(ImageTransform::directory($file->name));
+        try {
+            return $this->disk()->deleteDirectory(ImageTransform::directory($file->name));
+        } catch (Throwable) {
+            // The adapter turns only its own refusal into false; an entry vanishing under its walk throws from SPL.
+            return false;
+        }
     }
 
     public function hasCanonical(File $file): bool

@@ -4,7 +4,9 @@ namespace App\Observers;
 
 use App\Files\FileStorage;
 use App\Files\ImageCache;
+use App\Files\ImageCachePurgeException;
 use App\Models\File;
+use Illuminate\Support\Facades\DB;
 
 class FileObserver
 {
@@ -22,5 +24,23 @@ class FileObserver
     {
         $this->storage->delete($file);
         $this->imageCache->purge($file);
+    }
+
+    /**
+     * A variant published between the purge above and the commit is removed here. Never thrown: callers
+     * delete files after their own commit, where an exception would strand the rest (docs/internals/file-storage.md, "Deleting a file").
+     */
+    public function deleted(File $file): void
+    {
+        DB::afterCommit(function () use ($file): void {
+            // A publish that overlaps one attempt makes it fail though nothing is wrong with the disk.
+            foreach ([1, 2, 3] as $attempt) {
+                if ($this->imageCache->purge($file)) {
+                    return;
+                }
+            }
+
+            report(new ImageCachePurgeException("Derived files of deleted file [{$file->getKey()}] may be left on the image cache."));
+        });
     }
 }
