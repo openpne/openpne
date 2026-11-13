@@ -211,12 +211,17 @@ class ImageCache
     }
 
     /**
-     * Remove every cached variant, canonical and marker of $file (idempotent; true when none exist). False when the disk
-     * refused or a publish into the directory overlapped the removal, which a caller cannot tell apart.
+     * Remove every cached variant, canonical and marker of $file (idempotent; true when none exist). False, never an
+     * exception, when the disk refused or a publish or another purge of the directory overlapped this one.
      */
     public function purge(File $file): bool
     {
-        return $this->disk()->deleteDirectory(ImageTransform::directory($file->name));
+        try {
+            return $this->disk()->deleteDirectory(ImageTransform::directory($file->name));
+        } catch (Throwable) {
+            // The adapter turns only its own refusal into false; an entry vanishing under its walk throws from SPL.
+            return false;
+        }
     }
 
     public function hasCanonical(File $file): bool

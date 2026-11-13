@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Tests\TestCase;
+use UnexpectedValueException;
 
 class ImageCacheDeletionTest extends TestCase
 {
@@ -143,6 +144,21 @@ class ImageCacheDeletionTest extends TestCase
         $this->assertSame(3, $attempts());
         Exceptions::assertNotReported(ImageCachePurgeException::class);
         $this->assertSame([], $this->disk()->allFiles(ImageTransform::directory($file->name)));
+    }
+
+    public function test_a_purge_the_disk_throws_from_is_a_refusal_not_an_exception(): void
+    {
+        Exceptions::fake();
+        $file = $this->picture();
+        $disk = Mockery::mock($this->disk());
+        // What SPL throws when an entry vanishes under the adapter's walk, which the adapter does not catch.
+        $disk->shouldReceive('deleteDirectory')->andThrow(new UnexpectedValueException('failed to open directory'));
+        Storage::set('image_cache', $disk);
+
+        $file->delete();
+
+        $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
+        Exceptions::assertReported(ImageCachePurgeException::class);
     }
 
     /**

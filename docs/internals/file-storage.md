@@ -67,9 +67,9 @@ after that purge. Two steps close this in either order: the observer purges agai
 committed, and [`ImageCache`](../../app/Files/ImageCache.php) re-reads the row after publishing a
 variant and purges when it is gone.
 
-A purge never stops a delete. Callers delete files after their own transaction has committed, so an
-exception there would strand the remaining files and skip what follows; and a purge fails whenever a
-publish into the same directory overlaps it, with nothing wrong on the disk. The post-commit purge is
+A purge never stops a delete. Some callers delete files after their own transaction has committed,
+where an exception would strand the remaining files and skip what follows; and a purge fails whenever
+a publish or another purge of the same directory overlaps it, with nothing wrong on the disk. The post-commit purge is
 tried three times and then reported.
 
 What can remain on the cache disk after a delete:
