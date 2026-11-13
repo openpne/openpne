@@ -34,6 +34,7 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="OPENPNE_SURFACE_MODE" value="classic_default"/>
         <env name="OPENPNE_IMAGE_MAX_UPLOAD_KB" value="5120"/>
+        <env name="OPENPNE_IMAGE_FAST_PATH" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

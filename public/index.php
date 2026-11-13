@@ -13,6 +13,13 @@ if (file_exists($maintenance = $storagePath.'/framework/maintenance.php')) {
     require $maintenance;
 }
 
+// A signed variant URL is answered from the image cache without booting the framework
+// (docs/internals/images.md, "The fast path").
+require __DIR__.'/../bootstrap/image-fast-path.php';
+if (openpne_image_fast_path_serve($_SERVER, $_GET, $_COOKIE, $storagePath)) {
+    exit;
+}
+
 // Register the Composer autoloader...
 require __DIR__.'/../vendor/autoload.php';
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Files\ImageSpec;
 use App\Files\ImageTransform;
+use App\Files\VariantUrlSigner;
 use Database\Factories\FileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -81,6 +82,9 @@ class File extends Model
         $format = $outputFormat ?? $this->imageFormat() ?? 'jpg';
         $geometry = "w{$width}_h{$height}".($square ? '_sq' : '').($animated ? '_a' : '');
 
-        return route('image.show', ['format' => $format, 'geometry' => $geometry, 'name' => $this->name, 'ext' => $format, 'v' => ImageTransform::version()]);
+        $version = ImageTransform::version();
+        $signature = app(VariantUrlSigner::class)->sign($this, "{$format}/{$geometry}/{$this->name}", $version);
+
+        return route('image.show', ['format' => $format, 'geometry' => $geometry, 'name' => $this->name, 'ext' => $format, 'v' => $version, 's' => $signature]);
     }
 }

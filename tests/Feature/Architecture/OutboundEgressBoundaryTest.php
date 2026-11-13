@@ -56,6 +56,7 @@ class OutboundEgressBoundaryTest extends TestCase
         'Console/Commands/CheckTranslationsCommand.php',
         'Files/DbBlobFileStorage.php',
         'Files/FileUploader.php',
+        'Files/ImageFastPath.php',
         'Mail/Template/MailTemplateDefaults.php',
         'Support/ClassicThemes.php',
         'Support/CommonPasswordList.php',

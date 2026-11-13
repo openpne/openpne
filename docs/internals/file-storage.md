@@ -11,7 +11,9 @@ hash (`ImageTransform::directory`, the image cache's rule for the same OpenPNE 3
 
 The contract is the four byte-level operations only. Delivery is not here: every fetch goes through
 an app route whatever the backend is (`File::url()`, `File::publicUrl()`, the `/cache/img` variants),
-so it stays backend-independent and policy-gated and no caller holds a disk URL — and a raster is
+so it stays backend-independent and policy-gated and no caller holds a disk URL (a generated variant
+may be answered ahead of the framework, on a signature issued under the policy: [images.md](images.md),
+"The fast path") — and a raster is
 answered from its canonical ([security](security.md), "Inline delivery is re-encoded"), the stored
 bytes being read only to produce it. `delete()` is idempotent on every backend — a missing object is
 not an error.

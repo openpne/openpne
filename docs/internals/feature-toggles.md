@@ -137,6 +137,10 @@ names its own unit and the parent chain does the rest. Avatars and banner images
 and are never gated; a member-owned file that is not the avatar (an OpenPNE 3 upload) is gated by
 login in the policy itself, not by a unit.
 
+The refusal is the application's. A variant URL already signed for a member, on a page drawn while the
+unit was on, is still answered ahead of the framework until that member's image cookie ends
+([images.md](images.md), "The fast path").
+
 The admin file monitor reads through its own route (`AdminFileController`, admin guard, no policy),
 so an operator keeps moderating a unit they switched off.
 

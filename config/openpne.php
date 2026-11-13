@@ -56,6 +56,8 @@ return [
         'legacy_driver' => env('OPENPNE_IMAGE_DRIVER'),
         'legacy_strip_metadata' => env('OPENPNE_STRIP_IMAGE_METADATA'),
         'cache_disk' => env('OPENPNE_IMAGE_CACHE_DISK', 'image_cache'),
+        // Signed variant URLs answered before the framework boots; applies only on a local cache disk (docs/internals/images.md, "The fast path").
+        'fast_path' => (bool) env('OPENPNE_IMAGE_FAST_PATH', true),
         // At 100, intervention/image writes a GD WebP variant lossless, several times the same rung at the default quality.
         'quality' => (int) env('OPENPNE_IMAGE_QUALITY', 85),
         // What the Modern pickers re-encode on the member's device before the upload, switched off per site by

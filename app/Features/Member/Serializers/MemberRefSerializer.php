@@ -2,6 +2,7 @@
 
 namespace App\Features\Member\Serializers;
 
+use App\Files\FileOwners;
 use App\Models\Member;
 
 /**
@@ -13,6 +14,11 @@ class MemberRefSerializer
     /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool} */
     public static function ref(Member $member): array
     {
+        // The row in hand is the one FilePolicy would otherwise read again to sign the avatar's URL.
+        if ($member->avatar !== null) {
+            app(FileOwners::class)->note($member);
+        }
+
         return [
             'id' => $member->getKey(),
             'name' => $member->name,
