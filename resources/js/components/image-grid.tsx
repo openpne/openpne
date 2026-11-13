@@ -121,6 +121,8 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                         sizes={HERO_SIZES[variant]}
                         width={hero.width ?? undefined}
                         height={hero.height ?? undefined}
+                        // Lazy only where the box is reserved: a picture of unknown size arriving late would move the rows under a reader.
+                        loading={sized ? 'lazy' : undefined}
                         alt=""
                         className={cn(
                             sized
@@ -176,6 +178,7 @@ export function ImageGrid({ images, variant, className }: { images: GridImage[];
                                     src={ladder?.[0]?.url ?? fitFallbackUrl(image.fitSources) ?? ''}
                                     srcSet={cropSrcSet(ladder) ?? undefined}
                                     sizes={CELL_SIZES[variant]}
+                                    loading="lazy"
                                     alt=""
                                     className="h-full w-full object-cover"
                                 />
