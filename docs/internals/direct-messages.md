@@ -283,6 +283,12 @@ The submits are untouched and surface-agnostic: they redirect to the box they al
 forwards on from there — and the forward reflashes, so the answer the write wrote survives the extra
 hop instead of being aged out on a page nobody sees.
 
+## MCP
+
+An MCP client lists, reads, writes and marks read the same conversations through the queries and
+actions above, addressed by counterpart id; an AI account may write only to its owner and to members
+who wrote to it first ([mcp.md](mcp.md#direct-messages)).
+
 ## Separate from group talk
 
 The two conversation surfaces share their **frontend stream** ([`lib/chat/`](../../resources/js/lib/chat/):
