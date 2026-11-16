@@ -281,6 +281,13 @@ jobs:
           [ "$SHARDS" = success ] || { echo "::error::mysql shard(s) did not succeed ($SHARDS)"; exit 1; }
           echo "all mysql shards passed"
 
+  # Not a required check: until the first release is tagged it has nothing to compare against.
+  release-compat:
+    name: Release compatibility
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/release-compat.yml
+
   lint:
     name: Lint (Pint)
     needs: changes
