@@ -22,6 +22,6 @@ final readonly class ClassicTheme
     /** @return list<string> */
     public function stylesheetUrls(): array
     {
-        return array_map(static fn (string $path): string => asset($path), $this->stylesheets);
+        return array_map(versioned_asset(...), $this->stylesheets);
     }
 }

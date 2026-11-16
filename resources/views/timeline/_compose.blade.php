@@ -1,7 +1,7 @@
 @if ($canPost ?? \App\Features\Timeline\TimelinePosting::enabled())
 @once
     @push('pluginCss')
-        <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/counter.css') }}">
+        <link rel="stylesheet" href="{{ versioned_asset('opTimelinePlugin/css/counter.css') }}">
     @endpush
 @endonce
 <form method="POST" action="{{ route('timeline.store') }}" enctype="multipart/form-data" data-timeline-compose hidden
@@ -35,7 +35,7 @@
     </div>
 </form>
 @once
-    <script src="{{ asset('js/classic-timeline-compose.js') }}" defer></script>
+    <script src="{{ versioned_asset('js/classic-timeline-compose.js') }}" defer></script>
 @endonce
 @include('timeline._mention-picker')
 @endif

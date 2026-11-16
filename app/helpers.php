@@ -172,7 +172,22 @@ if (! function_exists('classic_plugin_css_url')) {
     {
         $path = PluginStylesheets::forRoute(request()->route()?->getName());
 
-        return $path === null ? null : asset($path);
+        return $path === null ? null : versioned_asset($path);
+    }
+}
+
+if (! function_exists('versioned_asset')) {
+    /**
+     * `asset()` for a script or stylesheet under public/, with `?v=` naming the file's bytes so a changed
+     * file is a new URL (docs/internals/runtime.md, "Static asset delivery"). A file that cannot be read keeps its plain URL.
+     */
+    function versioned_asset(string $path): string
+    {
+        // Keyed, so the URL a file will have after the next release cannot be computed from the public source and requested ahead of it.
+        $key = hash_hmac('sha256', 'static-asset-version', (string) config('app.key'));
+        $digest = @hash_hmac_file('sha256', public_path($path), $key);
+
+        return $digest === false ? asset($path) : asset($path).'?v='.substr($digest, 0, 16);
     }
 }
 

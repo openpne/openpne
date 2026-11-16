@@ -38,7 +38,7 @@
         </ul>
     </div>
     @once
-        <script src="{{ asset('js/classic-theme-nav.js') }}" defer></script>
+        <script src="{{ versioned_asset('js/classic-theme-nav.js') }}" defer></script>
     @endonce
 @else
 @once

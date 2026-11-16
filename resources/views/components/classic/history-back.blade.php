@@ -7,5 +7,5 @@
     <a href="{{ $fallback }}" data-history-back>{{ __('Back to previous page') }}</a>
 </x-classic.parts>
 @once
-    <script src="{{ asset('js/classic-history-back.js') }}" defer></script>
+    <script src="{{ versioned_asset('js/classic-history-back.js') }}" defer></script>
 @endonce
