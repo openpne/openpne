@@ -6,9 +6,7 @@ namespace App\Mcp\Tools;
 
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\GroupTalkAccess;
-use App\Features\GroupTalk\GroupTalkReactionController;
 use App\Features\Reactions\Queries\ReactionAggregates;
-use App\Features\Reactions\ReactionVocabulary;
 use App\Mcp\McpAbilities;
 use App\Models\GroupMessage;
 use App\Models\Member;
@@ -20,14 +18,9 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\ResponseFactory;
 
 /**
- * Adding and removing are two tools, as they are two URLs on the web surface
- * ({@see GroupTalkReactionController}): a call that is retried or doubled
- * settles where the caller pointed rather than flipping back. Both answer with the message's whole
- * chip row, so a reaction someone else added in the meantime arrives in the same answer.
- *
- * The gate is the web surface's: reacting is speaking in the room, so it is `canPost`, and a room the
- * caller may read but not write to answers as a room that is not there. The emoji is validated after
- * the gate, so an invalid payload cannot tell a room that exists from one that does not.
+ * Reacting is speaking in the room, so the gate is `canPost`, and a room the caller may read but not
+ * write to answers as a room that is not there. The emoji is validated after the gate, so an invalid
+ * payload cannot tell a room that exists from one that does not.
  */
 abstract class TalkReactionTool extends TalkTool
 {
@@ -87,8 +80,9 @@ abstract class TalkReactionTool extends TalkTool
                 ->description('The room, as list-talk-rooms reports it in groupId.'),
             'message_id' => $schema->integer()->min(1)->required()
                 ->description('The message, as read-talk-messages reports it in id.'),
-            'emoji' => $schema->string()->required()
-                ->description('One emoji. Adding takes one of the site\'s set: '.implode(' ', ReactionVocabulary::all()).'.'),
+            'emoji' => $this->emojiSchema($schema),
         ];
     }
+
+    abstract protected function emojiSchema(JsonSchema $schema): Type;
 }

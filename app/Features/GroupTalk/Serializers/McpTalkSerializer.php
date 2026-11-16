@@ -7,7 +7,6 @@ namespace App\Features\GroupTalk\Serializers;
 use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\TalkRoom;
-use App\Features\Reactions\Queries\ReactionAggregates;
 use App\Files\PostAttachments;
 use App\Models\GroupMessage;
 use App\Models\GroupMessageMention;
@@ -23,10 +22,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class McpTalkSerializer
 {
     /**
-     * `reactions` is the message's chip row as the room draws it — each emoji once, how many hold it,
-     * and whether the caller is one of them — so an agent can read an acknowledgement without a second
-     * call. It is the caller's own view: `mine` is relative to the token's member.
-     *
      * @param  array<int, GroupMessage>  $parents
      * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions
      * @return array{id: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, mentions: list<int>, inReplyTo: array{id: int, authorId: int|null}|null, reactions: list<array{emoji: string, count: int, mine: bool}>}
@@ -77,11 +72,10 @@ class McpTalkSerializer
      * end of the list to read them off.
      *
      * @param  array<int, GroupMessage>  $parents
-     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  keyed by message id, as
-     *                                                                                     {@see ReactionAggregates} answers
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  keyed by message id
      * @return array{messages: list<array<string, mixed>>, hasOlder: bool, hasNewer: bool, previousCursor: string|null, nextCursor: string|null}
      */
-    public static function page(GroupTalkPage $page, array $parents, array $reactions = []): array
+    public static function page(GroupTalkPage $page, array $parents, array $reactions): array
     {
         $messages = $page->messages
             ->map(fn (GroupMessage $message): array => self::message($message, $parents, $reactions[(int) $message->getKey()] ?? []))

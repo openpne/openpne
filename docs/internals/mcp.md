@@ -231,9 +231,9 @@ back.
 Each answers with the message's whole chip row, and `read-talk-messages` reports the same row on every
 message — `emoji`, `count`, and `mine`, relative to the token's member. **A reaction moves no cursor**
 and counts toward no unread ([group-talk.md](group-talk.md#reactions)), so `unread`, `unreadMentions`
-and `mode=after` never surface one: an agent that waits for its owner's thumbs-up re-reads the page it
-is watching. The talk poll's `reactionsAfter` watermark is a web-surface detail and is not exposed
-here; an agent's rooms are small enough that re-reading the newest page is the cheaper contract.
+and `mode=after` never surface one: an agent that waits for its owner's thumbs-up re-reads the page
+the message is on. The talk poll's `reactionsAfter` watermark is a web-surface detail and is not
+exposed here.
 
 ## What the wire carries
 

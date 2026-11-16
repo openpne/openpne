@@ -12,6 +12,7 @@ use App\Mcp\Tools\AddTalkReactionTool;
 use App\Mcp\Tools\ReadTalkMessagesTool;
 use App\Mcp\Tools\RemoveTalkReactionTool;
 use App\Models\Member;
+use Illuminate\Support\Facades\DB;
 
 class TalkReactionToolTest extends TalkToolsTestCase
 {
@@ -72,6 +73,14 @@ class TalkReactionToolTest extends TalkToolsTestCase
                 ->where('messages.0.reactions', [['emoji' => "\u{2705}", 'count' => 1, 'mine' => false]])
                 ->where('messages.1.reactions', [])
                 ->etc());
+
+        $this->acting($owner);
+
+        OpenPneServer::tool(ReadTalkMessagesTool::class, ['group_id' => $group->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('messages.0.reactions', [['emoji' => "\u{2705}", 'count' => 1, 'mine' => true]])
+                ->etc());
     }
 
     public function test_removing_takes_only_the_callers_own_emoji_off(): void
@@ -108,6 +117,28 @@ class TalkReactionToolTest extends TalkToolsTestCase
         ])->assertOk();
 
         $this->assertDatabaseCount('reactions', 1);
+    }
+
+    public function test_an_emoji_the_site_withdrew_can_still_be_taken_back(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $message = $this->say($group, $member, 'reacted before the set changed');
+        DB::table('reactions')->insert([
+            'reactable_type' => $message->getMorphClass(),
+            'reactable_id' => $message->getKey(),
+            'member_id' => $member->getKey(),
+            'emoji' => "\u{1F984}",
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->acting($member);
+
+        OpenPneServer::tool(RemoveTalkReactionTool::class, [
+            'group_id' => $group->getKey(), 'message_id' => $message->getKey(), 'emoji' => "\u{1F984}",
+        ])->assertOk()->assertStructuredContent(['messageId' => $message->getKey(), 'reactions' => []]);
+
+        $this->assertDatabaseCount('reactions', 0);
     }
 
     public function test_an_emoji_outside_the_sites_set_cannot_be_added(): void
@@ -152,6 +183,11 @@ class TalkReactionToolTest extends TalkToolsTestCase
 
         OpenPneServer::tool(AddTalkReactionTool::class, [
             'group_id' => $open->getKey(), 'message_id' => $message->getKey(), 'emoji' => ReactionVocabulary::LIKE,
+        ])->assertHasErrors(['No such talk room']);
+
+        // An emoji outside the set is not what the refusal reports: the gate answers first.
+        OpenPneServer::tool(AddTalkReactionTool::class, [
+            'group_id' => $open->getKey(), 'message_id' => $message->getKey(), 'emoji' => "\u{1F984}",
         ])->assertHasErrors(['No such talk room']);
 
         // A member of one room naming a message of another answers the same way.

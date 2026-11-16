@@ -56,11 +56,10 @@ class ReadTalkMessagesTool extends TalkTool
             default => $messages->latest($group),
         };
 
-        // No relations asked for: this wire reports the answered author as an id, which is a column of
-        // the parent row.
-        // One grouped query for the page, as the room's own chip rows are counted.
         $chips = $reactions($member, GroupMessage::class, $page->messages->map(fn (GroupMessage $message): int => (int) $message->getKey())->values()->all());
 
+        // No relations asked for: this wire reports the answered author as an id, which is a column of
+        // the parent row.
         return Response::structured(McpTalkSerializer::page($page, $replies($group, $page->messages, with: []), $chips));
     }
 
