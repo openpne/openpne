@@ -1,0 +1,26 @@
+# A release is checked when it is drafted and tagged later, when someone publishes the draft: this
+# says, after the fact, whether what was published is what was checked (RELEASE.md).
+name: Release published
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: The published release is the one that was checked
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          fetch-tags: true
+      - env:
+          TAG: ${{ github.event.release.tag_name }}
+          BODY: ${{ github.event.release.body }}
+        run: .github/scripts/release-validate.sh published "$TAG"

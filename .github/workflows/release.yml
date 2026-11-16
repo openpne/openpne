@@ -1,0 +1,152 @@
+# Checks the tip of release/<version> and, when everything passes, leaves a draft prerelease for a
+# maintainer to publish (RELEASE.md). Publishing is what creates the tag; this workflow never does.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, without the v (4.0.0-alpha.1)
+        required: true
+        type: string
+      sha:
+        description: Tip of release/<version>
+        required: true
+        type: string
+      differs:
+        description: Copies that differ from their original (commits, comma-separated), if any
+        required: false
+        type: string
+        default: ''
+      allow_advisories:
+        description: Advisory ids accepted for this release (comma-separated), if any
+        required: false
+        type: string
+        default: ''
+
+# Each release is checked as an update from the one before it, so two runs never overlap.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: The release is what its branch says
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+      baseline: ${{ steps.check.outputs.baseline }}
+      baseline_sha: ${{ steps.check.outputs.baseline_sha }}
+    steps:
+      # A run started from another ref would bring that ref's copy of this workflow and of the validation.
+      - name: Refuse a run started from another branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::start this workflow from main, not $GITHUB_REF"
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - id: check
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ inputs.sha }}
+          DIFFERS: ${{ inputs.differs }}
+        run: .github/scripts/release-validate.sh check "$VERSION" "$SHA" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.validate.outputs.sha }}
+
+  compat:
+    name: Update
+    needs: validate
+    if: needs.validate.outputs.baseline != ''
+    uses: ./.github/workflows/release-compat.yml
+    with:
+      ref: ${{ needs.validate.outputs.sha }}
+      baseline: ${{ needs.validate.outputs.baseline }}
+
+  audit:
+    name: Dependencies the release ships
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+      # The script is main's; the lock files are the release's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: checks
+          sparse-checkout: .github/scripts
+      - name: Audit what a site installs
+        env:
+          ALLOWED: ${{ inputs.allow_advisories }}
+        run: checks/.github/scripts/release-audit.sh
+
+  draft:
+    name: Draft the release
+    needs: [validate, ci, compat, audit]
+    # Spelled out because a skipped `compat` would otherwise skip this job, and so that nothing but
+    # success (or the first release's skip) on every check reaches it.
+    if: >-
+      always()
+      && needs.validate.result == 'success'
+      && needs.ci.result == 'success'
+      && needs.audit.result == 'success'
+      && (needs.compat.result == 'success'
+          || (needs.compat.result == 'skipped' && needs.validate.outputs.baseline == ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ inputs.version }}
+      SHA: ${{ needs.validate.outputs.sha }}
+      BASELINE: ${{ needs.validate.outputs.baseline }}
+      BASELINE_SHA: ${{ needs.validate.outputs.baseline_sha }}
+    steps:
+      - name: Refuse while another release is in progress
+        run: |
+          set -euo pipefail
+          others=$(gh release list --limit 100 --json tagName,isDraft \
+            --jq "[.[] | select(.isDraft and .tagName != \"v$VERSION\") | .tagName] | join(\" \")")
+          if [ -n "$others" ]; then
+            echo "::error::a draft is waiting for another release ($others): publish or delete it first, then start this one again"
+            exit 1
+          fi
+      - name: Draft v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$(gh release view "v$VERSION" --json isDraft --jq .isDraft 2>/dev/null || true)" = true ]; then
+            gh release delete "v$VERSION" --yes
+          fi
+          # release-verify.yml reads this line when the draft is published.
+          marker="<!-- release: tag=v$VERSION commit=$SHA baseline=${BASELINE:-none} baseline_commit=${BASELINE_SHA:-none} -->"
+          if [ -n "$BASELINE" ]; then
+            gh release create "v$VERSION" --target "$SHA" --draft --prerelease --title "v$VERSION" \
+              --notes "$marker" --generate-notes --notes-start-tag "$BASELINE"
+          else
+            gh release create "v$VERSION" --target "$SHA" --draft --prerelease --title "v$VERSION" \
+              --notes "$marker"$'\n\n'"The first alpha release."
+          fi

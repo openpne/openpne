@@ -2,7 +2,9 @@
 # What a site that follows the tagged releases is promised: it can update from the last release to
 # this commit (docs/updating.md).
 #
-#   baseline                      print the highest release tag, or nothing when there is none
+#   last-release                  print the highest release tag, or nothing when there is none
+#   baseline [<branch>]           the same, unless a release/<version> branch is ahead of it and
+#                                 the change is not going onto a release branch itself
 #   migrations <baseline> <ref>   refuse a change to a migration the baseline already shipped
 #   rehearse <baseline> <ref>     install the baseline, then walk docs/updating.md to <ref>
 #
@@ -16,16 +18,52 @@ cd "$(git rev-parse --show-toplevel)"
 die() { printf '::error::%s\n' "$*" >&2; exit 1; }
 commit() { git rev-parse --verify --quiet "$1^{commit}" || die "$1 is not a commit in this repository"; }
 
-baseline() {
-  local remote_tags local_tags
-  export LC_ALL=C
-  # A checkout that did not fetch tags would see none and pass every check below for ever.
-  remote_tags=$(git ls-remote --tags origin 'refs/tags/v[0-9]*' | awk '$2 !~ /\^\{\}$/ { sub("^refs/tags/", "", $2); print $2 }' | sort)
-  local_tags=$(git tag --list 'v[0-9]*' | sort)
-  [ "$remote_tags" = "$local_tags" ] \
-    || die "the release tags here differ from origin's (here: $(printf '%s' "$local_tags" | grep -c . || true), origin: $(printf '%s' "$remote_tags" | grep -c . || true)): fetch the tags first"
+# Bare versions on stdin, highest first. `~` sorts below the end of a string under `sort -V`, which
+# is what puts 4.0.0-alpha.2 below 4.0.0.
+by_version() { sed 's/-/~/' | sort -V -r | sed 's/~/-/'; }
 
-  git -c versionsort.suffix=- tag --list 'v[0-9]*' --sort=-v:refname | head -n 1
+# Names that are a release tag (v4.0.0-alpha.1, v4.0.0) or a release branch; a branch that only
+# starts like one (release/4.0.0-alpha.2-copy-fix) is somebody's work, not a release.
+tag_re='^v[0-9][^/]*$'
+branch_re='^release/[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$'
+
+# A checkout that did not fetch them would see none and pass every check below for ever.
+in_sync() { # in_sync <what> <ls-remote flag> <remote pattern> <prefix to strip> <name pattern> <local names>
+  local remote
+  remote=$(git ls-remote "$2" origin "$3" | awk -v p="$4" '$2 !~ /\^\{\}$/ { sub("^" p, "", $2); print $2 }' | { grep -E "$5" || true; } | sort)
+  [ "$remote" = "$6" ] \
+    || die "the $1 here differ from origin's (here: $(printf '%s' "$6" | grep -c . || true), origin: $(printf '%s' "$remote" | grep -c . || true)): git fetch --prune --prune-tags origin"
+}
+
+last_release() {
+  local tags top
+  export LC_ALL=C
+  tags=$(git tag --list 'v[0-9]*' | { grep -E "$tag_re" || true; } | sort)
+  in_sync "release tags" --tags 'refs/tags/v[0-9]*' 'refs/tags/' "$tag_re" "$tags"
+  top=$(printf '%s\n' "$tags" | sed -n 's/^v//p' | by_version | head -n 1)
+  [ -z "$top" ] || printf 'v%s\n' "$top"
+}
+
+# What a release/<version> branch holds before its tag exists is as good as shipped: a change to it
+# on main would surface only once the tag is published. A change going onto a release branch is
+# held to the last tag alone, because an urgent fix is cut from that tag, behind the branch being read.
+baseline() {
+  local onto=${1:-} tag branches ahead
+  export LC_ALL=C
+  tag=$(last_release)
+  if [[ "$onto" == release/* ]]; then
+    [ -z "$tag" ] || printf '%s\n' "$tag"
+    return
+  fi
+  branches=$(git for-each-ref --format='%(refname:lstrip=3)' 'refs/remotes/origin/release/' | { grep -E "$branch_re" || true; } | sort)
+  in_sync "release branches" --heads 'refs/heads/release/*' 'refs/heads/' "$branch_re" "$branches"
+  ahead=$(printf '%s\n' "$branches" | sed -n 's|^release/||p' | by_version | head -n 1)
+
+  if [ -n "$ahead" ] && [ "$(printf '%s\n%s\n' "$ahead" "${tag#v}" | by_version | head -n 1)" = "$ahead" ] && [ "v$ahead" != "$tag" ]; then
+    printf 'origin/release/%s\n' "$ahead"
+  elif [ -n "$tag" ]; then
+    printf '%s\n' "$tag"
+  fi
 }
 
 migrations() {
@@ -143,8 +181,9 @@ rehearse() {
 }
 
 case "${1:-}" in
-  baseline) baseline ;;
+  last-release) last_release ;;
+  baseline) baseline "${2:-}" ;;
   migrations) [ $# = 3 ] || die "usage: release-compat.sh migrations <baseline> <ref>"; migrations "$2" "$3" ;;
   rehearse) [ $# = 3 ] || die "usage: release-compat.sh rehearse <baseline> <ref>"; rehearse "$2" "$3" ;;
-  *) die "usage: release-compat.sh baseline | migrations <baseline> <ref> | rehearse <baseline> <ref>" ;;
+  *) die "usage: release-compat.sh last-release | baseline [<branch>] | migrations <baseline> <ref> | rehearse <baseline> <ref>" ;;
 esac
