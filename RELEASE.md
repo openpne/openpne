@@ -31,7 +31,7 @@ then copy the fix from `main` onto the renamed branch as well (the checks ask fo
    update from the last release on SQLite and MySQL, and audits the dependencies the release ships.
    If a copy differs from its original — the fix did not apply as it was — name it in `differs`;
    the run fails until the list matches. `allow_advisories` accepts advisories for one release,
-   each named by any id it goes by (PKSA, GHSA or CVE).
+   each named by an id the audit reports for it (`PKSA-…` or `GHSA-…`).
 2. **Publish the draft** it leaves under Releases, without changing its tag. Publishing creates the tag. A check then compares
    the tag with what was drafted; if it fails, delete the release and the tag and draft again.
 3. Delete the branch.

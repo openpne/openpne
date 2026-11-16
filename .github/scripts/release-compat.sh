@@ -44,10 +44,9 @@ last_release() {
   [ -z "$top" ] || printf 'v%s\n' "$top"
 }
 
-# A release being read is cut as release/<version> before its tag exists. What it holds is as good
-# as shipped: a change to it on main would surface only once the tag is published. A change going
-# onto a release branch is held to the last tag alone: an urgent fix is cut from that tag, behind
-# the branch being read.
+# What a release/<version> branch holds before its tag exists is as good as shipped: a change to it
+# on main would surface only once the tag is published. A change going onto a release branch is
+# held to the last tag alone, because an urgent fix is cut from that tag, behind the branch being read.
 baseline() {
   local onto=${1:-} tag branches ahead
   export LC_ALL=C
@@ -186,5 +185,5 @@ case "${1:-}" in
   baseline) baseline "${2:-}" ;;
   migrations) [ $# = 3 ] || die "usage: release-compat.sh migrations <baseline> <ref>"; migrations "$2" "$3" ;;
   rehearse) [ $# = 3 ] || die "usage: release-compat.sh rehearse <baseline> <ref>"; rehearse "$2" "$3" ;;
-  *) die "usage: release-compat.sh last-release | baseline | migrations <baseline> <ref> | rehearse <baseline> <ref>" ;;
+  *) die "usage: release-compat.sh last-release | baseline [<branch>] | migrations <baseline> <ref> | rehearse <baseline> <ref>" ;;
 esac

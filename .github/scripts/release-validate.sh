@@ -29,9 +29,11 @@ original_of() {
 # A copy is the same as its original when it is exactly what applying the original to the copy's
 # parent gives; one whose conflict was resolved by hand never is, whatever the resolution.
 same_as_original() { # same_as_original <copy> <original>
-  local merged
-  merged=$(git merge-tree --write-tree --merge-base="$2^" "$1^" "$2" 2>/dev/null) || return 1
-  [ "${merged%%$'\n'*}" = "$(git rev-parse "$1^{tree}")" ]
+  local merged status=0
+  merged=$(git merge-tree --write-tree --merge-base="$2^" "$1^" "$2" 2>&1) || status=$?
+  # 1 is a conflict; anything above is git failing, which is not "differs".
+  [ "$status" -le 1 ] || die "git merge-tree could not compare $1 with $2 (it needs git 2.40 or later): $merged"
+  [ "$status" = 0 ] && [ "${merged%%$'\n'*}" = "$(git rev-parse "$1^{tree}")" ]
 }
 
 check() {
@@ -113,7 +115,7 @@ published() {
 
   # Every other tag counts, a higher one too: this runs when the release is published, and a
   # draft is checked as an update from the highest tag there was.
-  top=$(git tag --list 'v[0-9]*' | grep -vxF "$tag" | sed -n 's/^v//p' | sed 's/-/~/' | sort -V | tail -n 1 | sed 's/~/-/' || true)
+  top=$(git tag --list 'v[0-9]*' | grep -E '^v[0-9][^/]*$' | grep -vxF "$tag" | sed -n 's/^v//p' | sed 's/-/~/' | sort -V | tail -n 1 | sed 's/~/-/' || true)
   if [ -z "$top" ]; then
     [ "$baseline" = none ] || die "the draft of $tag was checked as an update from $baseline, which is not a tag here"
   else

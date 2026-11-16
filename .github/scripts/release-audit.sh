@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Refuses a release that ships a dependency with a known advisory, unless the advisory is named in
-# $ALLOWED (comma or space separated: PKSA-…, GHSA-…, CVE-…). Dev dependencies are not shipped and
-# not looked at.
+# $ALLOWED (comma or space separated: PKSA-…, GHSA-…, and CVE-… where Composer reports one). Dev
+# dependencies are not shipped and not looked at.
 #
 #   release-audit.sh                                audit the lock files of this checkout
 #   release-audit.sh judge <composer report> <npm report>   decide on reports saved as JSON
@@ -27,9 +27,11 @@ npm_advisories() {
 }
 
 judge() {
-  local found refused
-  found=$(composer_advisories "$1"; npm_advisories "$2")
-  found=$(printf '%s\n' "$found" | grep . | sort -u || true)
+  local composer npm found refused
+  # One assignment each: a report that cannot be read has to stop here, not be outvoted by the other.
+  composer=$(composer_advisories "$1") || die "the composer report could not be read"
+  npm=$(npm_advisories "$2") || die "the npm report could not be read"
+  found=$(printf '%s\n%s\n' "$composer" "$npm" | grep . | sort -u || true)
   if [ -z "$found" ]; then
     echo "No advisory against what the release ships."
     return
