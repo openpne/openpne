@@ -1,5 +1,5 @@
-# The checks of .github/scripts/release-compat.sh as jobs. With no release to update from, the
-# lookup finds none and the other two jobs are skipped.
+# The checks of .github/scripts/release-compat.sh as jobs. With nothing to update from, the lookup
+# finds none and the other two jobs are skipped.
 name: Release compatibility
 
 on:
@@ -10,7 +10,7 @@ on:
         type: string
         default: ''
       baseline:
-        description: Tag or commit to update from. Defaults to the highest release tag.
+        description: Tag or commit to update from. Defaults to the last release, or to a release branch ahead of it.
         type: string
         default: ''
 
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      tag: ${{ steps.find.outputs.tag }}
+      from: ${{ steps.find.outputs.from }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,23 +36,23 @@ jobs:
           GIVEN: ${{ inputs.baseline }}
         run: |
           set -euo pipefail
-          tag="$GIVEN"
-          if [ -z "$tag" ]; then
-            tag=$(.github/scripts/release-compat.sh baseline)
+          from="$GIVEN"
+          if [ -z "$from" ]; then
+            from=$(.github/scripts/release-compat.sh baseline)
           fi
-          if [ -z "$tag" ]; then
-            echo "No release tag yet: nothing to be compatible with."
+          if [ -z "$from" ]; then
+            echo "No release yet: nothing to be compatible with."
           else
-            git rev-parse --verify --quiet "$tag^{commit}" >/dev/null \
-              || { echo "::error::$tag is not a commit in this repository"; exit 1; }
-            echo "Updating from $tag."
+            git rev-parse --verify --quiet "$from^{commit}" >/dev/null \
+              || { echo "::error::$from is not a commit in this repository"; exit 1; }
+            echo "Updating from $from."
           fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "from=$from" >> "$GITHUB_OUTPUT"
 
   migrations:
     name: Released migrations are unchanged
     needs: baseline
-    if: needs.baseline.outputs.tag != ''
+    if: needs.baseline.outputs.from != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -62,13 +62,13 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - env:
-          BASELINE: ${{ needs.baseline.outputs.tag }}
+          BASELINE: ${{ needs.baseline.outputs.from }}
         run: .github/scripts/release-compat.sh migrations "$BASELINE" HEAD
 
   rehearse:
     name: Update from the last release (${{ matrix.db }})
     needs: baseline
-    if: needs.baseline.outputs.tag != ''
+    if: needs.baseline.outputs.from != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -79,7 +79,7 @@ jobs:
       # The image ci.yml's mysql-shard job pins: bump the tag and the digest in both places together.
       MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
       DB_CONNECTION: ${{ matrix.db }}
-      BASELINE: ${{ needs.baseline.outputs.tag }}
+      BASELINE: ${{ needs.baseline.outputs.from }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
