@@ -125,14 +125,15 @@ class DirectMessageToolsTest extends McpTestCase
         config(['openpne.throttle.direct_message' => 2]);
         [$sender, $other, $bystander] = Member::factory()->count(3)->create();
 
-        $this->acting($sender);
+        // Stored tokens, since the stand-in Sanctum::actingAs hands out has no key to tell two apart.
+        $this->actingAs($sender->withAccessToken($sender->createToken('first', [McpAbilities::READ, McpAbilities::WRITE])->accessToken), 'sanctum');
         foreach (['one', 'two'] as $body) {
             OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $other->getKey(), 'body' => $body])->assertOk();
         }
 
         // Another token of the same member, naming nobody: the budget is the member's, and the answer
         // is the limit's rather than the refusal a missing member gets.
-        $this->acting($sender);
+        $this->actingAs($sender->withAccessToken($sender->createToken('second', [McpAbilities::READ, McpAbilities::WRITE])->accessToken), 'sanctum');
         OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $other->getKey() + 9999, 'body' => 'three'])
             ->assertHasErrors(['Too many direct messages']);
 
@@ -143,6 +144,20 @@ class DirectMessageToolsTest extends McpTestCase
 
         $this->acting($bystander);
         OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $other->getKey(), 'body' => 'mine'])->assertOk();
+    }
+
+    public function test_a_body_that_is_not_text_is_refused_rather_than_coerced(): void
+    {
+        [$sender, $other] = Member::factory()->count(2)->create();
+        $this->acting($sender);
+        $this->app->setLocale('en');
+
+        foreach ([123, ['a']] as $body) {
+            OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $other->getKey(), 'body' => $body])
+                ->assertHasErrors(['body']);
+        }
+
+        $this->assertDatabaseCount('direct_messages', 0);
     }
 
     public function test_a_read_only_token_is_told_which_ability_it_is_missing(): void
