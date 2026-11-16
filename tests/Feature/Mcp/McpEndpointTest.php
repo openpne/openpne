@@ -7,6 +7,7 @@ namespace Tests\Feature\Mcp;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTokenMemberNotFrozen;
 use App\Http\Middleware\ThrottleMcpByIp;
+use App\Mcp\Servers\OpenPneServer;
 use App\Models\Member;
 use App\Support\Feature;
 use Illuminate\Auth\Middleware\Authenticate;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
+use ReflectionProperty;
 
 /**
  * The gate is pinned on the two 405 stubs as well: the package registers them beside the POST,
@@ -54,6 +56,16 @@ class McpEndpointTest extends McpTestCase
             ->assertSee('post-talk-message')
             // The picture cap is stated in KB: a cap under 1 MB must not read as "0 MB".
             ->assertSee('at most 5120 KB once decoded');
+    }
+
+    public function test_the_tool_list_is_one_page(): void
+    {
+        $registered = (new ReflectionProperty(OpenPneServer::class, 'tools'))->getDefaultValue();
+
+        $this->rpc($this->token(Member::factory()->create()), 'tools/list')
+            ->assertOk()
+            ->assertJsonCount(count($registered), 'result.tools')
+            ->assertJsonMissingPath('result.nextCursor');
     }
 
     public function test_a_tool_call_writes_through_the_endpoint(): void

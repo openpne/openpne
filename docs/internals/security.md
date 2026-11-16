@@ -537,6 +537,10 @@ a route carrying one of these limiters cannot go unlisted. Each has two limbs: a
 | `reaction` | 60 / 120 | member id / client IP | reaction add, remove (group talk, timeline, diary, group boards) |
 | `reaction-read` | 120 / 240 | member id / client IP | reactor list (who reacted) on the same four surfaces; read once a chip's tip has stayed open, and each answer lists members with avatars |
 
+The MCP `send-direct-message` tool is not a route, so it counts its sends itself: the
+`direct-message-send` per-member figure, in a bucket of its own and keyed by member
+([mcp.md](mcp.md#rate-limits)).
+
 The registration-paused screen's request mail has a limiter of its own, `capacity-request`
 ([`FortifyServiceProvider`](../../app/Providers/FortifyServiceProvider.php)): 3 a minute per client
 IP and 20 an hour for the whole site, since a guest may send it

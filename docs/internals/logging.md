@@ -55,7 +55,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `member.withdrawn` | seam: `WithdrawMember` | `member_id`, `actor` (self\|admin), `admin_username` |
 | `member.banned` / `member.unbanned` | seam: `RejectMemberLogin` / `AllowMemberLogin` (actions) | `member_id`, `admin_username` |
 | `ai_account.created` / `ai_account.deleted` | seam: `CreateAiAccount` / `DeleteAiAccount` (actions) | `member_id`, `owner_id` |
-| `throttle.hit` | `bootstrap/app.php` report hook | `route`, `member_id` |
+| `throttle.hit` | `bootstrap/app.php` report hook; `SendDirectMessageTool`, whose limit answers as a tool error rather than a 429 | `route`, `member_id`, `tool` (the MCP tool only) |
 
 ## PII / injection contract
 

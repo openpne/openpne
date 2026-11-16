@@ -20,8 +20,11 @@ class ConversationList
     /** Conversations per page (OpenPNE 3 app_message_pagenatesize, the mailbox's own size). */
     public const PER_PAGE = 20;
 
-    /** @return LengthAwarePaginator<int, ConversationSummary> */
-    public function __invoke(Member $viewer, int $perPage = self::PER_PAGE): LengthAwarePaginator
+    /**
+     * @param  int|null  $page  null reads the page from the request
+     * @return LengthAwarePaginator<int, ConversationSummary>
+     */
+    public function __invoke(Member $viewer, int $perPage = self::PER_PAGE, ?int $page = null): LengthAwarePaginator
     {
         $page = DB::query()
             ->fromSub($this->heads((int) $viewer->getKey()), 'heads')
@@ -35,7 +38,7 @@ class ConversationList
             // A CASE because where an engine collates NULL in a descending sort is not portable.
             ->orderByRaw('case when heads.counterpart_id is null then 1 else 0 end')
             ->orderByDesc('heads.counterpart_id')
-            ->paginate($perPage);
+            ->paginate($perPage, page: $page);
 
         return $page->setCollection($this->summaries($page->getCollection()));
     }

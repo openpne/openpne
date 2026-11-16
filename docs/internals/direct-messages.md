@@ -283,6 +283,12 @@ The submits are untouched and surface-agnostic: they redirect to the box they al
 forwards on from there — and the forward reflashes, so the answer the write wrote survives the extra
 hop instead of being aged out on a page nobody sees.
 
+## MCP
+
+An MCP client lists, reads, writes and marks read the same conversations through the queries and
+actions above, addressed by counterpart id; an AI account may write only to its owner and to members
+who wrote to it first ([mcp.md](mcp.md#direct-messages)).
+
 ## Separate from group talk
 
 The two conversation surfaces share their **frontend stream** ([`lib/chat/`](../../resources/js/lib/chat/):
@@ -313,8 +319,8 @@ published content, and a private message is not that.
    and only a live receipt has any at all.
 8. Marking read moves `read_at` from null to a time and never the other way, so every report is
    idempotent and order between reports does not matter.
-9. A message written as chat carries no subject and no lineage, and every send — from either screen —
-   goes through `SendDirectMessage`.
+9. A message written as chat carries no subject and no lineage, and every send — from either screen
+   or the MCP tool — goes through `SendDirectMessage`.
 10. No mailbox URL moves. What a Modern viewer gets from one is a redirect into the chat reading, and
     only ever for a message they are a party to.
 11. Deleting a conversation writes no record of itself. It moves the viewer's own side of the rows
