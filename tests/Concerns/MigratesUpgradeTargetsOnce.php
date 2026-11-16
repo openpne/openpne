@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Migrates once per worker and resets only data between methods: the raw-DDL source tables commit and
  * so cannot ride inside RefreshDatabase's transaction, and a per-method migrate:fresh is the MySQL
- * lane's long pole. Not for a test that drops or alters an app table, directly or through the
- * file_bin FK rewire a run migrating `files` performs; those keep DatabaseMigrations.
+ * lane's long pole. A test that drops or alters an app table except the openpne4_upgrade_state
+ * sentinel, even through the file_bin FK rewire of a run migrating `files`, keeps DatabaseMigrations.
  */
 trait MigratesUpgradeTargetsOnce
 {
@@ -29,11 +29,7 @@ trait MigratesUpgradeTargetsOnce
         }
 
         // The shared flag, not a private one: a co-resident DatabaseMigrations test drops the schema
-        // and clears it on teardown, and the sentinel table covers a drop that does not.
-        if (RefreshDatabaseState::$migrated && ! Schema::hasTable('openpne4_upgrade_state')) {
-            RefreshDatabaseState::$migrated = false;
-        }
-
+        // and clears it on teardown.
         if (! RefreshDatabaseState::$migrated) {
             $this->artisan('migrate:fresh', $this->migrateFreshUsing());
             $this->app[Kernel::class]->setArtisan(null);
@@ -51,9 +47,15 @@ trait MigratesUpgradeTargetsOnce
         // Reset after the test, not before: a following RefreshDatabase method would otherwise open
         // its transaction on these committed rows.
         $this->beforeApplicationDestroyed(function () {
-            if (RefreshDatabaseState::$migrated && Schema::hasTable('openpne4_upgrade_state')) {
-                $this->truncateTablesForAllConnections();
+            // A test that dropped the sentinel table hands the worker on unmigrated, so a
+            // RefreshDatabase test next on it migrates too.
+            if (! Schema::hasTable('openpne4_upgrade_state')) {
+                RefreshDatabaseState::$migrated = false;
+
+                return;
             }
+
+            $this->truncateTablesForAllConnections();
         });
     }
 
