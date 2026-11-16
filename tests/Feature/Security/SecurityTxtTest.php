@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Security;
 
-use App\Http\Controllers\SecurityTxtController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -13,6 +12,8 @@ class SecurityTxtTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const ADVISORY_FORM = 'https://github.com/openpne/openpne/security/advisories/new';
+
     public function test_a_guest_reads_the_file_as_plain_text(): void
     {
         $response = $this->get('/.well-known/security.txt');
@@ -20,15 +21,20 @@ class SecurityTxtTest extends TestCase
         $response->assertOk();
         $this->assertSame('text/plain; charset=UTF-8', $response->headers->get('Content-Type'));
         $this->assertSame('max-age=86400, public', $response->headers->get('Cache-Control'));
-        $this->assertSame([], $response->headers->getCookies(), 'a publicly cacheable reply sets no cookie');
+        $this->assertSame([], $response->headers->getCookies(), 'a fetch starts no session and sets no cookie');
         $this->assertSame(
             [
-                'Contact' => SecurityTxtController::CONTACT,
-                'Policy' => SecurityTxtController::POLICY,
+                'Contact' => self::ADVISORY_FORM,
+                'Policy' => 'https://github.com/openpne/openpne/blob/main/SECURITY.md',
                 'Preferred-Languages' => 'en, ja',
             ],
             array_diff_key($this->fields($response->getContent()), ['Expires' => true]),
         );
+    }
+
+    public function test_the_policy_names_the_contact_the_file_gives(): void
+    {
+        $this->assertStringContainsString('<'.self::ADVISORY_FORM.'>', (string) file_get_contents(base_path('SECURITY.md')));
     }
 
     public function test_expires_is_six_months_ahead_in_utc(): void

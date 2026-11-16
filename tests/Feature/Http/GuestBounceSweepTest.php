@@ -19,7 +19,7 @@ class GuestBounceSweepTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** First URI segments of the token realm and the framework's own endpoints; the admin realm is AdminRealm's. */
+    /** First URI segments of the token realm, the session-less /.well-known files and the framework's own endpoints; the admin realm is AdminRealm's. */
     private const OUTSIDE_SEGMENTS = ['mcp', '.well-known', 'storage', 'up', '_inertia'];
 
     /** The token realm's two POSTs under /oauth; the consent screen beside them is a member page and is swept. */

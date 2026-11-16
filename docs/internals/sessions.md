@@ -17,6 +17,8 @@ bearer token as its only credential, and answers 401 instead of redirecting a gu
 and the `/.well-known` metadata sit in that realm too; the consent screen `/oauth/authorize` is a
 member page. `UseAdminSessionStore` still runs — it is global — and pinning a store nothing starts
 is harmless; a test asserts the response carries no cookie and writes no session row.
+`/.well-known/security.txt` holds no session either: it is registered without the `web` group's
+middleware ([security.md](security.md#vulnerability-reporting)).
 
 The switch is [`UseAdminSessionStore`](../../app/Http/Middleware/UseAdminSessionStore.php),
 **global** middleware keyed by request path. It cannot live in the Filament

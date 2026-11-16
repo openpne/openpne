@@ -281,7 +281,10 @@ Route::get('/site-icon/{size}.png', [SiteIconController::class, 'png'])
 Route::get('/favicon.svg', [SiteIconController::class, 'svg'])->name('favicon.svg');
 Route::get('/favicon.ico', [SiteIconController::class, 'ico'])->name('favicon.ico');
 
-Route::get('/.well-known/security.txt', SecurityTxtController::class)->name('security_txt');
+// Without the web group's middleware: a fetch must not start a session or set a cookie.
+Route::get('/.well-known/security.txt', SecurityTxtController::class)
+    ->withoutMiddleware('web')
+    ->name('security_txt');
 
 // OpenPNE 3 /cache/css/customizing.css, served from the database rather than a written cache file.
 Route::get('/cache/css/customizing.css', [CustomizingCssController::class, 'show'])->name('design.customizing_css');
