@@ -177,10 +177,7 @@ if (! function_exists('classic_plugin_css_url')) {
 }
 
 if (! function_exists('versioned_asset')) {
-    /**
-     * `asset()` for a script or stylesheet under public/, with `?v=` naming the file's bytes so a changed
-     * file is a new URL (docs/internals/runtime.md, "Static asset delivery"). A file that cannot be read keeps its plain URL.
-     */
+    /** `asset()` for a script or stylesheet under public/, with a `?v=` that follows the file's bytes (docs/internals/runtime.md, "Static asset delivery"). */
     function versioned_asset(string $path): string
     {
         // Keyed, so the URL a file will have after the next release cannot be computed from the public source and requested ahead of it.

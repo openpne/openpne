@@ -8,27 +8,53 @@ use PHPUnit\Framework\TestCase;
 
 class StaticAssetVersionGuardTest extends TestCase
 {
-    /** Matched on the source text, so only a literal path is seen: the calls passing a variable are held by the Classic stylesheet feature tests. */
-    public function test_no_script_or_stylesheet_is_linked_through_plain_asset(): void
+    /** The three variables are the layout's own, each filled by a helper that versions what it returns or names a route. */
+    private const LINKED = '/\A"\{\{ (?:versioned_asset\(\'[^\']+\'\)|\$pluginCssUrl|\$customCssUrl|\$themeCssUrl) \}\}"\z/';
+
+    public function test_every_script_and_stylesheet_a_view_links_is_versioned(): void
     {
-        $root = dirname(__DIR__, 3);
         $found = [];
 
-        foreach (['resources/views', 'app'] as $dir) {
-            $files = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($root.'/'.$dir, \FilesystemIterator::SKIP_DOTS),
-            );
-            foreach ($files as $file) {
-                if ($file->getExtension() !== 'php') {
-                    continue;
-                }
-                $source = (string) file_get_contents($file->getPathname());
-                if (preg_match_all('/(?<![\w>:$])asset\(\s*[\'"][^\'"]+\.(?:js|css)[\'"]/', $source, $matches) > 0) {
-                    $found[str_replace($root.'/', '', $file->getPathname())] = $matches[0];
+        foreach ($this->sources('resources/views') as $path => $source) {
+            preg_match_all('/<script\b[^>]*?\bsrc=("[^"]*"|[^\s>]+)/', $source, $scripts);
+            preg_match_all('/<link\b(?=[^>]*\brel="stylesheet")[^>]*?\bhref=("[^"]*"|[^\s>]+)/', $source, $stylesheets);
+            foreach ([...$scripts[1], ...$stylesheets[1]] as $value) {
+                if (preg_match(self::LINKED, $value) !== 1) {
+                    $found[$path][] = $value;
                 }
             }
         }
 
-        $this->assertSame([], $found, 'link scripts and stylesheets under public/ through versioned_asset()');
+        $this->assertSame([], $found);
+    }
+
+    public function test_no_script_or_stylesheet_path_is_passed_to_plain_asset(): void
+    {
+        $found = [];
+
+        foreach ([...$this->sources('resources/views'), ...$this->sources('app')] as $path => $source) {
+            if (preg_match_all('/(?<!versioned_)(?<!Vite::)asset\(\s*[\'"][^\'"]+\.(?:js|css)[\'"]/', $source, $matches) > 0) {
+                $found[$path] = $matches[0];
+            }
+        }
+
+        $this->assertSame([], $found);
+    }
+
+    /** @return array<string, string> path under the repository root => source */
+    private function sources(string $dir): array
+    {
+        $root = dirname(__DIR__, 3);
+        $sources = [];
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($root.'/'.$dir, \FilesystemIterator::SKIP_DOTS),
+        );
+        foreach ($files as $file) {
+            if ($file->getExtension() === 'php') {
+                $sources[str_replace($root.'/', '', $file->getPathname())] = (string) file_get_contents($file->getPathname());
+            }
+        }
+
+        return $sources;
     }
 }
