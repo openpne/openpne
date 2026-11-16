@@ -561,7 +561,8 @@ and retention are in [logging](logging.md).
 ## Response headers
 
 [`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php) sets the
-same baseline on every response — `X-Content-Type-Options: nosniff`,
+same baseline on every response that passes through the `web` group —
+`X-Content-Type-Options: nosniff`,
 `X-Frame-Options: DENY`, a `frame-ancestors 'none'; base-uri 'self'` CSP,
 `Permissions-Policy: camera=(), microphone=(), geolocation=()`,
 `Cross-Origin-Opener-Policy: same-origin`, `Referrer-Policy:
@@ -743,3 +744,16 @@ only, as text.
 What Markdown mode leaves open: custom CSS, which is not restricted here and can restyle the page
 or load from another host; an image from another host, which tells that host when a page was
 viewed; and a link whose text misdescribes its target.
+
+## Vulnerability reporting
+
+[`SECURITY.md`](../../SECURITY.md) is the policy: where a report goes and what the project commits
+to. Each site also answers `/.well-known/security.txt` (RFC 9116), so someone looking at one site
+finds the same contact. `SecurityTxtController` builds it per request: `Contact` is the repository's
+advisory form and `Policy` is `SECURITY.md` in that repository, because a site does not serve the
+policy itself; `Expires` is six months after the request, in UTC; there is no `Canonical` field.
+
+The route is registered without the `web` group's middleware, so a fetch starts no session and sets
+no cookie, and the reply is publicly cacheable for a day. A file at
+`public/.well-known/security.txt` is answered by the web server ahead of the route under the
+shipped nginx and Apache rules, which is how an operator names a contact of their own.
