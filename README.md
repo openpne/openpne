@@ -79,6 +79,15 @@ php artisan serve         # http://localhost:8000
 npm run dev               # Vite dev server on :5173 (HMR)
 ```
 
+## Releases
+
+`main` is the development line and moves with every merged change. A site runs a tagged release
+(`v4.0.0-alpha.N`, under [Releases](https://github.com/openpne/openpne/releases)) and moves from
+one to the next with [docs/updating.md](docs/updating.md).
+
+While the version carries `-alpha`, a release may change behaviour or stored data without a
+compatibility path, and a fix is published as a new release: an earlier alpha is not patched.
+
 ## Upgrading from OpenPNE 3
 
 Running an OpenPNE 3 site? [docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)
