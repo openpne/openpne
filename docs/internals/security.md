@@ -561,7 +561,8 @@ and retention are in [logging](logging.md).
 ## Response headers
 
 [`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php) sets the
-same baseline on every response — `X-Content-Type-Options: nosniff`,
+same baseline on every response of the `web` group (`/mcp` and
+`/.well-known/security.txt` run without that group) — `X-Content-Type-Options: nosniff`,
 `X-Frame-Options: DENY`, a `frame-ancestors 'none'; base-uri 'self'` CSP,
 `Permissions-Policy: camera=(), microphone=(), geolocation=()`,
 `Cross-Origin-Opener-Policy: same-origin`, `Referrer-Policy:

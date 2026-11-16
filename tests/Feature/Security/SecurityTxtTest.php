@@ -6,6 +6,7 @@ namespace Tests\Feature\Security;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SecurityTxtTest extends TestCase
@@ -21,7 +22,7 @@ class SecurityTxtTest extends TestCase
         $response->assertOk();
         $this->assertSame('text/plain; charset=UTF-8', $response->headers->get('Content-Type'));
         $this->assertSame('max-age=86400, public', $response->headers->get('Cache-Control'));
-        $this->assertSame([], $response->headers->getCookies(), 'a fetch starts no session and sets no cookie');
+        $this->assertSame([], $response->headers->getCookies(), 'a fetch sets no cookie');
         $this->assertSame(
             [
                 'Contact' => self::ADVISORY_FORM,
@@ -30,6 +31,17 @@ class SecurityTxtTest extends TestCase
             ],
             array_diff_key($this->fields($response->getContent()), ['Expires' => true]),
         );
+    }
+
+    public function test_a_fetch_writes_no_session_row(): void
+    {
+        // The suite's array driver would keep a started session out of the database, so the database
+        // driver is what makes the absence observable.
+        config(['session.driver' => 'database']);
+
+        $this->get('/.well-known/security.txt')->assertOk();
+
+        $this->assertSame(0, DB::table(config('session.member_table'))->count());
     }
 
     public function test_the_policy_names_the_contact_the_file_gives(): void
