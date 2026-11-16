@@ -57,6 +57,7 @@ use App\Http\Controllers\LegacyUploadFileController;
 use App\Http\Controllers\LinkCardImageController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PublicFileController;
+use App\Http\Controllers\SecurityTxtController;
 use App\Http\Controllers\SiteIconController;
 use App\Http\Middleware\AsBackgroundFetch;
 use App\Http\Middleware\EnsureFeatureEnabled;
@@ -279,6 +280,8 @@ Route::get('/site-icon/{size}.png', [SiteIconController::class, 'png'])
     ->name('site_icon');
 Route::get('/favicon.svg', [SiteIconController::class, 'svg'])->name('favicon.svg');
 Route::get('/favicon.ico', [SiteIconController::class, 'ico'])->name('favicon.ico');
+
+Route::get('/.well-known/security.txt', SecurityTxtController::class)->name('security_txt');
 
 // OpenPNE 3 /cache/css/customizing.css, served from the database rather than a written cache file.
 Route::get('/cache/css/customizing.css', [CustomizingCssController::class, 'show'])->name('design.customizing_css');
