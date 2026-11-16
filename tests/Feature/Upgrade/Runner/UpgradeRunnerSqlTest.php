@@ -303,7 +303,7 @@ class UpgradeRunnerSqlTest extends UpgradeSqlTestCase
     public function test_a_missing_state_table_is_a_precheck_error_in_the_json_too(): void
     {
         $this->seedGraph();
-        // The lane's trait re-migrates the targets when this sentinel is missing, so the drop heals.
+        // The lane's trait hands the worker on unmigrated after this drop.
         Schema::drop('openpne4_upgrade_state');
 
         $report = $this->jsonReport(['--json' => true], expectFailure: true);
