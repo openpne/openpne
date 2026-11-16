@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # What a site that follows the tagged releases is promised: it can update from the last release to
-# this commit (docs/updating.md). Three subcommands, each usable on its own:
+# this commit (docs/updating.md).
 #
 #   baseline                      print the highest release tag, or nothing when there is none
 #   migrations <baseline> <ref>   refuse a change to a migration the baseline already shipped
@@ -10,60 +10,69 @@
 # temporary file when DB_CONNECTION is unset or sqlite.
 set -euo pipefail
 
-here=$(cd "$(dirname "$0")" && pwd)
-allowlist="$here/../release-compat-allow"
+# Migration names are compared the way the framework orders them, byte by byte.
+export LC_ALL=C
+
+allowlist="$(cd "$(dirname "$0")" && pwd)/../release-compat-allow"
+cd "$(git rev-parse --show-toplevel)"
 
 die() { printf '::error::%s\n' "$*" >&2; exit 1; }
+commit() { git rev-parse --verify --quiet "$1^{commit}" || die "$1 is not a commit in this repository"; }
 
 baseline() {
-  local remote_tags remote_count local_count
+  local remote_tags local_tags
   # A checkout that did not fetch tags would see none and pass every check below for ever.
-  remote_tags=$(git ls-remote --tags origin 'v[0-9]*')
-  remote_count=$(printf '%s\n' "$remote_tags" | grep -c -v -e '\^{}$' -e '^$' || true)
-  local_count=$(git tag --list 'v[0-9]*' | grep -c . || true)
-  [ "$remote_count" = "$local_count" ] \
-    || die "origin has $remote_count release tag(s), this checkout has $local_count: fetch the tags first"
+  remote_tags=$(git ls-remote --tags origin 'refs/tags/v[0-9]*' | awk '$2 !~ /\^\{\}$/ { sub("^refs/tags/", "", $2); print $2 }' | sort)
+  local_tags=$(git tag --list 'v[0-9]*' | sort)
+  [ "$remote_tags" = "$local_tags" ] \
+    || die "the release tags here differ from origin's (here: $(printf '%s' "$local_tags" | grep -c . || true), origin: $(printf '%s' "$remote_tags" | grep -c . || true)): fetch the tags first"
 
   git -c versionsort.suffix=- tag --list 'v[0-9]*' --sort=-v:refname | head -n 1
 }
 
 migrations() {
-  local base=$1 target=$2 last status path blob failed=0
-  last=$(git ls-tree --name-only "$base" database/migrations/ | LC_ALL=C sort | tail -n 1)
+  local base target last changes status path shipped edited failed=0
+  base=$(commit "$1")
+  target=$(commit "$2")
+  last=$(git ls-tree --name-only "$base" database/migrations/ | sort | tail -n 1)
+  changes=$(git diff --name-status --no-renames "$base" "$target" -- database/migrations)
 
   while IFS=$'\t' read -r status path; do
+    [ -n "$status" ] || continue
     case "$status" in
       A)
         if [[ ! "$path" > "$last" ]]; then
-          printf '::error file=%s::sorts before %s, the last migration %s shipped: a fresh install and an updated site would run it in different orders. Give it a later timestamp.\n' "$path" "$last" "$base" >&2
+          printf '::error file=%s::sorts before %s, the last migration %s shipped: a fresh install and an updated site would run it in different orders. Give it a later timestamp.\n' "$path" "$last" "$1" >&2
           failed=1
         fi
         ;;
       M)
-        blob=$(git rev-parse "$base:$path")
-        if [ -f "$allowlist" ] && grep -qxF "$blob $path" "$allowlist"; then
+        shipped=$(git rev-parse "$base:$path")
+        edited=$(git rev-parse "$target:$path")
+        if [ -f "$allowlist" ] && grep -qxF "$shipped $edited $path" "$allowlist"; then
           printf 'allowed by .github/release-compat-allow: %s\n' "$path"
         else
-          printf '::error file=%s::%s shipped this migration, and a site that has run it will not run it again. Change the schema in a new migration; if the edit is safe for a site that already ran the old one, list "%s %s" in .github/release-compat-allow.\n' "$path" "$base" "$blob" "$path" >&2
+          printf '::error file=%s::%s shipped this migration, and a site that has run it will not run it again. Change the schema in a new migration; if this exact edit is safe for a site that already ran the old one, list "%s %s %s" in .github/release-compat-allow.\n' "$path" "$1" "$shipped" "$edited" "$path" >&2
           failed=1
         fi
         ;;
       *)
-        printf '::error file=%s::%s shipped this migration and it is gone (status %s): a site that has run it still lists it.\n' "$path" "$base" "$status" >&2
+        printf '::error file=%s::%s shipped this migration and it is gone (status %s): a site that has run it still lists it.\n' "$path" "$1" "$status" >&2
         failed=1
         ;;
     esac
-  done < <(LC_ALL=C git diff --name-status --no-renames "$base" "$target" -- database/migrations)
+  done <<<"$changes"
 
   [ "$failed" = 0 ] || exit 1
-  printf 'migrations: no unlisted change to what %s shipped, and every new one sorts after %s\n' "$base" "$last"
+  printf 'migrations: no unlisted change to what %s shipped, and every new one sorts after %s\n' "$1" "$last"
 }
 
 rehearse() {
   # Not local: the EXIT trap below still needs them after this function has returned.
-  local base=$1 target port
+  local base target port
   server=""
-  target=$(git rev-parse "$2^{commit}")
+  base=$(commit "$1")
+  target=$(commit "$2")
   work=${REHEARSAL_DIR:-$(mktemp -d)}
   site="$work/site"
   port=${REHEARSAL_PORT:-8137}
@@ -72,7 +81,7 @@ rehearse() {
   cleanup() { stop_server; git worktree remove --force "$site" 2>/dev/null || true; }
   trap cleanup EXIT
 
-  # Starts the app, asks for one page and stops it again, so nothing holds the old code in memory.
+  # One request against a server started for it, so each check sees the code and caches on disk.
   expect() {
     local want=$1 page=$2 got="" _
     php artisan serve --host=127.0.0.1 --port="$port" >"$work/serve.log" 2>&1 &
@@ -83,7 +92,11 @@ rehearse() {
       sleep 0.5
     done
     stop_server
-    [ "$got" = "$want" ] || { cat "$work/serve.log" >&2; die "$page answered $got, expected $want"; }
+    if [ "$got" != "$want" ]; then
+      cat "$work/serve.log" >&2
+      tail -n 60 storage/logs/*.log >&2 2>/dev/null || true
+      die "$page answered $got, expected $want"
+    fi
     printf '%s -> %s\n' "$page" "$got"
   }
   step() { printf '\n== %s\n' "$*"; }
@@ -95,7 +108,7 @@ rehearse() {
     : >"$DB_DATABASE"
   fi
 
-  step "a site on $base, built the way a deployment builds it"
+  step "a site on $1, built the way a deployment builds it"
   composer install --no-dev --optimize-autoloader --no-interaction --no-progress
   cp .env.example .env
   php artisan key:generate --force
@@ -116,14 +129,17 @@ rehearse() {
   git checkout --quiet --detach "$target"
   composer install --no-dev --optimize-autoloader --no-interaction --no-progress
   npm ci
+  # The older release's build is untracked and would outlive the checkout, answering for this one.
+  rm -rf public/build
   npm run build
   php artisan migrate --force
+  php artisan optimize
   php artisan queue:restart
   php artisan up
   expect 200 /login
   expect 200 /admin/login
 
-  printf '\nrehearsal: a site on %s updated to %s\n' "$base" "$target"
+  printf '\nrehearsal: a site on %s updated to %s\n' "$1" "$target"
 }
 
 case "${1:-}" in

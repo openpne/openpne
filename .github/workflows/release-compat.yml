@@ -1,6 +1,5 @@
-# What a site that follows the tagged releases is promised: it can update from the last release to
-# the commit under test (docs/updating.md). Called from ci.yml on every code change, where the last
-# release is looked up. Until a release exists the lookup finds none and the other jobs are skipped.
+# The checks of .github/scripts/release-compat.sh as jobs. With no release to update from, the
+# lookup finds none and the other two jobs are skipped.
 name: Release compatibility
 
 on:
@@ -11,7 +10,7 @@ on:
         type: string
         default: ''
       baseline:
-        description: Release tag to update from. Defaults to the highest release tag.
+        description: Tag or commit to update from. Defaults to the highest release tag.
         type: string
         default: ''
 
@@ -44,8 +43,8 @@ jobs:
           if [ -z "$tag" ]; then
             echo "No release tag yet: nothing to be compatible with."
           else
-            git rev-parse --verify --quiet "refs/tags/$tag^{commit}" >/dev/null \
-              || { echo "::error::$tag is not a tag in this repository"; exit 1; }
+            git rev-parse --verify --quiet "$tag^{commit}" >/dev/null \
+              || { echo "::error::$tag is not a commit in this repository"; exit 1; }
             echo "Updating from $tag."
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"

@@ -1,8 +1,10 @@
 # Edits to a migration that a release already shipped, accepted because they are safe for a site
 # that ran the shipped version (a formatting change, or a fix that only matters where it failed).
 #
-# One per line: the blob the release shipped, then the path.
+# One edit per line: the blob the release shipped, the blob it is edited to, then the path.
 #
 #   git rev-parse <release tag>:database/migrations/<file>
+#   git rev-parse HEAD:database/migrations/<file>
 #
-# A line stops matching once a release ships the edited file, and can be removed then.
+# A further edit to the same file needs a line of its own. A line stops matching once a release
+# ships the edited file, and can be removed then.
