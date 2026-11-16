@@ -18,7 +18,6 @@ die() { printf '::error::%s\n' "$*" >&2; exit 1; }
 note() { printf '%s\n' "$*" >&2; }
 newer() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sed 's/-/~/' | sort -V | tail -n 1 | sed 's/~/-/')" = "$1" ]; }
 
-# The commit on main that a release-branch commit says it copies.
 original_of() {
   local ids
   ids=$(git log -1 --format=%B "$1" | grep -oE '\(cherry picked from commit [0-9a-f]{7,40}\)' | grep -oE '[0-9a-f]{7,40}' | sort -u || true)
@@ -27,11 +26,16 @@ original_of() {
   git rev-parse --verify --quiet "$ids^{commit}" || die "$1 says it copies $ids, which is not a commit here"
 }
 
-# Without context lines, so a copy applied where its surroundings differ still matches.
-patch_id() { git diff -U0 "$1^" "$1" | git patch-id --stable | cut -d' ' -f1; }
+# A copy is the same as its original when it is exactly what applying the original to the copy's
+# parent gives; one whose conflict was resolved by hand never is, whatever the resolution.
+same_as_original() { # same_as_original <copy> <original>
+  local merged
+  merged=$(git merge-tree --write-tree --merge-base="$2^" "$1^" "$2" 2>/dev/null) || return 1
+  [ "${merged%%$'\n'*}" = "$(git rev-parse "$1^{tree}")" ]
+}
 
 check() {
-  local version=$1 given=$2 last tip sha point copies c orig originals="" differing="" expected last_point listed=${DIFFERS:-}
+  local version=$1 given=$2 last tip sha point copies c orig touched originals="" differing="" expected last_point listed=${DIFFERS:-}
   export LC_ALL=C
 
   [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]] \
@@ -42,6 +46,8 @@ check() {
 
   tip=$(git rev-parse --verify --quiet "refs/remotes/origin/release/$version^{commit}") \
     || die "origin has no release/$version branch"
+  # A branch name would follow the branch, and say nothing about what the notes were written for.
+  [[ "$given" =~ ^[0-9a-f]{40}$ ]] || die "\"$given\" is not a full commit id"
   sha=$(git rev-parse --verify --quiet "$given^{commit}") || die "$given is not a commit in this repository"
   [ "$sha" = "$tip" ] \
     || die "release/$version is at $tip, not $sha: the branch moved after the notes were written, or this is the wrong commit"
@@ -51,14 +57,20 @@ check() {
 
   point=$(git merge-base "$sha" origin/main)
   copies=$(git rev-list --reverse "$point..$sha")
+  [ -z "$(git rev-list --merges "$point..$sha")" ] || die "release/$version holds a merge commit: a copy is one commit with one parent"
   for c in $copies; do
     orig=$(original_of "$c")
     git merge-base --is-ancestor "$orig" origin/main || die "$c says it copies $orig, which is not on main"
-    if git diff-tree --no-commit-id --name-only -r "$c" | grep -q '^database/migrations/'; then
-      die "$c touches database/migrations: a migration added here would run on updated sites in another order than on a fresh install. Cut the release from main instead."
+    ! git merge-base --is-ancestor "$orig" "$point" \
+      || die "$c says it copies $orig, which main had before the branch left it: the branch holds it already, or main has taken it back"
+    touched=$(git diff-tree --no-commit-id --name-only -r "$c"; git diff-tree --no-commit-id --name-only -r "$orig")
+    if grep -q '^database/migrations/' <<<"$touched"; then
+      die "$c, or the fix it copies ($orig), touches database/migrations: a migration added here would run on updated sites in another order than on a fresh install. Cut the release from main instead."
     fi
     originals+="$orig"$'\n'
-    [ "$(patch_id "$c")" = "$(patch_id "$orig")" ] || differing+="$c"$'\n'
+    # A copy the last release already carried was compared, and declared if it differed, then.
+    if [ -n "$last" ] && git merge-base --is-ancestor "$c" "$last"; then continue; fi
+    same_as_original "$c" "$orig" || differing+="$c"$'\n'
   done
 
   expected=""
@@ -74,7 +86,7 @@ check() {
       || die "release/$version leaves main at $point, before $last did ($last_point): a site on $last would go back in time"
     for c in $(git rev-list --reverse "$last_point..$last"); do
       orig=$(original_of "$c")
-      git merge-base --is-ancestor "$orig" "$sha" || printf '%s' "$originals" | grep -qx "$orig" \
+      git merge-base --is-ancestor "$orig" "$sha" || grep -qx "$orig" <<<"$originals" \
         || die "$last carries a fix (main's $orig) that release/$version does not: copy it onto the branch"
     done
   fi
@@ -84,28 +96,29 @@ check() {
 }
 
 published() {
-  local tag=$1 marker commit baseline baseline_sha at other top
+  local tag=$1 marker drafted commit baseline baseline_sha at top
   export LC_ALL=C
-  marker=$(printf '%s' "${BODY:-}" | grep -oE '<!-- release: commit=[0-9a-f]{40} baseline=[^ ]+ baseline_commit=[^ ]+ -->' | head -n 1 || true)
+  marker=$(printf '%s' "${BODY:-}" | grep -oE '<!-- release: tag=[^ ]+ commit=[0-9a-f]{40} baseline=[^ ]+ baseline_commit=[^ ]+ -->' | head -n 1 || true)
   [ -n "$marker" ] || die "$tag was published without the line its draft carries (RELEASE.md, \"By hand\"): nothing says which commit was checked. Delete the release and the tag, and draft it again."
+  drafted=$(printf '%s' "$marker" | sed -E 's/.* tag=([^ ]+) .*/\1/')
   commit=$(printf '%s' "$marker" | sed -E 's/.* commit=([0-9a-f]{40}) .*/\1/')
   baseline=$(printf '%s' "$marker" | sed -E 's/.* baseline=([^ ]+) .*/\1/')
   baseline_sha=$(printf '%s' "$marker" | sed -E 's/.* baseline_commit=([^ ]+) .*/\1/')
 
+  [ "$tag" = "$drafted" ] \
+    || die "the release was drafted as $drafted and published as $tag: the checks find a release by its tag name. Delete the release and the tag, and draft it again."
   at=$(git rev-parse --verify --quiet "refs/tags/$tag^{commit}") || die "the tag $tag is not here"
   [ "$at" = "$commit" ] \
     || die "$tag points at $at, but the draft was checked as $commit: the release holds something that was not checked. Delete the release and the tag, and draft it again."
 
-  # The release before this one, whatever has been published since.
-  top=""
-  for other in $(git tag --list 'v[0-9]*' | sed -n 's/^v//p' | sed 's/-/~/' | sort -V | sed 's/~/-/'); do
-    if newer "${tag#v}" "$other"; then top=$other; fi
-  done
+  # Every other tag counts, a higher one too: this runs when the release is published, and a
+  # draft is checked as an update from the highest tag there was.
+  top=$(git tag --list 'v[0-9]*' | grep -vxF "$tag" | sed -n 's/^v//p' | sed 's/-/~/' | sort -V | tail -n 1 | sed 's/~/-/' || true)
   if [ -z "$top" ]; then
     [ "$baseline" = none ] || die "the draft of $tag was checked as an update from $baseline, which is not a tag here"
   else
     if [ "$baseline" != "v$top" ] || [ "$baseline_sha" != "$(git rev-parse "v$top^{commit}")" ]; then
-      die "the draft of $tag was checked as an update from $baseline, but the release before it is v$top: another release was published in between. Delete this release and its tag, and draft it again."
+      die "the draft of $tag was checked as an update from $baseline, but the highest other release is v$top: another release was published in between. Delete this release and its tag, and draft it again."
     fi
   fi
   note "$tag is at $commit, the commit its draft was checked as, updating from $baseline"

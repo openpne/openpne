@@ -24,7 +24,7 @@ on:
         type: string
         default: ''
 
-# A second release waits for the first: each is checked as an update from the release before it.
+# Each release is checked as an update from the one before it, so two runs never overlap.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -42,7 +42,7 @@ jobs:
       baseline: ${{ steps.check.outputs.baseline }}
       baseline_sha: ${{ steps.check.outputs.baseline_sha }}
     steps:
-      # The checks are the ones on main, whichever ref the run was started from.
+      # A run started from another ref would bring that ref's copy of this workflow and of the validation.
       - name: Refuse a run started from another branch
         if: github.ref != 'refs/heads/main'
         run: |
@@ -92,25 +92,15 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
+      # The script is main's, like the other checks; the lock files are the release's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: checks
+          sparse-checkout: .github/scripts
       - name: Audit what a site installs
         env:
           ALLOWED: ${{ inputs.allow_advisories }}
-        run: |
-          set -uo pipefail
-          composer audit --locked --no-dev 2>&1 | tee composer-audit.txt; composer_status=${PIPESTATUS[0]}
-          npm audit --omit=dev 2>&1 | tee npm-audit.txt; npm_status=${PIPESTATUS[0]}
-          if [ "$composer_status" = 0 ] && [ "$npm_status" = 0 ]; then
-            exit 0
-          fi
-          found=$(grep -ohE 'PKSA-[a-z0-9-]+|GHSA-[a-z0-9-]+' composer-audit.txt npm-audit.txt | sort -u)
-          allowed=$(printf '%s' "$ALLOWED" | tr ', ' '\n\n' | grep . | sort -u || true)
-          unaccepted=$(comm -23 <(printf '%s\n' "$found") <(printf '%s\n' "$allowed"))
-          # An audit that failed without naming an advisory failed for another reason: not acceptable either.
-          if [ -z "$found" ] || [ -n "$unaccepted" ]; then
-            echo "::error::advisories in what the release ships, not accepted for it: ${unaccepted:-none named, the audit itself failed}"
-            exit 1
-          fi
-          echo "Every advisory found was accepted for this release: $(printf '%s' "$found" | tr '\n' ' ')"
+        run: checks/.github/scripts/release-audit.sh
 
   draft:
     name: Draft the release
@@ -152,7 +142,7 @@ jobs:
             gh release delete "v$VERSION" --yes
           fi
           # release-verify.yml reads this line when the draft is published.
-          marker="<!-- release: commit=$SHA baseline=${BASELINE:-none} baseline_commit=${BASELINE_SHA:-none} -->"
+          marker="<!-- release: tag=v$VERSION commit=$SHA baseline=${BASELINE:-none} baseline_commit=${BASELINE_SHA:-none} -->"
           if [ -n "$BASELINE" ]; then
             gh release create "v$VERSION" --target "$SHA" --draft --prerelease --title "v$VERSION" \
               --notes "$marker" --generate-notes --notes-start-tag "$BASELINE"

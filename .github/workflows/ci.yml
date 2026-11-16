@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-  # release.yml runs every lane against the commit it is about to draft a release from.
   workflow_call:
     inputs:
       ref:
@@ -314,6 +313,8 @@ jobs:
     # A release runs it itself, against the last tag: the lookup here would name the release's own branch.
     if: needs.changes.outputs.code == 'true' && inputs.ref == ''
     uses: ./.github/workflows/release-compat.yml
+    with:
+      onto: ${{ github.base_ref }}
 
   lint:
     name: Lint (Pint)

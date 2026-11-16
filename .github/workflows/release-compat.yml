@@ -13,6 +13,10 @@ on:
         description: Tag or commit to update from. Defaults to the last release, or to a release branch ahead of it.
         type: string
         default: ''
+      onto:
+        description: Branch the change is going onto, when it is a pull request.
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -34,11 +38,12 @@ jobs:
         id: find
         env:
           GIVEN: ${{ inputs.baseline }}
+          ONTO: ${{ inputs.onto }}
         run: |
           set -euo pipefail
           from="$GIVEN"
           if [ -z "$from" ]; then
-            from=$(.github/scripts/release-compat.sh baseline)
+            from=$(.github/scripts/release-compat.sh baseline "$ONTO")
           fi
           if [ -z "$from" ]; then
             echo "No release yet: nothing to be compatible with."

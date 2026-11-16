@@ -22,7 +22,7 @@ digit. A release tagged any other way is invisible to them.
 An urgent fix to the last release is the same thing with another starting point: cut
 `release/<next version>` from the last release's tag and copy the fix onto it. If a release is
 already being reviewed under that version, rename its branch to the version after, release the fix,
-then copy the fix onto the renamed branch (the checks ask for it).
+then copy the fix from `main` onto the renamed branch as well (the checks ask for it).
 
 ## Draft, then publish
 
@@ -30,19 +30,21 @@ then copy the fix onto the renamed branch (the checks ask for it).
    the tip of the branch. It refuses anything but that tip, runs every CI lane on it, rehearses the
    update from the last release on SQLite and MySQL, and audits the dependencies the release ships.
    If a copy differs from its original — the fix did not apply as it was — name it in `differs`;
-   the run fails until the list matches. `allow_advisories` accepts named advisories for one
-   release.
-2. **Publish the draft** it leaves under Releases. Publishing creates the tag. A check then compares
+   the run fails until the list matches. `allow_advisories` accepts advisories for one release,
+   each named by any id it goes by (PKSA, GHSA or CVE).
+2. **Publish the draft** it leaves under Releases, without changing its tag. Publishing creates the tag. A check then compares
    the tag with what was drafted; if it fails, delete the release and the tag and draft again.
 3. Delete the branch.
 
 ## By hand
 
-When the workflow cannot draft the release, a maintainer can, after running the same checks
-locally (`.github/scripts/release-validate.sh check <version> <sha>`). The body has to start with
-the line the workflow would write, or the check after publishing fails:
+When the workflow cannot draft the release, a maintainer can. Nothing is checked on this path
+except what is run by hand: `DIFFERS=<commits> .github/scripts/release-validate.sh check <version>
+<sha>` checks the branch (after `git fetch --prune --prune-tags origin`), and CI, the update
+rehearsal and the audit are not run at all. The body has to carry the line the workflow would
+write, or the check after publishing fails:
 
 ```bash
 gh release create v<version> --target <sha> --draft --prerelease --title v<version> \
-  --notes '<!-- release: commit=<sha> baseline=<last tag, or none> baseline_commit=<its commit, or none> -->'
+  --notes '<!-- release: tag=v<version> commit=<sha> baseline=<last tag, or none> baseline_commit=<its commit, or none> -->'
 ```

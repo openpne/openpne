@@ -1,6 +1,5 @@
-# The checks in release.yml run when a release is drafted; the tag is created later, when someone
-# publishes the draft. This says whether what was published is what was checked. It runs after the
-# fact: a failure here means the release and its tag have to be deleted and drafted again.
+# A release is checked when it is drafted and tagged later, when someone publishes the draft: this
+# says, after the fact, whether what was published is what was checked (RELEASE.md).
 name: Release published
 
 on:
