@@ -16,11 +16,13 @@ class StaticAssetVersionGuardTest extends TestCase
         $found = [];
 
         foreach ($this->sources('resources/views') as $path => $source) {
-            preg_match_all('/<script\b[^>]*?\bsrc=("[^"]*"|[^\s>]+)/', $source, $scripts);
-            preg_match_all('/<link\b(?=[^>]*\brel="stylesheet")[^>]*?\bhref=("[^"]*"|[^\s>]+)/', $source, $stylesheets);
+            // A `->` inside a Blade echo would otherwise end the tag for the two patterns below.
+            $source = (string) preg_replace_callback('/\{\{.*?\}\}|\{!!.*?!!\}/s', static fn (array $echo): string => str_replace('>', "\x01", $echo[0]), $source);
+            preg_match_all('/<script\b[^>]*?\bsrc=("[^"]*"|[^\s>]+)/i', $source, $scripts);
+            preg_match_all('/<link\b(?=[^>]*\brel=["\']?stylesheet\b)[^>]*?\bhref=("[^"]*"|[^\s>]+)/i', $source, $stylesheets);
             foreach ([...$scripts[1], ...$stylesheets[1]] as $value) {
                 if (preg_match(self::LINKED, $value) !== 1) {
-                    $found[$path][] = $value;
+                    $found[$path][] = str_replace("\x01", '>', $value);
                 }
             }
         }
