@@ -36,8 +36,9 @@ Run them in the app root, as the user the site runs as.
    php artisan down --render="errors::503"
    ```
 
-   `--render` draws the maintenance page now and serves it without starting the application, so a
-   request that arrives while the code is being replaced still gets that page. A queue worker
+   `--render` draws the maintenance page now and serves it to a page request without starting the
+   application, so a page request that arrives while the code is being replaced still gets it. (A
+   request that asks for JSON is still handed to the application.) A queue worker
    takes no new job while the site is down; wait for the job it is running, if any, to finish
    before going on.
 
@@ -113,9 +114,10 @@ Run them in the app root, as the user the site runs as.
 
 Leave the site down and go back to the release you came from:
 
-1. Check out that release and run step 6 for it.
-2. Put back `.env` if you changed it.
-3. Restore the database **into an emptied one** — drop it and create it again first. A dump
+1. Put back `.env` if you changed it.
+2. Check out that release and run step 6 for it.
+3. Restore the database **into an emptied one** — drop it and create it again first, or drop
+   every table in it. A dump
    replaces only the tables it contains, and a migration that ran before the failure may have
    created one it does not; left behind, that table stops the next attempt at `migrate`. (For
    SQLite, put the copied file back in place of the database file.)
