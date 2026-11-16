@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Tools\AddTalkReactionTool;
 use App\Mcp\Tools\ListDiariesTool;
 use App\Mcp\Tools\ListTalkRoomsTool;
 use App\Mcp\Tools\MarkTalkReadTool;
@@ -15,6 +16,7 @@ use App\Mcp\Tools\ReadDiaryTool;
 use App\Mcp\Tools\ReadMemberProfileTool;
 use App\Mcp\Tools\ReadTalkMessageImagesTool;
 use App\Mcp\Tools\ReadTalkMessagesTool;
+use App\Mcp\Tools\RemoveTalkReactionTool;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
@@ -40,6 +42,8 @@ class OpenPneServer extends Server
         ReadTalkMessageImagesTool::class,
         PostTalkMessageTool::class,
         MarkTalkReadTool::class,
+        AddTalkReactionTool::class,
+        RemoveTalkReactionTool::class,
         ListDiariesTool::class,
         ReadDiaryTool::class,
         ReadDiaryImagesTool::class,

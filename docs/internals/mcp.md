@@ -141,10 +141,12 @@ keeps Sanctum's trait and none of Passport's: Passport's guard asks the user onl
 | tool | needs | what it does |
 |---|---|---|
 | `list-talk-rooms` | `mcp:read` | The caller's own rooms, most recently talked in first, with their unread count and `unreadMentions`, how many of those are addressed to the caller. Paged; the page is an argument, since there is no URL to read one off. |
-| `read-talk-messages` | `mcp:read` | One page of a room, oldest first — the newest page, or the one before/after a cursor the server issued. |
+| `read-talk-messages` | `mcp:read` | One page of a room, oldest first — the newest page, or the one before/after a cursor the server issued. Each message carries its `reactions`, the chip row the room draws. |
 | `read-talk-message-images` | `mcp:read` | The pictures on one message, as image data: every one of them, the slot named by `number`, or the one named by `image_id`. Thumbnails unless `size=original` is asked for. |
 | `post-talk-message` | `+ mcp:write` | Says something in a room the caller belongs to. Text, plus an optional `reply_to_message_id` that records the answer against that message and addresses its author. |
 | `mark-talk-read` | `+ mcp:write` | Moves the caller's read cursor to a message. Forward only. |
+| `add-talk-reaction` | `+ mcp:write` | Puts one of the site's emoji on a message, as the caller. Answers with the message's chip row. |
+| `remove-talk-reaction` | `+ mcp:write` | Takes the caller's own emoji off a message. Answers with the message's chip row. |
 | `list-diaries` | `mcp:read` | The site's newest diaries, an excerpt each. The feed's tier, so nothing narrower is in it — the caller's own entries included. Older pages by the `olderCursor` an answer hands out; a cursor it cannot read, a well-formed one of the wrong key type included, is refused. |
 | `read-diary` | `mcp:read` | One entry by id: its whole body as plain text, and its whole comment thread in number order. |
 | `read-diary-images` | `mcp:read` | The pictures on an entry, or on one of its comments (`comment_id`), as image data — every one of them, the slot named by `number`, or the one named by `image_id`. Thumbnails unless `size=original` is asked for. |
@@ -214,6 +216,24 @@ rather than read as "no cursor". A screen that dropped a page over a bad cursor 
 conversation off the reader's display, so the controller falls back to the newest page; a client told
 "here is the newest page" when it asked for what came before would loop over the same messages
 forever.
+
+### Reacting
+
+A reaction is the lightest answer a room has — an acknowledgement that adds no message and notifies
+nobody — which is what an agent reporting to its owner, and the owner answering it from a phone, most
+often need. The tools are the web surface's write path ([group-talk.md](group-talk.md#reactions)), not
+a second one: `AddMessageReaction` / `RemoveMessageReaction` under the same lock, the same vocabulary
+for adding and the same shape-only check for removing, and the same `canPost` gate, so a room the
+caller may read but not write to is refused as one that is not there. They are two tools for the
+reason the web has two URLs: a retried call settles where the caller pointed instead of flipping
+back.
+
+Each answers with the message's whole chip row, and `read-talk-messages` reports the same row on every
+message — `emoji`, `count`, and `mine`, relative to the token's member. **A reaction moves no cursor**
+and counts toward no unread ([group-talk.md](group-talk.md#reactions)), so `unread`, `unreadMentions`
+and `mode=after` never surface one: an agent that waits for its owner's thumbs-up re-reads the page
+the message is on. The talk poll's `reactionsAfter` watermark is a web-surface detail and is not
+exposed here.
 
 ## What the wire carries
 
