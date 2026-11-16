@@ -8,6 +8,8 @@ use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Queries\ReplyReferences;
 use App\Features\GroupTalk\Serializers\McpTalkSerializer;
+use App\Features\Reactions\Queries\ReactionAggregates;
+use App\Models\GroupMessage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
@@ -20,13 +22,13 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('read-talk-messages')]
 #[Title('Read talk messages')]
-#[Description('One page of a group talk room, oldest message first. Read the newest page, then walk back with mode=before or forward with mode=after, handing back a cursor the previous page returned.')]
+#[Description('One page of a group talk room, oldest message first. Read the newest page, then walk back with mode=before or forward with mode=after, handing back a cursor the previous page returned. Each message carries its reactions: every emoji on it, how many members hold it, and whether you are one of them. A reaction moves no cursor, so read the page again to see new ones.')]
 #[IsReadOnly]
 class ReadTalkMessagesTool extends TalkTool
 {
     private const MODES = ['latest', 'before', 'after'];
 
-    public function handle(Request $request, GroupTalkMessages $messages, ReplyReferences $replies): Response|ResponseFactory
+    public function handle(Request $request, GroupTalkMessages $messages, ReplyReferences $replies, ReactionAggregates $reactions): Response|ResponseFactory
     {
         $validated = $request->validate([
             'group_id' => ['required', 'integer', 'min:1'],
@@ -34,7 +36,8 @@ class ReadTalkMessagesTool extends TalkTool
             'cursor' => ['nullable', 'string', 'required_if:mode,before', 'required_if:mode,after'],
         ]);
 
-        $group = $this->readableRoom($this->member($request), (int) $validated['group_id']);
+        $member = $this->member($request);
+        $group = $this->readableRoom($member, (int) $validated['group_id']);
         if ($group === null) {
             return $this->refused();
         }
@@ -53,9 +56,11 @@ class ReadTalkMessagesTool extends TalkTool
             default => $messages->latest($group),
         };
 
+        $chips = $reactions($member, GroupMessage::class, $page->messages->map(fn (GroupMessage $message): int => (int) $message->getKey())->values()->all());
+
         // No relations asked for: this wire reports the answered author as an id, which is a column of
         // the parent row.
-        return Response::structured(McpTalkSerializer::page($page, $replies($group, $page->messages, with: [])));
+        return Response::structured(McpTalkSerializer::page($page, $replies($group, $page->messages, with: []), $chips));
     }
 
     /**

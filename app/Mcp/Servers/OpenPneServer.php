@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Tools\AddTalkReactionTool;
 use App\Mcp\Tools\ListConversationsTool;
 use App\Mcp\Tools\ListDiariesTool;
 use App\Mcp\Tools\ListTalkRoomsTool;
@@ -18,6 +19,7 @@ use App\Mcp\Tools\ReadDirectMessagesTool;
 use App\Mcp\Tools\ReadMemberProfileTool;
 use App\Mcp\Tools\ReadTalkMessageImagesTool;
 use App\Mcp\Tools\ReadTalkMessagesTool;
+use App\Mcp\Tools\RemoveTalkReactionTool;
 use App\Mcp\Tools\SendDirectMessageTool;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
@@ -39,6 +41,9 @@ use Laravel\Mcp\Server\Tool;
     MARKDOWN)]
 class OpenPneServer extends Server
 {
+    /** The library pages tools/list at 15, and a client that does not follow the cursor loses the tools past it. */
+    public int $defaultPaginationLength = 50;
+
     /** @var array<int, class-string<Tool>> */
     protected array $tools = [
         ListTalkRoomsTool::class,
@@ -46,6 +51,8 @@ class OpenPneServer extends Server
         ReadTalkMessageImagesTool::class,
         PostTalkMessageTool::class,
         MarkTalkReadTool::class,
+        AddTalkReactionTool::class,
+        RemoveTalkReactionTool::class,
         ListConversationsTool::class,
         ReadDirectMessagesTool::class,
         SendDirectMessageTool::class,

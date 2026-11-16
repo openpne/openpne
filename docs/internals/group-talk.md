@@ -686,7 +686,8 @@ An emoji on a message, in the `reactions` table — polymorphic from the first r
 where reactions land first and not where they stop. The table, the vocabulary, the two-URL write, the
 SQL-counted chip row and the bounded reactor list are [reactions.md](reactions.md); what follows is
 what talk adds. Writing is `canPost` (reacting is speaking in the room), reading the reactor list is
-`canView`, and a refusal is the usual 404.
+`canView`, and a refusal is the usual 404. An MCP client reacts through the same actions
+([mcp.md](mcp.md#reacting)).
 
 Nothing notifies. The room's unread badge is what tells a member something happened here, and a
 reaction did not happen *to* them in the sense a mention does.
