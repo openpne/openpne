@@ -1,0 +1,138 @@
+# The checks of .github/scripts/release-compat.sh as jobs. With no release to update from, the
+# lookup finds none and the other two jobs are skipped.
+name: Release compatibility
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to check. Defaults to the commit the caller runs on.
+        type: string
+        default: ''
+      baseline:
+        description: Tag or commit to update from. Defaults to the highest release tag.
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Find the last release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.find.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Find the last release
+        id: find
+        env:
+          GIVEN: ${{ inputs.baseline }}
+        run: |
+          set -euo pipefail
+          tag="$GIVEN"
+          if [ -z "$tag" ]; then
+            tag=$(.github/scripts/release-compat.sh baseline)
+          fi
+          if [ -z "$tag" ]; then
+            echo "No release tag yet: nothing to be compatible with."
+          else
+            git rev-parse --verify --quiet "$tag^{commit}" >/dev/null \
+              || { echo "::error::$tag is not a commit in this repository"; exit 1; }
+            echo "Updating from $tag."
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  migrations:
+    name: Released migrations are unchanged
+    needs: baseline
+    if: needs.baseline.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+      - env:
+          BASELINE: ${{ needs.baseline.outputs.tag }}
+        run: .github/scripts/release-compat.sh migrations "$BASELINE" HEAD
+
+  rehearse:
+    name: Update from the last release (${{ matrix.db }})
+    needs: baseline
+    if: needs.baseline.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [sqlite, mysql]
+    env:
+      # The image ci.yml's mysql-shard job pins: bump the tag and the digest in both places together.
+      MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
+      DB_CONNECTION: ${{ matrix.db }}
+      BASELINE: ${{ needs.baseline.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Start MySQL
+        if: matrix.db == 'mysql'
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if docker pull "$MYSQL_IMAGE"; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              echo "::error::could not pull $MYSQL_IMAGE after 5 attempts"
+              exit 1
+            fi
+            echo "pull attempt $attempt failed; retrying in $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+          docker run -d --name mysql -p 3306:3306 --tmpfs /var/lib/mysql:rw \
+            -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=openpne_rehearsal \
+            --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -psecret" \
+            --health-interval=5s --health-timeout=5s --health-retries=20 \
+            "$MYSQL_IMAGE"
+          for _ in $(seq 1 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' mysql)
+            if [ "$status" = healthy ]; then
+              exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' mysql)" != true ]; then
+              echo "::error::MySQL exited during startup"
+              docker logs mysql
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::MySQL did not become healthy within 200s (last status: $status)"
+          docker logs mysql
+          exit 1
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+      - name: Update a site from the last release
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_DATABASE: openpne_rehearsal
+          DB_USERNAME: root
+          DB_PASSWORD: secret
+        run: .github/scripts/release-compat.sh rehearse "$BASELINE" HEAD
