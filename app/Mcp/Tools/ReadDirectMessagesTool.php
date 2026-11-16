@@ -40,8 +40,8 @@ class ReadDirectMessagesTool extends DirectMessageTool
         }
 
         $mode = $validated['mode'] ?? 'latest';
-        // A cursor the server did not hand out is refused rather than read as "no cursor", for the
-        // reason talk's is: a client told "here is the newest page" would loop over it forever.
+        // A cursor that does not parse is refused rather than read as "no cursor", for the reason
+        // talk's is: a client told "here is the newest page" would loop over it forever.
         $cursor = $mode === 'latest' ? null : ConversationCursor::tryParse($validated['cursor'] ?? null);
         if ($mode !== 'latest' && $cursor === null) {
             return $this->refused();

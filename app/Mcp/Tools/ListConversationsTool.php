@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('list-conversations')]
 #[Title('List direct-message conversations')]
-#[Description('Your one-to-one direct-message conversations, the one written in most recently first, each with the other member, how many of their messages you have not read, and a one-line preview of the latest. A conversation with a member who has left is listed with a null memberId and cannot be opened here.')]
+#[Description('Your one-to-one direct-message conversations, the one written in most recently first, each with the other member, how many of their messages you have not read, and a one-line preview of the latest. A conversation with a member who has left is listed with a null memberId; it cannot be opened or marked read here, so its unread count stays.')]
 #[IsReadOnly]
 class ListConversationsTool extends DirectMessageTool
 {

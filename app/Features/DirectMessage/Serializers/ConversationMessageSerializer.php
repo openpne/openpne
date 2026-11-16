@@ -78,7 +78,7 @@ class ConversationMessageSerializer
      * bucket where no receipt names a member. An upgraded OpenPNE 3 send may carry several receipts, so
      * the answer is this conversation's rather than whichever one the relation holds first.
      */
-    private static function read(DirectMessage $message, int $viewer, ?Member $counterpart): ?bool
+    public static function read(DirectMessage $message, int $viewer, ?Member $counterpart): ?bool
     {
         if ($counterpart === null || (int) $message->sender_id !== $viewer) {
             return null;

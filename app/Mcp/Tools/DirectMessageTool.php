@@ -18,10 +18,7 @@ abstract class DirectMessageTool extends McpTool
         return Feature::DirectMessage->enabled();
     }
 
-    /**
-     * The other side of a conversation. Yourself and an id naming nobody answer alike, as the
-     * conversation screen 404s both. The withdrawn bucket names no member and is not addressable here.
-     */
+    /** Yourself and an id naming nobody answer alike, as the conversation screen 404s both. */
     protected function counterpart(Member $viewer, int $memberId): ?Member
     {
         $member = Member::query()->find($memberId);

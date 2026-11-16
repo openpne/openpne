@@ -10,9 +10,7 @@ use App\Features\DirectMessage\ConversationSummary;
 use App\Features\GroupTalk\Serializers\McpTalkSerializer;
 use App\Files\PostAttachments;
 use App\Models\DirectMessage;
-use App\Models\DirectMessageRecipient;
 use App\Models\Member;
-use App\Support\ChatPreview;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -37,12 +35,7 @@ class McpConversationSerializer
             'isAi' => (bool) $row->counterpart?->isAiAccount(),
             'unread' => $row->unread,
             'lastMessageAt' => CarbonImmutable::instance($latest->created_at)->toIso8601String(),
-            // The conversation list's own preview, so the two cannot disagree about what a row leads with.
-            'preview' => ChatPreview::lineOrImages(
-                [(string) $latest->body, (string) $latest->subject],
-                (bool) $latest->pictures_exists,
-                (bool) $latest->files_exists,
-            ),
+            'preview' => ConversationListSerializer::preview($latest),
         ];
     }
 
@@ -61,15 +54,12 @@ class McpConversationSerializer
     }
 
     /**
-     * `read` is the sender's view of delivery — true once the counterpart opened it — and null on a
-     * message the caller received, as the conversation screen reports it.
-     *
-     * @return array{id: int, body: string, subject: string|null, authorId: int|null, authorName: string|null, authorIsAi: bool, isOwn: bool, read: bool|null, createdAt: string, cursor: string, hasImages: bool, imageCount: int}
+     * @return array{id: int, body: string, subject: string|null, authorId: int|null, authorName: string|null, authorIsAi: bool, isOwn: bool, read: bool|null, createdAt: string, cursor: string, hasImages: bool, imageCount: int, fileCount: int}
      */
     public static function message(DirectMessage $message, Member $viewer, Member $counterpart): array
     {
-        $images = PostAttachments::partition($message->files)['images']->count();
-        $own = (int) $message->sender_id === (int) $viewer->getKey();
+        $attachments = PostAttachments::partition($message->files);
+        $images = $attachments['images']->count();
 
         return [
             'id' => (int) $message->getKey(),
@@ -79,12 +69,13 @@ class McpConversationSerializer
             'authorId' => $message->sender?->getKey(),
             'authorName' => $message->sender?->name,
             'authorIsAi' => (bool) $message->sender?->isAiAccount(),
-            'isOwn' => $own,
-            'read' => $own ? self::delivered($message, $counterpart) : null,
+            'isOwn' => (int) $message->sender_id === (int) $viewer->getKey(),
+            'read' => ConversationMessageSerializer::read($message, (int) $viewer->getKey(), $counterpart),
             'createdAt' => CarbonImmutable::instance($message->created_at)->toIso8601String(),
             'cursor' => (string) ConversationCursor::of($message),
             'hasImages' => $images > 0,
             'imageCount' => $images,
+            'fileCount' => $attachments['files']->count(),
         ];
     }
 
@@ -105,15 +96,5 @@ class McpConversationSerializer
             'previousCursor' => $messages === [] ? null : $messages[0]['cursor'],
             'nextCursor' => $messages === [] ? null : $messages[count($messages) - 1]['cursor'],
         ];
-    }
-
-    /** This conversation's receipt, not whichever one an upgraded multi-recipient send holds first. */
-    private static function delivered(DirectMessage $message, Member $counterpart): bool
-    {
-        $receipt = $message->recipients->first(
-            fn (DirectMessageRecipient $r): bool => (int) $r->recipient_id === (int) $counterpart->getKey()
-        );
-
-        return $receipt?->read_at !== null;
     }
 }

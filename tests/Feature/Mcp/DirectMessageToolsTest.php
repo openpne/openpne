@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp;
 
+use App\Features\DirectMessage\Queries\ConversationList;
 use App\Mcp\McpAbilities;
 use App\Mcp\Servers\OpenPneServer;
 use App\Mcp\Tools\ListConversationsTool;
@@ -11,7 +12,9 @@ use App\Mcp\Tools\MarkDirectMessagesReadTool;
 use App\Mcp\Tools\ReadDirectMessagesTool;
 use App\Mcp\Tools\SendDirectMessageTool;
 use App\Models\DirectMessage;
+use App\Models\DirectMessageFile;
 use App\Models\DirectMessageRecipient;
+use App\Models\File;
 use App\Models\Member;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Support\SnsSettingKey;
@@ -19,9 +22,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\CapturesSecurityLog;
 
 class DirectMessageToolsTest extends McpTestCase
 {
+    use CapturesSecurityLog;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -86,6 +92,12 @@ class DirectMessageToolsTest extends McpTestCase
         OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $asker->getKey(), 'body' => 'an answer'])
             ->assertOk();
 
+        // Only them: someone else having written, or the agent's own message to a member, opens nobody.
+        $this->deliver($agent, $stranger, 'sent some other way');
+
+        OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $stranger->getKey(), 'body' => 'hello again'])
+            ->assertHasErrors(['No such conversation']);
+
         // A person's token is not narrowed: choosing whom to write to is theirs.
         $this->acting($stranger);
         OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $owner->getKey(), 'body' => 'from a person'])
@@ -104,6 +116,33 @@ class DirectMessageToolsTest extends McpTestCase
         }
 
         $this->assertDatabaseCount('direct_messages', 0);
+    }
+
+    public function test_sends_are_counted_per_member_before_the_recipient_is_looked_at(): void
+    {
+        Notification::fake();
+        $this->captureSecurityLog();
+        config(['openpne.throttle.direct_message' => 2]);
+        [$sender, $other, $bystander] = Member::factory()->count(3)->create();
+
+        $this->acting($sender);
+        foreach (['one', 'two'] as $body) {
+            OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $other->getKey(), 'body' => $body])->assertOk();
+        }
+
+        // Another token of the same member, naming nobody: the budget is the member's, and the answer
+        // is the limit's rather than the refusal a missing member gets.
+        $this->acting($sender);
+        OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $other->getKey() + 9999, 'body' => 'three'])
+            ->assertHasErrors(['Too many direct messages']);
+
+        $this->assertDatabaseCount('direct_messages', 2);
+        $logged = $this->assertOneSecurityEvent('throttle.hit');
+        $this->assertEquals($sender->getKey(), $logged['member_id']);
+        $this->assertSame('send-direct-message', $logged['tool']);
+
+        $this->acting($bystander);
+        OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $other->getKey(), 'body' => 'mine'])->assertOk();
     }
 
     public function test_a_read_only_token_is_told_which_ability_it_is_missing(): void
@@ -136,6 +175,62 @@ class DirectMessageToolsTest extends McpTestCase
                 ->where('conversations.0.preview', 'to bob')
                 ->where('conversations.1.memberId', $alice->getKey())
                 ->where('conversations.1.unread', 2)
+                ->etc());
+    }
+
+    public function test_the_list_pages_by_argument_and_names_nobody_for_the_withdrawn_bucket(): void
+    {
+        $viewer = Member::factory()->create();
+        foreach (Member::factory()->count(ConversationList::PER_PAGE)->create() as $i => $other) {
+            $this->deliver($other, $viewer, 'hi', now()->subMinutes($i + 1));
+        }
+        $left = $this->deliver(Member::factory()->create(), $viewer, 'before leaving', now()->subHour());
+        DB::table('direct_messages')->where('id', $left->getKey())->update(['sender_id' => null]);
+        $this->acting($viewer);
+
+        OpenPneServer::tool(ListConversationsTool::class, ['page' => 2])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('page', 2)
+                ->where('lastPage', 2)
+                ->has('conversations', 1)
+                ->where('conversations.0.memberId', null)
+                ->where('conversations.0.name', null)
+                ->where('conversations.0.unread', 1)
+                ->etc());
+    }
+
+    public function test_a_page_reports_the_counterparts_receipt_and_the_files_a_message_carries(): void
+    {
+        [$viewer, $other] = Member::factory()->count(2)->create();
+        $opened = $this->deliver($viewer, $other, 'opened', now()->subMinutes(3));
+        $opened->recipients()->update(['read_at' => now()]);
+        $attached = $this->deliver($other, $viewer, '', now()->subMinutes(2));
+        DirectMessageFile::factory()->create([
+            'direct_message_id' => $attached->getKey(),
+            'file_id' => File::factory()->create(['type' => 'application/pdf']),
+        ]);
+        $this->deliver($viewer, $other, 'latest', now()->subMinute());
+        $this->acting($viewer);
+
+        $cursor = null;
+        OpenPneServer::tool(ReadDirectMessagesTool::class, ['member_id' => $other->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(function ($json) use (&$cursor): void {
+                $json->where('messages.0.read', true)
+                    ->where('messages.1.hasImages', false)
+                    ->where('messages.1.fileCount', 1)
+                    ->where('messages.2.read', false)
+                    ->etc();
+                $cursor = $json->toArray()['messages'][2]['cursor'];
+            });
+
+        OpenPneServer::tool(ReadDirectMessagesTool::class, ['member_id' => $other->getKey(), 'mode' => 'before', 'cursor' => $cursor])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->has('messages', 2)
+                ->where('messages.0.body', 'opened')
+                ->where('messages.1.fileCount', 1)
                 ->etc());
     }
 
@@ -186,6 +281,21 @@ class DirectMessageToolsTest extends McpTestCase
 
         OpenPneServer::tool(MarkDirectMessagesReadTool::class, ['member_id' => $other->getKey(), 'message_id' => $elsewhere->getKey()])
             ->assertHasErrors(['No such conversation']);
+    }
+
+    public function test_marking_read_clears_the_feed_row_the_message_raised(): void
+    {
+        [$viewer, $other] = Member::factory()->count(2)->create();
+        $this->acting($other);
+        OpenPneServer::tool(SendDirectMessageTool::class, ['member_id' => $viewer->getKey(), 'body' => 'ping'])->assertOk();
+        $this->assertSame(1, $viewer->unreadNotifications()->count());
+
+        $this->acting($viewer);
+        OpenPneServer::tool(MarkDirectMessagesReadTool::class, [
+            'member_id' => $other->getKey(), 'message_id' => DirectMessage::query()->sole()->getKey(),
+        ])->assertOk();
+
+        $this->assertSame(0, $viewer->unreadNotifications()->count());
     }
 
     public function test_switching_direct_messages_off_takes_the_tools_away(): void

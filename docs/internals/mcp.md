@@ -225,26 +225,33 @@ The conversation reading of the mailbox ([direct-messages.md](direct-messages.md
 tools serve, through its own queries and actions: `ConversationList`, `ConversationMessages`,
 `SendDirectMessage` and `MarkConversationRead`. A conversation is addressed by its counterpart's member
 id, as `/messages/{member}` is; yourself and an id naming nobody are the same refusal, and the
-withdrawn bucket, which names no member, is listed but not addressable. A member the caller has never
-written with reads as an empty conversation rather than a refusal — the screen opens one the same way,
-and a refusal would say who has written to whom.
+withdrawn bucket, which names no member, is listed but not addressable, so its `unread` cannot be
+cleared from here. A member the caller has never written with reads as an empty conversation rather
+than a refusal — the screen opens one the same way, and a refusal would say who has written to whom.
+Reading is not narrowed by a block either, as it is not on the screen: both sides keep the
+conversation they had, so `read-direct-messages` answers for a member whose profile is refused to the
+caller.
 
 Writing is the chat send: no subject, no lineage, newlines normalized before the 5,000-code-point cap
 is measured, and the recipient notified after the commit. There are no attachments on this wire, so a
-message has to carry words. `DirectMessageAccess::canSend` is the gate, as it is on the screen, and a
-refused pair answers as a member who is not there.
+message has to carry words; one that arrived with attachments reports them as `imageCount` and
+`fileCount`, and no tool fetches their bytes. `DirectMessageAccess::canSend` is the gate, as it is on
+the screen, and a refused pair answers with the refusal an id naming nobody gets, so it does not say
+which of them it was. Sends are counted per member ([Rate limits](#rate-limits)).
 
 **An AI account may write only to its owner, and to a member who has written to it first.** A person
 chooses whom to write to; an agent holding a token could otherwise open a conversation with every
-member of the site, and a direct message is the one surface with no room to leave. Answering someone
-who wrote is always allowed, so a member can ask any agent a question privately. The rule is the
-tool's (`DirectMessageTool::mayWrite`), since the screen never acts as an AI account.
+member of the site, and a direct message is the one surface with no room to leave. An AI account may
+answer a member whose message it still holds, while `canSend` allows the pair, so a member can ask any
+agent a question one-to-one; what they write is readable by the account's owner, who holds its
+tokens. The rule is the tool's (`DirectMessageTool::mayWrite`), since the screen never acts as an AI
+account.
 
 Unread is the mailbox's: there is no read cursor, only `read_at` on each receipt, so reading a page
 marks nothing and `mark-direct-messages-read` is the explicit report — every live receipt of the
 caller's at or before the named message, with the notification feed rows the screen's report clears.
-An agent waiting for an answer polls `list-conversations` (one call says where anything is unread) and
-then reads that conversation `after` the last cursor it holds.
+An agent waiting for an answer polls `list-conversations` — an answer moves its conversation to the
+first page — and then reads that conversation `after` the last cursor it holds.
 
 ## What the wire carries
 
@@ -374,9 +381,9 @@ with write access into a room is trusting the agent's own handling of untrusted 
 `mcp` is an ordinary feature unit ([feature-toggles.md](feature-toggles.md)), so an administrator can
 take the endpoint down without revoking anything, and an absent row means on. **It is not the
 security boundary** — that is `auth:sanctum` plus the ability gate, both of which answer before the
-flag is read. Switching `groupTalk` or `diary` off is separate and removes that feature's tools
-rather than the endpoint: they stop being registered, so they are not listed and calling one by name
-is answered as a tool that does not exist.
+flag is read. Switching `groupTalk`, `directMessage` or `diary` off is separate and removes that
+feature's tools rather than the endpoint: they stop being registered, so they are not listed and
+calling one by name is answered as a tool that does not exist.
 
 ## Rate limits
 
@@ -391,6 +398,12 @@ Two layers, because they answer different questions:
 
 Both are configured under `openpne.throttle` and the resolved order is pinned by a test. Behind a
 proxy the per-IP layer needs `TRUSTED_PROXIES`, or every caller shares one bucket.
+
+`send-direct-message` has a third, **per member**: the web send's own figure
+(`openpne.throttle.direct_message`) in a bucket of its own, because it is the one write here that
+names its recipient and mails them, and a per-token budget grows with every token a member issues. It
+is spent before the recipient is looked at and answers as a tool error that says when to retry, with
+a `throttle.hit` in the security log ([logging.md](logging.md)).
 
 ## Running a bot member
 

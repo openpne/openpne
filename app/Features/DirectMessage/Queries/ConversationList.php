@@ -21,8 +21,7 @@ class ConversationList
     public const PER_PAGE = 20;
 
     /**
-     * @param  int|null  $page  null reads the page from the request, as a screen does; a caller with no
-     *                          URL (the MCP tool) names it
+     * @param  int|null  $page  null reads the page from the request
      * @return LengthAwarePaginator<int, ConversationSummary>
      */
     public function __invoke(Member $viewer, int $perPage = self::PER_PAGE, ?int $page = null): LengthAwarePaginator

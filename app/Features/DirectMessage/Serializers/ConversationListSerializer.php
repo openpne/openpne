@@ -53,7 +53,7 @@ class ConversationListSerializer
      * An upgraded row may hold no body and a message written as chat no subject, so both are offered
      * before the stand-in. `ConversationList` supplies `pictures_exists` and `files_exists`.
      */
-    private static function preview(DirectMessage $latest): string
+    public static function preview(DirectMessage $latest): string
     {
         return ChatPreview::lineOrImages(
             [(string) $latest->body, (string) $latest->subject],

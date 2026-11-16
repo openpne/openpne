@@ -42,7 +42,6 @@ class MarkDirectMessagesReadTool extends DirectMessageTool
         try {
             $marked = $markRead($viewer, $counterpart, (int) $validated['message_id']);
         } catch (DirectMessageActionException) {
-            // Another conversation's message, a draft, or one the caller has trashed.
             return $this->refused();
         }
 
