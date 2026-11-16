@@ -35,6 +35,20 @@ class ClassicPluginStylesheetTest extends TestCase
         $this->assertGreaterThan($plugin, $custom);
     }
 
+    public function test_the_skin_the_module_stylesheet_and_the_scripts_are_linked_with_a_version(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+
+        $html = (string) $this->actingAs($owner)->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
+
+        foreach (['opSkinBasicPlugin/css/main.css', 'opDiaryPlugin/css/diary.css'] as $path) {
+            $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="[^"]*/'.preg_quote($path, '#').'\?v=[0-9a-f]{16}">#', $html);
+        }
+        $this->assertMatchesRegularExpression('#<script src="[^"]*/js/classic-notification-center\.js\?v=[0-9a-f]{16}" defer>#', $html);
+        $this->assertDoesNotMatchRegularExpression('#(?:href|src)="[^"]*\.(?:js|css)"#', $html);
+    }
+
     public function test_the_community_home_pushes_the_component_stylesheet_into_the_cascade(): void
     {
         // OpenPNE 3 loads communityTopic.css on community home from the embedded list components'

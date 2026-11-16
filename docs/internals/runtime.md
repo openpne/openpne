@@ -152,6 +152,23 @@ how the web server sends them decides how long that visit takes. Two things are 
 and `mod_setenvif` are loaded, and nothing where they are not. Any other server (nginx, Caddy) needs
 the same two rules in its own configuration.
 
+The scripts and stylesheets the Classic screens load from elsewhere under `public/` (`js/`, `css/`,
+the OpenPNE 3 plugin directories, the theme packages) keep their paths and are linked as
+`<path>?v=<16 hex digits>`, a digest of the file's bytes keyed with the application key. A file
+whose bytes are new has a URL no cache has seen, so a page from a new release does not run the
+previous release's script or stylesheet out of one. Images, and the files a stylesheet names through
+`url()`, carry no version. Three things follow for a deployment:
+
+- **A cache in front keys on the query string.**
+- **These URLs must not be given the long-lived header.** The web server answers any `v` with the
+  file it has now, so a URL an earlier release linked may hold a later release's file. A rollback,
+  or a release that returns a file to bytes it had before, links that URL again and gets what the
+  cache holds for as long as the cache keeps it.
+- **A new page is served only once every origin has the new files**: the version is computed from
+  the files beside the code that rendered the page.
+
+Replacing the application key changes every version once.
+
 The shipped rules leave responses from `index.php` alone. Compressing a page that carries a CSRF
 token next to reflected input is the BREACH side channel, so whether to compress dynamic responses
 is the operator's decision.

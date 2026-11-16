@@ -9,7 +9,7 @@
      ($recentTopics/$recentEvents are null exactly then). --}}
 @if (isset($recentTopics) || isset($recentEvents))
     @push('pluginCss')
-        <link rel="stylesheet" href="{{ asset('opCommunityTopicPlugin/css/communityTopic.css') }}">
+        <link rel="stylesheet" href="{{ versioned_asset('opCommunityTopicPlugin/css/communityTopic.css') }}">
     @endpush
 @endif
 

@@ -4,8 +4,8 @@
      OpenPNE 3 load order. --}}
 @once
     @push('pluginCss')
-        <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/bootstrap.css') }}">
-        <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/timeline.css') }}">
-        <link rel="stylesheet" href="{{ asset('css/classic-timeline.css') }}">
+        <link rel="stylesheet" href="{{ versioned_asset('opTimelinePlugin/css/bootstrap.css') }}">
+        <link rel="stylesheet" href="{{ versioned_asset('opTimelinePlugin/css/timeline.css') }}">
+        <link rel="stylesheet" href="{{ versioned_asset('css/classic-timeline.css') }}">
     @endpush
 @endonce

@@ -39,6 +39,19 @@ class ClassicThemeStylesheetTest extends TestCase
         $this->assertSame($sorted, $positions, 'theme stylesheets follow the module and custom CSS, in name order');
     }
 
+    public function test_the_theme_stylesheets_are_linked_with_a_version(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::ClassicTheme, 'cerulean');
+
+        $html = $this->diaryPage();
+
+        foreach (['bootstrap', 'font-awesome', 'foundation', 'main'] as $name) {
+            $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="[^"]*/opSkinThemePlugin/cerulean/css/'.$name.'\.css\?v=[0-9a-f]{16}">#', $html);
+        }
+        $this->assertMatchesRegularExpression('#<script src="[^"]*/js/classic-theme-nav\.js\?v=[0-9a-f]{16}" defer>#', $html);
+        $this->assertDoesNotMatchRegularExpression('#(?:href|src)="[^"]*\.(?:js|css)"#', $html);
+    }
+
     public function test_the_default_skin_stays_when_no_theme_is_chosen_or_the_chosen_one_is_not_on_disk(): void
     {
         $this->assertStringContainsString('opSkinBasicPlugin/css/main.css', $this->diaryPage());

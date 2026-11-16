@@ -9,10 +9,10 @@
     @include('partials.site-icons')
     <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
     @php($classicTheme = classic_theme())
-    {{-- Default skin, served statically; $classicSkinCss overrides which skin stylesheet is linked. A theme
-         replaces it and is linked last, after the module and custom CSS, as OpenPNE 3 stacked it. --}}
+    {{-- Default skin, served statically. A theme replaces it and is linked last, after the module and
+         custom CSS, as OpenPNE 3 stacked it. --}}
     @if ($classicTheme === null)
-        <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
+        <link rel="stylesheet" href="{{ versioned_asset('opSkinBasicPlugin/css/main.css') }}">
     @endif
     {{-- The page module's OpenPNE 3 plugin stylesheet, linked after the skin it overrides.
          $suppressPluginCss is for a screen rendered over a route it is not the screen of (the
