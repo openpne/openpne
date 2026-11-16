@@ -10,9 +10,6 @@
 # temporary file when DB_CONNECTION is unset or sqlite.
 set -euo pipefail
 
-# Migration names are compared the way the framework orders them, byte by byte.
-export LC_ALL=C
-
 allowlist="$(cd "$(dirname "$0")" && pwd)/../release-compat-allow"
 cd "$(git rev-parse --show-toplevel)"
 
@@ -21,6 +18,7 @@ commit() { git rev-parse --verify --quiet "$1^{commit}" || die "$1 is not a comm
 
 baseline() {
   local remote_tags local_tags
+  export LC_ALL=C
   # A checkout that did not fetch tags would see none and pass every check below for ever.
   remote_tags=$(git ls-remote --tags origin 'refs/tags/v[0-9]*' | awk '$2 !~ /\^\{\}$/ { sub("^refs/tags/", "", $2); print $2 }' | sort)
   local_tags=$(git tag --list 'v[0-9]*' | sort)
@@ -32,6 +30,8 @@ baseline() {
 
 migrations() {
   local base target last changes status path shipped edited failed=0
+  # Migration names are compared the way the framework orders them, byte by byte.
+  export LC_ALL=C
   base=$(commit "$1")
   target=$(commit "$2")
   last=$(git ls-tree --name-only "$base" database/migrations/ | sort | tail -n 1)
@@ -94,7 +94,7 @@ rehearse() {
     stop_server
     if [ "$got" != "$want" ]; then
       cat "$work/serve.log" >&2
-      tail -n 60 storage/logs/*.log >&2 2>/dev/null || true
+      grep -h '\.ERROR:' storage/logs/*.log 2>/dev/null | tail -n 3 | cut -c1-2000 >&2 || true
       die "$page answered $got, expected $want"
     fi
     printf '%s -> %s\n' "$page" "$got"
