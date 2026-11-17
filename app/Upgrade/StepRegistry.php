@@ -222,7 +222,7 @@ final class StepRegistry
             'session' => 'OpenPNE 3 PHP session store. Not migrated: a session cannot carry across the cutover, so members sign in again.',
             'diary_comment_update' => 'OpenPNE 3 marker of each diary a member commented on and when. Not migrated: OpenPNE 4 derives the comment history from diary_comments (DiaryCommentHistory).',
             'diary_comment_unread' => 'OpenPNE 3 per-diary unread-comment flag for the diary\'s owner. Not migrated: OpenPNE 4 keeps no diary-comment unread state; the diary_commented notification stands in.',
-            'skin_config' => 'OpenPNE 3 skin settings. Not migrated: no OpenPNE 3 application code read the table, and OpenPNE 4 looks are configured in the admin panel.',
+            'skin_config' => 'OpenPNE 3 skin settings. Not migrated: no OpenPNE 3 application code read the table, and OpenPNE 4 keeps a site\'s appearance in its own admin settings.',
         ];
     }
 

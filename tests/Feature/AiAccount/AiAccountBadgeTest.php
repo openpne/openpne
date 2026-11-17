@@ -135,11 +135,11 @@ class AiAccountBadgeTest extends TestCase
 
         $this->actingAs($human)
             ->get("/member/{$aiAccount->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('profile.owner.isAi', true));
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('profile.isAi', true));
 
         $this->actingAs($human)
             ->get("/member/{$human->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('profile.owner.isAi', false));
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('profile.isAi', false));
     }
 
     public function test_the_signed_in_member_shares_the_reference_shape(): void

@@ -91,7 +91,6 @@ class ModernOnlyCoverageTest extends TestCase
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
         'member.config.mfa.edit', 'member.config.passkeys.edit', 'member.config.notifications.edit', 'member.config.ai',
-        'member.config.look.edit',
         'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
         'group.recent', 'group.topics.recent', 'group.events.recent',
         'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
@@ -140,8 +139,6 @@ class ModernOnlyCoverageTest extends TestCase
             'member avatar' => ['/member/avatar'],
             'ai accounts' => ['/member/config/ai'],
             'passkeys' => ['/member/config/passkeys'],
-            // A site offering one look sends this to the settings page, which renders Modern too.
-            'layout picker' => ['/member/config/look'],
             'community search' => ['/groups'],
             'community joined' => ['/groups/mine'],
             'community recent activity' => ['/groups/recent'],
@@ -209,11 +206,11 @@ class ModernOnlyCoverageTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('timeline/tag'));
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('member/show'));
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member'));
         $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('diary/show'));
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
-            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('community/show'));
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('unified/group'));
 
         $aiAccount = Member::factory()->aiAccount($viewer)->create();
         $this->actingAs($viewer)->get("/member/config/ai/{$aiAccount->getKey()}")

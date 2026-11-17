@@ -116,7 +116,6 @@ interface LookSpec {
     tabMark: TabMark;
     bottomBarInConversation: boolean;
     ground: 'standard' | 'unified';
-    rightRail: boolean;
     /** A bar with no AvatarMenu needs them. */
     accountInDrawer: boolean;
     foldsHubHeading: boolean;
@@ -137,7 +136,6 @@ export const LOOKS = {
         tabMark: 'count',
         bottomBarInConversation: false,
         ground: 'standard',
-        rightRail: true,
         accountInDrawer: false,
         foldsHubHeading: true,
         colorLine: false,
@@ -150,7 +148,6 @@ export const LOOKS = {
         tabMark: 'dot',
         bottomBarInConversation: false,
         ground: 'unified',
-        rightRail: false,
         accountInDrawer: true,
         foldsHubHeading: false,
         colorLine: false,
@@ -163,7 +160,6 @@ export const LOOKS = {
         tabMark: 'dot',
         bottomBarInConversation: true,
         ground: 'unified',
-        rightRail: false,
         accountInDrawer: true,
         foldsHubHeading: false,
         colorLine: true,
@@ -709,7 +705,6 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     // Compose although it submits nothing: choosing who to write to is one screen with one job.
     'message/new': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
-    'member/config/look': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/password': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },

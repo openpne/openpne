@@ -56,7 +56,7 @@ class LayoutHookCoverageTest extends TestCase
         $expected = array_map(fn (LayoutHook $hook): string => $hook->value, array_filter(LayoutHook::cases(), fn (LayoutHook $hook): bool => $hook->isClientRendered()));
 
         $this->assertSame(array_values($expected), array_keys($hooks->clientMap()));
-        $this->assertSame(['modern.left_nav_end', 'modern.main_start', 'modern.main_end', 'modern.right_rail_end', 'modern.auth_start', 'modern.auth_end'], array_keys($hooks->clientMap()));
+        $this->assertSame(['modern.left_nav_end', 'modern.main_start', 'modern.main_end', 'modern.auth_start', 'modern.auth_end'], array_keys($hooks->clientMap()));
     }
 
     private function concat(string $root, string $extension, ?string $exclude = null): string

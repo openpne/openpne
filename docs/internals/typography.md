@@ -43,7 +43,7 @@ a missed migration.
 | `pageCompose` | 18px, 20px from `lg` | compose screens, where the sheet header sits right above the title |
 | `group` | 18px | a heading that stands outside the cards it groups — the settings page's groups |
 | `section` | 16px | a block within the content flow: a form section, a settings sub-section, a dialog title |
-| `minor` | 14px | a card's title band, a rail heading, a heading nested inside a section |
+| `minor` | 14px | a card's title band, a heading nested inside a section |
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
 | `bar` | 16px | the top bar's centered label and its scope name (chrome, outside the content ranks) |
 

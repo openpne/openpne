@@ -40,14 +40,6 @@ export interface NineTableItem {
     href: string;
 }
 
-export interface RightRail {
-    /** The viewer's friends, or an SNS-wide sample while the `friend` unit is switched off. */
-    people: {
-        kind: 'friends' | 'members';
-        items: NineTableItem[];
-    };
-}
-
 /** `id` is the group's, not a room's. */
 export interface TalkNavRoom {
     id: number;
@@ -109,7 +101,6 @@ export interface PageProps {
     rowActionsHint: 'shown' | 'dismissed' | null;
     imageUpload: ImageUploadPolicy;
     unread: UnreadCounts | null;
-    rightRail: RightRail | null;
     /** Raw HTML a package registered per shell position, non-empty entries only (docs/internals/layout-hooks.md). */
     layoutHooks: Record<string, string>;
     /** Null for a guest and while `groupTalk` is off. */

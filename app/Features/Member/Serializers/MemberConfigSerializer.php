@@ -11,8 +11,6 @@ use App\Mcp\OAuth\Connections;
 use App\Models\Member;
 use App\Support\Autoplay;
 use App\Support\Feature;
-use App\Support\Look;
-use App\Support\LookResolver;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
@@ -106,49 +104,6 @@ class MemberConfigSerializer
             ];
         }
 
-        // With one selectable look there is nothing to choose; the client hides the row when the key
-        // is absent.
-        $selectable = LookResolver::selectable();
-        if (count($selectable) >= 2) {
-            $form['look'] = [
-                'current' => self::chosenLook($member, $selectable)?->label(),
-                'default' => LookResolver::siteDefault()->label(),
-            ];
-        }
-
         return $form;
-    }
-
-    /** @return array<string, mixed> */
-    public static function lookForm(Member $member): array
-    {
-        $selectable = LookResolver::selectable();
-        $default = LookResolver::siteDefault();
-
-        return [
-            'options' => array_map(
-                static fn (Look $look): array => [
-                    'value' => $look->value,
-                    'label' => $look->label(),
-                    'description' => $look->description(),
-                ],
-                $selectable,
-            ),
-            'current' => self::chosenLook($member, $selectable)?->value,
-            'default' => ['value' => $default->value, 'label' => $default->label()],
-        ];
-    }
-
-    /**
-     * The stored choice, not the resolved look: an undecided member reads as following the site
-     * default. A stored look the site no longer offers reads as following too.
-     *
-     * @param  list<Look>  $selectable
-     */
-    private static function chosenLook(Member $member, array $selectable): ?Look
-    {
-        $stored = $member->preferredLook();
-
-        return $stored !== null && in_array($stored, $selectable, true) ? $stored : null;
     }
 }

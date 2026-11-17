@@ -232,24 +232,6 @@ class Member extends Authenticatable implements PasskeyUser
         $this->resetPreference(PreferenceKey::PreferredSurface);
     }
 
-    public function preferredLook(): ?Look
-    {
-        $value = PreferenceKey::PreferredLook->decode($this->storedPreference(PreferenceKey::PreferredLook));
-        assert($value === null || $value instanceof Look);
-
-        return $value;
-    }
-
-    public function setPreferredLook(Look $look): void
-    {
-        $this->writePreference(PreferenceKey::PreferredLook, $look);
-    }
-
-    public function resetPreferredLook(): void
-    {
-        $this->resetPreference(PreferenceKey::PreferredLook);
-    }
-
     public function composeEditor(): ComposeEditor
     {
         $value = PreferenceKey::ComposeEditor->decode($this->storedPreference(PreferenceKey::ComposeEditor));

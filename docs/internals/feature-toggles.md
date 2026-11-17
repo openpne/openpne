@@ -88,7 +88,7 @@ switching a unit takes effect without clearing them.
 
 The Inertia shell shares `enabledFeatures`, the resolved state of every unit
 (`Feature::enabledMap()`, so a call site never re-applies the dependency). The nav sections, the
-compose action, the dashboard sections and the profile digest read it and stop offering a
+compose action, the dashboard sections and the member page read it and stop offering a
 switched-off unit.
 
 **Those checks are presentation only.** A disabled unit's data never enters the Inertia payload:
@@ -178,15 +178,6 @@ dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinT
 (a route needing a second gate) and [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
 second unit per context — `activityBox` goes on the home, where it is the friend feed, and stays on a
 profile, where it is the owner's own timeline).
-
-And a surface whose purpose outlives the unit **falls back to a unit-independent variant** instead
-of disappearing. The right rail's faces grid answers "who is on this SNS", which a site that
-switched friends off — because everyone there already knows everyone — still asks: with `friend`
-off it samples all members ([`RandomMembers`](../../app/Features/Member/Queries/RandomMembers.php))
-under the same block and visibility rules, and the payload names which audience it shipped
-(`people.kind`) so the heading and the view-all link follow. A section whose purpose *is* the unit —
-the joined-group grid beside it — still empties. Neither reinterprets nor widens a stored
-audience, and neither rewrites a row.
 
 ## Upgrade
 

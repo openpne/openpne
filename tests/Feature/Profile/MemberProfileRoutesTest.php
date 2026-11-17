@@ -4,13 +4,10 @@ namespace Tests\Feature\Profile;
 
 use App\Models\Diary;
 use App\Models\Gadget;
-use App\Models\Group;
-use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\MemberImage;
 use App\Models\MemberProfile;
 use App\Models\Profile;
-use App\Models\TimelinePost;
 use App\Services\GadgetService;
 use App\Support\AvatarColor;
 use App\Support\PreferenceKey;
@@ -68,24 +65,22 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
-                ->where('profile.owner.id', $owner->getKey())
-                ->where('profile.owner.avatarColor', null)
-                ->has('profile.fields', 1)
+                ->component('unified/member')
+                ->where('profile.id', $owner->getKey())
+                ->where('profile.avatarColor', null)
+                ->has('fields', 1)
             );
     }
 
-    public function test_modern_owner_avatar_is_sized_for_the_80px_profile_header(): void
+    public function test_a_guest_gets_the_avatar_sized_for_the_80px_profile_header(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
+        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
         MemberImage::factory()->create(['member_id' => $owner->getKey()]);
-        $viewer = Member::factory()->create();
-
-        // The header paints at 80px, so it takes 180 rather than the 120 the list avatars use.
+        // A guest's header paints at 80px, so it takes 180 rather than the 120 the list avatars use.
         $expected = $owner->fresh()->avatar->file->thumbnailUrl(180, 180, square: true);
 
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+        $this->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->where('profile.owner.avatarUrl', $expected));
     }
 
@@ -98,8 +93,8 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
-                ->where('profile.owner.avatarColor', '#15803d')
+                ->component('unified/member')
+                ->where('profile.avatarColor', '#15803d')
             );
     }
 
@@ -156,7 +151,7 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
+                ->component('unified/member')
                 ->where('profile.friendStatus', 'none'));
     }
 
@@ -324,7 +319,7 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
+                ->component('unified/member')
                 ->where('profile.age', 36)
             );
     }
@@ -451,10 +446,10 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
+                ->component('unified/member')
                 ->where('profile.bio', 'Hello, I am Owner')
-                ->has('profile.fields', 1)
-                ->where('profile.fields.0.value', 'a-regular-value')
+                ->has('fields', 1)
+                ->where('fields.0.value', 'a-regular-value')
             );
     }
 
@@ -469,19 +464,6 @@ class MemberProfileRoutesTest extends TestCase
             ->assertDontSee('private-bio-secret');
     }
 
-    public function test_digest_diary_count_is_scoped_to_the_viewer(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create(); // non-friend → Members clearance
-        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
-        Diary::factory()->friends()->create(['member_id' => $owner->getKey()]);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.stats.diaries', 1));
-    }
-
     public function test_a_private_diary_title_is_absent_from_the_digest_payload(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
@@ -494,56 +476,6 @@ class MemberProfileRoutesTest extends TestCase
             ->assertDontSee('my-private-diary-title');
     }
 
-    public function test_a_friend_sees_the_friends_only_diary_in_the_digest(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $friend = Member::factory()->create();
-        $this->makeFriends($owner, $friend);
-        Diary::factory()->friends()->create(['member_id' => $owner->getKey(), 'title' => 'friends-only-entry']);
-
-        $this->actingAs($friend)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.stats.diaries', 1)
-                ->where('digest.recentDiaries.0.title', 'friends-only-entry'));
-    }
-
-    public function test_the_digest_grids_match_the_stats_and_carry_deep_links(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create();
-        $friend = Member::factory()->create();
-        $this->makeFriends($owner, $friend);
-        $group = Group::factory()->create();
-        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $owner->getKey()]);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.stats.friends', 1)
-                ->has('digest.friends', 1)
-                ->where('digest.friends.0.id', $friend->getKey())
-                ->where('digest.friends.0.href', "/member/{$friend->getKey()}")
-                ->where('digest.stats.groups', 1)
-                ->has('digest.groups', 1)
-                ->where('digest.groups.0.id', $group->getKey())
-                ->where('digest.groups.0.href', "/groups/{$group->getKey()}"));
-    }
-
-    public function test_activity_count_excludes_replies_and_invisible_posts(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create(); // non-friend → Members clearance
-        $top = TimelinePost::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
-        TimelinePost::factory()->replyTo($top)->create(['member_id' => $owner->getKey()]); // reply — excluded
-        TimelinePost::factory()->friends()->create(['member_id' => $owner->getKey()]); // above clearance — hidden
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.stats.activity', 1));
-    }
-
     public function test_a_guest_receives_no_digest(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
@@ -554,19 +486,6 @@ class MemberProfileRoutesTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
                 ->where('digest', null));
-    }
-
-    public function test_self_digest_includes_private_content(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        Diary::factory()->private()->create(['member_id' => $owner->getKey()]);
-        TimelinePost::factory()->private()->create(['member_id' => $owner->getKey()]);
-
-        $this->actingAs($owner)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.stats.diaries', 1)
-                ->where('digest.stats.activity', 1));
     }
 
     private function fieldFor(Member $owner, Visibility $visibility, string $value): void

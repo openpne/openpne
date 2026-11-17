@@ -70,9 +70,6 @@ class ProfileSerializer
     }
 
     /**
-     * Grid thumbnails are 320×320: the profile body column is wider than the shell's right rail, so
-     * RightRailSerializer::rail is not reused.
-     *
      * @param  array{diaries: int, activity: int, friends: int, groups: int}  $stats
      * @param  Collection<int, Diary>  $recentDiaries  images.file eager-loaded by the caller (rich rows)
      * @param  Collection<int, Member>  $friends

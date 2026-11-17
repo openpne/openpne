@@ -602,8 +602,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/autoplay', [MemberConfigController::class, 'updateAutoplayAnimations'])->name('member.config.autoplay');
     // Unthrottled and bodyless, like /compose/editor: the first-use hint, dismissed once per member.
     Route::post('/member/config/row-actions-hint', [RowActionsHintController::class, 'dismiss'])->name('member.config.row_actions_hint');
-    // The layout choice (docs/internals/looks.md); its picker is the GET detail page below.
-    Route::post('/member/config/look', [MemberConfigController::class, 'updateLook'])->name('member.config.look');
     // Ends an OAuth connection (docs/internals/mcp.md, "Signing in from a client"); no unit gate, so a
     // grant can be ended while the endpoint is switched off, as a token can.
     Route::post('/member/config/connections/{client}/{subject}/delete', [MemberConfigController::class, 'destroyConnection'])
@@ -616,7 +614,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->middleware('throttle:email-change')->name('member.config.email');
 
     // Modern-only detail pages with no Classic twin, so no surface default and no `.modern.` name.
-    Route::get('/member/config/look', [MemberConfigController::class, 'editLook'])->name('member.config.look.edit');
     Route::get('/member/config/email', [MemberConfigController::class, 'editEmail'])->name('member.config.email.edit');
     Route::get('/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
     Route::get('/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');

@@ -17,7 +17,6 @@ use App\Models\TimelinePost;
 use App\Support\Feature;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -183,119 +182,7 @@ class ModernFeatureSuppressionTest extends TestCase
 
     // --- Profile digest ---
 
-    public function test_the_profile_drops_the_friend_status_and_the_friends_grid(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create();
-        $this->makeFriends($owner, Member::factory()->create());
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('profile.friendStatus', 'none')
-                ->has('digest.friends', 1)
-                ->where('digest.stats.friends', 1));
-
-        $this->switchOff(Feature::Friend);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('profile.friendStatus', null)
-                ->where('digest.friends', [])
-                ->where('digest.stats.friends', 0));
-    }
-
-    public function test_the_profile_drops_the_recent_diaries(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create();
-        Diary::factory()->create([
-            'member_id' => $owner->getKey(),
-            'visibility' => Visibility::Members,
-            'title' => 'an-owner-diary-title',
-        ]);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('digest.recentDiaries', 1)
-                ->where('digest.stats.diaries', 1));
-
-        $this->switchOff(Feature::Diary);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.recentDiaries', [])
-                ->where('digest.stats.diaries', 0))
-            ->assertDontSee('an-owner-diary-title');
-    }
-
-    public function test_the_profile_drops_the_joined_communities_grid(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create();
-        $group = $this->joinedGroup($owner);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('digest.groups', 1)
-                ->where('digest.groups.0.id', $group->getKey())
-                ->where('digest.stats.groups', 1));
-
-        $this->switchOff(Feature::Group);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.groups', [])
-                ->where('digest.stats.groups', 0));
-    }
-
-    public function test_the_profile_zeroes_the_activity_stat_on_its_own(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create();
-        TimelinePost::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
-        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
-
-        $this->switchOff(Feature::Timeline);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.stats.activity', 0)
-                ->where('digest.stats.diaries', 1)); // the neighbouring unit is untouched
-    }
-
     // --- Shell + settings ---
-
-    /**
-     * The exception to the emptying above: the faces grid's purpose outlives `friend`, so it falls
-     * back to all members instead of vanishing (docs/internals/feature-toggles.md).
-     */
-    public function test_the_right_rail_falls_back_to_all_members(): void
-    {
-        $viewer = Member::factory()->create();
-        $friend = Member::factory()->create();
-        $stranger = Member::factory()->create();
-        $this->makeFriends($viewer, $friend);
-
-        $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('rightRail.people.kind', 'friends')
-                ->has('rightRail.people.items', 1)
-                ->where('rightRail.people.items.0.id', $friend->getKey()));
-
-        $this->switchOff(Feature::Friend);
-
-        $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('rightRail.people.kind', 'members')
-                // The stranger the friends grid never carried is in the fallback pool; the viewer is not.
-                ->has('rightRail.people.items', 2)
-                ->where('rightRail.people.items', fn (Collection $items) => $items->pluck('id')
-                    ->contains($friend->getKey()) && $items->pluck('id')->contains($stranger->getKey())));
-    }
 
     /** The nav's room list goes with the unit that owns talk, and with the one talk lives inside. */
     public function test_the_nav_room_list_goes_with_the_group_unit(): void

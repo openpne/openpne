@@ -10,7 +10,6 @@ use App\Models\Member;
 use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
-use App\Support\Look;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,12 +31,6 @@ class UnifiedMemberTest extends TestCase
         parent::setUp();
 
         config(['openpne.surface_mode' => 'modern_default']);
-    }
-
-    private function unifiedOn(): void
-    {
-        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
-        $this->freshRequestState();
     }
 
     /** The bidirectional mirror `friendships` is read through, both rows. */
@@ -108,33 +101,10 @@ class UnifiedMemberTest extends TestCase
         ));
     }
 
-    public function test_the_shipped_profile_is_untouched_while_the_switch_is_off(): void
+    public function test_a_member_gets_the_page_without_the_digest_being_gathered(): void
     {
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
-        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
-
-        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
-                ->where('profile.owner.id', $owner->getKey())
-                ->has('profile.fields')
-                ->where('digest.stats.diaries', 1)
-                ->has('digest.recentDiaries')
-                ->has('digest.friends')
-                ->has('digest.groups')
-                ->missing('groups')
-                ->missing('friends')
-                ->missing('recentPhotos')
-                ->missing('recentDiaries')
-            );
-    }
-
-    public function test_the_switch_swaps_the_page_without_gathering_the_digest(): void
-    {
-        $owner = Member::factory()->create();
-        $viewer = Member::factory()->create();
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -164,7 +134,6 @@ class UnifiedMemberTest extends TestCase
         $owner = Member::factory()->create();
         MemberImage::factory()->create(['member_id' => $owner->getKey()]);
         $viewer = Member::factory()->create();
-        $this->unifiedOn();
 
         // A wide crop across the content column, so it takes the cover sizes rather than the digest
         // profile's 180px round face.
@@ -180,7 +149,6 @@ class UnifiedMemberTest extends TestCase
     public function test_the_owners_own_page_offers_the_self_entries_instead_of_a_relationship(): void
     {
         $owner = Member::factory()->create();
-        $this->unifiedOn();
 
         $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -194,7 +162,6 @@ class UnifiedMemberTest extends TestCase
     {
         // The unified page's sections are the auth-only ones the digest is already withheld for.
         $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
-        $this->unifiedOn();
 
         $this->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -208,7 +175,6 @@ class UnifiedMemberTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $this->block($owner, $viewer);
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")->assertNotFound();
     }
@@ -218,7 +184,6 @@ class UnifiedMemberTest extends TestCase
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $this->block($viewer, $owner);
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -234,7 +199,6 @@ class UnifiedMemberTest extends TestCase
         $stranger = Member::factory()->create();
         $this->makeFriends($owner, $friend);
         $this->diary($owner, '2026-08-16 10:00:00', images: 1, visibility: Visibility::Friends, title: 'friends-only-entry');
-        $this->unifiedOn();
 
         $this->actingAs($friend)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -257,7 +221,6 @@ class UnifiedMemberTest extends TestCase
         $friend = Member::factory()->create();
         $this->makeFriends($owner, $friend);
         $this->diary($owner, '2026-08-16 10:00:00', images: 1, visibility: Visibility::Private, title: 'self-only-entry');
-        $this->unifiedOn();
 
         $this->actingAs($friend)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -282,7 +245,6 @@ class UnifiedMemberTest extends TestCase
         $this->makeFriends($owner, $friend);
         $open = $this->timelinePost($owner, '2026-08-16 09:00:00', images: 1);
         $restricted = $this->timelinePost($owner, '2026-08-16 10:00:00', images: 1, visibility: Visibility::Friends);
-        $this->unifiedOn();
 
         $this->actingAs($friend)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -312,8 +274,6 @@ class UnifiedMemberTest extends TestCase
         GroupMember::factory()->create(['group_id' => $viewersGroup->getKey(), 'member_id' => $viewer->getKey()]);
         $this->makeFriends($viewer, Member::factory()->create());
 
-        $this->unifiedOn();
-
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('groups', 1)
@@ -342,7 +302,6 @@ class UnifiedMemberTest extends TestCase
             $friends[] = $friend;
         }
 
-        $this->unifiedOn();
         $expected = array_map(fn (int $made): int => $friends[$made]->getKey(), [1, 8, 5, 3, 10, 6, 0, 9, 2]);
 
         $page = $this->actingAs($viewer)->get("/member/{$owner->getKey()}")->viewData('page');
@@ -358,7 +317,6 @@ class UnifiedMemberTest extends TestCase
         GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $owner->getKey()]);
 
         $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -380,7 +338,6 @@ class UnifiedMemberTest extends TestCase
         $this->makeFriends($owner, $friend);
 
         $this->setSnsSetting(SnsSettingKey::FeatureFriendEnabled, false);
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -410,7 +367,6 @@ class UnifiedMemberTest extends TestCase
         $post = $this->timelinePost($owner, '2026-08-16 09:00:00', images: 1);
 
         $this->setSnsSetting(SnsSettingKey::FeatureDiaryEnabled, false);
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -434,7 +390,6 @@ class UnifiedMemberTest extends TestCase
         $this->timelinePost($owner, '2026-08-16 10:00:00', images: 1);
 
         $this->setSnsSetting(SnsSettingKey::FeatureTimelineEnabled, false);
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -457,7 +412,6 @@ class UnifiedMemberTest extends TestCase
         $viewer = Member::factory()->create();
 
         $this->setSnsSetting(SnsSettingKey::FeatureDirectMessageEnabled, false);
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -477,7 +431,6 @@ class UnifiedMemberTest extends TestCase
         // (higher id) is the newer post.
         $tied = $this->diary($owner, '2026-08-16 10:00:10', images: 1);
         $newest = $this->diary($owner, '2026-08-16 10:00:10', images: 1);
-        $this->unifiedOn();
 
         $this->actingAs($friend)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -501,7 +454,6 @@ class UnifiedMemberTest extends TestCase
         foreach (range(1, 8) as $minute) {
             $posts[$minute] = $this->timelinePost($owner, "2026-08-16 10:0{$minute}:00", images: 1);
         }
-        $this->unifiedOn();
 
         $expected = [
             // The rich parent's own pictures keep the order their author arranged them in.
