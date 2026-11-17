@@ -26,6 +26,8 @@
         <env name="APP_ENV" value="testing"/>
         <!-- A development .env carries a port in APP_URL, and links are compared against this one. -->
         <env name="APP_URL" value="http://localhost"/>
+        <!-- A development .env may name a proxy, and requests in tests come from none. -->
+        <env name="TRUSTED_PROXIES" value=""/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

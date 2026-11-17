@@ -88,7 +88,7 @@ class SecurityHeadersTest extends TestCase
     {
         Route::middleware('web')->get('/__sec_ip', fn () => request()->ip());
 
-        // TRUSTED_PROXIES is unset in tests, so the proxy is untrusted and the forwarded header
+        // TRUSTED_PROXIES is empty in tests, so the proxy is untrusted and the forwarded header
         // must not move the resolved client IP — the guard against accidentally trusting all proxies.
         $this->get('/__sec_ip', ['X-Forwarded-For' => '203.0.113.9'])
             ->assertOk()

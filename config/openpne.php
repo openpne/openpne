@@ -285,7 +285,7 @@ return [
     | production so a deployment behind a TLS-terminating proxy never emits http
     | links or non-secure cookies; a dev/HTTP environment can opt out. Trusting
     | that proxy's forwarded headers is configured separately (TRUSTED_PROXIES,
-    | see bootstrap/app.php and docs/internals/runtime.md).
+    | see docs/internals/runtime.md).
     |
     | 'operator_raw_html' lets administrators publish raw HTML (page inserts,
     | footer, banners, information and free-area gadgets) instead of Markdown.
