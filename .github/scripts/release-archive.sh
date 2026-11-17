@@ -11,10 +11,11 @@
 #
 # `update` reads ARCHIVE_DB: sqlite-default (database/database.sqlite in WAL mode, the default),
 # sqlite-outside (an absolute path outside the tree), relocated (that, with .env and storage/
-# outside the tree too) or mysql (DB_* from the environment, an empty database).
+# outside the tree too) or mysql (DB_* from the environment, an empty database). ARCHIVE_NEW_MARK,
+# when set, is text only the new release's login page has: the page must have it after the update
+# and must have lost it after going back.
 set -euo pipefail
 
-here=$(cd "$(dirname "$0")" && pwd)
 port=${ARCHIVE_PORT:-8141}
 server=""
 worker=""
@@ -36,14 +37,19 @@ trap cleanup EXIT
 # code and the caches on disk.
 expect() {
   local want=$1 page=$2 got="" _
+  # A server an earlier check left behind would answer for this site.
+  got=$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' "http://127.0.0.1:$port/" || true)
+  [ "$got" = 000 ] || die "something already answers on port $port"
   php artisan serve --host=127.0.0.1 --port="$port" >"$work/serve.log" 2>&1 &
   server=$!
   for _ in $(seq 1 60); do
-    got=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port$page" || true)
+    got=$(curl -s -o "$work/page" --max-time 30 -w '%{http_code}' "http://127.0.0.1:$port$page" || true)
     [ "$got" != 000 ] && break
     sleep 0.5
   done
   stop server
+  # Without ext-pcntl `artisan serve` does not take the server it started down with it.
+  pkill -f "^[^ ]*php[^ ]* -S 127\.0\.0\.1:$port " 2>/dev/null || true
   if [ "$got" != "$want" ]; then
     cat "$work/serve.log" >&2
     grep -h '\.ERROR:' storage/logs/*.log 2>/dev/null | tail -n 3 | cut -c1-2000 >&2 || true
@@ -53,11 +59,19 @@ expect() {
 }
 
 set_env() { # set_env <file> <key> <value>: replace the line, commented out or not, or add it
-  if grep -qE "^#? ?$2=" "$1"; then
-    sed -i -E "0,/^#? ?$2=.*/s||$2=$3|" "$1"
-  else
-    printf '%s=%s\n' "$2" "$3" >>"$1"
-  fi
+  local line found=0 out
+  out=$(mktemp)
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ "$found" = 0 ] && [[ "$line" =~ ^#?\ ?$2= ]]; then
+      printf '%s=%s\n' "$2" "$3"
+      found=1
+    else
+      printf '%s\n' "$line"
+    fi
+  done <"$1" >"$out"
+  [ "$found" = 1 ] || printf '%s=%s\n' "$2" "$3" >>"$out"
+  cat "$out" >"$1"
+  rm -f "$out"
 }
 
 unpack() { # unpack <archive> <into>: prints the directory the archive holds
@@ -98,7 +112,8 @@ build() {
   cd "$work/$name"
 
   step "dependencies, without the development ones"
-  # --no-scripts: composer's own hooks would run with whatever .env the builder has.
+  # The two commands composer's hooks come to, named so that the archive's contents do not follow
+  # whatever a hook goes on to do.
   composer install --no-dev --optimize-autoloader --no-scripts --no-interaction --no-progress
   php artisan package:discover
   php artisan filament:assets
@@ -136,7 +151,7 @@ PY
 # check_tree <site> <sha>: what an archive has to hold, and what it must not.
 check_tree() {
   local site=$1 sha=$2 path failed=0
-  for path in .env.example artisan RELEASE public/index.php public/.htaccess public/robots.txt \
+  for path in .env.example artisan RELEASE tests/release-archive-probe.php public/index.php public/.htaccess public/robots.txt \
     public/build/manifest.json public/build/.vite/license.md public/js/filament public/css/filament \
     vendor/autoload.php bootstrap/cache/packages.php bootstrap/cache/services.php \
     storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions \
@@ -158,6 +173,9 @@ check_tree() {
 # install <site>: the steps of a new site, in the current directory, on SQLite in the tree.
 install() {
   cp .env.example .env
+  set_env .env APP_ENV production
+  set_env .env APP_DEBUG false
+  set_env .env OPENPNE_FORCE_HTTPS false
   set_env .env APP_URL "http://127.0.0.1:$port"
   : >database/database.sqlite
   php artisan key:generate --force
@@ -195,14 +213,14 @@ verify() {
 
 update() {
   local old_dir=$1 old_version=$2 new_dir=$3 new_version=$4 mode=${ARCHIVE_DB:-sqlite-default}
-  local root old new env_file storage db theme state marker
+  local root old new env_file storage db theme marker pid
   old_dir=$(cd "$old_dir" && pwd)
   new_dir=$(cd "$new_dir" && pwd)
-  work=$(mktemp -d)
+  work=$(cd "$(mktemp -d)" && pwd -P)
   root=$work/srv
   without_build_tools
-  probe() { php "$here/release-archive-probe.php" "$1" "$root/openpne" "$state"; }
-  state=$work/probe.json
+  # The probe of the release in place: each one knows its own code.
+  probe() { php tests/release-archive-probe.php "$1" "$work/probe.json"; }
 
   step "a site on $old_version at $root/openpne ($mode)"
   old=$(unpack "$old_dir/openpne-$old_version.tar.gz" "$root")
@@ -232,7 +250,6 @@ update() {
   esac
   [ -z "$db" ] || : >"$db"
   if [ "$mode" = relocated ]; then
-    # docs/internals/runtime.md, "Key invariants": .env and storage/ may live outside the app root.
     mkdir -p "$work/etc"
     mv .env "$work/etc/.env"
     mv storage "$work/data/storage"
@@ -244,7 +261,6 @@ update() {
   set_env "$env_file" OPENPNE_FILES_DISK local
   php artisan key:generate --force
   php artisan openpne:install
-  php artisan optimize
   php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
   worker=$!
 
@@ -260,7 +276,7 @@ update() {
     # -wal file for as long as it stays open.
     mkfifo "$work/hold"
     exec 9<>"$work/hold"
-    sqlite3 "$db" <"$work/hold" >/dev/null &
+    (cd "$work" && exec sqlite3 "$db" <"$work/hold" >/dev/null) &
     holder=$!
     printf 'BEGIN;\nSELECT count(*) FROM members;\n' >&9
     sleep 1
@@ -313,14 +329,18 @@ update() {
   fi
 
   step "put it at the site's path"
-  cd "$root"
+  # Whatever still runs in the directory would go on running the old release from where it goes.
+  for pid in /proc/[0-9]*; do
+    [ "${pid#/proc/}" != "$$" ] || continue
+    [ "$(readlink "$pid/cwd" 2>/dev/null || true)" != "$root/openpne" ] \
+      || die "process ${pid#/proc/} ($(tr '\0' ' ' <"$pid/cmdline")) still runs in the directory about to be moved away"
+  done
   mv "$root/openpne" "$root/openpne-old"
   mv "$new" "$root/openpne"
   cd "$root/openpne"
 
-  step "migrate, rebuild the caches, start the worker, open the site"
+  step "migrate, start the worker, open the site"
   php artisan migrate --force
-  php artisan optimize
   php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
   worker=$!
   php artisan up
@@ -328,6 +348,7 @@ update() {
 
   step "the site after the update"
   expect 200 /login
+  [ -z "${ARCHIVE_NEW_MARK:-}" ] || grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the login page is not the new release's"
   expect 200 /admin/login
   probe check
   grep -qxF "version=$new_version" RELEASE || die "RELEASE is not the new release's"
@@ -347,16 +368,20 @@ update() {
   step "going back: the old directory at the site's path, the backup in place of the database"
   php artisan down --render="errors::503"
   stop worker
-  cd "$root"
   mv "$root/openpne" "$root/openpne-failed"
   mv "$root/openpne-old" "$root/openpne"
   cd "$root/openpne"
   rm -f "$db" "$db-wal" "$db-shm"
   cp "$work/backup.sqlite" "$db"
+  php artisan view:clear
   php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
   worker=$!
   php artisan up
+  [ "$(sqlite3 "$db" 'PRAGMA integrity_check')" = ok ] || die "the database put back does not pass its integrity check"
+  [ "$(sqlite3 "$db" 'SELECT count(*) FROM migrations')" = "$(find database/migrations -name '*.php' | wc -l)" ] \
+    || die "the database put back has run migrations the old release does not have"
   expect 200 /login
+  [ -z "${ARCHIVE_NEW_MARK:-}" ] || ! grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the old release is drawing the new release's login page"
   probe check
   [ -e "$marker" ] || die "going back did not bring back the old release's code"
 

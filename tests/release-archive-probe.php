@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// What release-archive.sh puts into a site before an update and looks for after it: a member, an
-// entry of theirs and a picture stored on the site's disk.
-//
-//   php release-archive-probe.php seed|check <site> <state file>
+// Run in a site's root by .github/scripts/release-archive.sh: php tests/release-archive-probe.php seed|check <state file>
+// A release checks what an earlier release's copy of this file seeded, so the state file's keys stay.
 
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Data\DiaryFormData;
@@ -18,9 +16,10 @@ use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 
-[, $mode, $site, $state] = $argv + [null, null, null, null];
-if (! in_array($mode, ['seed', 'check'], true) || ! is_file("$site/artisan") || $state === null) {
-    fwrite(STDERR, "usage: php release-archive-probe.php seed|check <site> <state file>\n");
+[, $mode, $state] = $argv + [null, null, null];
+$site = dirname(__DIR__);
+if (! in_array($mode, ['seed', 'check'], true) || $state === null) {
+    fwrite(STDERR, "usage: php tests/release-archive-probe.php seed|check <state file>\n");
     exit(2);
 }
 
@@ -39,7 +38,7 @@ $fail = static function (string $message): never {
 if ($mode === 'seed') {
     $member = Member::create(['name' => 'Probe', 'email' => EMAIL, 'password' => PASSWORD]);
 
-    $png = tempnam(sys_get_temp_dir(), 'probe').'.png';
+    $png = dirname($state).'/probe.png';
     $image = imagecreatetruecolor(64, 48);
     imagefill($image, 0, 0, imagecolorallocate($image, 30, 120, 160));
     imagepng($image, $png);

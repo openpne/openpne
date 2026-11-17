@@ -316,9 +316,8 @@ jobs:
     with:
       onto: ${{ github.base_ref }}
 
-  # The archive a release attaches, installed the way a server without Composer or Node installs
-  # it. PHP 8.3 is the oldest a site may run. A release builds its own archive in release.yml, so a
-  # called run leaves this out. Not a required check.
+  # .github/scripts/release-archive.sh on PHP 8.3, the oldest a site may run; the update is walked
+  # from the archive to itself, there being no earlier one to start from. Not a required check.
   release-archive:
     name: Release archive (build + install)
     needs: changes
@@ -337,6 +336,7 @@ jobs:
           cache: 'npm'
       - run: .github/scripts/release-archive.sh build HEAD "$RUNNER_TEMP/archive" 0.0.0-ci
       - run: .github/scripts/release-archive.sh verify "$RUNNER_TEMP/archive" 0.0.0-ci HEAD
+      - run: .github/scripts/release-archive.sh update "$RUNNER_TEMP/archive" 0.0.0-ci "$RUNNER_TEMP/archive" 0.0.0-ci
 
   lint:
     name: Lint (Pint)

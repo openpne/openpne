@@ -32,7 +32,6 @@ export default defineConfig(({ mode }) => {
             tailwindcss(),
         ],
         build: {
-            // The licences of what the bundle contains, for whoever redistributes the build.
             license: true,
             rolldownOptions: {
                 output: {
