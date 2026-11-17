@@ -70,9 +70,9 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
-                    // Only where the mobile bar actually carries the title: a guest's bar is brand +
-                    // sign-in and the unified chrome's is the tab pair, so folding for either would
-                    // leave the hub with no visible heading anywhere.
+                    // Only where the mobile bar actually carries the title: the shipped guest bar is
+                    // brand + sign-in and the unified chrome's is the tab pair, so folding for either
+                    // would leave the hub with no visible heading anywhere.
                     fold={chrome.mode === 'section' && props.auth.user !== null && look.foldsHubHeading}
                     action={
                         action && (

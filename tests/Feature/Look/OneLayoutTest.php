@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Look;
 
+use App\Models\Diary;
 use App\Models\Group;
 use App\Models\Member;
 use App\Support\Visibility;
@@ -49,12 +50,25 @@ class OneLayoutTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/group')->where('look', 'tabbed'));
     }
 
-    public function test_a_signed_out_visitor_gets_the_standard_frame(): void
+    public function test_a_signed_out_visitor_gets_the_same_layout_on_every_page_open_to_one(): void
     {
         $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Open]);
 
         $this->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('member/show')->where('look', 'standard'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member')->where('look', 'tabbed')->where('auth.user', null));
+
+        foreach ([
+            "/diary/{$diary->getKey()}" => 'diary/show',
+            "/diary/listMember/{$owner->getKey()}" => 'diary/list',
+            '/diary/list' => 'diary/feed',
+            '/terms' => 'policy/show',
+            '/privacy' => 'policy/show',
+        ] as $path => $component) {
+            $this->get($path)
+                ->assertOk()
+                ->assertInertia(fn (AssertableInertia $page) => $page->component($component)->where('look', 'tabbed')->where('auth.user', null));
+        }
     }
 
     public function test_the_settings_page_offers_no_layout(): void

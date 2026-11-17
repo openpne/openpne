@@ -8,6 +8,8 @@ use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\MemberImage;
+use App\Models\MemberProfile;
+use App\Models\Profile;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use App\Support\SnsSettingKey;
@@ -158,16 +160,59 @@ class UnifiedMemberTest extends TestCase
             );
     }
 
-    public function test_a_guest_keeps_the_shipped_profile(): void
+    /** The owner has every kind of row the member page lists at the widest audience it can take, and one field kept to members. */
+    public function test_a_guest_gets_the_heading_and_the_fields_alone(): void
     {
-        // The unified page's sections are the auth-only ones the digest is already withheld for.
-        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $this->setSnsSetting(SnsSettingKey::TimelineAllowWebPublic, true);
+        $owner = Member::factory()->create(['name' => 'Public Owner', 'profile_visibility' => Visibility::Open]);
+        $profile = Profile::factory()->create(['is_edit_public_flag' => true, 'is_public_web' => true]);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(),
+            'profile_id' => $profile->getKey(),
+            'value' => 'a-web-public-field',
+            'visibility' => Visibility::Open,
+        ]);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(),
+            'profile_id' => Profile::factory()->create(['is_edit_public_flag' => true])->getKey(),
+            'value' => 'a-members-only-field',
+            'visibility' => Visibility::Members,
+        ]);
+        $this->diary($owner, '2026-08-02 10:00:00', images: 1, visibility: Visibility::Open, title: 'a-web-public-entry');
+        $this->timelinePost($owner, '2026-08-03 10:00:00', images: 1, visibility: Visibility::Open);
+        $friend = Member::factory()->create(['name' => 'A Friend Of The Owner']);
+        $this->makeFriends($owner, $friend);
+        $group = Group::factory()->create(['name' => 'A Group Of The Owner']);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $owner->getKey()]);
 
         $this->get("/member/{$owner->getKey()}")
+            ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
-                ->where('digest', null)
-            );
+                ->component('unified/member')
+                ->where('profile.name', 'Public Owner')
+                ->where('profile.isSelf', false)
+                ->where('profile.friendStatus', null)
+                ->has('fields', 1)
+                ->where('fields.0.value', 'a-web-public-field')
+                ->where('groups', [])
+                ->where('friends', [])
+                ->where('recentPhotos', [])
+                ->where('recentDiaries', [])
+            )
+            ->assertSee('a-web-public-field')
+            ->assertDontSee('a-members-only-field')
+            ->assertDontSee('a-web-public-entry')
+            ->assertDontSee('A Friend Of The Owner')
+            ->assertDontSee('A Group Of The Owner');
+
+        // The fixture is one a member does see, or the emptiness above would prove nothing.
+        $this->actingAs(Member::factory()->create())->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('fields', 2)
+                ->has('groups', 1)
+                ->has('friends', 1)
+                ->has('recentPhotos', 2)
+                ->has('recentDiaries', 1));
     }
 
     public function test_the_owners_block_still_denies_the_whole_page(): void

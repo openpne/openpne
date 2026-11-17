@@ -242,6 +242,24 @@ function UnifiedBar({ hidden }: { hidden?: boolean }) {
     );
 }
 
+/** Where a member's bar ends in the menu, a guest's ends in the way in. */
+function GuestEntry({ className }: { className?: string }) {
+    const t = useT();
+
+    return (
+        <Link
+            href="/login"
+            className={cn(
+                'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm text-link transition hover:bg-accent',
+                BAR_ACTION_HIT,
+                className,
+            )}
+        >
+            {t('Log In')}
+        </Link>
+    );
+}
+
 /**
  * The tabbed look's phone header (docs/internals/looks.md, "The registry"). A compose sheet is the
  * exception, being a mode rather than a class: it keeps its own ✕ header.
@@ -255,7 +273,8 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     // a place, which share one header of mark and site name.
     const brand = isHomeComponent(String(component), props.modernHome) || isPlaceTop(String(component));
     const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
-    const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome);
+    const guest = props.auth.user === null;
+    const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome, guest);
 
     return (
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
@@ -297,7 +316,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                     // A form's crumb goes nowhere, so it must not look as though it does.
                     <span className="min-w-0 truncate text-sm text-muted-foreground">{text(crumb.label)}</span>
                 ))}
-            <NavDrawer labeled />
+            {guest ? <GuestEntry className="ml-auto" /> : <NavDrawer labeled />}
         </TopBar>
     );
 }
@@ -327,28 +346,20 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         </Link>
     );
 
+    // Ahead of the class split below, which this look does not make, and of the guest's bar, which
+    // it replaces; the compose sheet is excepted because its ✕ is how a mode is left.
+    if (lookSpec(props.look).topBar === 'breadcrumb' && !chrome.compose) {
+        return <BreadcrumbBar chrome={chrome} hidden={hidden} />;
+    }
+
     // A guest has no member nav to open and no account menu, so the bar stays identity + the way in.
     if (!auth.user) {
         return (
             <TopBar hidden={hidden}>
                 {brand}
-                <Link
-                    href="/login"
-                    className={cn(
-                        'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm text-link transition hover:bg-accent',
-                        BAR_ACTION_HIT,
-                    )}
-                >
-                    {t('Log In')}
-                </Link>
+                <GuestEntry />
             </TopBar>
         );
-    }
-
-    // Ahead of the class split below, which this look does not make; the compose sheet is excepted
-    // because its ✕ is how a mode is left.
-    if (lookSpec(props.look).topBar === 'breadcrumb' && !chrome.compose) {
-        return <BreadcrumbBar chrome={chrome} hidden={hidden} />;
     }
 
     // Home and the hubs are one bar under the unified chrome; everything below them is untouched.

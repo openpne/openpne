@@ -93,7 +93,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // The height place-bar.tsx gives its bar, hairline included, and only where it renders one: a
     // screen with no crumb has nothing for a sticky child to stand below.
     const placeBarOffset =
-        look.placeBar && breadcrumbCrumb(chrome) !== null ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
+        look.placeBar && breadcrumbCrumb(chrome, !member) !== null ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
 
     return (
         <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>

@@ -37,7 +37,8 @@ export default function UnifiedMember() {
         <>
             <Head title={profile.name} />
 
-            <ProfileHeader profile={profile} as="h1" actions={<MemberActions profile={profile} />} />
+            {/* The fields below leave the self-introduction out, so clamped here it could be read nowhere. */}
+            <ProfileHeader profile={profile} as="h1" clampBio={false} actions={<MemberActions profile={profile} />} />
 
             {/* member/show's ordering, kept in the unified grammar: identity before activity. */}
             {fields.length > 0 && (

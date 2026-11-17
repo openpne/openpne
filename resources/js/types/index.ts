@@ -89,7 +89,7 @@ export interface PageProps {
     /** Dependencies already resolved server-side. Hiding here is presentation only — a switched-off
      *  unit's rows never reach the payload. */
     enabledFeatures: Record<FeatureKey, boolean>;
-    /** The server's `App\Support\Look`; `standard` for a guest whatever the site says. */
+    /** The server's `App\Support\Look`. */
     look: LookId;
     /** The server's `App\Support\ModernHome`: which of the two home pages `/` serves. */
     modernHome: ModernHomeId;

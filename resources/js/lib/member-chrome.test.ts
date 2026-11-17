@@ -633,6 +633,30 @@ test('the breadcrumb claims the place a screen is inside, and it is pressable', 
     assert.deepEqual(crumb('diary/show', { diary: { author: owner } }), { label: 'Owner', href: '/member/1', link: true });
 });
 
+const guestCrumb = (component: string, props: Record<string, unknown>) => {
+    const page = { enabledFeatures: allOn, ...props };
+
+    return breadcrumbCrumb(resolveChrome(component, page), true);
+};
+
+test("a guest's crumb leads only where a guest may go", () => {
+    // The author's page may sit behind the login wall, where their entries list never does.
+    assert.deepEqual(guestCrumb('diary/show', { diary: { author: owner } }), {
+        label: { key: ":name's %diary%", replacements: { name: 'Owner' } },
+        href: '/diary/listMember/1',
+        link: true,
+    });
+    // Somebody else's entries: the trail's target is their page, so it is named and not offered.
+    assert.deepEqual(guestCrumb('diary/list', { owner, isOwner: false }), { label: 'Owner', href: '/member/1', link: false });
+});
+
+test("a guest's place top, hub and site policy answer no crumb, as a member's do", () => {
+    assert.equal(guestCrumb('unified/member', { profile: owner }), null);
+    assert.equal(guestCrumb('diary/feed', { variant: 'all' }), null);
+    // The page's own heading names a policy directly below the bar.
+    assert.equal(guestCrumb('policy/show', { kind: 'terms' }), null);
+});
+
 test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {
     // The three-page symmetry extends to the header, and the place's own hero names it directly
     // below: naming it twice in 60px was the duplication the owner asked out of.

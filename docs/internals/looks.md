@@ -7,8 +7,8 @@ of code a look owns is the size of its deviation, not the size of the product.
 Looks are a Modern-surface concept. Which surface a request gets (Classic or Modern) is a
 separate, earlier question — see [feature-modules.md](feature-modules.md).
 
-A site does not choose among them and neither does a member: every member is served `tabbed`
-and a signed-out visitor `standard` ([Resolution](#resolution)). `unified` is served to no one.
+A site does not choose among them and neither does a member: everyone is served `tabbed`
+([Resolution](#resolution)). `standard` and `unified` are served to no one.
 
 ## The registry
 
@@ -30,7 +30,7 @@ field whose name answers the question being asked rather than one that happens t
 
 The looks today:
 
-- **`standard`** — deviates in nothing. The frame a signed-out visitor gets.
+- **`standard`** — deviates in nothing.
 - **`unified`** — the experiment: `/member/{id}` renders `unified/member` instead of
   `member/show`, and `/groups/{group}` renders `unified/group` instead of
   `community/show`; the bars become the persistent header plus dive row, and the shell
@@ -79,10 +79,19 @@ Two decisions inside `tabbed` are deliberate rather than pending:
 and [`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php) shares
 the id as the `look` prop so no consumer resolves it a second time:
 
-- **A member** gets `tabbed`. Nothing a site or a member stores changes that: there is no
-  setting for it and no picker.
-- **A signed-out visitor** gets `standard`. The pages a look swaps render against a viewer,
-  and the pages a guest does reach (a web-public profile, a web-public entry) have none.
+Everyone gets `tabbed`. Nothing a site or a member stores changes that: there is no setting
+for it and no picker.
+
+A signed-out visitor gets the same frame with the member-only parts left out:
+
+- No bottom tabs and no menu. The way in to `/login` stands where the menu does: at the end
+  of the phone header, and in the sidebar at desk width.
+- The crumb never takes the place tier, whose target is a member's page that may sit behind
+  the login wall. It is the trail's last item, and it is a link only where that target is
+  open to a guest (an entry's crumb to its author's entries, which lists the web-public
+  ones); anywhere else it is text.
+- A web-public profile is the member page with the heading and the profile fields alone
+  ([member-profile.md](member-profile.md), "Key invariants").
 
 ## What a look may not do
 

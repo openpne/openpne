@@ -109,6 +109,27 @@ test('a form says where it is without offering a way out of it', () => {
     expect(placeBar()?.querySelector('a')).toBeNull();
 });
 
+/** A guest's crumb is the phone bar's rule again at desk width: the author's entries, and no face standing for a page behind the login wall. */
+test("a guest's place bar leads to the author's entries, faceless", () => {
+    const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
+    arrive('diary/show', { look: 'tabbed', auth: { user: null }, diary: { author } });
+
+    const pill = placeBar()?.querySelector('a');
+    expect(pill?.getAttribute('href')).toBe('/diary/listMember/9');
+    expect(pill?.textContent).toBe("Owner's %diary%");
+    expect(placeBar()?.querySelector('img')).toBeNull();
+    expect(document.querySelector('a[href="/member/9"]')).toBeNull();
+});
+
+test("a member's place bar on the same entry is the author's page, with the face", () => {
+    const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
+    arrive('diary/show', { look: 'tabbed', diary: { author } });
+
+    const pill = placeBar()?.querySelector('a');
+    expect(pill?.getAttribute('href')).toBe('/member/9');
+    expect(pill?.querySelector('img')?.getAttribute('src')).toBe('/img/owner.png');
+});
+
 test.each(['dashboard', 'notifications/index'])('%s is inside nothing, so no place bar stands over it', (component) => {
     // The sidebar's brand and its active row already answer for these; a bar repeating them would be
     // furniture with nothing to say.

@@ -90,9 +90,9 @@ class ProfileController extends Controller
                 // Branching first keeps the digest below from being gathered for a page that never
                 // shows it.
                 if (LookResolver::resolve($request)->usesUnifiedPages()) {
-                    return Inertia::render('unified/member', UnifiedMemberSerializer::page(
-                        $viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus,
-                    ));
+                    return Inertia::render('unified/member', $viewer === null
+                        ? UnifiedMemberSerializer::guestPage($member, $fields, $lang, $age)
+                        : UnifiedMemberSerializer::page($viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus));
                 }
 
                 // Auth-only: the previews and stats link to routes behind the auth group.
