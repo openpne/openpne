@@ -19,13 +19,14 @@ export interface MemberActionsProfile {
  */
 const SENTENCE = 'whitespace-normal text-center';
 
-/**
- * The page renders for a signed-in member only, so the viewer is never a guest and the gate is the
- * relationship alone.
- */
+/** A guest gets no entry at all: every one of them targets a route behind the login wall. */
 export function MemberActions({ profile }: { profile: MemberActionsProfile }) {
     const t = useT();
-    const { enabledFeatures } = usePage<PageProps>().props;
+    const { auth, enabledFeatures } = usePage<PageProps>().props;
+
+    if (auth.user === null) {
+        return null;
+    }
 
     if (profile.isSelf) {
         return (

@@ -13,9 +13,11 @@ import { derivedIdentityColor } from './identity-visual';
 export interface UnifiedProfile {
     id: number;
     name: string;
-    /** The two `srcset` rungs of the cover crop; both null when the member set no picture. */
+    /** The two `srcset` rungs of the cover crop; both null when the member set no picture, and for a guest. */
     avatarUrl: string | null;
     avatarUrlLarge: string | null;
+    /** A guest's only picture: too small to stretch across the cover, so it stands where the initial would. */
+    avatarUrlSmall?: string | null;
     avatarColor: string | null;
     isAi: boolean;
     bio: string | null;
@@ -69,11 +71,15 @@ export function ProfileHeader({
                         hex={profile.avatarColor ?? derivedIdentityColor(profile.name)}
                         className="flex aspect-[4/3] max-h-[16rem] w-full items-center justify-center pb-24 sm:max-h-60"
                     >
-                        <InitialBadge
-                            aria-hidden
-                            name={profile.name}
-                            className="size-20 rounded-full bg-scrim-foreground/25 text-3xl text-scrim-foreground"
-                        />
+                        {profile.avatarUrlSmall ? (
+                            <img src={profile.avatarUrlSmall} alt="" className="size-20 rounded-full object-cover" />
+                        ) : (
+                            <InitialBadge
+                                aria-hidden
+                                name={profile.name}
+                                className="size-20 rounded-full bg-scrim-foreground/25 text-3xl text-scrim-foreground"
+                            />
+                        )}
                     </IdentityCover>
                 )}
                 {/* -bottom-px closes the seam a fractional height can open. */}

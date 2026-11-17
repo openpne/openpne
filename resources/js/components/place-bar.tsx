@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
@@ -7,6 +7,7 @@ import { useT } from '@/lib/i18n';
 import { breadcrumbCrumb, type Chrome } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
+import type { PageProps } from '@/types';
 
 /** One shape and one height whether the crumb links or is plain text: what sticks below the bar offsets by the single `--modern-place-bar` the shell publishes. */
 const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
@@ -20,13 +21,15 @@ const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const t = useT();
     const scrolled = useScrolled();
-    const crumb = breadcrumbCrumb(chrome);
+    const guest = usePage<PageProps>().props.auth.user === null;
+    const crumb = breadcrumbCrumb(chrome, guest);
 
     if (!crumb) {
         return null;
     }
 
-    const { scope } = chrome;
+    // The face stands for the member's own page, where a guest's crumb never leads.
+    const scope = guest ? undefined : chrome.scope;
     const label = typeof crumb.label === 'string' ? crumb.label : t(crumb.label.key, crumb.label.replacements);
     // Absent where the place is a section rather than an entity (a tag lens crumbs to its feed), and
     // on a form, which the registry pins to no scope.

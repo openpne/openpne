@@ -72,16 +72,24 @@ class MemberProfileRoutesTest extends TestCase
             );
     }
 
-    public function test_a_guest_gets_the_avatar_sized_for_the_80px_profile_header(): void
+    public function test_a_guest_gets_the_180px_avatar_and_neither_cover_size(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
         MemberImage::factory()->create(['member_id' => $owner->getKey()]);
-        // A guest's header paints at 80px, so it takes 180 rather than the 120 the list avatars use.
-        $expected = $owner->fresh()->avatar->file->thumbnailUrl(180, 180, square: true);
+        $file = $owner->fresh()->avatar->file;
 
-        $this->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('profile.owner.avatarUrl', $expected));
+        $response = $this->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('profile.avatarUrlSmall', $file->thumbnailUrl(180, 180, square: true))
+                ->where('profile.avatarUrl', null)
+                ->where('profile.avatarUrlLarge', null));
+
+        // The page's JSON escapes each slash, so the size segments are matched in both spellings.
+        $html = str_replace('\\/', '/', (string) $response->getContent());
+        $this->assertStringContainsString('w180_h180', $html);
+        $this->assertStringNotContainsString('w640_h640', $html);
+        $this->assertStringNotContainsString('w1200_h1200', $html);
     }
 
     public function test_modern_owner_carries_the_chosen_badge_color_as_hex(): void
@@ -474,18 +482,6 @@ class MemberProfileRoutesTest extends TestCase
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()
             ->assertDontSee('my-private-diary-title');
-    }
-
-    public function test_a_guest_receives_no_digest(): void
-    {
-        config(['openpne.surface_mode' => 'modern_default']);
-        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
-        $this->webField($owner, 'public-value');
-
-        $this->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('member/show')
-                ->where('digest', null));
     }
 
     private function fieldFor(Member $owner, Visibility $visibility, string $value): void

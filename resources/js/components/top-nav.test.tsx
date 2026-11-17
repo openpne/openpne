@@ -197,15 +197,37 @@ test("the guest bar's brand is their way to the front page", () => {
     expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
 });
 
-test("a guest's bar is the same with the switch on", () => {
-    // The switch never reaches a guest (HandleInertiaRequests), and the bar does not read it either:
-    // a signed-out visitor has no member nav to carry.
-    const chrome = arrive('member/show', '/member/9', { look: 'unified', auth: { user: null } });
+test("a guest's tabbed place top is the home grammar, ending in the way in rather than the menu", () => {
+    const chrome = arrive('unified/member', '/member/9', { look: 'tabbed', auth: { user: null }, profile: { id: 9, name: 'Owner' } });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
-    expect(screen.getByText('Test SNS')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
     expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
+    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Owner' })).toBeNull();
+});
+
+test("a guest's entry page crumbs to the author's entries, never to the author's page", () => {
+    const author = { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false };
+    const chrome = arrive('diary/show', '/diary/3', { look: 'tabbed', auth: { user: null }, diary: { author } });
+
+    renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(screen.getByRole('link', { name: "Owner's %diary%" }).getAttribute('href')).toBe('/diary/listMember/9');
+    expect(document.querySelector('a[href="/member/9"]')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Log In' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
+});
+
+test("a guest's crumb to a page behind the login wall is text", () => {
+    const owner = { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false };
+    const chrome = arrive('diary/list', '/diary/listMember/9', { look: 'tabbed', auth: { user: null }, owner, isOwner: false });
+
+    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(container.textContent).toContain('Owner');
+    expect(screen.queryByRole('link', { name: 'Owner' })).toBeNull();
 });
 
 /**

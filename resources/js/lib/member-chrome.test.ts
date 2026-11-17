@@ -13,6 +13,7 @@ import {
     lookSpec,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
+    POLICY_TITLES,
     resolveChrome,
     TALK_ROOMS_HREF,
     unifiedTabs,
@@ -631,6 +632,34 @@ const crumb = (component: string, props: Record<string, unknown>) => {
 test('the breadcrumb claims the place a screen is inside, and it is pressable', () => {
     assert.deepEqual(crumb('group/talk/index', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: true });
     assert.deepEqual(crumb('diary/show', { diary: { author: owner } }), { label: 'Owner', href: '/member/1', link: true });
+});
+
+const guestCrumb = (component: string, props: Record<string, unknown>) => {
+    const page = { enabledFeatures: allOn, ...props };
+
+    return breadcrumbCrumb(resolveChrome(component, page), true);
+};
+
+test("a guest's crumb leads only where a guest may go", () => {
+    // The author's page may sit behind the login wall, where their entries list never does.
+    assert.deepEqual(guestCrumb('diary/show', { diary: { author: owner } }), {
+        label: { key: ":name's %diary%", replacements: { name: 'Owner' } },
+        href: '/diary/listMember/1',
+        link: true,
+    });
+    // Somebody else's entries: the trail's target is their page, so it is named and not offered.
+    assert.deepEqual(guestCrumb('diary/list', { owner, isOwner: false }), { label: 'Owner', href: '/member/1', link: false });
+});
+
+test("a guest's screen with a title and no trail shows the title as text", () => {
+    assert.deepEqual(guestCrumb('policy/show', { kind: 'terms' }), { label: POLICY_TITLES.terms, href: '', link: false });
+    // A member's bar leaves the mark standing alone there, as before.
+    assert.equal(crumb('policy/show', { kind: 'terms' }), null);
+});
+
+test("a guest's place top and hub answer no crumb, as a member's do", () => {
+    assert.equal(guestCrumb('unified/member', { profile: owner }), null);
+    assert.equal(guestCrumb('diary/feed', { variant: 'all' }), null);
 });
 
 test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {

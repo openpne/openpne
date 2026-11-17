@@ -180,3 +180,7 @@ Privacy is enforced **in SQL**, not after the fact:
 6. Whether a guest may open a profile page is answered by `ProfileAccess::isWebPublic()` alone, which
    reads the effective audience (policy over member choice); nothing reads `members.profile_visibility`
    for that question directly.
+7. A guest's Modern profile page carries the heading (name, picture, bio, gated age) and the fields
+   a guest may see, and nothing else: the groups, friends, recent photos and recent entries are
+   empty whatever their own visibility, and the picture is the 180px square only
+   (`UnifiedMemberSerializer::guestPage()`).

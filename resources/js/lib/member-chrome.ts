@@ -829,13 +829,33 @@ export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
 
+/** The one trail target a guest may open: an author's entries list filters itself to the web-public ones. */
+const GUEST_OPEN = /^\/diary\/listMember\/\d+$/;
+
+/**
+ * A guest's crumb never takes the scope tier, whose target is a profile that may sit behind the
+ * login wall, and a trail target not open to a guest is painted as text.
+ */
+function guestCrumb(chrome: Chrome): BreadcrumbCrumb | null {
+    const last = chrome.context?.[chrome.context.length - 1];
+    if (last) {
+        return { label: last.label, href: last.href, link: chrome.form !== true && GUEST_OPEN.test(last.href) };
+    }
+
+    return chrome.mode === 'contextual' && chrome.title ? { label: chrome.title, href: '', link: false } : null;
+}
+
 /**
  * Deliberately not divePlace, which answers home from anywhere that is not a place: a breadcrumb
  * claims where the reader is, and "you are at home" on a settings page would be false. A form takes
  * its trail rather than its scope: the scope tier is pressable by construction, and the bar must
  * never carry a link beside unsaved input.
  */
-export function breadcrumbCrumb(chrome: Chrome): BreadcrumbCrumb | null {
+export function breadcrumbCrumb(chrome: Chrome, guest = false): BreadcrumbCrumb | null {
+    if (guest) {
+        return guestCrumb(chrome);
+    }
+
     if (chrome.form !== true) {
         const { scope } = chrome;
         const place = scope?.kind === 'group' ? groupPlace(scope) : scope?.kind === 'member' ? memberPlace(scope) : null;

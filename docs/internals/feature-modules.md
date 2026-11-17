@@ -179,8 +179,8 @@ Within Modern, the **look** is a named set of deviations from the standard layou
 ([`App\Support\Look`](../../app/Support/Look.php), resolved per request by
 [`LookResolver`](../../app/Support/LookResolver.php) and shared as the `look` prop). A look
 swaps page components and shell chrome, never routes or sources, and a screen it says nothing
-about renders standard. Neither a site nor a member chooses it: a member gets `tabbed`, a
-signed-out visitor `standard`. See [looks.md](looks.md).
+about renders standard. Neither a site nor a member chooses it: everyone gets `tabbed`, a
+signed-out visitor without the member-only parts. See [looks.md](looks.md).
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern

@@ -38,3 +38,14 @@ test('an empty self-introduction leaves no room behind it', () => {
     expect(container.textContent).not.toContain('the first line');
     expect(container.querySelectorAll('p')).toHaveLength(0);
 });
+
+/** A guest's only picture is the 180px square, which the cover's full-width crop would stretch. */
+test('a small picture stands where the initial would, and no cover is drawn from it', () => {
+    const { container } = render(<ProfileHeader profile={{ ...profile, avatarUrlSmall: '/cache/small.jpg' }} />);
+
+    expect(container.querySelectorAll('img')).toHaveLength(1);
+    const image = container.querySelector('img');
+    expect(image?.getAttribute('src')).toBe('/cache/small.jpg');
+    expect(image?.className).toContain('size-20');
+    expect(image?.hasAttribute('srcset')).toBe(false);
+});
