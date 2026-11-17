@@ -5,11 +5,11 @@ body:
   - type: markdown
     attributes:
       value: |
-        For a site you run that does something wrong. A site that would not install or update has its own form, and a problem with a site you use but do not run goes to its operator. English or Japanese, either is fine.
+        For a site you run that does something wrong, a failed upgrade from OpenPNE 3 included. A site that would not install or update has its own form, and a problem with a site you use but do not run goes to its operator. English or Japanese, either is fine.
 
         This issue is public. Before pasting output or a log, take out:
 
-        - registration, invitation and password-reset links (anyone who opens one can use it), and sign-in codes: a command prints them, and a site whose mail goes to the log writes the whole message there;
+        - registration, invitation and password-reset links (anyone who opens one can use it), and sign-in codes: `openpne:member:invite` prints a link, and a site whose mail goes to the log writes whole messages there;
         - `APP_KEY`, passwords and tokens;
         - anything about your members.
 
