@@ -133,8 +133,9 @@ application log here, and only once `php artisan queue:work` has run.
 ## Releases
 
 `main` is the development line and moves with every merged change. A site runs a tagged release
-(`v4.0.0-alpha.N`, under [Releases](https://github.com/openpne/openpne/releases)): it checks out
-the release's tag rather than `main` before installing, and moves from one release to the next with
+(`v4.0.0-alpha.N`, under [Releases](https://github.com/openpne/openpne/releases)): it installs
+the release's archive, which needs neither Composer nor Node.js on the server, or checks out the
+release's tag rather than `main`, and moves from one release to the next with
 [docs/updating.md](docs/updating.md).
 
 While the version carries `-alpha`, a release may change behaviour or stored data without a

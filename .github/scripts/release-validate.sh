@@ -6,7 +6,10 @@
 #                           where the branch left it plus copies of fixes main also has; prints
 #                           sha=, baseline= and baseline_sha= for the workflow
 #   published <tag>         refuse a published release that is not the one its draft was checked as
-#                           (the release body in $BODY)
+#                           (the release body in $BODY, the files attached to it in $ASSETS)
+#   archives <tag> <dir>    refuse archives in <dir> that are not the ones the draft of <tag> was
+#                           given (the release body in $BODY); prints attached, or none for a
+#                           release drafted without them
 #
 # `check` reads $DIFFERS: the copies the release notes list as differing from their original.
 set -euo pipefail
@@ -97,11 +100,44 @@ check() {
   printf 'sha=%s\nbaseline=%s\nbaseline_sha=%s\n' "$sha" "$last" "$([ -z "$last" ] || git rev-parse "$last^{commit}")"
 }
 
-published() {
-  local tag=$1 marker drafted commit baseline baseline_sha at top
+# The line a draft's body carries; a body a maintainer rewrote without it says nothing checkable.
+marker_of() { # marker_of <tag>
+  local marker
+  marker=$(printf '%s' "${BODY:-}" | grep -oE '<!-- release: tag=[^ ]+ commit=[0-9a-f]{40} baseline=[^ ]+ baseline_commit=[^ ]+ sums=(none|[0-9a-f]{64}) -->' | head -n 1 || true)
+  [ -n "$marker" ] || die "the body of $1 does not have the line its draft carries (RELEASE.md, \"By hand\"): nothing says which commit was checked, or which archives. Delete the release and the tag, and draft it again."
+  printf '%s' "$marker"
+}
+
+# SHA256SUMS is what the marker pins, and the two archives are what SHA256SUMS pins: a file
+# replaced after the draft, with or without its line in SHA256SUMS, fails one of the two.
+archives() { # archives <tag> <dir>
+  local tag=$1 dir=$2 version=${1#v} marker sums found listed
   export LC_ALL=C
-  marker=$(printf '%s' "${BODY:-}" | grep -oE '<!-- release: tag=[^ ]+ commit=[0-9a-f]{40} baseline=[^ ]+ baseline_commit=[^ ]+ -->' | head -n 1 || true)
-  [ -n "$marker" ] || die "$tag was published without the line its draft carries (RELEASE.md, \"By hand\"): nothing says which commit was checked. Delete the release and the tag, and draft it again."
+  marker=$(marker_of "$tag")
+  sums=$(printf '%s' "$marker" | sed -E 's/.* sums=([^ ]+) .*/\1/')
+  found=""
+  [ ! -d "$dir" ] || found=$(find "$dir" -maxdepth 1 -type f \( -name 'openpne-*' -o -name SHA256SUMS \) -printf '%f\n' | sort | tr '\n' ' ')
+  if [ "$sums" = none ]; then
+    [ -z "$found" ] || die "$tag was drafted without archives (sums=none) and has [ $found] attached: only the Release workflow makes a release's archives (RELEASE.md)"
+    echo none
+    return
+  fi
+  [ "$found" = "SHA256SUMS openpne-$version.tar.gz openpne-$version.zip " ] \
+    || die "$tag was drafted with openpne-$version.tar.gz, openpne-$version.zip and SHA256SUMS, and has [ $found] attached"
+  [ "$(sha256sum "$dir/SHA256SUMS" | cut -d' ' -f1)" = "$sums" ] \
+    || die "the SHA256SUMS attached to $tag is not the one its draft was given"
+  listed=$(sed -E 's/^[0-9a-f]{64} [ *]//' "$dir/SHA256SUMS" | sort | tr '\n' ' ')
+  [ "$listed" = "openpne-$version.tar.gz openpne-$version.zip " ] \
+    || die "the SHA256SUMS attached to $tag lists [ $listed], not the two archives"
+  (cd "$dir" && sha256sum --check --strict --quiet SHA256SUMS >&2) \
+    || die "an archive attached to $tag is not the file its SHA256SUMS was written for"
+  echo attached
+}
+
+published() {
+  local tag=$1 marker drafted commit baseline baseline_sha at top attached
+  export LC_ALL=C
+  marker=$(marker_of "$tag")
   drafted=$(printf '%s' "$marker" | sed -E 's/.* tag=([^ ]+) .*/\1/')
   commit=$(printf '%s' "$marker" | sed -E 's/.* commit=([0-9a-f]{40}) .*/\1/')
   baseline=$(printf '%s' "$marker" | sed -E 's/.* baseline=([^ ]+) .*/\1/')
@@ -123,11 +159,14 @@ published() {
       die "the draft of $tag was checked as an update from $baseline, but the highest other release is $top: another release was published in between. Delete this release and its tag, and draft it again."
     fi
   fi
-  note "$tag is at $commit, the commit its draft was checked as, updating from $baseline"
+  [ -n "${ASSETS:-}" ] || die "published needs \$ASSETS: the directory the release's attached files were downloaded to"
+  attached=$(archives "$tag" "$ASSETS")
+  note "$tag is at $commit, the commit its draft was checked as, updating from $baseline, archives: $attached"
 }
 
 case "${1:-}" in
   check) [ $# = 3 ] || die "usage: release-validate.sh check <version> <sha>"; check "$2" "$3" ;;
   published) [ $# = 2 ] || die "usage: release-validate.sh published <tag>"; published "$2" ;;
-  *) die "usage: release-validate.sh check <version> <sha> | published <tag>" ;;
+  archives) [ $# = 3 ] || die "usage: release-validate.sh archives <tag> <dir>"; archives "$2" "$3" ;;
+  *) die "usage: release-validate.sh check <version> <sha> | published <tag> | archives <tag> <dir>" ;;
 esac

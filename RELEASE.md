@@ -29,12 +29,19 @@ then copy the fix from `main` onto the renamed branch as well (the checks ask fo
 1. **Run the Release workflow** (Actions, "Release", from `main`) with the version and the commit at
    the tip of the branch. It refuses anything but that tip, runs every CI lane on it, rehearses the
    update from the last release on SQLite and MySQL, and audits the dependencies the release ships.
+   It also builds the release's archives (`openpne-<version>.tar.gz`, `.zip` and `SHA256SUMS`:
+   the tree with its dependencies and the built frontend), installs each where Composer and Node
+   fail when called, and updates a site from the last release's archives, as downloaded, to them
+   ([docs/updating.md](docs/updating.md), "From a release archive"). The draft carries the three
+   files.
    If a copy differs from its original — the fix did not apply as it was — name it in `differs`;
    the run fails until the list matches. `allow_advisories` accepts advisories for one release,
    each named by an id the audit reports for it (`PKSA-…` or `GHSA-…`; `CVE-…` too where Composer's
    report carries one).
-2. **Publish the draft** it leaves under Releases, without changing its tag. Publishing creates the tag. A check then compares
-   the tag with what was drafted; if it fails, delete the release and the tag and draft again.
+2. **Publish the draft** it leaves under Releases, without changing its tag or its files, and
+   keeping the `<!-- release: … -->` line when you edit the notes. Publishing creates the tag. A
+   check then compares the tag and the attached files with what was drafted; if it fails, delete
+   the release and the tag and draft again.
 3. Delete the branch.
 
 ## By hand
@@ -47,5 +54,9 @@ write, or the check after publishing fails:
 
 ```bash
 gh release create v<version> --target <sha> --draft --prerelease --title v<version> \
-  --notes '<!-- release: tag=v<version> commit=<sha> baseline=<last tag, or none> baseline_commit=<its commit, or none> -->'
+  --notes '<!-- release: tag=v<version> commit=<sha> baseline=<last tag, or none> baseline_commit=<its commit, or none> sums=none -->'
 ```
+
+A release made by hand has no archives: only the workflow builds and checks them, and `sums=none`
+says so (the check after publishing refuses archives attached to it). A site installed from an
+archive cannot move to such a release; it waits for the next one the workflow drafts.
