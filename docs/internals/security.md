@@ -497,8 +497,8 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
   app. A member registered under a mailbox they cannot read cannot recover the account by mail, and
   whoever reads that mailbox can take it over unless an authenticator app guards it
   ([Member two-factor authentication](#member-two-factor-authentication)). Changing the address
-  (`RequestEmailChange`) is no way out: it confirms the new one by mail and mails the current one a
-  link that cancels the change.
+  (`RequestEmailChange`) repairs it only while nobody reads the wrong mailbox: the change waits for a
+  confirmation from the new address, and until then a link mailed to the current one cancels it.
 
 ## Password policy
 

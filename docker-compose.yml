@@ -3,13 +3,13 @@
 #
 # Tuned for the inner loop: source is bind-mounted, Vite serves HMR, outgoing mail
 # is caught by Mailpit, and queued work runs inline (QUEUE_CONNECTION=sync) so mail
-# appears immediately without a worker. A site that serves people needs a real
-# database, SMTP, a queue worker and the scheduler instead.
+# appears immediately without a worker. A site that serves people sets up SMTP, a
+# queue and the scheduler instead.
 #
 # - Every service that writes to the bind mount runs as OPENPNE_UID:OPENPNE_GID
 #   (default 1000:1000 — export both if your host user differs), so generated
 #   files keep host ownership. vendor/ and node_modules/ live on the bind mount.
-# - SQLite is used; nothing here runs MySQL.
+# - SQLite is the default; the stack runs no database server of its own.
 # - `vite` runs the Vite dev server on :5173 for HMR; Laravel reads
 #   `public/hot` to redirect asset URLs to it. First startup runs `npm ci`.
 
@@ -22,9 +22,8 @@ services:
     # passes these through (clear_env = no), so they win over .env. Production wires real
     # SMTP and a real queue + worker instead.
     environment:
-      # A command has no request to take the address from, so the links it prints are built
-      # from this alone.
-      APP_URL: http://localhost:${OPENPNE_HTTP_PORT:-8080}
+      # Read once, by the entrypoint, to write APP_URL into the .env it creates.
+      OPENPNE_HTTP_PORT: ${OPENPNE_HTTP_PORT:-8080}
       MAIL_MAILER: smtp
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
@@ -41,6 +40,13 @@ services:
     depends_on:
       - mailpit
       - imgproxy
+    # php-fpm listens only once the entrypoint has installed and migrated, which is what
+    # `bin/dev-up` waits for.
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15m
 
   nginx:
     image: nginx:1.31.8-alpine
@@ -65,6 +71,11 @@ services:
       - "5173:5173"
     volumes:
       - .:/var/www/html
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(5173, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15m
 
   # Dev mail sink: catches every outgoing mail instead of delivering it and shows
   # it at http://localhost:8025. The app reaches it over SMTP on the compose network.

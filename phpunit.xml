@@ -24,8 +24,8 @@
         -->
         <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
-        <!-- Forced: the Docker stack exports its own APP_URL and MAIL_MAILER, which would otherwise win over these. -->
-        <env name="APP_URL" value="http://localhost" force="true"/>
+        <!-- A development .env carries a port in APP_URL, and links are compared against this one. -->
+        <env name="APP_URL" value="http://localhost"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

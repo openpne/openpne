@@ -23,7 +23,7 @@ OpenPNE は、自分たちの SNS サイトを作るためのオープンソー�
 - **グループ**: チャットのための「トーク」、じっくり話すための「トピック」、参加を募る「イベント」。
 - 短い投稿のための**タイムライン**と、サイトであったことをまとめて見られる**ホーム**。
 - **2 つの見た目**: スマホを基準に作った Modern と、OpenPNE 3 のサイトの画面・URL・テーマを引き継ぐ Classic。
-- **管理画面**: メンバー、投稿、登録の受け付け方、サイトの見た目、メンバー数の上限。
+- **管理画面**: メンバー、投稿、登録の受け付け方、サイトの見た目。
 - **ログイン**: パスワード、2 段階認証、パスキー。
 - **日本語と英語**。メンバーごとに選べます。
 - **AI クライアント**が [MCP](https://modelcontextprotocol.io) サーバを通して読み書きできます。メンバーとして、またはメンバーが持つ AI アカウントとして使えます。
@@ -41,13 +41,13 @@ docker compose exec app php artisan openpne:admin:create admin       # パスワ
 docker compose exec app php artisan openpne:member:invite you@example.com
 ```
 
-最初の起動には数分かかります(イメージを作り、依存を入れ、フロントエンドの開発サーバを起こすため)。最後のコマンドが、登録用のリンクを表示します。リンクを開いて名前とパスワードを決めると、あなたがサイトの最初のメンバーです。ほかの人も同じコマンドで招待できます。管理画面の「メンバー招待」からも招待でき、そのメールは実際のメールボックスではなく <http://localhost:8025> に届きます。
+最初の `bin/dev-up` には数分かかります(イメージを作り、依存を入れ、フロントエンドの開発サーバを起こして、サイトが応答するまで待つため)。最後のコマンドが、登録用のリンクを表示します。リンクを開いて名前とパスワードを決めると、あなたがサイトの最初のメンバーです。日記を書いたり、グループを作ったりできます。ほかの人も同じコマンドで招待できます。管理画面の「メンバー招待」からも招待でき、そのメールは実際のメールボックスではなく <http://localhost:8025> に届きます。
 
 この構成は、OpenPNE を試すためと、開発するためのものです。データは手元の SQLite ファイルに入り、フロントエンドは開発サーバから配られます。
 
 ## サイトを運営する
 
-人が使うサイトでは、`main` ではなくタグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))を使います。必要なものは、PHP 8.3 以降、SQLite か MySQL、Web サーバ、キューのワーカー、スケジューラの設定です([docs/internals/runtime.md](docs/internals/runtime.md)、英語)。ビルドには Composer 2 と Node.js 26 を使います。リリースからリリースへの更新は [docs/updating.md](docs/updating.md)(英語)にあります。
+人が使うサイトでは、`main` ではなくタグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))を使います。必要なものは、PHP 8.3 以降、SQLite か MySQL、Web サーバ、スケジューラの設定、キューに入った処理を動かす手段です([docs/internals/runtime.md](docs/internals/runtime.md) の "Queue"、英語)。ビルドには Composer 2 と Node.js 26 を使います。リリースからリリースへの更新は [docs/updating.md](docs/updating.md)(英語)にあります。
 
 バージョンに `-alpha` が付いている間は、互換性の手当てなしに動きや保存データが変わることがあります。修正は新しいリリースとして出し、前の alpha には入りません。
 
@@ -55,5 +55,5 @@ docker compose exec app php artisan openpne:member:invite you@example.com
 
 - 開発の手順: [README.md](README.md#developing)(英語)
 - OpenPNE 3 からの移行: [docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)(英語)
-- 脆弱性の報告: [SECURITY.md](SECURITY.md)(英語)。日本語でも受け付けます。
+- 脆弱性の報告: [SECURITY.md](SECURITY.md)(英語)
 - ライセンス: Apache License 2.0([LICENSE](LICENSE))

@@ -8,8 +8,8 @@ They were taken from a freshly installed site filled with made-up content. No me
 or address in them belongs to a real person or site, and the AI account's message was written by
 hand like the rest.
 
-- **Avatars and the site's logo** were drawn for these pictures from basic shapes. They are part of
-  this repository and under its licence.
+- **Avatars and the site's logo** were drawn for these pictures from basic shapes; no third-party
+  artwork is in them.
 - **Photographs** are from Wikimedia Commons, each marked CC0 1.0 (public domain dedication) on its
   page there:
 

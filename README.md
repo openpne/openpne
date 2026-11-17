@@ -25,8 +25,7 @@ This repository is OpenPNE 4, a rewrite on Laravel 13 that succeeds
 - **A timeline** for short posts, and **a home page** that sums up what has happened on the site.
 - **Two looks**: Modern, built for phones first, and Classic, which keeps the screens, addresses and
   themes of an OpenPNE 3 site.
-- **An admin panel** for members, what they post, who may register, the look of the site and a cap
-  on how many members it takes.
+- **An admin panel** for members, what they post, who may register and the look of the site.
 - **Sign-in** with a password, two-factor codes or passkeys.
 - **Japanese and English**, chosen per member.
 - **AI clients** can read and post through an [MCP](https://modelcontextprotocol.io) server, as a
@@ -36,8 +35,8 @@ This repository is OpenPNE 4, a rewrite on Laravel 13 that succeeds
 
 ## Try it
 
-With [Docker](https://docs.docker.com/get-started/get-docker/) and Compose, a site to click around
-in is four commands away:
+With [Docker](https://docs.docker.com/get-started/get-docker/) and Compose, these commands end in a
+site to click around in:
 
 ```bash
 git clone https://github.com/openpne/openpne.git && cd openpne
@@ -47,11 +46,11 @@ docker compose exec app php artisan openpne:admin:create admin       # asks for 
 docker compose exec app php artisan openpne:member:invite you@example.com
 ```
 
-The first start takes a few minutes: it builds an image, installs the dependencies and starts a
-development server for the frontend. The last command prints a registration link. Open it, choose a
-name and a password, and you are the site's first member. Invite others the same way, or from
-"Member invites" in the admin panel, whose mail arrives at <http://localhost:8025> instead of a
-real mailbox.
+The first `bin/dev-up` takes a few minutes: it builds an image, installs the dependencies, starts a
+development server for the frontend, and returns once the site answers. The last command prints a
+registration link. Open it, choose a name and a password, and you are the site's first member, free
+to write a diary entry or start a group. Invite others the same way, or from "Member invites" in
+the admin panel, whose mail arrives at <http://localhost:8025> instead of a real mailbox.
 
 This stack is for trying OpenPNE and for working on it. It keeps its data in a SQLite file in the
 checkout and serves the frontend from a development server.
@@ -59,16 +58,17 @@ checkout and serves the frontend from a development server.
 ## Running a site
 
 A site that serves people runs a tagged release rather than `main`; see [Releases](#releases). It
-needs PHP 8.3 or later, SQLite or MySQL, a web server, a queue worker and a scheduler entry
-([docs/internals/runtime.md](docs/internals/runtime.md)); Composer 2 and Node.js 26 build it.
+needs PHP 8.3 or later, SQLite or MySQL, a web server, a scheduler entry and a way to run queued
+work ([docs/internals/runtime.md](docs/internals/runtime.md), "Queue"); Composer 2 and Node.js 26
+build it.
 Moving from one release to the next is [docs/updating.md](docs/updating.md).
 
 ## Developing
 
 `bin/dev-up` is the development stack too. On first start the `app` container runs
-`composer install`, generates `APP_KEY`, and runs migrations; the `vite` sidecar runs `npm ci` and
-starts the Vite dev server on `:5173`. Source is bind-mounted so code changes are reflected without
-a rebuild.
+`composer install`, creates `.env` with `APP_URL` set to the stack's address, generates `APP_KEY`,
+and runs migrations; the `vite` sidecar runs `npm ci` and starts the Vite dev server on `:5173`.
+Source is bind-mounted so code changes are reflected without a rebuild.
 
 Day-to-day commands run inside the containers:
 
