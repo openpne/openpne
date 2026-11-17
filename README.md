@@ -35,8 +35,8 @@ This repository is OpenPNE 4, a rewrite on Laravel 13 that succeeds
 
 ## Try it
 
-With [Docker](https://docs.docker.com/get-started/get-docker/) and Compose, these commands end in a
-site to click around in:
+With [Docker Compose](https://docs.docker.com/compose/install/), these commands end in a site to
+click around in:
 
 ```bash
 git clone https://github.com/openpne/openpne.git && cd openpne
@@ -46,7 +46,7 @@ docker compose exec app php artisan openpne:admin:create admin       # asks for 
 docker compose exec app php artisan openpne:member:invite you@example.com
 ```
 
-The first `bin/dev-up` takes a few minutes: it builds an image, installs the dependencies, starts a
+The first `bin/dev-up` can take a few minutes: it builds an image, installs the dependencies, starts a
 development server for the frontend, and returns once the site answers. The last command prints a
 registration link. Open it, choose a name and a password, and you are the site's first member, free
 to write a diary entry or start a group. Invite others the same way, or from "Member invites" in

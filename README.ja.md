@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-OpenPNE は、自分たちの SNS サイトを運営するためのオープンソースソフトウェアです。地域、サークル、会社、ファンの集まりなど、ひとつのコミュニティのための場所を、自分で管理するサーバに置けます。誰でも参加できるサイトにも、招待制のサイトにもできます。
+OpenPNE は、自分たちの SNS サイトを運営するためのオープンソースソフトウェアです。地域、サークル、会社、ファンの集まりなど、コミュニティ専用の SNS を、自分で管理するサーバに構築できます。誰でも参加できるサイトにも、招待制のサイトにもできます。
 
 <p align="center">
   <img src="docs/images/ja/home.webp" width="30%" alt="ホーム: この 1 週間にメンバーが投稿したできごと">
@@ -14,24 +14,31 @@ OpenPNE は、自分たちの SNS サイトを運営するためのオープン�
 
 このリポジトリは OpenPNE 4 です。[OpenPNE 3](https://github.com/openpne/OpenPNE3) の後継として、Laravel 13 で作り直しました。
 
-この文書は [README.md](README.md) のうち、OpenPNE の紹介からサイトの運営までを日本語にしたものです。内容が食い違う場合は、英語版が正です。
+この文書は、英語版 [README.md](README.md) の内容を、開発の手順を除いて日本語でまとめたものです。内容が食い違う場合は、英語版が正です。
 
-## サイトでできること
+## 機能一覧
 
 - **メンバー**: プロフィール、フレンド、メッセージ、通知。
-- **日記**: 写真、コメント、リアクションを付けられます。誰に見せるかを 1 件ずつ選べます。
+- **日記**: 写真、コメント、リアクションを付けられます。公開範囲は日記ごとに選べます。
 - **グループ**: チャットのための「トーク」、じっくり話すための「トピック」、参加を募る「イベント」。
 - 短い投稿のための**タイムライン**と、サイトであったことをまとめて見られる**ホーム**。
 - **2 つの見た目**: スマホを基準に作った Modern と、OpenPNE 3 のサイトの画面・URL・テーマを引き継ぐ Classic。
 - **管理画面**: メンバー、投稿、登録の受け付け方、サイトの見た目。
 - **ログイン**: パスワード、2 要素認証、パスキー。
-- **日本語と英語**。メンバーごとに選べます。
+- **日本語と英語**: メンバーごとに選べます。
 - **AI クライアント**が [MCP](https://modelcontextprotocol.io) サーバを通して、メンバーとして、またはメンバーが持つ AI アカウントとして読み書きできます。
-- **OpenPNE 3 からのアップグレード**。メンバーと、メンバーが書いたものを引き継ぎます([docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)、英語)。
+- **OpenPNE 3 からのアップグレード**: OpenPNE 3 のサイトのデータを引き継げます。
 
-## 試す
+## インストール
 
-[Docker](https://docs.docker.com/get-started/get-docker/) と Compose があれば、次のコマンドで、手元で試せるサイトが起動します。
+用途によって、2 つの方法があります。
+
+- **お試し・開発用**: Docker Compose で、手元のマシンで起動します。
+- **本番用**: タグの付いたリリースを、サーバにインストールします。
+
+### お試し・開発用(Docker Compose)
+
+[Docker Compose](https://docs.docker.com/compose/install/) が使える環境で、次のコマンドを実行します。
 
 ```bash
 git clone https://github.com/openpne/openpne.git && cd openpne
@@ -41,20 +48,34 @@ docker compose exec app php artisan openpne:admin:create admin       # パスワ
 docker compose exec app php artisan openpne:member:invite you@example.com
 ```
 
-最初の `bin/dev-up` には数分かかります。イメージをビルドし、依存パッケージをインストールし、フロントエンドの開発サーバを起動して、サイトが応答するまで待つためです。最後のコマンドを実行すると、登録用のリンクが表示されます。リンクを開いて名前とパスワードを決めると、サイトの最初のメンバーとして登録されます。日記を書いたり、グループを作ったりできます。ほかの人も同じコマンドで招待できます。管理画面の「メンバー招待」からも招待できます。その招待メールは、実際のメールボックスではなく <http://localhost:8025> に届きます。
+初回の `bin/dev-up` は、イメージのビルドなどで数分かかることがあります。
 
-上のコマンドで起動する構成は、OpenPNE を試すためと、開発するためのものです。データは clone したディレクトリ内の SQLite ファイルに保存され、フロントエンドは開発サーバから配信されます。
+最後のコマンドを実行すると、登録用のリンクが表示されます。リンクを開いて名前とパスワードを決めると、サイトの最初のメンバーとして登録されます。日記を書いたり、グループを作ったりできます。ほかの人も同じコマンドで招待できます。管理画面の「メンバー招待」からも招待できます。その招待メールは、実際のメールボックスではなく <http://localhost:8025> に届きます。
 
-## サイトを運営する
+この環境は、試用と開発のためのものです(データは clone したディレクトリ内の SQLite ファイルに保存され、フロントエンドは開発サーバから配信されます)。実際に運営するサイトには、次の「本番用」の方法を使います。
 
-実際に運営するサイトでは、`main` ではなくタグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))を使います。リリースにアーカイブが付いていれば、サーバに Composer や Node.js がなくてもインストールできます。サーバへのインストール方法は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3 以降、SQLite か MySQL、Web サーバ、キューのジョブを実行する手段です。リリースから次のリリースへの更新手順は [docs/updating.md](docs/updating.md)(英語)にあります。
+### 本番用(リリース)
+
+実際に運営するサイトには、`main` ブランチではなく、タグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))をインストールします。
+
+インストール方法は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3 以降、SQLite か MySQL、Web サーバ、キューのジョブを実行する手段です。リリースにアーカイブが付いていれば、サーバに Composer や Node.js がなくてもインストールできます。次のリリースへの更新手順は [docs/updating.md](docs/updating.md)(英語)にあります。
 
 バージョンに `-alpha` が付いている間は、互換性を保つ手段なしに、動作や保存データが変わることがあります。修正は新しいリリースとして公開し、以前の alpha には適用しません。
 
-## そのほか
+## OpenPNE 3 からのアップグレード
 
-- 開発の手順: [README.md](README.md#developing)(英語)
-- OpenPNE 3 からのアップグレード: [docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)(英語)
-- インストールや更新ができないときの報告と、不具合の報告: [New issue](https://github.com/openpne/openpne/issues/new/choose) のフォーム(項目は英語です。日本語で記入してかまいません)
-- 脆弱性を非公開で報告する方法: [SECURITY.md](SECURITY.md)(英語)
-- ライセンス: Apache License 2.0([LICENSE](LICENSE))
+OpenPNE 3 のサイトのデータを、新しくインストールした OpenPNE 4 に引き継げます。対象は、メンバーとプロフィール、日記、グループ(OpenPNE 3 のコミュニティ)、メッセージ、ファイル、サイトの設定などです。手順と、引き継がれないデータは、[docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)(英語)にあります。
+
+## 開発
+
+開発環境の使い方とテストの実行方法は、英語版の [README.md](README.md#developing) にあります。
+
+## 不具合の報告
+
+インストールや更新ができないとき、不具合を見つけたときは、[New issue](https://github.com/openpne/openpne/issues/new/choose) のフォームから報告してください(項目は英語です。日本語で記入してかまいません)。
+
+脆弱性は、公開の issue にせず、[SECURITY.md](SECURITY.md)(英語)の方法で非公開で報告してください。
+
+## ライセンス
+
+Apache License 2.0([LICENSE](LICENSE))
