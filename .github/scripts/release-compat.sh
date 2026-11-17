@@ -30,8 +30,10 @@ branch_re='^release/[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$'
 
 # A checkout that did not fetch them would see none and pass every check below for ever.
 in_sync() { # in_sync <what> <ls-remote flag> <remote pattern> <prefix to strip> <name pattern> <local names>
-  local remote
-  remote=$(git ls-remote "$2" origin "$3" | awk -v p="$4" '$2 !~ /\^\{\}$/ { sub("^" p, "", $2); print $2 }' | { grep -E "$5" || true; } | sort)
+  local listing remote
+  listing=$(git ls-remote "$2" origin "$3") \
+    || die "could not ask origin for its $1 (the reason is above). This says nothing about what is being checked: run this again."
+  remote=$(printf '%s\n' "$listing" | awk -v p="$4" '$2 !~ /\^\{\}$/ { sub("^" p, "", $2); print $2 }' | { grep -E "$5" || true; } | sort)
   [ "$remote" = "$6" ] \
     || die "the $1 here differ from origin's (here: $(printf '%s' "$6" | grep -c . || true), origin: $(printf '%s' "$remote" | grep -c . || true)): git fetch --prune --prune-tags origin"
 }

@@ -160,18 +160,18 @@ published() {
 
   [ "$tag" = "$drafted" ] \
     || die "the release was drafted as $drafted and published as $tag: the checks find a release by its tag name. $remedy"
-  at=$(git rev-parse --verify --quiet "refs/tags/$tag^{commit}") || die "the tag $tag is not here"
+  at=$(git rev-parse --verify --quiet "refs/tags/$tag^{commit}") || die "the tag $tag is not in this checkout. This says nothing about the release: run this again."
   [ "$at" = "$commit" ] \
-    || die "$tag points at $at, but the draft was checked as $commit: the release holds something that was not checked. Delete the release and the tag, and draft it again."
+    || die "$tag points at $at, but the draft was checked as $commit: the release holds something that was not checked. $remedy"
 
   # Every other tag counts, a higher one too: this runs when the release is published, and a
   # draft is checked as an update from the highest tag there was.
   top=$("$here/release-compat.sh" last-release "$tag")
   if [ -z "$top" ]; then
-    [ "$baseline" = none ] || die "the draft of $tag was checked as an update from $baseline, which is not a tag here"
+    [ "$baseline" = none ] || die "the draft of $tag was checked as an update from $baseline, which is not a tag here. $remedy"
   else
     if [ "$baseline" != "$top" ] || [ "$baseline_sha" != "$(git rev-parse "$top^{commit}")" ]; then
-      die "the draft of $tag was checked as an update from $baseline, but the highest other release is $top: another release was published in between. Delete this release and its tag, and draft it again."
+      die "the draft of $tag was checked as an update from $baseline, but the highest other release is $top: another release was published in between. $remedy"
     fi
   fi
   [ -n "${ASSETS:-}" ] || die "published needs \$ASSETS: the directory the release's attached files were downloaded to"

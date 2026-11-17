@@ -40,16 +40,18 @@ then copy the fix from `main` onto the renamed branch as well (the checks ask fo
    report carries one).
 2. **Publish the draft** it leaves under Releases, without changing its tag or its files, and
    keeping the `<!-- release: … -->` line when you edit the notes. Publishing creates the tag. A
-   check then compares the tag and the attached files with what was drafted. If it says GitHub
-   could not be reached, run it again; if it fails for another reason, delete the release and the
-   tag and draft again.
+   check then compares the tag and the attached files with what was drafted. If it fails, its
+   last `::error::` line says what to do: delete the release and the tag and draft again, or, when
+   GitHub did not answer, run the check again. A failure without such a line is not about the
+   release: run the check again.
 3. Delete the branch.
 
 ## After publishing
 
-A published release keeps its `<!-- release: … -->` line and its three files as they are. The next
-release's run reads both: it downloads the files, checks them against the line, and updates a site
-from them, so a line or a file that changed stops every later run.
+A published release keeps its `<!-- release: … -->` line and the files attached to it as they
+are, with none added. The run for the release after it reads both: it downloads the files, checks
+them against the line, and updates a site from them, so a line or a file that changed stops that
+run until it is put right.
 
 Put back what changed. If a file is gone and cannot be put back (the archives are not built the
 same twice), remove every file from that release and change `sums=<hash>` in its line to
