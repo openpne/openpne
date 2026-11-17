@@ -8,8 +8,8 @@ import { breadcrumbCrumb, type Chrome } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 
-/** One shape for both faces of the crumb, so the bar reads the same wherever the reader lands. */
-const PILL = 'inline-flex min-w-0 items-center gap-1.5 rounded-full py-1';
+/** One shape and one height for both faces of the crumb: what sticks below the bar offsets by the single `--modern-place-bar` the shell publishes. */
+const PILL = 'inline-flex min-h-8 min-w-0 items-center gap-1.5 rounded-full py-1';
 
 /**
  * Only where a screen is inside something: home, a hub and anything the sidebar's own active row

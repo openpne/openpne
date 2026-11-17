@@ -9,7 +9,7 @@ import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
 import { carriesFiles, carriesPick, takesText } from '@/lib/file-drop';
-import { type Chrome, chromeRecedes, hasBottomNav, lookSpec } from '@/lib/member-chrome';
+import { breadcrumbCrumb, type Chrome, chromeRecedes, hasBottomNav, lookSpec } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -91,8 +91,10 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         : look.colorLine
           ? 'lg:[--modern-top-offset:4px]'
           : 'lg:[--modern-top-offset:0px]';
-    // The height place-bar.tsx gives a crumb with a face, hairline included, so it moves when that bar's padding does.
-    const placeBarOffset = look.placeBar ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
+    // The height place-bar.tsx gives its bar, hairline included, and only where it renders one: a
+    // screen with no crumb has nothing for a sticky child to stand below.
+    const placeBarOffset =
+        look.placeBar && breadcrumbCrumb(chrome) !== null ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
 
     return (
         <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>
