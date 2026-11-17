@@ -81,7 +81,8 @@ it held is lost. A pointer attached later raises panels on controls mounted from
   said is *why it cannot be pressed* — a different feature.
 - **`title=` for truncation.** The native `title` on a truncated line (an attachment's file name
   in the composers) gives the full text of a line that had to be cut. That is a different job
-  from naming a control, and it stays.
+  from naming a control, and it stays. The people grid's face tile, which draws no name, carries
+  its `aria-label` as a native `title` too.
 
 ## Key invariants
 

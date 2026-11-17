@@ -2,7 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Activity, ChevronRight, IdCard, UserCircle2, Users } from 'lucide-react';
 import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
-import type { NineTableItem, PageProps } from '@/types';
+import type { PersonTile, PageProps } from '@/types';
 import type { DiarySummary } from '../diary/types';
 import { DiaryCards } from '@/components/sections/diary-cards';
 import { GroupGrid, type HomeGroup } from '@/components/sections/group-grid';
@@ -20,7 +20,7 @@ interface MemberShowProps extends PageProps {
     profile: MemberPageProfile;
     fields: { name: string; caption: string; value: string }[];
     groups: HomeGroup[];
-    friends: NineTableItem[];
+    friends: PersonTile[];
     recentPhotos: HomePhoto[];
     recentDiaries: DiarySummary[];
 }

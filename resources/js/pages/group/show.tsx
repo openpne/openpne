@@ -8,7 +8,7 @@ import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { membersPhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
-import type { NineTableItem, PageProps } from '@/types';
+import type { PersonTile, PageProps } from '@/types';
 import { GroupAbout } from '../community/group-about';
 import type { CommunityRoleSlug, EventSummary, GroupAbout as GroupAboutData, TopicSummary } from '../community/types';
 import { BoardCards } from '@/components/sections/board-cards';
@@ -32,7 +32,7 @@ interface GroupShowProps extends PageProps {
     canManage: boolean;
     canJoin: boolean;
     canLeave: boolean;
-    members: NineTableItem[];
+    members: PersonTile[];
     categoryGroups: (HomeGroup & { memberCount: number })[];
     recentTopics: TopicSummary[] | null; // null → the viewer may not read the boards
     canPostTopic: boolean;

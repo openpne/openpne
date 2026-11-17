@@ -4,7 +4,7 @@ import { InitialBadge } from '@/components/initial-badge';
 import { derivedIdentityColor } from './identity-visual';
 import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
-import type { NineTableItem } from '@/types';
+import type { PersonTile } from '@/types';
 
 export interface SeatRow {
     seats: 4 | 5;
@@ -43,7 +43,7 @@ export function seatRows(count: number): SeatRow[] {
  * formation drawn for the eye, and forty is what makes the four-seat row's inset a whole number of
  * columns. The seat, not the face, is the link: a circle hands back the corners of its own target.
  */
-export function PeopleGrid({ people }: { people: NineTableItem[] }) {
+export function PeopleGrid({ people }: { people: PersonTile[] }) {
     const t = useT();
     let seated = 0;
 

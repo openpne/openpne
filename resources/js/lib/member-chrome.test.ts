@@ -531,8 +531,7 @@ test("a guest's place top, hub and site policy answer no crumb, as a member's do
 });
 
 test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {
-    // The place's own hero names it directly below: naming it twice in 60px was the duplication the
-    // owner asked out of.
+    // The place's own hero names it directly below, so a crumb would name it twice in 60px.
     for (const [component, props] of [
         ['group/show', { group: cyclists }],
         ['member/show', { profile: owner }],

@@ -5,7 +5,7 @@ import HomeIssue from './issue';
 import type { GridImage } from '@/components/image-grid';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
-import type { AuthUser, FeatureKey, NineTableItem } from '@/types';
+import type { AuthUser, FeatureKey, PersonTile } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
 import type { HomeGroup } from '@/components/sections/group-grid';
 import type { Issue, IssueStory, TalkBurst, TalkExcerptMessage, UpcomingEvent } from './types';
@@ -231,7 +231,7 @@ const burst = (id: number): TalkBurst => ({
     href: `/groups/${id}/talk`,
 });
 
-const newcomer: NineTableItem = { id: 31, name: 'Aki', imageUrl: null, avatarColor: null, isAi: false, href: '/member/31' };
+const newcomer: PersonTile = { id: 31, name: 'Aki', imageUrl: null, avatarColor: null, isAi: false, href: '/member/31' };
 const newGroup: HomeGroup = { id: 41, name: 'Film club', imageUrl: null, href: '/groups/41' };
 const upcoming: UpcomingEvent = { ...brief('event', 51), openDate: '2026-09-01' };
 

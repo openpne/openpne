@@ -98,8 +98,8 @@ A guest gets the same frame with the member-only parts left out:
 `/member/{id}` renders `member/show` and `/groups/{group}` renders `group/show`. Both
 gather several sources onto one page, under one contract:
 
-- **Read-only projection.** The page re-arranges what the viewer already reads. Same routes, same
-  viewer-scoped queries, same clearance.
+- **Read-only projection.** The page re-arranges what the viewer already reads, through each
+  source's own viewer-scoped query and at the same clearance.
 - **No new capability rides the page.** Every row comes from a source the viewer already reads
   on that source's own screen, and each file is asked through
   `FilePolicy` when it is served ([`ImageController`](../../app/Http/Controllers/ImageController.php))
