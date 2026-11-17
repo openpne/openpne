@@ -1,5 +1,4 @@
-import { AiChip } from '@/components/ai-chip';
-import { Avatar } from '@/components/avatar';
+import { PostByline } from '@/components/post-byline';
 import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
@@ -16,7 +15,6 @@ import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
-import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -90,22 +88,7 @@ export default function GroupTopicShow() {
             <Heading variant="page">{topic.name}</Heading>
 
             <Panel bodyClassName="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} isAi={topic.author?.isAi ?? false} size="md" decorative />
-                    {topic.author ? (
-                        <Link href={`/member/${topic.author.id}`} className="min-w-0 truncate text-link hover:underline">
-                            {topic.author.name}
-                        </Link>
-                    ) : (
-                        <span>{t('%Withdrawn_member%')}</span>
-                    )}
-                    <AiChip isAi={topic.author?.isAi ?? false} />
-                    <span>&mdash; <Timestamp at={topic.createdAt} preset="absolute" /></span>
-                    {topic.editedAt && <span className="text-xs">({t('Edited')})</span>}
-                    <span className="ml-auto shrink-0">
-                        <RowMenu items={canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/topics/${topic.id}/edit` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteTopic() }] : []} />
-                    </span>
-                </div>
+                <PostByline author={topic.author} at={topic.createdAt} edited={Boolean(topic.editedAt)} menu={<RowMenu items={canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/topics/${topic.id}/edit` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteTopic() }] : []} />} />
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
                 <LinkCard card={topic.linkCard} />
