@@ -6,9 +6,15 @@ README's [Try it](../README.md#try-it) is shorter. Moving a site to a later rele
 [upgrading-from-openpne3.md](upgrading-from-openpne3.md), whose first stage uses this guide up to
 the settings and says where it leaves it.
 
-The commands are the ones for Ubuntu 24.04 with nginx and PHP-FPM, and a site at
-`https://sns.example.com`. Other systems differ in package names and in where the web server keeps
-its configuration, not in the steps.
+The commands are the ones for Ubuntu 26.04 LTS with nginx and PHP-FPM, and a site at
+`https://sns.example.com`. That system is the example, not a requirement: whatever meets
+[What the server needs](#what-the-server-needs) runs a site, and other systems differ in package
+names and in where the web server keeps its configuration, not in the steps. Where a path or a
+service name below carries `8.5`, it is the version of PHP the system packages. Ubuntu 24.04 LTS
+packages PHP 8.3: the same packages install by the same lines, and those names carry `8.3`.
+
+A server you administer is what the steps assume. A host where you cannot is covered by
+[On a shared host](#on-a-shared-host).
 
 ## What the server needs
 
@@ -25,9 +31,11 @@ its configuration, not in the steps.
   the server and needs Composer 2 and Node.js 26 as well.
 
 ```bash
-sudo apt install nginx php-fpm php-cli php-curl php-mbstring php-xml php-intl php-zip php-gd \
-  php-bcmath unzip php-sqlite3 sqlite3    # php-mysql in place of php-sqlite3 and sqlite3 for MySQL
+sudo apt install php-cli php-curl php-mbstring php-xml php-intl php-zip php-gd php-bcmath unzip \
+  php-sqlite3 sqlite3                     # php-mysql in place of these two for MySQL
 ```
+
+The web server's own packages come in [step 4](#4-serve-it).
 
 ## The site user and its directory
 
@@ -150,10 +158,14 @@ it: keep it with your backups, and do not generate it again.
 
 ## 4. Serve it
 
+```bash
+sudo apt install nginx php-fpm
+```
+
 PHP runs as the site user, in a PHP-FPM pool of its own:
 
 ```ini
-; /etc/php/8.3/fpm/pool.d/openpne.conf
+; /etc/php/8.5/fpm/pool.d/openpne.conf
 [openpne]
 user = openpne
 group = openpne
@@ -211,7 +223,7 @@ server {
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/openpne /etc/nginx/sites-enabled/openpne
-sudo systemctl restart php8.3-fpm
+sudo systemctl restart php8.5-fpm
 sudo systemctl reload nginx
 ```
 
@@ -220,9 +232,16 @@ What the two static rules are for, and why the pages PHP answers with are left u
 
 ### Apache
 
-Apache serves the same directory. The release's `public/.htaccess` carries the rewrite, the
-compression and the cache header, so the virtual host has to allow it, and to keep Apache's own
-configuration from compressing the pages PHP answers with:
+Apache with `mod_php` serves the same directory, in place of nginx and PHP-FPM:
+
+```bash
+sudo apt install apache2 libapache2-mod-php
+sudo a2enmod rewrite headers deflate setenvif
+```
+
+The release's `public/.htaccess` carries the rewrite, the compression and the cache header, so the
+virtual host has to allow it, and to keep Apache's own configuration from compressing the pages
+PHP answers with:
 
 ```apache
 # /etc/apache2/sites-available/openpne.conf
@@ -242,14 +261,12 @@ configuration from compressing the pages PHP answers with:
 ```
 
 ```bash
-sudo apt install apache2 libapache2-mod-php     # in place of nginx and php-fpm
-sudo a2enmod rewrite headers deflate setenvif
 sudo a2ensite openpne
 sudo systemctl restart apache2
 ```
 
-With `mod_php`, as here, PHP runs as Apache's own user, `www-data`, and that user is the site
-user: it owns `/srv/openpne` in place of a user made for the site
+With `mod_php` PHP runs as Apache's own user, `www-data`, and that user is the site user: it owns
+`/srv/openpne` in place of a user made for the site
 (`sudo mkdir /srv/openpne && sudo chown www-data:www-data /srv/openpne`), every command in this
 guide is run as it (`sudo -u www-data php artisan …`), and the cron line and the worker below are
 its own (`sudo crontab -u www-data -e`, `User=www-data` and `Group=www-data`).
@@ -364,3 +381,24 @@ there. All of those send mail.
   read the settings when it started. A site that has run `php artisan optimize` runs it again.
 - `storage/` and `.env` can live outside the release's directory as well
   ([runtime.md](internals/runtime.md)); an update then carries neither.
+
+## On a shared host
+
+A host where you cannot make users, install packages or configure the web server can run a site
+too, when it gives you:
+
+- a shell (SSH), to unpack the archive and run `php artisan`;
+- PHP 8.3 or later, for the web and on the command line, with the extensions
+  [above](#what-the-server-needs) (`intl` is the one such hosts most often lack);
+- MySQL, or SQLite;
+- Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root.
+
+The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are
+as written, in a directory of yours. Step 4 is the host's own setting that makes the release's
+`public/` the document root; nothing outside `public/` may be reachable from the web. Where no
+process can be kept running, `QUEUE_CONNECTION=deferred` stands in for the worker, and the
+scheduler runs from the host's cron if it has one
+([runtime.md](internals/runtime.md#scheduled-tasks) says what is lost without it). An update is
+[updating.md](updating.md), in the directories you have.
+
+This guide does not walk through any one host.
