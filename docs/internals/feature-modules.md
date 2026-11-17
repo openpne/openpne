@@ -176,10 +176,9 @@ either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 
 Within Modern, the **look** is a named set of deviations from the standard layout
-([`App\Support\Look`](../../app/Support/Look.php), resolved per request by
-[`LookResolver`](../../app/Support/LookResolver.php) and shared as the `look` prop). A look
-swaps page components and shell chrome, never routes or sources, and a screen it says nothing
-about renders standard. Neither a site nor a member chooses it: everyone gets `tabbed`, a
+([`App\Support\Look`](../../app/Support/Look.php), shared as the `look` prop). A look
+decides the shell chrome around a page, never the page, its route or its sources, and a
+screen it says nothing about renders standard. Neither a site nor a member chooses it: everyone gets `tabbed`, a
 signed-out visitor without the member-only parts. See [looks.md](looks.md).
 
 A feature's **Modern status** is described with four values — `native`,

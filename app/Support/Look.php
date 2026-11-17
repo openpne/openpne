@@ -18,16 +18,4 @@ enum Look: string
 
     /** The experiment that moves finding your way into one breadcrumb header, with no back button. */
     case Tabbed = 'tabbed';
-
-    /**
-     * A bool rather than a page-format id: every non-standard look so far renders the same unified
-     * page components and differs only in its chrome.
-     */
-    public function usesUnifiedPages(): bool
-    {
-        return match ($this) {
-            self::Standard => false,
-            self::Unified, self::Tabbed => true,
-        };
-    }
 }

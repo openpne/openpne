@@ -4,7 +4,6 @@ namespace Tests\Unit\Support;
 
 use App\Support\Autoplay;
 use App\Support\ComposeEditor;
-use App\Support\Look;
 use App\Support\PreferenceKey;
 use App\Support\PushDelivery;
 use App\Support\RowActionsHint;
@@ -43,26 +42,6 @@ class PreferenceKeyTest extends TestCase
         $this->assertNotContains(PreferenceKey::AutoplayAnimations, PreferenceKey::upgradableCases());
         $this->assertNull(PreferenceKey::RowActionsHint->op3SourceName());
         $this->assertNotContains(PreferenceKey::RowActionsHint, PreferenceKey::upgradableCases());
-
-        // OpenPNE 3 had no Modern surface, so there is no layout choice to carry over either.
-        $this->assertNull(PreferenceKey::PreferredLook->op3SourceName());
-        $this->assertNotContains(PreferenceKey::PreferredLook, PreferenceKey::upgradableCases());
-    }
-
-    public function test_preferred_look_is_tri_state(): void
-    {
-        // Same shape as the surface: an absent row (and a corrupted value) means "no member choice",
-        // so resolution falls through to the site default rather than pinning a look nobody picked.
-        $this->assertNull(PreferenceKey::PreferredLook->default());
-        $this->assertNull(PreferenceKey::PreferredLook->decode(null));
-        $this->assertNull(PreferenceKey::PreferredLook->decode('nonsense'));
-        $this->assertNull(PreferenceKey::PreferredLook->decode(''));
-
-        foreach (Look::cases() as $look) {
-            $this->assertSame($look, PreferenceKey::PreferredLook->decode(PreferenceKey::PreferredLook->encode($look)));
-        }
-
-        $this->assertSame('unified', PreferenceKey::PreferredLook->encode(Look::Unified));
     }
 
     public function test_preferred_surface_is_tri_state(): void

@@ -4,22 +4,19 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Migrations;
 
-use App\Services\SnsSettingService;
-use App\Support\Look;
-use App\Support\SnsSettingKey;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The old key exists here only as the literal the migration itself carries — its enum case is gone.
- */
+/** Both keys exist here only as the literals the migration itself carries: their enum cases are gone. */
 class ConvertModernUnifiedHomeToDefaultLookTest extends TestCase
 {
     use RefreshDatabase;
 
     private const OLD_KEY = 'modern_unified_home';
+
+    private const NEW_KEY = 'default_look';
 
     private function migration(): Migration
     {
@@ -28,7 +25,7 @@ class ConvertModernUnifiedHomeToDefaultLookTest extends TestCase
 
     private function storedLook(): ?string
     {
-        return DB::table('sns_settings')->where('key', SnsSettingKey::DefaultLook->value)->value('value');
+        return DB::table('sns_settings')->where('key', self::NEW_KEY)->value('value');
     }
 
     private function storedOldKey(): ?string
@@ -36,15 +33,13 @@ class ConvertModernUnifiedHomeToDefaultLookTest extends TestCase
         return DB::table('sns_settings')->where('key', self::OLD_KEY)->value('value');
     }
 
-    /** The read after up() takes no cache clear of the test's own, so the migration's forget answers it. */
-    public function test_the_experiment_carries_over_through_a_warm_cache(): void
+    public function test_the_experiment_carries_over(): void
     {
         DB::table('sns_settings')->updateOrInsert(['key' => self::OLD_KEY], ['value' => '1']);
-        $this->assertSame(Look::Standard, app(SnsSettingService::class)->get(SnsSettingKey::DefaultLook));
 
         $this->migration()->up();
 
-        $this->assertSame(Look::Unified, app(SnsSettingService::class)->get(SnsSettingKey::DefaultLook));
+        $this->assertSame('unified', $this->storedLook());
         $this->assertNull($this->storedOldKey());
     }
 
@@ -60,7 +55,7 @@ class ConvertModernUnifiedHomeToDefaultLookTest extends TestCase
 
     public function test_down_restores_the_old_switch_only_for_the_look_it_converted(): void
     {
-        DB::table('sns_settings')->updateOrInsert(['key' => SnsSettingKey::DefaultLook->value], ['value' => 'unified']);
+        DB::table('sns_settings')->updateOrInsert(['key' => self::NEW_KEY], ['value' => 'unified']);
 
         $this->migration()->down();
 
@@ -70,7 +65,7 @@ class ConvertModernUnifiedHomeToDefaultLookTest extends TestCase
 
     public function test_down_writes_no_old_row_for_a_look_that_is_not_the_experiment(): void
     {
-        DB::table('sns_settings')->updateOrInsert(['key' => SnsSettingKey::DefaultLook->value], ['value' => 'standard']);
+        DB::table('sns_settings')->updateOrInsert(['key' => self::NEW_KEY], ['value' => 'standard']);
 
         $this->migration()->down();
 

@@ -9,7 +9,6 @@ use App\Notifications\Settings\NotificationKind;
 use App\Support\Autoplay;
 use App\Support\AvatarColor;
 use App\Support\ComposeEditor;
-use App\Support\Look;
 use App\Support\PreferenceKey;
 use App\Support\PushDelivery;
 use App\Support\RowActionsHint;
@@ -289,7 +288,7 @@ class Member extends Authenticatable implements PasskeyUser
         return $this->preferences->firstWhere('key', $key->value)?->value;
     }
 
-    private function writePreference(PreferenceKey $key, Visibility|Surface|Look|ComposeEditor|PushDelivery|Autoplay|RowActionsHint $value): void
+    private function writePreference(PreferenceKey $key, Visibility|Surface|ComposeEditor|PushDelivery|Autoplay|RowActionsHint $value): void
     {
         $this->preferences()->updateOrCreate(
             ['key' => $key->value],

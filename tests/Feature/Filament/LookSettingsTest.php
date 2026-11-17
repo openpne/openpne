@@ -6,7 +6,6 @@ namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\LookSettings;
 use App\Models\AdminUser;
-use App\Models\Member;
 use App\Services\SnsSettingService;
 use App\Support\ModernGroupList;
 use App\Support\ModernHome;
@@ -63,27 +62,22 @@ class LookSettingsTest extends TestCase
             ->assertHasErrors('data.'.SnsSettingKey::ModernGroupList->value);
     }
 
-    public function test_a_save_writes_the_two_settings_and_no_layout_row(): void
+    public function test_a_save_writes_the_two_settings_and_nothing_else(): void
     {
-        // The retired layout keys share this page's setting group, and a loop over the group would
-        // write them back with their defaults on every save.
-        DB::table('member_preferences')->insert(['member_id' => Member::factory()->create()->getKey(), 'key' => 'preferred_look', 'value' => 'unified']);
+        $before = DB::table('sns_settings')->pluck('key')->all();
 
         Livewire::test(LookSettings::class)->call('save')->assertHasNoErrors();
 
-        $keys = DB::table('sns_settings')->pluck('key')->all();
-        $this->assertContains(SnsSettingKey::ModernHome->value, $keys);
-        $this->assertContains(SnsSettingKey::ModernGroupList->value, $keys);
-        $this->assertNotContains(SnsSettingKey::DefaultLook->value, $keys);
-        $this->assertNotContains(SnsSettingKey::SelectableLooks->value, $keys);
-        $this->assertSame(1, DB::table('member_preferences')->where('key', 'preferred_look')->count());
+        $written = array_values(array_diff(DB::table('sns_settings')->pluck('key')->all(), $before));
+        sort($written);
+        $this->assertSame([SnsSettingKey::ModernGroupList->value, SnsSettingKey::ModernHome->value], $written);
     }
 
     public function test_the_form_offers_no_layout_to_choose(): void
     {
         Livewire::test(LookSettings::class)
-            ->assertFormFieldDoesNotExist(SnsSettingKey::DefaultLook->value)
-            ->assertFormFieldDoesNotExist(SnsSettingKey::SelectableLooks->value);
+            ->assertFormFieldDoesNotExist('default_look')
+            ->assertFormFieldDoesNotExist('selectable_looks');
     }
 
     /** A migrated site keeps OpenPNE 3's word for a group, so a name built from a site term would not be the one these point at. */
