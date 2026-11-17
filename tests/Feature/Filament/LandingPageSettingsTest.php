@@ -91,6 +91,14 @@ class LandingPageSettingsTest extends TestCase
         $this->assertStringContainsString("the {$name} page", (string) file_get_contents(base_path('docs/upgrading-from-openpne3.md')));
     }
 
+    public function test_an_administrator_opens_it_at_the_address_its_name_gives(): void
+    {
+        $this->assertSame('/admin/landing-page-settings', parse_url(LandingPageSettings::getUrl(), PHP_URL_PATH));
+
+        $this->get('/admin/landing-page-settings')->assertOk()->assertSee('Landing page settings');
+        $this->get('/admin/look-settings')->assertNotFound();
+    }
+
     public function test_a_guest_cannot_reach_it(): void
     {
         auth('admin')->logout();

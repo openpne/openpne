@@ -25,8 +25,8 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * Everything arrives already decided: the controller resolves the viewer's role, the read gates and
- * the rows behind them, once for Classic and Modern. The same-category groups and the picture strip
- * are gathered here, each behind a gate the controller answered.
+ * the rows behind them, once for Classic and Modern. The picture strip is gathered here behind the
+ * gates the controller answered; the same-category groups take none (CategoryGroups).
  */
 final class GroupPageSerializer
 {

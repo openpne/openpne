@@ -99,9 +99,9 @@ final class PageSections
     }
 
     /**
-     * The faces grid. Named
-     * for what it draws rather than for the relationship: the same grid shows a member's friends on
-     * one page and a group's members on another, and the tiles must not tell them apart.
+     * The faces grid. Named for what it draws rather than for the relationship: the same grid shows
+     * a member's friends on one page and a group's members on another, and the tiles must not tell
+     * them apart.
      *
      * @param  Collection<int, Member>  $people  `avatar.file` eager-loaded by the caller's query
      * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, href: string}>
