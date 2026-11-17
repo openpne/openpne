@@ -77,8 +77,8 @@ class GroupController extends Controller
         // and its query never runs.
         $showTopics = $canViewBoard && Feature::GroupTopic->enabled();
         $showEvents = $canViewBoard && Feature::GroupEvent->enabled();
-        // Read here rather than in a branch: all three layouts — Classic, the shipped Modern page and
-        // the unified one — show these same rows, and none of them may ask for them a second time.
+        // Read here rather than in a branch: Classic and Modern show these same rows, and neither may
+        // ask for them a second time.
         $topics = $showTopics ? $recentTopics($found) : null;
         $canPostTopic = GroupTopicAccess::canPostTopic($found, $viewer);
         $events = $showEvents ? $recentEvents($found) : null;

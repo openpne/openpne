@@ -16,7 +16,7 @@ A look is declared twice, once per side of the wire:
 
 | Side | Where | Answers |
 |---|---|---|
-| Server | [`App\Support\Look`](../../app/Support/Look.php) | the ids, and the one every page is served under |
+| Server | [`App\Support\Look`](../../app/Support/Look.php) | the ids |
 | Client | `LOOKS` in [`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts) | one field per question the shell asks a look about the chrome around the page — its docblock states when a question earns a field |
 
 `LookRegistryParityTest` asserts the two key sets are equal, because drift is silent and
@@ -74,8 +74,9 @@ Two decisions inside `tabbed` are deliberate rather than pending:
 
 [`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php) shares
 `tabbed` as the `look` prop on every response. Nothing a site or a member stores changes
-that: there is no setting for it, no picker and no stored choice. `/member/{id}` renders
-`unified/member` and `/groups/{group}` renders `unified/group` for everyone.
+that: there is no setting for it, no picker and no stored choice. A look does not choose
+the page either: `/member/{id}` renders `unified/member` and `/groups/{group}` renders
+`unified/group` whatever the look.
 
 A signed-out visitor gets the same frame with the member-only parts left out:
 
@@ -94,9 +95,8 @@ Every look inherits the same contract:
 
 - **Read-only projection.** A look re-arranges what the viewer already reads. Same routes,
   same viewer-scoped queries, same clearance.
-- **No new capability rides a look.** Where a look's page shows something the page it
-  replaces did not, the rows come from a source the viewer already reads and each file is
-  asked again through `FilePolicy` — a parent's read gate is not a permission on the bytes
-  hanging off it.
+- **No new capability rides a look.** Whatever a look's chrome shows comes from a source the
+  viewer already reads, and each file is asked again through `FilePolicy` — a parent's read
+  gate is not a permission on the bytes hanging off it.
 - **Nothing is stored differently.** A look reads the rows every other look reads and writes
   none of its own.

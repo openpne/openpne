@@ -96,9 +96,8 @@ the controllers and the cross-feature aggregate queries skip the work and hand t
 empty collections, so an emptied section and a genuinely empty one are indistinguishable in the
 JSON — hiding a section in React would otherwise ship the rows it hides. A feature's own queries
 carry no check (their routes already answer 404); the constraint sits in the aggregate that reaches
-across units — [`ProfileStats`](../../app/Features/Profile/Queries/ProfileStats.php) and
-[`JoinedGroupActivity`](../../app/Features/Home/Queries/JoinedGroupActivity.php) hold their
-own ([feature-modules.md](feature-modules.md#key-invariants) invariant 2), the dashboard and profile
+across units — [`JoinedGroupActivity`](../../app/Features/Home/Queries/JoinedGroupActivity.php)
+holds its own ([feature-modules.md](feature-modules.md#key-invariants) invariant 2), the dashboard and profile
 adapters hold the rest. `UnreadCounts` reports a switched-off unit's badge as zero, unqueried.
 
 ## Notifications

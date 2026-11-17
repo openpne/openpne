@@ -8,6 +8,7 @@ use App\Filament\Concerns\HiddenWhenClassicOnly;
 use App\Services\SnsSettingService;
 use App\Support\ModernGroupList;
 use App\Support\ModernHome;
+use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -36,9 +37,6 @@ class LookSettings extends Page
     use HiddenWhenClassicOnly;
 
     protected static ?int $navigationSort = 16;
-
-    /** The keys this page writes: the look keys share their setting group and are no longer offered. */
-    private const KEYS = [SnsSettingKey::ModernHome, SnsSettingKey::ModernGroupList];
 
     /**
      * @var array<string, mixed>|null
@@ -102,7 +100,7 @@ class LookSettings extends Page
         $data = $this->form->getState();
 
         DB::transaction(function () use ($data): void {
-            foreach (self::KEYS as $key) {
+            foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? $key->default()))],
@@ -123,7 +121,7 @@ class LookSettings extends Page
     private function currentValues(): array
     {
         $values = [];
-        foreach (self::KEYS as $key) {
+        foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
             // The service hands back typed values; the controls hold and post the stored ids.
             $value = app(SnsSettingService::class)->get($key);
             $values[$key->value] = $value instanceof ModernHome || $value instanceof ModernGroupList ? $value->value : $value;

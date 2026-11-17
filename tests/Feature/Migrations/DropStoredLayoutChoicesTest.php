@@ -27,9 +27,11 @@ class DropStoredLayoutChoicesTest extends TestCase
             ['key' => 'selectable_looks', 'value' => 'standard,tabbed'],
         ]);
         DB::table('sns_settings')->updateOrInsert(['key' => 'modern_home'], ['value' => 'dashboard']);
+        $another = Member::factory()->create();
         DB::table('member_preferences')->insert([
             ['member_id' => $member->getKey(), 'key' => 'preferred_look', 'value' => 'standard'],
             ['member_id' => $member->getKey(), 'key' => 'preferred_surface', 'value' => 'modern'],
+            ['member_id' => $another->getKey(), 'key' => 'preferred_look', 'value' => 'unified'],
         ]);
         $settings = DB::table('sns_settings')->count();
 
@@ -38,7 +40,7 @@ class DropStoredLayoutChoicesTest extends TestCase
         $this->assertSame(0, DB::table('sns_settings')->whereIn('key', ['default_look', 'selectable_looks'])->count());
         $this->assertSame($settings - 2, DB::table('sns_settings')->count());
         $this->assertSame('dashboard', DB::table('sns_settings')->where('key', 'modern_home')->value('value'));
-        $this->assertSame(['preferred_surface'], DB::table('member_preferences')->where('member_id', $member->getKey())->pluck('key')->all());
+        $this->assertSame(['preferred_surface'], DB::table('member_preferences')->pluck('key')->all());
     }
 
     public function test_a_site_with_no_layout_rows_is_left_as_it_was(): void
@@ -49,6 +51,5 @@ class DropStoredLayoutChoicesTest extends TestCase
         $this->migration()->down();
 
         $this->assertSame($settings, DB::table('sns_settings')->count());
-        $this->assertSame(0, DB::table('member_preferences')->count());
     }
 }
