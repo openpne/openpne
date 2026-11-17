@@ -16,12 +16,12 @@ A look is declared twice, once per side of the wire:
 
 | Side | Where | Answers |
 |---|---|---|
-| Server | [`App\Support\Look`](../../app/Support/Look.php) | which page components the swapped routes render (`usesUnifiedPages()`) |
+| Server | [`App\Support\Look`](../../app/Support/Look.php) | the ids, and the one every page is served under |
 | Client | `LOOKS` in [`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts) | one field per question the shell asks a look about the chrome around the page — its docblock states when a question earns a field |
 
 `LookRegistryParityTest` asserts the two key sets are equal, because drift is silent and
-asymmetric: a look present only on the server ships unified pages under standard chrome, a
-look present only on the client the reverse. Each `LOOKS` row is complete by type
+asymmetric: a look present only on the server is one the shell has no row for, a look
+present only on the client one no page can be served under. Each `LOOKS` row is complete by type
 (`satisfies Record<string, LookSpec>`), so a look cannot answer some of the shell's
 questions and leave the others reading `undefined` — falsy, and standard-ish rather than
 standard. Fields whose value vectors coincide are indistinguishable to every test — registry
@@ -31,12 +31,9 @@ field whose name answers the question being asked rather than one that happens t
 The looks today:
 
 - **`standard`** — deviates in nothing.
-- **`unified`** — the experiment: `/member/{id}` renders `unified/member` instead of
-  `member/show`, and `/groups/{group}` renders `unified/group` instead of
-  `community/show`; the bars become the persistent header plus dive row, and the shell
-  paints the unified ground. Those two pages are the only swap:
-  `/` renders the same page under every look ([home-issues.md](home-issues.md#routes)).
-- **`tabbed`** — the same swapped pages, different chrome. Every
+- **`unified`** — the experiment: the bars become the persistent header plus dive row, and
+  the shell paints the unified ground.
+- **`tabbed`** — the same ground, different chrome. Every
   screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
   the site name on the three pages that ARE a place (home, a member's, a group's — a
   member's and a group's name themselves again in their own hero directly below),
@@ -75,12 +72,10 @@ Two decisions inside `tabbed` are deliberate rather than pending:
 
 ## Resolution
 
-[`LookResolver::resolve()`](../../app/Support/LookResolver.php) answers once per request,
-and [`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php) shares
-the id as the `look` prop so no consumer resolves it a second time:
-
-Everyone gets `tabbed`. Nothing a site or a member stores changes that: there is no setting
-for it and no picker.
+[`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php) shares
+`tabbed` as the `look` prop on every response. Nothing a site or a member stores changes
+that: there is no setting for it, no picker and no stored choice. `/member/{id}` renders
+`unified/member` and `/groups/{group}` renders `unified/group` for everyone.
 
 A signed-out visitor gets the same frame with the member-only parts left out:
 
@@ -105,9 +100,3 @@ Every look inherits the same contract:
   hanging off it.
 - **Nothing is stored differently.** A look reads the rows every other look reads and writes
   none of its own.
-
-## Stored values that are no longer read
-
-`default_look` and `selectable_looks` in `sns_settings`, and a member's `preferred_look`
-preference, were the site default, the looks offered to members and a member's own choice. A
-row of any of them left on a site has no effect.

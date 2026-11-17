@@ -3,19 +3,14 @@
 namespace App\Features\Profile;
 
 use App\Features\Block\BlockLookup;
-use App\Features\Diary\Queries\RecentMemberDiaries;
-use App\Features\Friend\Queries\ListFriends;
-use App\Features\Group\Queries\ListMemberGroups;
 use App\Features\Notifications\ConsumeNotificationRows;
 use App\Features\Notifications\NotificationTarget;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Features\Profile\Queries\EditProfileFields;
-use App\Features\Profile\Queries\ProfileStats;
 use App\Features\Profile\Queries\ShowProfile;
 use App\Features\Profile\Queries\VisibleAge;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
-use App\Features\Profile\Serializers\ProfileSerializer;
 use App\Features\Profile\Serializers\UnifiedMemberSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -24,7 +19,6 @@ use App\Models\Member;
 use App\Services\GadgetService;
 use App\Support\Feature;
 use App\Support\GuestLoginRedirect;
-use App\Support\LookResolver;
 use App\Support\PreferenceKey;
 use App\Support\SurfaceResolver;
 use App\Support\ViewerRelations;
@@ -86,28 +80,10 @@ class ProfileController extends Controller
                 'zones' => $gadgets->zones('profile', subject: $member, viewer: $viewer),
                 'layout' => $gadgets->layoutLetter('profile'),
             ]),
-            SurfaceResolver::MODERN => function () use ($request, $member, $fields, $isSelf, $lang, $age, $friendStatus, $viewer) {
-                // Branching first keeps the digest below from being gathered for a page that never
-                // shows it.
-                if (LookResolver::resolve($request)->usesUnifiedPages()) {
-                    return Inertia::render('unified/member', $viewer === null
-                        ? UnifiedMemberSerializer::guestPage($member, $fields, $lang, $age)
-                        : UnifiedMemberSerializer::page($viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus));
-                }
-
-                // Auth-only: the previews and stats link to routes behind the auth group.
-                $digest = $viewer === null ? null : ProfileSerializer::digest(
-                    (new ProfileStats)($viewer, $member),
-                    Feature::Diary->enabled() ? (new RecentMemberDiaries)($viewer, $member, 3)->load('images.file') : collect(),
-                    // 10 tiles fill the 5-column grid's two rows; NineTable trims to 9 (3×3) on mobile.
-                    Feature::Friend->enabled() ? (new ListFriends)->take($viewer, $member, 10) : collect(),
-                    Feature::Group->enabled() ? (new ListMemberGroups)->take($member, 10) : collect(),
-                );
-
-                return Inertia::render('member/show', [
-                    'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age, $friendStatus),
-                    'digest' => $digest,
-                ]);
+            SurfaceResolver::MODERN => function () use ($member, $fields, $isSelf, $lang, $age, $friendStatus, $viewer) {
+                return Inertia::render('unified/member', $viewer === null
+                    ? UnifiedMemberSerializer::guestPage($member, $fields, $lang, $age)
+                    : UnifiedMemberSerializer::page($viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus));
             },
         ]);
     }

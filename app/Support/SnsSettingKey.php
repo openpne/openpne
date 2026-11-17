@@ -157,16 +157,11 @@ enum SnsSettingKey: string
 
     case PrivacyPolicy = 'privacy_policy';
 
-    case DefaultLook = 'default_look';
-
     /** The page Modern serves at `/` (App\Support\ModernHome). */
     case ModernHome = 'modern_home';
 
     /** What a row of the joined list opens under Modern (App\Support\ModernGroupList). */
     case ModernGroupList = 'modern_group_list';
-
-    /** A CSV of look ids, the registry's one list-valued key; the effective set is this plus the default look. */
-    case SelectableLooks = 'selectable_looks';
 
     /**
      * A GroupTalkNotifyMode value: the web default of the `group_talk_new_message` kind, which a
@@ -217,7 +212,7 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
-            self::DefaultLook, self::SelectableLooks, self::ModernHome, self::ModernGroupList => SettingGroup::Look,
+            self::ModernHome, self::ModernGroupList => SettingGroup::Look,
             self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
             self::ImageUploadBrowserShrink => SettingGroup::Images,
@@ -290,7 +285,7 @@ enum SnsSettingKey: string
             // The policy bodies keep the OpenPNE 3 sns_config name verbatim; only their markup is
             // rewritten, by the post-walk pass (the walk copies the value as-is).
             self::UserAgreement, self::PrivacyPolicy => $this->value,
-            self::DefaultLook, self::SelectableLooks, self::ModernHome, self::ModernGroupList => null,
+            self::ModernHome, self::ModernGroupList => null,
             self::GroupTalkNotifyDefault => null,
             self::GroupTopicCommentReply => 'op_community_topic_plugin_community_topic_comment_reply',
             self::GroupEventCommentReply => 'op_community_topic_plugin_community_event_comment_reply',
@@ -426,15 +421,9 @@ enum SnsSettingKey: string
             // Unwritten until an administrator writes them; the pages stay reachable and say so
             // (OpenPNE 3 shipped an "under construction" default in the same spot).
             self::UserAgreement, self::PrivacyPolicy => '',
-            // The layout the site has always shipped; the unified one is an experiment an operator
-            // opts into.
-            self::DefaultLook => Look::Standard,
             // What a fresh install has always served; the upgrade stamps the other for its sites.
             self::ModernHome => ModernHome::Issue,
             self::ModernGroupList => ModernGroupList::Talk,
-            // Nothing on offer until an operator ticks a look: the site runs on its default alone,
-            // and the member config page shows no layout section.
-            self::SelectableLooks => [],
             // The quiet end: an OSS site notifies about being named and nothing else until an
             // operator asks for more.
             self::GroupTalkNotifyDefault => GroupTalkNotifyMode::Mentions->value,
@@ -470,13 +459,9 @@ enum SnsSettingKey: string
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value : (ProfileVisibilityPolicy::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
-            self::DefaultLook => $value instanceof Look ? $value : (Look::tryFrom(trim((string) $value)) ?? $this->default()),
             self::ModernHome => $value instanceof ModernHome ? $value : (ModernHome::tryFrom(trim((string) $value)) ?? $this->default()),
             self::ModernGroupList => $value instanceof ModernGroupList ? $value : (ModernGroupList::tryFrom(trim((string) $value)) ?? $this->default()),
             self::BrandFaviconFallback => $value instanceof FaviconFallback ? $value : (FaviconFallback::tryFrom(trim((string) $value)) ?? $this->default()),
-            // The one key whose value is a list: an explicit arm because the default one casts to
-            // string, which an array cannot be.
-            self::SelectableLooks => self::lookSet($value),
             default => is_string($value) ? trim($value) : (string) $value,
         };
     }
@@ -498,12 +483,9 @@ enum SnsSettingKey: string
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             self::ProfileVisibilityPolicy => $value instanceof ProfileVisibilityPolicy ? $value->value : (string) $value,
-            self::DefaultLook => $value instanceof Look ? $value->value : (string) $value,
             self::ModernHome => $value instanceof ModernHome ? $value->value : (string) $value,
             self::ModernGroupList => $value instanceof ModernGroupList ? $value->value : (string) $value,
             self::BrandFaviconFallback => $value instanceof FaviconFallback ? $value->value : (string) $value,
-            // Same reason as coerce()'s arm: the list is stored as CSV, and (string) on an array fatals.
-            self::SelectableLooks => implode(',', array_column(self::lookSet($value), 'value')),
             default => (string) $value,
         };
     }
@@ -520,15 +502,9 @@ enum SnsSettingKey: string
             self::SurfaceMode => SurfaceMode::tryFrom($value) ?? $this->default(),
             // An unknown value is the members-only default: never the web, never a member's own choice.
             self::ProfileVisibilityPolicy => ProfileVisibilityPolicy::tryFrom($value) ?? $this->default(),
-            // Same for the look: a value no registered look answers to is corruption, and lands on
-            // the layout the site shipped with rather than on an experiment.
-            self::DefaultLook => Look::tryFrom($value) ?? $this->default(),
             self::ModernHome => ModernHome::tryFrom($value) ?? $this->default(),
             self::ModernGroupList => ModernGroupList::tryFrom($value) ?? $this->default(),
             self::BrandFaviconFallback => FaviconFallback::tryFrom($value) ?? $this->default(),
-            // Stored CSV → typed looks; an id no registered look answers to drops out of the set
-            // rather than taking the whole row down with it.
-            self::SelectableLooks => self::lookSet($value),
             // Fail-closed: only an explicit '0' disables the challenge; any other stored value keeps
             // it on, mirroring RegistrationMode::current()'s restrictive fallback on a bad value.
             self::CaptchaEnabled => $value !== '0',
@@ -621,11 +597,9 @@ enum SnsSettingKey: string
             self::GroupTopicCommentReply => __('Reply link on %topic% comments'),
             self::GroupEventCommentReply => __('Reply link on event comments'),
             self::ImageUploadBrowserShrink => __('Shrink pictures in the browser before upload'),
-            self::DefaultLook => __('Default UI layout'),
             self::ModernHome => __('Page shown as home'),
             self::ModernGroupList => __('Page a joined %community% opens'),
             self::ClassicTheme => __('Theme'),
-            self::SelectableLooks => __('Selectable UI layouts'),
             self::MemberCapacity => __('Member capacity'),
             self::AiAccountCapacity => __('AI account capacity'),
         };
@@ -634,7 +608,7 @@ enum SnsSettingKey: string
     public function isRequired(): bool
     {
         return match ($this) {
-            self::SnsName, self::AdminMailAddress, self::DefaultLook, self::ModernHome, self::ModernGroupList => true,
+            self::SnsName, self::AdminMailAddress, self::ModernHome, self::ModernGroupList => true,
             self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge, self::ProfileVisibilityPolicy,
             self::TimelineAllowWebPublic, self::TimelinePostingEnabled, self::DiaryAllowWebPublic, self::DiarySearchEnabled,
             self::DiaryAutoTimelinePost, self::GroupAutoTimelinePost,
@@ -649,7 +623,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback,
-            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::SelectableLooks,
+            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy,
             self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply,
             self::ImageUploadBrowserShrink, self::ClassicTheme,
             self::MemberCapacity, self::AiAccountCapacity => false,
@@ -737,26 +711,5 @@ enum SnsSettingKey: string
         }
 
         return null;
-    }
-
-    /**
-     * Normalize a look set — an array of Look|id (a checkbox post) or a CSV string (a stored row) —
-     * to typed looks. Unknown ids drop, duplicates collapse, and the result is in registry order, so
-     * one set has exactly one representation however it arrived.
-     *
-     * @return list<Look>
-     */
-    private static function lookSet(mixed $value): array
-    {
-        $chosen = [];
-        foreach (is_array($value) ? $value : explode(',', (string) $value) as $id) {
-            // A crafted post can nest an array where an id belongs; casting that would fatal.
-            $look = $id instanceof Look ? $id : (is_scalar($id) ? Look::tryFrom(trim((string) $id)) : null);
-            if ($look !== null) {
-                $chosen[$look->value] = true;
-            }
-        }
-
-        return array_values(array_filter(Look::cases(), static fn (Look $look): bool => isset($chosen[$look->value])));
     }
 }

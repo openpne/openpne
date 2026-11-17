@@ -21,7 +21,6 @@ use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\Group\Serializers\UnifiedGroupSerializer;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
-use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\GroupTalk\Queries\LatestGroupMessage;
@@ -29,7 +28,6 @@ use App\Features\GroupTalk\Queries\UnreadTalkCounts;
 use App\Features\GroupTalk\Serializers\TalkRoomSerializer;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\Queries\RecentGroupTopics;
-use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Member\Serializers\MemberRefSerializer;
@@ -43,7 +41,6 @@ use App\Models\GroupCategory;
 use App\Models\Member;
 use App\Support\ChatPreview;
 use App\Support\Feature;
-use App\Support\LookResolver;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -123,7 +120,7 @@ class GroupController extends Controller
                     'canViewTalk' => $canViewTalk,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
+            SurfaceResolver::MODERN => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
                 $canManage = $role?->canManage() ?? false;
                 $canJoin = $role === null && ! $isPending;
                 $canLeave = $role !== null && $role !== GroupRole::Admin;
@@ -134,48 +131,25 @@ class GroupController extends Controller
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
                 ];
 
-                // Both Inertia::render targets stay string literals, so a static sweep can classify
-                // every routed component.
-                if (LookResolver::resolve($request)->usesUnifiedPages()) {
-                    return Inertia::render('unified/group', UnifiedGroupSerializer::page(
-                        viewer: $viewer,
-                        group: $found,
-                        role: $role,
-                        isPending: $isPending,
-                        isTransferNominee: $isTransferNominee,
-                        canManage: $canManage,
-                        canJoin: $canJoin,
-                        canLeave: $canLeave,
-                        members: $sidebarMembers,
-                        recentTopics: $topics,
-                        canPostTopic: $canPostTopic,
-                        recentEvents: $events,
-                        canPostEvent: $canPostEvent,
-                        canViewTalk: $canViewTalk,
-                        talkPreview: $preview,
-                        talkUnread: $talkUnreadCount,
-                        about: GroupSerializer::about($found, $staff),
-                    ));
-                }
-
-                return Inertia::render('community/show', [
-                    'group' => GroupSerializer::detail($found),
-                    'viewerRole' => $role?->slug(),
-                    'isPending' => $isPending,
-                    'isTransferNominee' => $isTransferNominee,
-                    'canManage' => $canManage,
-                    'canJoin' => $canJoin,
-                    'canLeave' => $canLeave,
-                    'members' => GroupSerializer::members($sidebarMembers),
-                    'recentTopics' => $topics === null ? null : GroupTopicSerializer::summaries($topics),
-                    'canPostTopic' => $canPostTopic,
-                    'recentEvents' => $events === null ? null : GroupEventSerializer::summaries($events),
-                    'canPostEvent' => $canPostEvent,
-                    'canViewTalk' => $canViewTalk,
-                    'talkPreview' => $preview,
-                    'talkUnread' => $talkUnreadCount,
-                    'about' => GroupSerializer::about($found, $staff),
-                ]);
+                return Inertia::render('unified/group', UnifiedGroupSerializer::page(
+                    viewer: $viewer,
+                    group: $found,
+                    role: $role,
+                    isPending: $isPending,
+                    isTransferNominee: $isTransferNominee,
+                    canManage: $canManage,
+                    canJoin: $canJoin,
+                    canLeave: $canLeave,
+                    members: $sidebarMembers,
+                    recentTopics: $topics,
+                    canPostTopic: $canPostTopic,
+                    recentEvents: $events,
+                    canPostEvent: $canPostEvent,
+                    canViewTalk: $canViewTalk,
+                    talkPreview: $preview,
+                    talkUnread: $talkUnreadCount,
+                    about: GroupSerializer::about($found, $staff),
+                ));
             },
         ]);
     }

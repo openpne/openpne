@@ -10,7 +10,6 @@ use App\Models\Diary;
 use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
 use App\Models\Member;
-use App\Support\Look;
 use App\Support\ModernHome;
 use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
@@ -86,17 +85,6 @@ class HomeIssueRoutesTest extends TestCase
         $this->actingAs($member)->get('/home/2026/08')->assertNotFound();
         $this->actingAs($member)->get('/home/2026/08/27')->assertNotFound();
         $this->actingAs($member)->get('/')->assertOk()->assertSee('id="page_member_home"', false);
-    }
-
-    /** The unified look swaps the page a screen draws, never the route or the payload. */
-    public function test_the_unified_look_still_renders_the_issue_page(): void
-    {
-        $this->publish();
-        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
-        $this->freshRequestState();
-
-        $this->actingAs(Member::factory()->create())->get('/home/2026/08/27')
-            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('home/archive'));
     }
 
     /** A month or a day may be written either way; the URL the site links is the padded one. */
@@ -370,16 +358,6 @@ class HomeIssueRoutesTest extends TestCase
             'modern only' => ['modern_only'],
             'modern default' => ['modern_default'],
         ];
-    }
-
-    public function test_the_unified_look_still_renders_the_front_page(): void
-    {
-        $this->publish();
-        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
-        $this->freshRequestState();
-
-        $this->actingAs(Member::factory()->create())->get('/')
-            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('home/issue'));
     }
 
     /** Backwards only: the newest issue is what the front page IS, so nothing stands forward of it. */

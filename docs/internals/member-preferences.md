@@ -41,8 +41,6 @@ default applies to every member who has not made an explicit choice. The default
   to the [surface fallback](feature-modules.md#surface-selection)". So it has a distinct read,
   [`Member::preferredSurface(): ?Surface`](../../app/Models/Member.php), rather than going
   through `Member::preference()` (which is typed to return a non-null `Visibility`).
-- `PreferredLook` is a key no code reads or writes any more
-  ([looks.md](looks.md#stored-values-that-are-no-longer-read)).
 - `ComposeEditor` stores an [`App\Support\ComposeEditor`](../../app/Support/ComposeEditor.php)
   (`rich` | `markdown` | `plain`) with a **concrete** default (`Rich`): a corrupt row fails closed to
   `Rich`, never `null`. Read via [`Member::composeEditor(): ComposeEditor`](../../app/Models/Member.php),

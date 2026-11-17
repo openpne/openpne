@@ -5,7 +5,6 @@ namespace Tests\Unit\Support;
 use App\Features\GroupTalk\GroupTalkNotifyMode;
 use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Support\FaviconFallback;
-use App\Support\Look;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use PHPUnit\Framework\TestCase;
@@ -134,68 +133,6 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame(3, $key->decode(''));
         $this->assertSame(3, $key->decode(null));
         $this->assertSame(0, $key->decode('-1'));
-    }
-
-    public function test_the_default_look_is_standard_until_an_operator_opts_in(): void
-    {
-        $key = SnsSettingKey::DefaultLook;
-
-        $this->assertSame(SettingGroup::Look, $key->group());
-        // OpenPNE 3 had no Modern surface, so there is no layout choice to carry over.
-        $this->assertNull($key->op3SourceName());
-        $this->assertFalse($key->isMigratedFromOp3());
-        $this->assertSame(Look::Standard, $key->default());
-
-        // Round-trips as the typed enum, from either the enum itself or the posted id.
-        $this->assertSame('unified', $key->encode($key->coerce(Look::Unified)));
-        $this->assertSame('unified', $key->encode($key->coerce(' unified ')));
-        $this->assertSame(Look::Unified, $key->decode('unified'));
-        $this->assertSame(Look::Standard, $key->decode('standard'));
-
-        // A value no registered look answers to is corruption, not a decision: it reads as the
-        // layout the site shipped with rather than as an experiment.
-        $this->assertSame(Look::Standard, $key->decode(''));
-        $this->assertSame(Look::Standard, $key->decode('Unified'));
-        $this->assertSame(Look::Standard, $key->decode('nonesuch'));
-        $this->assertSame(Look::Standard, $key->decode(null));
-        $this->assertSame('standard', $key->encode($key->coerce('nonesuch')));
-    }
-
-    public function test_the_selectable_looks_are_a_list_stored_as_csv(): void
-    {
-        $key = SnsSettingKey::SelectableLooks;
-
-        $this->assertSame(SettingGroup::Look, $key->group());
-        $this->assertNull($key->op3SourceName());
-        // Nothing on offer until an operator ticks something; the site runs on its default alone.
-        $this->assertSame([], $key->default());
-        $this->assertSame([], $key->decode(null));
-        $this->assertSame([], $key->decode(''));
-
-        // The checkbox list posts an array of ids; it round-trips through the stored CSV.
-        $this->assertSame('standard,unified', $key->encode($key->coerce(['standard', 'unified'])));
-        $this->assertSame([Look::Standard, Look::Unified], $key->decode('standard,unified'));
-
-        // Order is the registry's, not the submission's, and a duplicate collapses — one set, one
-        // stored representation.
-        $this->assertSame('standard,unified', $key->encode($key->coerce([Look::Unified, 'standard', 'unified'])));
-
-        // An id no registered look answers to drops out rather than taking the row down with it.
-        $this->assertSame([Look::Unified], $key->decode('nonesuch,unified'));
-        $this->assertSame('unified', $key->encode($key->coerce(['unified', 'nonesuch'])));
-    }
-
-    public function test_the_selectable_looks_codec_survives_an_actual_array(): void
-    {
-        // Both arms are explicit for this key because the default ones do `(string) $value`, which
-        // fatals on an array — the admin save posts one, so a missing arm would be a 500.
-        $key = SnsSettingKey::SelectableLooks;
-
-        $this->assertSame([], $key->coerce([]));
-        $this->assertSame('', $key->encode([]));
-        $this->assertSame('standard', $key->encode([Look::Standard]));
-        // A crafted post can nest an array where an id belongs; it drops instead of fatalling.
-        $this->assertSame([], $key->coerce([['unified']]));
     }
 
     public function test_the_talk_notification_default_is_mentions_until_an_operator_opts_in(): void

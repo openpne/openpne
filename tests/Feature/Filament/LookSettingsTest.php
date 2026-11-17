@@ -74,16 +74,16 @@ class LookSettingsTest extends TestCase
         $keys = DB::table('sns_settings')->pluck('key')->all();
         $this->assertContains(SnsSettingKey::ModernHome->value, $keys);
         $this->assertContains(SnsSettingKey::ModernGroupList->value, $keys);
-        $this->assertNotContains(SnsSettingKey::DefaultLook->value, $keys);
-        $this->assertNotContains(SnsSettingKey::SelectableLooks->value, $keys);
+        $this->assertNotContains('default_look', $keys);
+        $this->assertNotContains('selectable_looks', $keys);
         $this->assertSame(1, DB::table('member_preferences')->where('key', 'preferred_look')->count());
     }
 
     public function test_the_form_offers_no_layout_to_choose(): void
     {
         Livewire::test(LookSettings::class)
-            ->assertFormFieldDoesNotExist(SnsSettingKey::DefaultLook->value)
-            ->assertFormFieldDoesNotExist(SnsSettingKey::SelectableLooks->value);
+            ->assertFormFieldDoesNotExist('default_look')
+            ->assertFormFieldDoesNotExist('selectable_looks');
     }
 
     /** A migrated site keeps OpenPNE 3's word for a group, so a name built from a site term would not be the one these point at. */

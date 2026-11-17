@@ -14,7 +14,7 @@ use App\Support\BrandColor;
 use App\Support\ClassicOnlyHandoff;
 use App\Support\Feature;
 use App\Support\LayoutHooks;
-use App\Support\LookResolver;
+use App\Support\Look;
 use App\Support\SnsSettingKey;
 use Closure;
 use Illuminate\Http\Request;
@@ -65,8 +65,7 @@ class HandleInertiaRequests extends Middleware
             'enabledFeatures' => $user
                 ? Feature::enabledMap()
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),
-            // Resolved once for the request and never null.
-            'look' => LookResolver::resolve($request)->value,
+            'look' => Look::Tabbed->value,
             'modernHome' => app(SnsSettingService::class)->get(SnsSettingKey::ModernHome)->value,
             'groupList' => app(SnsSettingService::class)->get(SnsSettingKey::ModernGroupList)->value,
             // False for a guest, who cannot reach the switch that stops it (docs/internals/images.md,
