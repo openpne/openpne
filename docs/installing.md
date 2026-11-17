@@ -179,8 +179,9 @@ touch /srv/openpne/database.sqlite
 chmod 600 /srv/openpne/database.sqlite
 ```
 
-The site needs the first two lines. The other two are how a site that serves people runs on
-SQLite ([changing-database-engine.md](changing-database-engine.md)): set them before it does.
+Of the four `.env` lines, the site needs the first two. The other two are how a site that serves
+people runs on SQLite ([changing-database-engine.md](changing-database-engine.md)): set them
+before it does.
 
 ### Or: MySQL
 
@@ -357,9 +358,10 @@ the two sections above show:
 
 - the site user is the one made for the site, the first **Either** of
   [The site user and its directory](#the-site-user-and-its-directory);
-- the packages are `apache2` and `php-fpm`, and the pool is the one of the nginx section;
-- the commands are those of the `mod_php` section, with `proxy_fcgi` added to the modules
-  `a2enmod` enables;
+- the packages are `apache2` and `php-fpm` (not `libapache2-mod-php`), and the pool is the one of
+  the nginx section;
+- the `a2enmod`, `a2ensite` and restart lines are those of the `mod_php` section, with `proxy_fcgi`
+  added to the modules `a2enmod` enables;
 - the virtual host is the one of the `mod_php` section, without its two `php_admin_value` lines
   (the pool has them) and with `.php` handed to the pool's socket: inside the `FilesMatch` block,
   `SetHandler "proxy:unix:/run/php/openpne.sock|fcgi://localhost"`.
