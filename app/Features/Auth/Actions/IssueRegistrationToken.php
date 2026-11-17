@@ -45,7 +45,7 @@ class IssueRegistrationToken
      * the caller vouches for it, which only the operator's command may (docs/internals/security.md,
      * "Registration links").
      */
-    public function link(string $email, RegistrationTokenSource $source): IssueResult|string
+    public function unmailedLink(string $email, RegistrationTokenSource $source): IssueResult|string
     {
         [$result, $raw] = $this->issue(Str::lower(trim($email)), $source, null);
 

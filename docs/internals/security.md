@@ -468,8 +468,8 @@ A person joins a site by opening a registration link (`/register/{token}`); an A
 [`IssueRegistrationToken`](../../app/Features/Auth/Actions/IssueRegistrationToken.php) is the one
 place that writes a link ([capacity.md](capacity.md), "Where a seat is taken"), and
 `registration_tokens` holds only a hash of it. A mailed link's raw token is also in the queued
-notification until the mail is sent (`jobs`, then `failed_jobs` if delivery fails) and in whatever
-the mailer keeps, the application log under `MAIL_MAILER=log`.
+notification until the mail is sent (under the `database` queue, in `jobs`, then `failed_jobs`
+if delivery fails) and in whatever the mailer keeps, the application log under `MAIL_MAILER=log`.
 
 | Issued by | Stored `source` | Allowed while `registration_mode` is |
 |---|---|---|
@@ -492,10 +492,12 @@ the mailer keeps, the application log under `MAIL_MAILER=log`.
   which link it used (`email_verified_at` is unused on every path), and the security log says only
   that a link was printed for an address (`registration.link_printed`, [logging.md](logging.md)),
   not that the member registered through it.
-- **What a wrong address costs.** The password reset, the two-factor reset link and the sign-in
-  code all go to the registered address. An account registered under a mailbox its member cannot
-  read is one the member cannot recover and whoever reads that mailbox can take over. Changing the
-  address (`RequestEmailChange`) confirms the new one by mail.
+- **What a wrong address costs.** The password reset goes to the registered address, and so do
+  the two-factor reset link and the sign-in code of a member with a passkey and no authenticator
+  app. A member registered under a mailbox they cannot read cannot recover the account by mail, and
+  whoever reads that mailbox can take it over unless an authenticator app guards it
+  ([Member two-factor authentication](#member-two-factor-authentication)). Changing the address
+  (`RequestEmailChange`) confirms the new one by mail.
 
 ## Password policy
 

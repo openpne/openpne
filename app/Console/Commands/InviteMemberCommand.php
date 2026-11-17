@@ -37,7 +37,7 @@ class InviteMemberCommand extends Command
             return self::FAILURE;
         }
 
-        $link = $issue->link($email, RegistrationTokenSource::AdminInvite);
+        $link = $issue->unmailedLink($email, RegistrationTokenSource::AdminInvite);
 
         if ($link instanceof IssueResult) {
             $this->error(match ($link) {

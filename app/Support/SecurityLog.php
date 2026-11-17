@@ -7,8 +7,8 @@ use Stringable;
 
 /**
  * An event carries the actor and guard where one is resolved, an email address or attempted
- * identifier only for the events docs/internals/logging.md names under "PII / injection contract",
- * and never a password, token, session id, recovery code or raw credentials array.
+ * identifier only for a named few events, and never a password, token, session id, recovery code
+ * or raw credentials array (docs/internals/logging.md, "PII / injection contract").
  */
 final class SecurityLog
 {
