@@ -18,6 +18,9 @@ composer install --no-interaction --prefer-dist
 # a key, not only the first-boot copy).
 if [ ! -f .env ]; then
     cp .env.example .env
+    # A command has no request to take the address from, so a link it prints is built from
+    # APP_URL alone and needs the published port.
+    sed -i "s|^APP_URL=.*|APP_URL=http://localhost:${OPENPNE_HTTP_PORT:-8080}|" .env
 fi
 if ! grep -q '^APP_KEY=base64:' .env; then
     php artisan key:generate --ansi
