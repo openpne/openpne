@@ -38,6 +38,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `login.code_failed` | seam: `LoginCodeController::store` — a submitted code that was refused (wrong, over the attempt cap, or the challenge voided since); an expired challenge logs nothing, and the code itself is never logged | `guard`, `member_id` |
 | `mfa.failed` | listener `LogTwoFactorFailure` (member TOTP) | `guard`, `member_id` |
 | `member.registered` | listener `LogMemberRegistered` (`MemberRegistered`) | `guard`, `member_id` |
+| `registration.link_issued` | seam: `InviteMemberCommand` — a link printed rather than mailed | `email`, `via` (cli) |
 | `mfa.enabled` | seam: `MemberMfaController::confirm`, `AdminAppAuthentication` set-up | `guard`, `member_id`\|`username` |
 | `mfa.disabled` | seam: `MemberMfaController::disable` (live), `AdminAppAuthentication` disable, `DisableMemberMfaCommand`, `DisableAdminMfaCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
 | `mfa.recovery_codes_regenerated` | seam: `MemberMfaController::regenerate`, `AdminAppAuthentication` regenerate | `guard`, `member_id`\|`username` |
@@ -63,7 +64,8 @@ fallible and must not be able to suppress the audit record of a change that alre
 
 - **Actor.** Always the resolved actor where one exists — member id, or admin username (admins have
   no email). The attempted identifier (email/username) is logged only for `login.failed` /
-  `login.lockout` (no actor resolved yet) and for the `email.*` events (the address is the subject).
+  `login.lockout` (no actor resolved yet), and for the `email.*` events and `registration.link_issued`
+  (the address is the subject).
 - **Never logged.** Passwords, tokens, session ids, recovery codes, a `Failed` event's raw
   credentials array, or a rate limiter's key (login keys embed the attempted email). Listeners pass
   a single identifier value, never the credentials map.

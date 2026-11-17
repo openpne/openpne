@@ -17,8 +17,8 @@ use Illuminate\Validation\ValidationException;
 /**
  * The member is created and the token consumed in one transaction, so a token never outlives the
  * account it created and a failure never leaves a member without burning the token. The token's
- * email is forced over whatever the form posted: the address was proven by the mailed link, not
- * re-entered.
+ * email is forced over whatever the form posted: the address is the one the link was issued for, not
+ * one re-entered.
  */
 class CompleteRegistration
 {

@@ -48,6 +48,7 @@ counted under their own cap, so a site offering AI accounts does not spend its m
 | self-registration entry (`/register`) | registration-paused box instead of the form; the submit redirects back to it | `IssueRegistrationToken` |
 | member invitation (`/invite`) | the same box, under the invite page's own id | `IssueRegistrationToken` |
 | administrator invitation (admin "Member invites") | a notice in place of the form; a batch that fills the site part-way reports how many were not sent | `IssueRegistrationToken` |
+| operator invitation (`openpne:member:invite`) | the command fails and names `openpne:capacity` | `IssueRegistrationToken` |
 | link completion (`/register/{token}`) | the paused box instead of the account form; the token is kept, so the link works again once a seat frees | `CompleteRegistration` |
 
 The entry screens check before rendering so a visitor sees the notice rather than a form that will
