@@ -40,14 +40,6 @@ export interface NineTableItem {
     href: string;
 }
 
-export interface RightRail {
-    /** The viewer's friends, or an SNS-wide sample while the `friend` unit is switched off. */
-    people: {
-        kind: 'friends' | 'members';
-        items: NineTableItem[];
-    };
-}
-
 /** `id` is the group's, not a room's. */
 export interface TalkNavRoom {
     id: number;

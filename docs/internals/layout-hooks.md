@@ -47,7 +47,7 @@ page including the login screen and the 4xx screen:
 | `ClassicFooterEnd` | end of `#FooterContainer` |
 | `ClassicBodyEnd` | before `</body>`, after the operator's `pc_html_bottom` |
 
-Modern, two Blade positions in [`app.blade.php`](../../resources/views/app.blade.php) and six the
+Modern, two Blade positions in [`app.blade.php`](../../resources/views/app.blade.php) and five the
 React shell draws:
 
 | Case | Where | Who sees it |
@@ -64,7 +64,7 @@ The admin panel is not hooked (Filament has its own render hooks), nor is the 5x
 
 ## Modern
 
-The six React positions reach the client as the shared `layoutHooks` prop: position value to HTML,
+The five React positions reach the client as the shared `layoutHooks` prop: position value to HTML,
 non-empty entries only, re-sent on every visit. [`<LayoutHook>`](../../resources/js/components/layout-hook.tsx)
 writes the string through `innerHTML` and then re-creates every `<script>` it contained, because a
 script that arrives by `innerHTML` never runs; the scripts run again only when the string changes.

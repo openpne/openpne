@@ -354,7 +354,7 @@ surface and helper copy must not mention surfaces at all (the *Appearance (Class
 the one fixed anchor, since the upgrade guide and the upgrade runner's messages point at it); there
 the other surface's screens are hidden too ([`HiddenWhenModernOnly`](../../app/Filament/Concerns/HiddenWhenModernOnly.php) on the
 Appearance (Classic) screens, [`HiddenWhenClassicOnly`](../../app/Filament/Concerns/HiddenWhenClassicOnly.php)
-on the UI layout, login page and image upload settings), a Modern-only section or switch (the logo)
+on the Entry page, login page and image upload settings), a Modern-only section or switch (the logo)
 is absent, and its stored value is neither shown nor rewritten:
 
 ```text

@@ -332,7 +332,7 @@ change from a problem when you go through it.
   after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the Modern
   surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover below starts
   with the Modern branding. There, the home is the "What's new" lists, the page nearest the OpenPNE
-  3 home (the Home and group entry settings page offers the daily issue instead); the joined
+  3 home (the Entry page settings page offers the daily issue instead); the joined
   communities' topics and events are the two tabs after *Joined* and *All* under the communities
   entry, as the recent-list gadgets' "More" was on the PC layout, and a community on the *Joined*
   list opens its page, as it did in OpenPNE 3, rather than its talk (the same settings page offers

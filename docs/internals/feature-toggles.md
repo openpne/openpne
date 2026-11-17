@@ -88,7 +88,7 @@ switching a unit takes effect without clearing them.
 
 The Inertia shell shares `enabledFeatures`, the resolved state of every unit
 (`Feature::enabledMap()`, so a call site never re-applies the dependency). The nav sections, the
-compose action, the dashboard sections and the profile digest read it and stop offering a
+compose action, the dashboard sections and the member page read it and stop offering a
 switched-off unit.
 
 **Those checks are presentation only.** A disabled unit's data never enters the Inertia payload:

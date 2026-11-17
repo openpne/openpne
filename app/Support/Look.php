@@ -30,24 +30,4 @@ enum Look: string
             self::Unified, self::Tabbed => true,
         };
     }
-
-    /** Label as a translation key, like Surface: the consumer translates in the reader's locale. */
-    public function label(): string
-    {
-        return match ($this) {
-            self::Standard => 'Standard',
-            self::Unified => 'Unified (experimental)',
-            self::Tabbed => 'Tabbed (experimental)',
-        };
-    }
-
-    /** One-line description for the look picker, as a translation key like Surface. */
-    public function description(): string
-    {
-        return match ($this) {
-            self::Standard => 'The Modern layout as it has always been.',
-            self::Unified => 'The experimental layout that renders profiles and %communities% in one shared shape.',
-            self::Tabbed => 'The experimental layout where the site mark and a breadcrumb up top say where you are.',
-        };
-    }
 }

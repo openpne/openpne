@@ -26,8 +26,7 @@ class NavTalkRooms
             'rooms' => $rows->take($limit)->map(fn (Group $group): array => [
                 'id' => $group->getKey(),
                 'name' => $group->name,
-                // A sidebar row paints its image at 24px, so 48 is the whitelisted size that covers
-                // it at 2x — the rail's 180 would be far more bytes for the same row.
+                // A sidebar row paints its image at 24px, so 48 is the whitelisted size that covers it at 2x.
                 'imageUrl' => $group->image?->thumbnailUrl(48, 48, square: true),
                 'unread' => (int) $group->unread_talk_count,
                 'muted' => (bool) $group->is_talk_muted,

@@ -86,6 +86,17 @@ class LookSettingsTest extends TestCase
             ->assertFormFieldDoesNotExist(SnsSettingKey::SelectableLooks->value);
     }
 
+    /** A migrated site keeps OpenPNE 3's word for a group, so a name built from a site term would not be the one these point at. */
+    public function test_the_upgrade_report_and_its_guide_point_at_the_page_by_its_name(): void
+    {
+        app()->setLocale('en');
+        $name = LookSettings::getNavigationLabel();
+
+        $this->assertSame('Entry page settings', $name);
+        $this->assertSame(2, substr_count((string) file_get_contents(app_path('Upgrade/Runner/UpgradeRunner.php')), "the {$name} page"));
+        $this->assertStringContainsString("the {$name} page", (string) file_get_contents(base_path('docs/upgrading-from-openpne3.md')));
+    }
+
     public function test_a_guest_cannot_reach_it(): void
     {
         auth('admin')->logout();
