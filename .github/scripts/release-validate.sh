@@ -30,9 +30,9 @@ original_of() {
 # parent gives; one whose conflict was resolved by hand never is, whatever the resolution.
 same_as_original() { # same_as_original <copy> <original>
   local merged status=0
-  merged=$(git merge-tree --write-tree --merge-base="$2^" "$1^" "$2" 2>/dev/null) || status=$?
+  merged=$(git merge-tree --write-tree --merge-base="$2^" "$1^" "$2") || status=$?
   # 1 is a conflict; anything above is git failing, which is not "differs".
-  [ "$status" -le 1 ] || die "git merge-tree could not compare $1 with $2 (it needs git 2.40 or later)"
+  [ "$status" -le 1 ] || die "git merge-tree could not compare $1 with $2 (its own message is above; it needs git 2.40 or later)"
   [ "$status" = 0 ] && [ "${merged%%$'\n'*}" = "$(git rev-parse "$1^{tree}")" ]
 }
 

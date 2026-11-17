@@ -4,8 +4,8 @@
 #
 #   last-release [<tag>]          print the highest release tag, <tag> left out, or nothing when
 #                                 there is none
-#   baseline [<branch>]           the same, unless a release/<version> branch is ahead of it and
-#                                 the change is not going onto a release branch itself
+#   baseline [<branch>]           the highest release tag, unless a release/<version> branch is
+#                                 ahead of it and the change is not going onto a release branch
 #   migrations <baseline> <ref>   refuse a change to a migration the baseline already shipped
 #   rehearse <baseline> <ref>     install the baseline, then walk docs/updating.md to <ref>
 #
