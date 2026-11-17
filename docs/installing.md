@@ -35,8 +35,8 @@ A server you administer is what the steps assume. A host where you cannot is cov
 - **A database**: SQLite 3, or MySQL 8. A SQLite site also needs the `sqlite3` command, which
   [updating.md](updating.md) uses for its backup.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
-- **A shell** on the server, and cron for the scheduler of step 6 (a site runs without the
-  scheduler, less well: [runtime.md](internals/runtime.md#scheduled-tasks)).
+- **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
+  runs without, and offers it as one way to run the queue.
 - Nothing to build with, when the release is installed from its archive. A release taken from git
   is built on the server and needs Composer 2 and Node.js 26 as well.
 
@@ -407,17 +407,16 @@ believed about the address they come from. See
 
 ## 6. Background work
 
-Two things run beside the web server, both as the site user.
+Both parts run as the site user.
 
-**The scheduler**, every minute from the site user's cron (`crontab -e` in its shell, or
-`sudo crontab -u www-data -e` for Apache's user):
+### The queue
 
-```
-* * * * * cd /srv/openpne/site && php artisan schedule:run >> /dev/null 2>&1
-```
+The site needs this one: mail, notifications and the sizes of a posted picture are queued, and
+nothing is sent until something works the queue. **Do one of the three below.**
 
-**The queue**, which sends mail and notifications and draws the sizes of a posted picture. A worker
-kept running by systemd (with Apache's user, `User=www-data` and `Group=www-data`):
+#### Either: a worker kept running by systemd
+
+With Apache's user, `User=www-data` and `Group=www-data`:
 
 ```ini
 # /etc/systemd/system/openpne-worker.service
@@ -448,13 +447,39 @@ The three options of `queue:work` are yours as well: seconds to wait when the qu
 attempts before a job counts as failed, and seconds after which the worker exits so that a fresh
 one takes over.
 
-A host that cannot keep a process running does one of these instead of the worker above
-([runtime.md](internals/runtime.md#queue) says what each gives up):
+#### Or: the queue from cron
 
-- a second line in the site user's cron:
-  `* * * * * cd /srv/openpne/site && php artisan queue:work --stop-when-empty >> /dev/null 2>&1`
-- `QUEUE_CONNECTION=deferred` in `.env`: no worker at all, each job runs at the end of the request
-  that queued it.
+Instead of the section above, where no process can be kept running. A line in the site user's
+cron (`crontab -e` in its shell, or `sudo crontab -u www-data -e` for Apache's user) works the
+queue once a minute:
+
+```
+* * * * * cd /srv/openpne/site && php artisan queue:work --stop-when-empty >> /dev/null 2>&1
+```
+
+#### Or: no worker
+
+Instead of both sections above, where there is no cron either. In `.env`:
+
+```ini
+QUEUE_CONNECTION=deferred
+```
+
+Each job then runs at the end of the request that queued it.
+[runtime.md](internals/runtime.md#queue) says what this way and the one before it give up.
+
+### The scheduler
+
+Recommended, not required. A line in the site user's cron (as above):
+
+```
+* * * * * cd /srv/openpne/site && php artisan schedule:run >> /dev/null 2>&1
+```
+
+A site without it runs, with two differences. The front page's issue of the day is published when
+the page is first opened after 06:00, not at 06:00. And link cards that nothing refers to any more
+are never removed: their rows and images pile up
+([runtime.md](internals/runtime.md#scheduled-tasks)).
 
 ## 7. Mail
 
@@ -473,7 +498,7 @@ MAIL_FROM_ADDRESS=sns@example.com
 MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-Mail leaves through the queue, so nothing is sent until step 6 is in place.
+Mail leaves through the queue, so nothing is sent until the queue of step 6 is in place.
 
 ## 8. The first member
 
@@ -499,10 +524,11 @@ there. All of those send mail.
   consistent copy while the site runs; copying the file alone can lose the latest rows. A copy
   holds everything the database does: keep it where only the site user reads it.
 - **Update** by [updating.md](updating.md), release by release.
-- **After editing `.env`**, restart the queue worker (`sudo systemctl restart openpne-worker`): it
-  read the settings when it started. A site that has run `php artisan optimize` runs it again; the
-  file it writes under `bootstrap/cache` holds the settings, secrets included, which is why step 2
-  closes that directory to other users. An update from an archive brings a new one: close it again.
+- **After editing `.env`**, restart the queue worker if you run one
+  (`sudo systemctl restart openpne-worker`): it read the settings when it started. A site that has
+  run `php artisan optimize` runs it again; the file it writes under `bootstrap/cache` holds the
+  settings, secrets included, which is why step 2 closes that directory to other users. An update
+  from an archive brings a new one, and [updating.md](updating.md) closes it again.
 - `storage/` and `.env` can live outside the release's directory as well
   ([runtime.md](internals/runtime.md)); an update then carries neither.
 
@@ -522,9 +548,8 @@ too, when it gives you:
 The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are
 as written, in a directory of yours, without the `sudo apt install` lines. Step 4 is the host's own
 setting that makes the release's `public/` the document root; nothing outside `public/` may be
-reachable from the web. Where no process can be kept running, `QUEUE_CONNECTION=deferred` stands
-in for the worker, and the scheduler runs from the host's cron if it has one
-([runtime.md](internals/runtime.md#scheduled-tasks) says what is lost without it). An update is
-[updating.md](updating.md), in the directories you have.
+reachable from the web. Step 6 is the way of working the queue that the host allows, and the
+scheduler if the host has cron. An update is [updating.md](updating.md), in the directories you
+have.
 
 This guide does not walk through any one host.
