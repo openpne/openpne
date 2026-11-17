@@ -292,7 +292,7 @@ update() {
 
   step "back up"
   if [ -n "$db" ]; then
-    sqlite3 "$db" ".backup '$work/backup.sqlite'"
+    sqlite3 -readonly "$db" ".backup '$work/backup.sqlite'"
     if [ "$mode" = sqlite-default ]; then
       # The fixture has to be one where the shortcut loses data, or this check proves nothing.
       cp "$db" "$work/alone.sqlite"

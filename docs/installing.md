@@ -3,7 +3,8 @@
 Sets up a site for people to use, from a release. To look at OpenPNE on your own machine first, the
 README's [Try it](../README.md#try-it) is shorter. Moving a site to a later release is
 [updating.md](updating.md); bringing one over from OpenPNE 3 is
-[upgrading-from-openpne3.md](upgrading-from-openpne3.md), which starts from this install.
+[upgrading-from-openpne3.md](upgrading-from-openpne3.md), whose first stage uses this guide up to
+the settings and says where it leaves it.
 
 The commands are the ones for Ubuntu 24.04 with nginx and PHP-FPM, and a site at
 `https://sns.example.com`. Other systems differ in package names and in where the web server keeps
@@ -25,7 +26,7 @@ its configuration, not in the steps.
 
 ```bash
 sudo apt install nginx php-fpm php-cli php-curl php-mbstring php-xml php-intl php-zip php-gd \
-  php-bcmath php-sqlite3 sqlite3          # php-mysql in place of php-sqlite3 and sqlite3 for MySQL
+  php-bcmath unzip php-sqlite3 sqlite3    # php-mysql in place of php-sqlite3 and sqlite3 for MySQL
 ```
 
 ## The site user and its directory
@@ -34,7 +35,8 @@ sudo apt install nginx php-fpm php-cli php-curl php-mbstring php-xml php-intl ph
 queue worker. A command run as someone else, `root` included, leaves files in `storage/` that the
 site cannot write to afterwards, and the next request that needs one answers with a 500
 (`sudo chown -R openpne:openpne /srv/openpne` puts that right). Below that user is `openpne`, and
-the commands that are not prefixed with `sudo` are run as it (`sudo -iu openpne`).
+the commands that are not prefixed with `sudo` are run as it (`sudo -iu openpne`). With Apache and
+`mod_php` the site user is Apache's own instead: read [Apache](#apache) before going on.
 
 It owns one directory, with the release in a directory of its own inside:
 
@@ -182,7 +184,7 @@ server {
     client_max_body_size 32m;
 
     gzip on;
-    gzip_types text/css application/javascript image/svg+xml;
+    gzip_types text/css application/javascript text/javascript image/svg+xml;
 
     location /build/assets/ {
         try_files $uri =404;
@@ -198,6 +200,7 @@ server {
         fastcgi_pass unix:/run/php/openpne.sock;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
+        gzip off;
     }
 
     location ~ /\.(?!well-known) {
@@ -212,7 +215,7 @@ sudo systemctl restart php8.3-fpm
 sudo systemctl reload nginx
 ```
 
-What the two static rules are for is in
+What the two static rules are for, and why the pages PHP answers with are left uncompressed, is in
 [runtime.md](internals/runtime.md#static-asset-delivery).
 
 ### Apache
@@ -346,11 +349,12 @@ there. All of those send mail.
 
 ## After the install
 
-- **Back up** the database, `.env` (it holds `APP_KEY`) and, when `OPENPNE_FILES_DISK` names a disk,
-  the files on it. With the default the stored files are in the database. For SQLite,
-  `sqlite3 /srv/openpne/database.sqlite ".backup '/path/to/copy.sqlite'"` writes a consistent copy
-  while the site runs; copying the file alone can lose the latest rows. A copy holds everything
-  the database does: keep it where only the site user reads it.
+- **Back up** the database, `.env` (it holds `APP_KEY`), `storage/oauth-private.key` and
+  `storage/oauth-public.key` if step 3 made them, and, when `OPENPNE_FILES_DISK` names a disk, the
+  files on it. With the default the stored files are in the database. For SQLite,
+  `sqlite3 -readonly /srv/openpne/database.sqlite ".backup '/path/to/copy.sqlite'"` writes a
+  consistent copy while the site runs; copying the file alone can lose the latest rows. A copy
+  holds everything the database does: keep it where only the site user reads it.
 - **Update** by [updating.md](updating.md), release by release.
 - **After editing `.env`**, restart the queue worker (`sudo systemctl restart openpne-worker`): it
   read the settings when it started. A site that has run `php artisan optimize` runs it again.

@@ -50,8 +50,16 @@ Run them in the app root, as the user the site runs as.
 2. **Back up**, now that nothing is writing: a dump of the database, and `.env` if it is not
    already kept somewhere else. With the default `OPENPNE_FILES_DISK=blob` the stored files are in
    that dump. If the setting names a disk, copy what the disk holds at the same moment, so the
-   rows and the files they point to match. For SQLite,
-   `sqlite3 database/database.sqlite ".backup '/path/to/copy.sqlite'"` writes a consistent copy.
+   rows and the files they point to match. For SQLite, the database is the file `DB_DATABASE`
+   names, or `database/database.sqlite` in the app root when it names none, and this writes a
+   consistent copy of it:
+
+   ```bash
+   sqlite3 -readonly /path/to/database.sqlite ".backup '/path/to/copy.sqlite'"
+   ```
+
+   `-readonly` makes a wrong path an error. Without it `sqlite3` creates an empty database at
+   that path and copies that, and says nothing.
 
 3. **Remove the caches the running release built**, while its code is still the one checked out:
 
@@ -160,7 +168,7 @@ itself, so that the new tree is its own.
      stay behind and still be loaded.
 
      ```bash
-     tar -xzf openpne-NEW.tar.gz -C /srv/openpne   # makes /srv/openpne/openpne-NEW
+     tar -xzf /srv/openpne/openpne-NEW.tar.gz -C /srv/openpne   # makes /srv/openpne/openpne-NEW
      ```
 
   2. Carry the site's own files into it.
@@ -192,9 +200,10 @@ itself, so that the new tree is its own.
        archive of the release the site runs:
 
        ```bash
-       tar -xzf openpne-OLD.tar.gz -C /tmp
-       diff -u /tmp/openpne-OLD/public/.htaccess /srv/openpne/site/public/.htaccess > htaccess.patch
-       patch /srv/openpne/openpne-NEW/public/.htaccess < htaccess.patch
+       tar -xzf /srv/openpne/openpne-OLD.tar.gz -C /tmp
+       diff -u /tmp/openpne-OLD/public/.htaccess /srv/openpne/site/public/.htaccess \
+         > /tmp/htaccess.patch
+       patch /srv/openpne/openpne-NEW/public/.htaccess < /tmp/htaccess.patch
        ```
 
        If `patch` rejects a part, stop and bring that part over by hand.
