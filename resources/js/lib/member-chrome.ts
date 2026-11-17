@@ -829,7 +829,7 @@ export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
 
-/** The one trail target a guest may open: an author's entries list filters itself to the web-public ones. */
+/** The one trail target a guest may open: an author's entries list admits a guest whenever one of that author's entries does. */
 const GUEST_OPEN = /^\/diary\/listMember\/\d+$/;
 
 /**
@@ -838,11 +838,8 @@ const GUEST_OPEN = /^\/diary\/listMember\/\d+$/;
  */
 function guestCrumb(chrome: Chrome): BreadcrumbCrumb | null {
     const last = chrome.context?.[chrome.context.length - 1];
-    if (last) {
-        return { label: last.label, href: last.href, link: chrome.form !== true && GUEST_OPEN.test(last.href) };
-    }
 
-    return chrome.mode === 'contextual' && chrome.title ? { label: chrome.title, href: '', link: false } : null;
+    return last ? { label: last.label, href: last.href, link: chrome.form !== true && GUEST_OPEN.test(last.href) } : null;
 }
 
 /**

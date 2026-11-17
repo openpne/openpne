@@ -160,7 +160,7 @@ class UnifiedMemberTest extends TestCase
             );
     }
 
-    /** Every row here is one a guest may read on its own page, so only the page's own rule keeps it off this one. */
+    /** The owner has every kind of row the member page lists, each at the widest audience it can take. */
     public function test_a_guest_gets_the_heading_and_the_fields_alone(): void
     {
         $this->setSnsSetting(SnsSettingKey::TimelineAllowWebPublic, true);
@@ -171,6 +171,12 @@ class UnifiedMemberTest extends TestCase
             'profile_id' => $profile->getKey(),
             'value' => 'a-web-public-field',
             'visibility' => Visibility::Open,
+        ]);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(),
+            'profile_id' => Profile::factory()->create(['is_edit_public_flag' => true])->getKey(),
+            'value' => 'a-members-only-field',
+            'visibility' => Visibility::Members,
         ]);
         $this->diary($owner, '2026-08-02 10:00:00', images: 1, visibility: Visibility::Open, title: 'a-web-public-entry');
         $this->timelinePost($owner, '2026-08-03 10:00:00', images: 1, visibility: Visibility::Open);
@@ -194,6 +200,7 @@ class UnifiedMemberTest extends TestCase
                 ->where('recentDiaries', [])
             )
             ->assertSee('a-web-public-field')
+            ->assertDontSee('a-members-only-field')
             ->assertDontSee('a-web-public-entry')
             ->assertDontSee('A Friend Of The Owner')
             ->assertDontSee('A Group Of The Owner');
@@ -201,6 +208,7 @@ class UnifiedMemberTest extends TestCase
         // The fixture is one a member does see, or the emptiness above would prove nothing.
         $this->actingAs(Member::factory()->create())->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('fields', 2)
                 ->has('groups', 1)
                 ->has('friends', 1)
                 ->has('recentPhotos', 2)

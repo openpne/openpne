@@ -89,8 +89,7 @@ A signed-out visitor gets the same frame with the member-only parts left out:
 - The crumb never takes the place tier, whose target is a member's page that may sit behind
   the login wall. It is the trail's last item, and it is a link only where that target is
   open to a guest (an entry's crumb to its author's entries, which lists the web-public
-  ones); anywhere else it is text. A screen with a title and no trail (a site policy) shows
-  the title as text.
+  ones); anywhere else it is text.
 - A web-public profile is the member page with the heading and the profile fields alone
   ([member-profile.md](member-profile.md), "Key invariants").
 

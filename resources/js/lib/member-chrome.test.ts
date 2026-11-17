@@ -13,7 +13,6 @@ import {
     lookSpec,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
-    POLICY_TITLES,
     resolveChrome,
     TALK_ROOMS_HREF,
     unifiedTabs,
@@ -651,15 +650,11 @@ test("a guest's crumb leads only where a guest may go", () => {
     assert.deepEqual(guestCrumb('diary/list', { owner, isOwner: false }), { label: 'Owner', href: '/member/1', link: false });
 });
 
-test("a guest's screen with a title and no trail shows the title as text", () => {
-    assert.deepEqual(guestCrumb('policy/show', { kind: 'terms' }), { label: POLICY_TITLES.terms, href: '', link: false });
-    // A member's bar leaves the mark standing alone there, as before.
-    assert.equal(crumb('policy/show', { kind: 'terms' }), null);
-});
-
-test("a guest's place top and hub answer no crumb, as a member's do", () => {
+test("a guest's place top, hub and site policy answer no crumb, as a member's do", () => {
     assert.equal(guestCrumb('unified/member', { profile: owner }), null);
     assert.equal(guestCrumb('diary/feed', { variant: 'all' }), null);
+    // The page's own heading names a policy directly below the bar.
+    assert.equal(guestCrumb('policy/show', { kind: 'terms' }), null);
 });
 
 test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {

@@ -182,5 +182,6 @@ Privacy is enforced **in SQL**, not after the fact:
    for that question directly.
 7. A guest's Modern profile page carries the heading (name, picture, bio, gated age) and the fields
    a guest may see, and nothing else: the groups, friends, recent photos and recent entries are
-   empty whatever their own visibility, and the picture is the 180px square only
-   (`UnifiedMemberSerializer::guestPage()`).
+   empty whatever their own visibility (`UnifiedMemberSerializer::guestPage()`). The picture it
+   carries is the 180px square; that is what the page shows, not a limit on what a guest may
+   fetch, as every size of a picture a guest may see is served to one.

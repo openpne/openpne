@@ -67,7 +67,7 @@ final class UnifiedMemberSerializer
 
     /**
      * A guest gets the heading and the fields alone: every list is empty whatever its rows' own
-     * visibility, and the picture is the 180px square only (docs/internals/member-profile.md, "Key invariants").
+     * visibility, and the page carries the 180px picture only (docs/internals/member-profile.md, "Key invariants").
      *
      * @param  Collection<int, ProfileFieldValue>  $fields  already resolved at a guest's clearance
      * @return array{profile: array<string, mixed>, fields: list<array{name: string, caption: string, value: string}>, groups: array{}, friends: array{}, recentPhotos: array{}, recentDiaries: array{}}
@@ -76,9 +76,7 @@ final class UnifiedMemberSerializer
     {
         return [
             'profile' => [
-                ...self::profile($owner, $fields, $lang, isSelf: false, age: $age, friendStatus: null),
-                'avatarUrl' => null,
-                'avatarUrlLarge' => null,
+                ...self::profile($owner, $fields, $lang, isSelf: false, age: $age, friendStatus: null, cover: false),
                 'avatarUrlSmall' => $owner->avatar?->file?->thumbnailUrl(180, 180, square: true),
             ],
             'fields' => ProfileSerializer::fieldRows($fields, $lang),
@@ -102,8 +100,9 @@ final class UnifiedMemberSerializer
         bool $isSelf,
         ?int $age,
         ?string $friendStatus,
+        bool $cover = true,
     ): array {
-        $file = $owner->avatar?->file;
+        $file = $cover ? $owner->avatar?->file : null;
 
         return [
             'id' => $owner->getKey(),
