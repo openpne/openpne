@@ -3,15 +3,24 @@
 Sets up a site for people to use, from a release. To look at OpenPNE on your own machine first, the
 README's [Try it](../README.md#try-it) is shorter. Moving a site to a later release is
 [updating.md](updating.md); bringing one over from OpenPNE 3 is
-[upgrading-from-openpne3.md](upgrading-from-openpne3.md), whose first stage uses this guide up to
-the settings and says where it leaves it.
+[upgrading-from-openpne3.md](upgrading-from-openpne3.md), whose first stage says which steps of
+this guide it takes and which it changes.
 
-The commands are the ones for Ubuntu 26.04 LTS with nginx and PHP-FPM, and a site at
-`https://sns.example.com`. That system is the example, not a requirement: whatever meets
+The commands are the ones for Ubuntu 26.04 LTS, and a site at `https://sns.example.com`. That
+system is the example, not a requirement: whatever meets
 [What the server needs](#what-the-server-needs) runs a site, and other systems differ in package
 names and in where the web server keeps its configuration, not in the steps. Where a path or a
 service name below carries `8.5`, it is the version of PHP the system packages. Ubuntu 24.04 LTS
 packages PHP 8.3: the same packages install by the same lines, and those names carry `8.3`.
+
+**Not every command below is for you.** Where a step can be done in more than one way, the ways
+are headed **Either** and **Or**: do one of them and skip the others. The **Either** is the way
+this guide takes when nothing asks for another: a user made for the site, the release's archive,
+and nginx with PHP-FPM.
+
+In the configuration examples, a comment separates **what the site needs** from **what is yours**
+to set for your server. The names `openpne` and `/srv/openpne` are this guide's own: others do as
+well, used throughout.
 
 A server you administer is what the steps assume. A host where you cannot is covered by
 [On a shared host](#on-a-shared-host).
@@ -19,37 +28,36 @@ A server you administer is what the steps assume. A host where you cannot is cov
 ## What the server needs
 
 - **PHP 8.3 or later**, for the web server and on the command line, with the extensions `ctype`,
-  `curl`, `dom`, `exif`, `fileinfo`, `filter`, `gd`, `hash`, `iconv`, `intl`, `mbstring`, `openssl`,
-  `pcre`, `session`, `sodium`, `tokenizer`, `xml`, `xmlreader`, `zip`, and `pdo_sqlite` or
-  `pdo_mysql` for the database. `bcmath` or `gmp` makes web push faster; the queue worker's job
-  timeouts need `pcntl` on the command line.
+  `curl`, `dom`, `exif`, `fileinfo`, `filter`, `gd`, `hash`, `iconv`, `intl`, `libxml`, `mbstring`,
+  `openssl`, `pcre`, `session`, `sodium`, `tokenizer`, `xml`, `xmlreader`, `zip`, `zlib`, and
+  `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes web push faster; the queue
+  worker's job timeouts need `pcntl` on the command line.
 - **A database**: SQLite 3, or MySQL 8. A SQLite site also needs the `sqlite3` command, which
   [updating.md](updating.md) uses for its backup.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
-- **A shell and cron** on the server.
-- Nothing to build with, when the release is installed from its archive. A git checkout is built on
-  the server and needs Composer 2 and Node.js 26 as well.
+- **A shell** on the server, and cron for the scheduler of step 6 (a site runs without the
+  scheduler, less well: [runtime.md](internals/runtime.md#scheduled-tasks)).
+- Nothing to build with, when the release is installed from its archive. A release taken from git
+  is built on the server and needs Composer 2 and Node.js 26 as well.
 
 ```bash
-sudo apt install php-cli php-curl php-mbstring php-xml php-intl php-zip php-gd php-bcmath unzip \
-  php-sqlite3 sqlite3                     # php-mysql in place of these two for MySQL
+sudo apt install php-cli php-curl php-mbstring php-xml php-intl php-zip php-gd php-bcmath unzip
 ```
 
-The web server's own packages come in [step 4](#4-serve-it).
+The database's packages come in [step 2](#2-write-the-settings) and the web server's in
+[step 4](#4-serve-it), each with the way you choose there.
 
 ## The site user and its directory
 
 **One user runs everything**: PHP for the web server, every `php artisan` command, cron and the
 queue worker. A command run as someone else, `root` included, leaves files in `storage/` that the
 site cannot write to afterwards, and the next request that needs one answers with a 500
-(`sudo chown -R openpne:openpne /srv/openpne` puts that right). Below that user is `openpne`, and
-the commands that are not prefixed with `sudo` are run as it (`sudo -iu openpne`). With Apache and
-`mod_php` the site user is Apache's own instead: read [Apache](#apache) before going on.
+(`sudo chown -R <site user>: /srv/openpne` puts that right).
 
-It owns one directory, with the release in a directory of its own inside:
+That user owns one directory, with the release in a directory of its own inside:
 
 ```
-/srv/openpne/                    owned by openpne
+/srv/openpne/                    owned by the site user
 /srv/openpne/site/               the release; the web server serves site/public
 /srv/openpne/database.sqlite     the database, when it is SQLite
 ```
@@ -57,13 +65,38 @@ It owns one directory, with the release in a directory of its own inside:
 The release's directory is replaced as a whole by every update from an archive, which is why the
 database is kept beside it and why its parent belongs to the site user.
 
+Who the site user is follows from the web server you will use in step 4. **Do one of the two
+below.**
+
+### Either: a user made for the site (PHP-FPM, under nginx or Apache)
+
 ```bash
 sudo useradd --system --create-home --home-dir /srv/openpne --shell /bin/bash openpne
 sudo chmod 755 /srv/openpne               # the web server reads site/public through it
 sudo -iu openpne
 ```
 
+From here on, the commands without `sudo` are run in that shell, as `openpne`, and the ones with
+`sudo` in your own.
+
+### Or: Apache's own user (Apache with mod_php)
+
+Instead of the section above: skip this if you made a user there. With `mod_php`, PHP runs as
+Apache's user, `www-data`, so that user is the site user and owns the directory:
+
+```bash
+sudo mkdir /srv/openpne
+sudo chown www-data:www-data /srv/openpne
+```
+
+From here on, every command without `sudo` is run as that user, as `sudo -u www-data <command>`,
+and where the guide names `openpne` as a user or a group, read `www-data`.
+
 ## 1. Put the release in place
+
+**Do one of the two below.**
+
+### Either: from the release's archive
 
 Download `openpne-<version>.tar.gz` (or `.zip`) and `SHA256SUMS` from the
 [release](https://github.com/openpne/openpne/releases) into `/srv/openpne`, check the download, and
@@ -77,8 +110,11 @@ mv openpne-4.0.0-alpha.N site
 cd site
 ```
 
-A release without an archive, or a site that will carry changes of its own, is a git checkout of
-the release's tag instead, built in place:
+### Or: from git
+
+Instead of the section above: skip this if you unpacked an archive. A release without an archive,
+or a site that will carry changes of its own, is the release's tag taken from git and built in
+place, which needs Composer 2 and Node.js 26 on the server:
 
 ```bash
 git clone --branch v4.0.0-alpha.N https://github.com/openpne/openpne.git /srv/openpne/site
@@ -93,15 +129,22 @@ npm run build
 ```bash
 cp .env.example .env
 chmod 600 .env
-chmod o-rwx storage                       # logs and keys: nobody but the site user reads them
+chmod o-rwx storage bootstrap/cache       # logs, keys, cached settings: the site user's alone
 ```
 
-Set these in `.env` before anything else runs:
+Set these in `.env` before anything else runs. What a site that serves people needs:
+
+```ini
+APP_ENV=production
+APP_DEBUG=false
+```
+
+`APP_DEBUG=true` shows settings and source to whoever causes an error.
+
+What is yours, with this guide's values as the example:
 
 ```ini
 APP_NAME="Example SNS"
-APP_ENV=production
-APP_DEBUG=false
 APP_URL=https://sns.example.com
 APP_TIMEZONE=Asia/Tokyo
 LOG_LEVEL=warning
@@ -111,9 +154,17 @@ LOG_LEVEL=warning
   host name is refused.
 - `APP_TIMEZONE` is fixed by the first row written: changing it later moves every stored time
   ([runtime.md](internals/runtime.md#site-timezone)).
-- `APP_DEBUG=true` shows settings and source to whoever causes an error. Keep it `false`.
+- `LOG_LEVEL` is how much the site logs; `warning` leaves out the routine lines.
 
-Then the database. **SQLite**, at a path outside the release's directory:
+Then the database. **Do one of the two below.**
+
+### Either: SQLite
+
+```bash
+sudo apt install php-sqlite3 sqlite3
+```
+
+The database is a file, at a path outside the release's directory. In `.env`:
 
 ```ini
 DB_CONNECTION=sqlite
@@ -127,7 +178,23 @@ touch /srv/openpne/database.sqlite
 chmod 600 /srv/openpne/database.sqlite
 ```
 
-**MySQL**, in a database made for the site (`utf8mb4`), with a user that owns it:
+### Or: MySQL
+
+Instead of the section above: skip this if you chose SQLite.
+
+```bash
+sudo apt install php-mysql
+```
+
+In a MySQL 8 server of yours, a database made for the site (`utf8mb4`), with a user that owns it:
+
+```sql
+CREATE DATABASE openpne CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'openpne'@'localhost' IDENTIFIED BY '...';
+GRANT ALL PRIVILEGES ON openpne.* TO 'openpne'@'localhost';
+```
+
+In `.env`:
 
 ```ini
 DB_CONNECTION=mysql
@@ -136,12 +203,6 @@ DB_PORT=3306
 DB_DATABASE=openpne
 DB_USERNAME=openpne
 DB_PASSWORD=...
-```
-
-```sql
-CREATE DATABASE openpne CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'openpne'@'localhost' IDENTIFIED BY '...';
-GRANT ALL PRIVILEGES ON openpne.* TO 'openpne'@'localhost';
 ```
 
 ## 3. Create the site
@@ -158,6 +219,11 @@ it: keep it with your backups, and do not generate it again.
 
 ## 4. Serve it
 
+**Do one of the three below**: one that goes with the site user you chose. The first two are
+spelled out; the third is made of their parts.
+
+### Either: nginx with PHP-FPM
+
 ```bash
 sudo apt install nginx php-fpm
 ```
@@ -167,18 +233,20 @@ PHP runs as the site user, in a PHP-FPM pool of its own:
 ```ini
 ; /etc/php/8.5/fpm/pool.d/openpne.conf
 [openpne]
+; What the site needs: PHP as the site user, on a socket nginx can open, taking uploads this large.
 user = openpne
 group = openpne
 listen = /run/php/openpne.sock
 listen.owner = www-data
 listen.group = www-data
+php_admin_value[upload_max_filesize] = 16M
+php_admin_value[post_max_size] = 32M
+; Yours: how many PHP processes the server keeps. These are a small server's numbers.
 pm = dynamic
 pm.max_children = 10
 pm.start_servers = 2
 pm.min_spare_servers = 1
 pm.max_spare_servers = 3
-php_admin_value[upload_max_filesize] = 16M
-php_admin_value[post_max_size] = 32M
 ```
 
 The two sizes follow the upload caps in `.env` (`OPENPNE_IMAGE_MAX_UPLOAD_KB`,
@@ -187,21 +255,15 @@ The two sizes follow the upload caps in `.env` (`OPENPNE_IMAGE_MAX_UPLOAD_KB`,
 ```nginx
 # /etc/nginx/sites-available/openpne
 server {
+    # Yours: the name and the port the site answers on, and its certificate.
     listen 80;
     server_name sns.example.com;
 
+    # What the site needs: the release's public/ as the root, every other path handed to
+    # index.php, PHP reached through the pool's socket, and a request body as large as PHP takes.
     root /srv/openpne/site/public;
     index index.php;
-
     client_max_body_size 32m;
-
-    gzip on;
-    gzip_types text/css application/javascript text/javascript image/svg+xml;
-
-    location /build/assets/ {
-        try_files $uri =404;
-        add_header Cache-Control "public, max-age=31536000, immutable";
-    }
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
@@ -213,6 +275,16 @@ server {
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
         gzip off;
+    }
+
+    # What a site should have, though it runs without: static text compressed, the hashed assets
+    # cached for good, and files whose names start with a dot refused.
+    gzip on;
+    gzip_types text/css application/javascript text/javascript image/svg+xml;
+
+    location /build/assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
     location ~ /\.(?!well-known) {
@@ -227,12 +299,12 @@ sudo systemctl restart php8.5-fpm
 sudo systemctl reload nginx
 ```
 
-What the two static rules are for, and why the pages PHP answers with are left uncompressed, is in
-[runtime.md](internals/runtime.md#static-asset-delivery).
+What the static rules are for, and why the pages PHP answers with are left uncompressed
+(`gzip off`), is in [runtime.md](internals/runtime.md#static-asset-delivery).
 
-### Apache
+### Or: Apache with mod_php
 
-Apache with `mod_php` serves the same directory, in place of nginx and PHP-FPM:
+Instead of the section above: skip this if you set up nginx.
 
 ```bash
 sudo apt install apache2 libapache2-mod-php
@@ -246,17 +318,24 @@ PHP answers with:
 ```apache
 # /etc/apache2/sites-available/openpne.conf
 <VirtualHost *:80>
+    # Yours: the name and the port the site answers on, and its certificate.
     ServerName sns.example.com
+
+    # What the site needs: the release's public/ as the root with its .htaccess in force, and
+    # uploads this large.
     DocumentRoot /srv/openpne/site/public
     <Directory /srv/openpne/site/public>
         AllowOverride All
         Require all granted
     </Directory>
+    php_admin_value upload_max_filesize 16M
+    php_admin_value post_max_size 32M
+
+    # What a site should have, though it runs without: the pages PHP answers with left
+    # uncompressed.
     <FilesMatch "\.php$">
         SetEnv no-gzip 1
     </FilesMatch>
-    php_admin_value upload_max_filesize 16M
-    php_admin_value post_max_size 32M
 </VirtualHost>
 ```
 
@@ -265,11 +344,18 @@ sudo a2ensite openpne
 sudo systemctl restart apache2
 ```
 
-With `mod_php` PHP runs as Apache's own user, `www-data`, and that user is the site user: it owns
-`/srv/openpne` in place of a user made for the site
-(`sudo mkdir /srv/openpne && sudo chown www-data:www-data /srv/openpne`), every command in this
-guide is run as it (`sudo -u www-data php artisan …`), and the cron line and the worker below are
-its own (`sudo crontab -u www-data -e`, `User=www-data` and `Group=www-data`).
+### Or: Apache with PHP-FPM
+
+Instead of both sections above. Apache can hand PHP to a PHP-FPM pool, as nginx does, in place of
+running it itself with `mod_php`. PHP then runs as a user made for the site and not as Apache's,
+which makes this the Apache setup to prefer. This guide does not spell it out; it is made of what
+the two sections above show:
+
+- the site user is the one made for the site, the first **Either** of
+  [The site user and its directory](#the-site-user-and-its-directory);
+- the packages are `apache2` and `php-fpm`, and the pool is the one of the nginx section;
+- the virtual host is the one of the `mod_php` section, without its two `php_admin_value` lines
+  (the pool has them) and with `.php` handed to the pool's socket through `mod_proxy_fcgi`.
 
 ## 5. HTTPS, and a proxy in front
 
@@ -280,7 +366,8 @@ nobody can sign in.
 When TLS ends in the web server above, add the certificate to its configuration and nothing else.
 When it ends in something in front of it (a load balancer, a CDN, another nginx), the site sees
 that proxy's address as every member's, and the limits on sign-in attempts count everyone together.
-Name the proxy in `.env`, by address or range, comma-separated:
+**Only then**, name the proxy in `.env`, by address or range, comma-separated; with nothing in
+front of the web server the setting stays empty:
 
 ```ini
 TRUSTED_PROXIES=10.0.0.5
@@ -288,21 +375,21 @@ TRUSTED_PROXIES=10.0.0.5
 
 The proxy has to send `X-Forwarded-For`, and to pass the `Host` header through unchanged. Do not
 name an address that anyone other than the proxy can send requests from: whoever can is believed
-about the address they come from. See
-[runtime.md](internals/runtime.md#reverse-proxy--https).
+about the address they come from. See [runtime.md](internals/runtime.md#reverse-proxy--https).
 
 ## 6. Background work
 
 Two things run beside the web server, both as the site user.
 
-**The scheduler**, every minute from cron (`crontab -e`):
+**The scheduler**, every minute from the site user's cron (`crontab -e` in its shell, or
+`sudo crontab -u www-data -e` for Apache's user):
 
 ```
 * * * * * cd /srv/openpne/site && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 **The queue**, which sends mail and notifications and draws the sizes of a posted picture. A worker
-kept running by systemd:
+kept running by systemd (with Apache's user, `www-data` in the two lines that name `openpne`):
 
 ```ini
 # /etc/systemd/system/openpne-worker.service
@@ -311,11 +398,14 @@ Description=OpenPNE queue worker
 After=network.target
 
 [Service]
+# What the site needs: the worker as the site user, in the release's directory, started again
+# whenever it exits.
 User=openpne
 Group=openpne
 WorkingDirectory=/srv/openpne/site
 ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
 Restart=always
+# Yours: how long systemd waits before starting it again.
 RestartSec=5
 
 [Install]
@@ -326,10 +416,14 @@ WantedBy=multi-user.target
 sudo systemctl enable --now openpne-worker
 ```
 
-A host that cannot keep a process running has two other ways
+The three options of `queue:work` are yours as well: seconds to wait when the queue is empty,
+attempts before a job counts as failed, and seconds after which the worker exits so that a fresh
+one takes over.
+
+A host that cannot keep a process running does one of these instead of the worker above
 ([runtime.md](internals/runtime.md#queue) says what each gives up):
 
-- from cron, beside the scheduler's line:
+- a second line in the site user's cron:
   `* * * * * cd /srv/openpne/site && php artisan queue:work --stop-when-empty >> /dev/null 2>&1`
 - `QUEUE_CONNECTION=deferred` in `.env`: no worker at all, each job runs at the end of the request
   that queued it.
@@ -339,7 +433,7 @@ A host that cannot keep a process running has two other ways
 Until mail is set up, `MAIL_MAILER=log` sends nothing, and the site still says a message was sent
 (it is written to `storage/logs/` only at `LOG_LEVEL=debug`). The site sends mail for registration
 and invitation links, password resets, address changes and sign-in codes, and for the notifications
-a member has switched on. For an SMTP server:
+a member has switched on. For an SMTP server, in `.env`:
 
 ```ini
 MAIL_MAILER=smtp
@@ -378,7 +472,9 @@ there. All of those send mail.
   holds everything the database does: keep it where only the site user reads it.
 - **Update** by [updating.md](updating.md), release by release.
 - **After editing `.env`**, restart the queue worker (`sudo systemctl restart openpne-worker`): it
-  read the settings when it started. A site that has run `php artisan optimize` runs it again.
+  read the settings when it started. A site that has run `php artisan optimize` runs it again; the
+  file it writes under `bootstrap/cache` holds the settings, secrets included, which is why step 2
+  closes that directory to other users. An update from an archive brings a new one: close it again.
 - `storage/` and `.env` can live outside the release's directory as well
   ([runtime.md](internals/runtime.md)); an update then carries neither.
 
@@ -389,15 +485,15 @@ too, when it gives you:
 
 - a shell (SSH), to unpack the archive and run `php artisan`;
 - PHP 8.3 or later, for the web and on the command line, with the extensions
-  [above](#what-the-server-needs) (`intl` is the one such hosts most often lack);
+  [above](#what-the-server-needs), `intl` among them;
 - MySQL, or SQLite;
 - Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root.
 
 The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are
-as written, in a directory of yours. Step 4 is the host's own setting that makes the release's
-`public/` the document root; nothing outside `public/` may be reachable from the web. Where no
-process can be kept running, `QUEUE_CONNECTION=deferred` stands in for the worker, and the
-scheduler runs from the host's cron if it has one
+as written, in a directory of yours, without the `sudo apt install` lines. Step 4 is the host's own
+setting that makes the release's `public/` the document root; nothing outside `public/` may be
+reachable from the web. Where no process can be kept running, `QUEUE_CONNECTION=deferred` stands
+in for the worker, and the scheduler runs from the host's cron if it has one
 ([runtime.md](internals/runtime.md#scheduled-tasks) says what is lost without it). An update is
 [updating.md](updating.md), in the directories you have.
 

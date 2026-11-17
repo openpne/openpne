@@ -10,8 +10,8 @@
 #                                    stored file, then walk docs/updating.md to the new one
 #
 # `update` reads ARCHIVE_DB: sqlite-default (database/database.sqlite in WAL mode, the default),
-# sqlite-outside (an absolute path outside the tree), relocated (that, with .env and storage/
-# outside the tree too) or mysql (DB_* from the environment, an empty database). ARCHIVE_NEW_MARK,
+# sqlite-outside (WAL too, at an absolute path outside the tree), relocated (that, with .env and
+# storage/ outside the tree too) or mysql (DB_* from the environment, an empty database). ARCHIVE_NEW_MARK,
 # when set, is text only the new release's login page has: the page must have it after the update
 # and must have lost it after going back.
 set -euo pipefail
@@ -239,6 +239,7 @@ update() {
       mkdir -p "$work/data"
       db=$work/data/site.sqlite
       set_env .env DB_DATABASE "$db"
+      set_env .env DB_JOURNAL_MODE WAL
       ;;
     mysql)
       for key in DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD; do

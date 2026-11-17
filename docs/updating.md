@@ -242,6 +242,8 @@ itself, so that the new tree is its own.
    cd /srv/openpne/site
    ```
 
+   `/srv/openpne/openpne-failed` must not exist beforehand either.
+
 3. Do steps 1, 3 and 4 of [If a step fails](#if-a-step-fails): the `.env` if it is kept outside the
    app root and you changed it, the database, the disk's files.
 4. `php artisan view:clear`. With `storage/` outside the app root the two releases share the
