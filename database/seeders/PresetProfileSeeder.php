@@ -10,12 +10,12 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * OpenPNE 4's own default set, not a replica of an OpenPNE 3 fixture: an upgraded site keeps its
- * own fields, which ProfileUpgrade brings. Country-specific region fields are left to the operator
- * because they share the unique `op_preset_region` name, so only one variant can exist.
+ * own fields, which ProfileUpgrade brings. The rest of the catalog is the operator's to add
+ * (docs/internals/member-profile.md, "Field definitions vs values").
  */
 class PresetProfileSeeder extends Seeder
 {
-    private const SEED_KEYS = ['sex', 'birthday', 'postal_code', 'telephone_number', 'self_introduction', 'country'];
+    private const SEED_KEYS = ['birthday', 'self_introduction'];
 
     public function run(): void
     {

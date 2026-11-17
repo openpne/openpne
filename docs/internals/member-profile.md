@@ -19,6 +19,11 @@ select/radio/checkbox live in `profile_options`; captions/labels are localised i
 choices from [`config/preset_profile.php`](../../config/preset_profile.php) via
 [`PresetProfileService`](../../app/Services/PresetProfileService.php), not the database.
 
+A new site starts with two of the catalog's presets, birthday and self-introduction, both optional
+([`PresetProfileSeeder`](../../database/seeders/PresetProfileSeeder.php)). The others (sex, postal
+code, telephone number, country, region) are the operator's to add from the admin panel, and a site
+upgraded from OpenPNE 3 keeps the fields it had.
+
 A **value** is a [`MemberProfile`](../../app/Models/MemberProfile.php) row. The table is
 redesigned from OpenPNE 3's nested-set `member_profile` (lft/rgt/level/tree_key dropped);
 see the [migration](../../database/migrations/2026_06_02_000002_create_member_profiles_table.php).
