@@ -3,13 +3,13 @@
 #
 # Tuned for the inner loop: source is bind-mounted, Vite serves HMR, outgoing mail
 # is caught by Mailpit, and queued work runs inline (QUEUE_CONNECTION=sync) so mail
-# appears immediately without a worker. A production stack (released image, real
-# DB/SMTP, queue worker + scheduler) is deliberately separate.
+# appears immediately without a worker. A site that serves people needs a real
+# database, SMTP, a queue worker and the scheduler instead.
 #
 # - Every service that writes to the bind mount runs as OPENPNE_UID:OPENPNE_GID
 #   (default 1000:1000 — export both if your host user differs), so generated
 #   files keep host ownership. vendor/ and node_modules/ live on the bind mount.
-# - SQLite is used by default; opt in to MySQL via a separate compose file.
+# - SQLite is used; nothing here runs MySQL.
 # - `vite` runs the Vite dev server on :5173 for HMR; Laravel reads
 #   `public/hot` to redirect asset URLs to it. First startup runs `npm ci`.
 
@@ -22,6 +22,9 @@ services:
     # passes these through (clear_env = no), so they win over .env. Production wires real
     # SMTP and a real queue + worker instead.
     environment:
+      # A command has no request to take the address from, so the links it prints are built
+      # from this alone.
+      APP_URL: http://localhost:${OPENPNE_HTTP_PORT:-8080}
       MAIL_MAILER: smtp
       MAIL_HOST: mailpit
       MAIL_PORT: 1025

@@ -1,32 +1,79 @@
 # OpenPNE
 
-OpenPNE is an open-source social networking platform you can self-host. It powers community SNS sites — invitation-only or open registration — with member profiles, diaries, communities, direct messaging, friend relationships, timeline, and more.
+[日本語](README.ja.md)
 
-This repository is a Laravel 13 reimplementation succeeding the previous version (symfony 1.4 based, see [OpenPNE3](https://github.com/openpne/OpenPNE3)).
+OpenPNE is open-source software for running your own social networking site: a place for one
+community — a neighbourhood, a club, a company, a fan base — on a server you control, open to
+anyone or by invitation only.
 
-## Getting started
+<p align="center">
+  <img src="docs/images/en/home.webp" width="30%" alt="The home page: what members posted on the site this week">
+  <img src="docs/images/en/talk.webp" width="30%" alt="A group's talk room: a message with three photos, and an AI account answering a member">
+  <img src="docs/images/en/entry.webp" width="30%" alt="A diary entry with a photo, reactions and comments">
+</p>
 
-The only requirement is [Docker](https://docs.docker.com/get-started/get-docker/) with Compose:
+The people and posts in these pictures are made up ([docs/images](docs/images/README.md)).
+
+This repository is OpenPNE 4, a rewrite on Laravel 13 that succeeds
+[OpenPNE 3](https://github.com/openpne/OpenPNE3).
+
+## What a site has
+
+- **Members**: profiles, friends, direct messages, notifications.
+- **Diaries**: posts with photos, comments and reactions, and a choice of who may read each one.
+- **Groups**: a talk room for chat, topics for longer threads, events with sign-up.
+- **A timeline** for short posts, and **a home page** that sums up what has happened on the site.
+- **Two looks**: Modern, built for phones first, and Classic, which keeps the screens, addresses and
+  themes of an OpenPNE 3 site.
+- **An admin panel** for members, what they post, who may register, the look of the site and a cap
+  on how many members it takes.
+- **Sign-in** with a password, two-factor codes or passkeys.
+- **Japanese and English**, chosen per member.
+- **AI clients** can read and post through an [MCP](https://modelcontextprotocol.io) server, as a
+  member or as an AI account a member owns.
+- **An upgrade path** from OpenPNE 3 that carries a site's members and what they wrote
+  ([docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)).
+
+## Try it
+
+With [Docker](https://docs.docker.com/get-started/get-docker/) and Compose, a site to click around
+in is four commands away:
 
 ```bash
-bin/dev-up                # http://localhost:8080  (caught mail: http://localhost:8025)
+git clone https://github.com/openpne/openpne.git && cd openpne
+bin/dev-up                                                           # http://localhost:8080
+docker compose exec app php artisan openpne:install                  # the tables and a new site's initial data
+docker compose exec app php artisan openpne:admin:create admin       # asks for a password; sign in at /admin
+docker compose exec app php artisan openpne:member:invite you@example.com
 ```
 
-On first start the `app` container runs `composer install`, generates
-`APP_KEY`, and runs migrations; the `vite` sidecar runs `npm ci` and starts
-the Vite dev server on `:5173`. Source is bind-mounted so code changes are
-reflected without a rebuild. SQLite is used by default. The site's initial
-data and its first administrator are one step more:
+The first start takes a few minutes: it builds an image, installs the dependencies and starts a
+development server for the frontend. The last command prints a registration link. Open it, choose a
+name and a password, and you are the site's first member. Invite others the same way, or from
+"Member invites" in the admin panel, whose mail arrives at <http://localhost:8025> instead of a
+real mailbox.
 
-```bash
-docker compose exec app php artisan openpne:install
-docker compose exec app php artisan openpne:admin:create admin   # then sign in at /admin
-```
+This stack is for trying OpenPNE and for working on it. It keeps its data in a SQLite file in the
+checkout and serves the frontend from a development server.
+
+## Running a site
+
+A site that serves people runs a tagged release rather than `main`; see [Releases](#releases). It
+needs PHP 8.3 or later, SQLite or MySQL, a web server, a queue worker and a scheduler entry
+([docs/internals/runtime.md](docs/internals/runtime.md)); Composer 2 and Node.js 26 build it.
+Moving from one release to the next is [docs/updating.md](docs/updating.md).
+
+## Developing
+
+`bin/dev-up` is the development stack too. On first start the `app` container runs
+`composer install`, generates `APP_KEY`, and runs migrations; the `vite` sidecar runs `npm ci` and
+starts the Vite dev server on `:5173`. Source is bind-mounted so code changes are reflected without
+a rebuild.
 
 Day-to-day commands run inside the containers:
 
 ```bash
-docker compose exec app php artisan test
+docker compose exec app php artisan test --parallel
 docker compose exec app vendor/bin/pint --test    # drop --test to auto-format
 docker compose exec vite npm run type-check
 ```
@@ -61,23 +108,27 @@ Notes:
   inside the container and `public/hot` references that port, so a
   host-side remap would not actually redirect the browser).
 
-## Without Docker
+### Without Docker
 
 Requires PHP 8.3+, Composer 2.x, and Node.js 26+ on the host:
 
 ```bash
 composer install
 npm install
-cp .env.example .env
+cp .env.example .env                     # then set APP_URL=http://localhost:8000
 php artisan key:generate
 touch database/database.sqlite
 php artisan openpne:install              # schema + the initial data of a new site
 php artisan openpne:admin:create admin   # the first administrator, for /admin
+php artisan openpne:member:invite you@example.com   # prints the first member's registration link
 php artisan passport:keys  # optional: lets AI clients sign in to the MCP server
 
 php artisan serve         # http://localhost:8000
 npm run dev               # Vite dev server on :5173 (HMR)
 ```
+
+`APP_URL` is what a printed link starts with, so it has to carry the port. Mail goes to the
+application log here, and only once `php artisan queue:work` has run.
 
 ## Releases
 
@@ -94,6 +145,10 @@ compatibility path, and a fix is published as a new release: an earlier alpha is
 Running an OpenPNE 3 site? [docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)
 migrates its data into a fresh OpenPNE 4 install — rehearsed against a dump while the old site keeps
 serving, then repeated as the cutover.
+
+## Security
+
+Found a vulnerability? [SECURITY.md](SECURITY.md) says how to report it privately.
 
 ## License
 
