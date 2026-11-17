@@ -232,7 +232,8 @@ the source and refuses a schema that already holds them ([upgrade.md](upgrade.md
 
 ## Release marker
 
-A deployment may place a `RELEASE` file at the app root, `key=value` lines, one per line.
+A deployment may place a `RELEASE` file at the app root, `key=value` lines, one per line; a release
+archive ([updating.md](../updating.md), "From a release archive") carries one with `version` and `sha`.
 The app reads only `sha` (`App\Support\ReleaseMarker`): the upgrade's run report carries it as
 `release`, the run's first write stores it as the build that started the run, and the
 completion marker, `openpne:upgrade-status` and `openpne:verify-upgrade` report it, so a fleet
