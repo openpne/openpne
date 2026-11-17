@@ -493,7 +493,7 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
   that a link was printed for an address (`registration.link_printed`, [logging.md](logging.md)),
   not that the member registered through it.
 - **What a wrong address costs.** The password reset goes to the registered address, and so do
-  the two-factor reset link and the sign-in code of a member with a passkey and no authenticator
+  the two-factor reset link, and the sign-in code of a member with a passkey and no authenticator
   app. A member registered under a mailbox they cannot read cannot recover the account by mail, and
   whoever reads that mailbox can take it over unless an authenticator app guards it
   ([Member two-factor authentication](#member-two-factor-authentication)). Changing the address
