@@ -492,7 +492,7 @@ too, when it gives you:
 - MySQL, or SQLite;
 - Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
 - PHP for the web running as your own account, as the command line does. Where it runs as a user
-  the host's sites share, the two `chmod` lines of step 2 lock the site out of its own files.
+  the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.
 
 The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are
 as written, in a directory of yours, without the `sudo apt install` lines. Step 4 is the host's own

@@ -185,7 +185,8 @@ itself, so that the new tree is its own.
      Give `/srv/openpne/openpne-NEW/.env` what the last command shows it needs. The copy of
      `storage/` takes the room and the time of everything in it, stored files included when
      `OPENPNE_FILES_DISK` names a local disk. A site that keeps `.env` or `storage/` outside the
-     app root ([runtime.md](internals/runtime.md)) carries neither.
+     app root ([runtime.md](internals/runtime.md)) carries neither, and runs the `chmod` line all
+     the same: `bootstrap/cache` is in the release's tree.
 
      - **A directory or a file you added** comes along as it is, a theme of your own for one.
        Copy what is yours, not the directory around it: the themes a release ships are the new
