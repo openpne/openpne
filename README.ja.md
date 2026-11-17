@@ -47,7 +47,7 @@ docker compose exec app php artisan openpne:member:invite you@example.com
 
 ## サイトを運営する
 
-人が使うサイトでは、`main` ではなくタグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))を使います。リリースには、Composer も Node.js も要らずに入れられる配布物(アーカイブ)が付きます。サーバへの入れ方は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3 以降、SQLite か MySQL、Web サーバ、キューに入った処理を動かす手段です。リリースからリリースへの更新は [docs/updating.md](docs/updating.md)(英語)にあります。
+人が使うサイトでは、`main` ではなくタグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))を使います。リリースに配布物(アーカイブ)が付いていれば、Composer も Node.js も要らずに入れられます。サーバへの入れ方は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3 以降、SQLite か MySQL、Web サーバ、キューに入った処理を動かす手段です。リリースからリリースへの更新は [docs/updating.md](docs/updating.md)(英語)にあります。
 
 バージョンに `-alpha` が付いている間は、互換性の手当てなしに動きや保存データが変わることがあります。修正は新しいリリースとして出し、前の alpha には入りません。
 

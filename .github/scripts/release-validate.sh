@@ -7,9 +7,10 @@
 #                           sha=, baseline= and baseline_sha= for the workflow
 #   published <tag>         refuse a published release that is not the one its draft was checked as
 #                           (the release body in $BODY, the files attached to it in $ASSETS)
-#   archives <tag> <dir>    refuse archives in <dir> that are not the ones the draft of <tag> was
-#                           given (the release body in $BODY); prints attached, or none for a
-#                           release drafted without them
+#   attached <tag> <dir>    download every file attached to <tag> into <dir> (needs gh)
+#   archives <tag> <dir>    refuse files in <dir> that are not the ones the draft of <tag> was
+#                           given (the release body in $BODY), for a release that is already out;
+#                           prints attached, or none for a release drafted without archives
 #
 # `check` reads $DIFFERS: the copies the release notes list as differing from their original.
 set -euo pipefail
@@ -100,12 +101,26 @@ check() {
   printf 'sha=%s\nbaseline=%s\nbaseline_sha=%s\n' "$sha" "$last" "$([ -z "$last" ] || git rev-parse "$last^{commit}")"
 }
 
+# What a failed check asks for: a release just published is drafted again, one sites already run is put right.
+remedy="Delete the release and the tag, and draft it again."
+
 # The line a draft's body carries; a body a maintainer rewrote without it says nothing checkable.
 marker_of() { # marker_of <tag>
   local marker
   marker=$(printf '%s' "${BODY:-}" | grep -oE '<!-- release: tag=[^ ]+ commit=[0-9a-f]{40} baseline=[^ ]+ baseline_commit=[^ ]+ sums=(none|[0-9a-f]{64}) -->' | head -n 1 || true)
-  [ -n "$marker" ] || die "the body of $1 does not have the line its draft carries (RELEASE.md, \"By hand\"): nothing says which commit was checked, or which archives. Delete the release and the tag, and draft it again."
+  [ -n "$marker" ] || die "the body of $1 does not have the line its draft carries (RELEASE.md, \"By hand\"): nothing says which commit was checked, or which archives. $remedy"
   printf '%s' "$marker"
+}
+
+# GitHub not answering is reported as that: an empty directory would read as a release with nothing attached.
+attached() { # attached <tag> <dir>
+  local tag=$1 dir=$2 names
+  names=$(gh release view "$tag" --json assets --jq '.assets[].name') \
+    || die "could not list what is attached to $tag (the reason is above). This says nothing about the release: run this again."
+  mkdir -p "$dir"
+  [ -z "$(find "$dir" -mindepth 1 -print -quit)" ] || die "$dir is not empty"
+  [ -z "$names" ] || gh release download "$tag" --dir "$dir" \
+    || die "could not download what is attached to $tag (the reason is above). This says nothing about the release: run this again."
 }
 
 # SHA256SUMS is what the marker pins, and the two archives are what SHA256SUMS pins: a file
@@ -116,21 +131,21 @@ archives() { # archives <tag> <dir>
   marker=$(marker_of "$tag")
   sums=$(printf '%s' "$marker" | sed -E 's/.* sums=([^ ]+) .*/\1/')
   found=""
-  [ ! -d "$dir" ] || found=$(find "$dir" -maxdepth 1 -type f \( -name 'openpne-*' -o -name SHA256SUMS \) -printf '%f\n' | sort | tr '\n' ' ')
+  [ ! -d "$dir" ] || found=$(find "$dir" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort | tr '\n' ' ')
   if [ "$sums" = none ]; then
-    [ -z "$found" ] || die "$tag was drafted without archives (sums=none) and has [ $found] attached: only the Release workflow makes a release's archives (RELEASE.md)"
+    [ -z "$found" ] || die "$tag was drafted without archives (sums=none) and has [ $found] attached: a release carries the three files the Release workflow gave its draft, or none (RELEASE.md). $remedy"
     echo none
     return
   fi
   [ "$found" = "SHA256SUMS openpne-$version.tar.gz openpne-$version.zip " ] \
-    || die "$tag was drafted with openpne-$version.tar.gz, openpne-$version.zip and SHA256SUMS, and has [ $found] attached"
+    || die "$tag was drafted with openpne-$version.tar.gz, openpne-$version.zip and SHA256SUMS, and has [ $found] attached. $remedy"
   [ "$(sha256sum "$dir/SHA256SUMS" | cut -d' ' -f1)" = "$sums" ] \
-    || die "the SHA256SUMS attached to $tag is not the one its draft was given"
+    || die "the SHA256SUMS attached to $tag is not the one its draft was given. $remedy"
   listed=$(sed -E 's/^[0-9a-f]{64} [ *]//' "$dir/SHA256SUMS" | sort | tr '\n' ' ')
   [ "$listed" = "openpne-$version.tar.gz openpne-$version.zip " ] \
-    || die "the SHA256SUMS attached to $tag lists [ $listed], not the two archives"
-  (cd "$dir" && sha256sum --check --strict --quiet SHA256SUMS >&2) \
-    || die "an archive attached to $tag is not the file its SHA256SUMS was written for"
+    || die "the SHA256SUMS attached to $tag lists [ $listed], not the two archives. $remedy"
+  (cd "$dir" && sha256sum --check --quiet SHA256SUMS >&2) \
+    || die "an archive attached to $tag is not the file its SHA256SUMS was written for. $remedy"
   echo attached
 }
 
@@ -144,7 +159,7 @@ published() {
   baseline_sha=$(printf '%s' "$marker" | sed -E 's/.* baseline_commit=([^ ]+) .*/\1/')
 
   [ "$tag" = "$drafted" ] \
-    || die "the release was drafted as $drafted and published as $tag: the checks find a release by its tag name. Delete the release and the tag, and draft it again."
+    || die "the release was drafted as $drafted and published as $tag: the checks find a release by its tag name. $remedy"
   at=$(git rev-parse --verify --quiet "refs/tags/$tag^{commit}") || die "the tag $tag is not here"
   [ "$at" = "$commit" ] \
     || die "$tag points at $at, but the draft was checked as $commit: the release holds something that was not checked. Delete the release and the tag, and draft it again."
@@ -167,6 +182,10 @@ published() {
 case "${1:-}" in
   check) [ $# = 3 ] || die "usage: release-validate.sh check <version> <sha>"; check "$2" "$3" ;;
   published) [ $# = 2 ] || die "usage: release-validate.sh published <tag>"; published "$2" ;;
-  archives) [ $# = 3 ] || die "usage: release-validate.sh archives <tag> <dir>"; archives "$2" "$3" ;;
-  *) die "usage: release-validate.sh check <version> <sha> | published <tag> | archives <tag> <dir>" ;;
+  attached) [ $# = 3 ] || die "usage: release-validate.sh attached <tag> <dir>"; attached "$2" "$3" ;;
+  archives)
+    [ $# = 3 ] || die "usage: release-validate.sh archives <tag> <dir>"
+    remedy="$2 is published and sites run it: put back what was changed after it was published (RELEASE.md, \"After publishing\")."
+    archives "$2" "$3" ;;
+  *) die "usage: release-validate.sh check <version> <sha> | published <tag> | attached <tag> <dir> | archives <tag> <dir>" ;;
 esac
