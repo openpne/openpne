@@ -40,10 +40,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Which proxies are trusted is config/trustedproxy.php: .env is not loaded yet when this runs.
-        // X-Forwarded-Host is deliberately not trusted: the Host is validated by trustHosts instead
-        // (docs/internals/runtime.md, "Reverse proxy & HTTPS").
+        // .env is not loaded yet, so this sees the process environment only; a value in .env arrives
+        // through config/trustedproxy.php.
+        $proxies = trim((string) env('TRUSTED_PROXIES'));
         $middleware->trustProxies(
+            at: $proxies === '' ? null : $proxies,
+            // X-Forwarded-Host is deliberately not trusted: the Host is validated by trustHosts instead
+            // (docs/internals/runtime.md, "Reverse proxy & HTTPS").
             headers: Request::HEADER_X_FORWARDED_FOR
                 | Request::HEADER_X_FORWARDED_PORT
                 | Request::HEADER_X_FORWARDED_PROTO,

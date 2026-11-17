@@ -112,8 +112,10 @@ mixed them needs a re-import, not a conversion.
 
 The app almost always runs behind a reverse proxy (the fleet edge, or a
 self-hoster's nginx/Caddy/Cloudflare). Two settings make it see the real client
-instead of the proxy, read from `.env` or the process environment through
-[`config/trustedproxy.php`](../../config/trustedproxy.php) and `config/openpne.php`:
+instead of the proxy. `TRUSTED_PROXIES` in the process environment is read on every request
+([`bootstrap/app.php`](../../bootstrap/app.php)) and comes first; in `.env` it is read as
+configuration ([`config/trustedproxy.php`](../../config/trustedproxy.php)), so a cached
+configuration holds the value it was built with. `config/openpne.php` reads the others:
 
 | Variable | Effect |
 |----------|--------|
