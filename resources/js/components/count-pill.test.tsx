@@ -9,7 +9,7 @@ import { NavItems } from './nav-items';
 import { PageTabs } from './page-tabs';
 import { ConversationRow } from '@/pages/message/conversations/conversation-row';
 import { RoomRow } from '@/pages/community/room-row';
-import { HomeSection } from '@/pages/unified/home-section';
+import { HomeSection } from '@/components/sections/home-section';
 import { fakeT } from '@/lib/test-i18n';
 import { type Chrome, resolveChrome } from '@/lib/member-chrome';
 import type { AuthUser, FeatureKey } from '@/types';
@@ -232,8 +232,8 @@ test('every unread phrase is given the count it names', () => {
         // `lib/member-chrome.ts` has a local `t` building a deferred label whose calls carry no count,
         // so only the translator's own calls are read.
         if (!code.includes("from '@/lib/i18n'")) return [];
-        // Anywhere in the key, not only at its start: `Jump to :count unread messages` and
-        // `%Friends% (:count)` are the same template and were sailing past a `^:count` match.
+        // Anywhere in the key, not only at its start: `Jump to :count unread messages` was sailing
+        // past a `^:count` match.
         const found = code.match(/t\('[^']*:count[^']*'[^)]*\)/g) ?? [];
 
         // The replacement object, not the word: `:count` is itself in every match, which is how the
@@ -282,7 +282,7 @@ test('a group room row with one waiting says so in the singular', () => {
 });
 
 /*
- * The heading tests above prove the mechanism and not the wiring — either page could drop its
+ * The heading tests above prove the mechanism and not the wiring — a page could drop its
  * `sr-only` phrase and stay green — so this reads the pages instead.
  */
 test('every heading that shows a pill also says the count', () => {
@@ -305,8 +305,8 @@ test('every heading that shows a pill also says the count', () => {
 
         return [...code.matchAll(PILL_IN_HEADER)].map((m) => ({ file, code, at: m.index ?? 0 }));
     });
-    // Two headings use this shape today; a scan finding none would pass on an empty set.
-    expect(sites).toHaveLength(2);
+    // One heading uses this shape today; a scan finding none would pass on an empty set.
+    expect(sites).toHaveLength(1);
 
     const bare = sites.filter(({ code, at }) => {
         // Scoped to this pill's own section: "an sr-only somewhere near a title" would be satisfied

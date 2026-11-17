@@ -17,8 +17,8 @@ use App\Features\Group\Queries\ListMemberGroups;
 use App\Features\Group\Queries\ListPendingMembers;
 use App\Features\Group\Queries\SearchGroups;
 use App\Features\Group\Queries\ShowGroup;
+use App\Features\Group\Serializers\GroupPageSerializer;
 use App\Features\Group\Serializers\GroupSerializer;
-use App\Features\Group\Serializers\UnifiedGroupSerializer;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
 use App\Features\GroupTalk\GroupTalkAccess;
@@ -131,7 +131,7 @@ class GroupController extends Controller
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
                 ];
 
-                return Inertia::render('unified/group', UnifiedGroupSerializer::page(
+                return Inertia::render('group/show', GroupPageSerializer::page(
                     viewer: $viewer,
                     group: $found,
                     role: $role,

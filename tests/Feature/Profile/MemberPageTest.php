@@ -24,7 +24,7 @@ use Tests\TestCase;
  * Viewer and owner are different members here, so this exercises the clearance matrix the home slice
  * cannot.
  */
-class UnifiedMemberTest extends TestCase
+class MemberPageTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -91,7 +91,7 @@ class UnifiedMemberTest extends TestCase
      *
      * @return list<array{query: string}>
      */
-    private function digestCountQueries(): array
+    private function countQueries(): array
     {
         return array_values(array_filter(
             DB::getQueryLog(),
@@ -103,7 +103,7 @@ class UnifiedMemberTest extends TestCase
         ));
     }
 
-    public function test_a_member_gets_the_page_without_the_digest_being_gathered(): void
+    public function test_a_member_gets_the_page_without_a_count_of_the_owners_rows_being_run(): void
     {
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
@@ -111,7 +111,7 @@ class UnifiedMemberTest extends TestCase
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->has('fields')
                 ->has('groups')
                 ->has('friends')
@@ -125,10 +125,10 @@ class UnifiedMemberTest extends TestCase
                 ->missing('digest')
                 ->missing('profile.stats')
             );
-        $counts = $this->digestCountQueries();
+        $counts = $this->countQueries();
         DB::disableQueryLog();
 
-        $this->assertSame([], $counts, 'the digest counts still ran for a page that does not show them');
+        $this->assertSame([], $counts, 'a count of the owner\'s rows ran for a page that shows none');
     }
 
     public function test_the_hero_takes_the_two_cover_rungs(): void
@@ -137,8 +137,8 @@ class UnifiedMemberTest extends TestCase
         MemberImage::factory()->create(['member_id' => $owner->getKey()]);
         $viewer = Member::factory()->create();
 
-        // A wide crop across the content column, so it takes the cover sizes rather than the digest
-        // profile's 180px round face.
+        // A wide crop across the content column, so it takes the cover sizes rather than a round
+        // face's.
         $file = $owner->fresh()->avatar->file;
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
@@ -154,7 +154,7 @@ class UnifiedMemberTest extends TestCase
 
         $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.isSelf', true)
                 ->where('profile.friendStatus', null)
             );
@@ -188,7 +188,7 @@ class UnifiedMemberTest extends TestCase
         $this->get("/member/{$owner->getKey()}")
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.name', 'Public Owner')
                 ->where('profile.isSelf', false)
                 ->where('profile.friendStatus', null)
@@ -232,7 +232,7 @@ class UnifiedMemberTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.friendStatus', null)
             );
     }
@@ -451,8 +451,7 @@ class UnifiedMemberTest extends TestCase
 
     public function test_the_message_unit_off_reaches_the_client_as_a_switched_off_unit(): void
     {
-        // The action row reads the shared unit map, as the digest profile's does — there is no
-        // per-page prop for it to disagree with.
+        // The action row reads the shared unit map: there is no per-page prop for it to disagree with.
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
 
@@ -460,7 +459,7 @@ class UnifiedMemberTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('enabledFeatures.directMessage', false)
             );
     }

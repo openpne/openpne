@@ -65,7 +65,7 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.id', $owner->getKey())
                 ->where('profile.avatarColor', null)
                 ->has('fields', 1)
@@ -101,7 +101,7 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.avatarColor', '#15803d')
             );
     }
@@ -159,7 +159,7 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.friendStatus', 'none'));
     }
 
@@ -327,7 +327,7 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.age', 36)
             );
     }
@@ -454,7 +454,7 @@ class MemberProfileRoutesTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.bio', 'Hello, I am Owner')
                 ->has('fields', 1)
                 ->where('fields.0.value', 'a-regular-value')

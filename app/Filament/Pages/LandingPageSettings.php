@@ -32,7 +32,7 @@ use Illuminate\Support\Facades\DB;
  *
  * @property-read Schema $form
  */
-class LookSettings extends Page
+class LandingPageSettings extends Page
 {
     use HiddenWhenClassicOnly;
 
@@ -100,7 +100,7 @@ class LookSettings extends Page
         $data = $this->form->getState();
 
         DB::transaction(function () use ($data): void {
-            foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
+            foreach (SnsSettingKey::inGroup(SettingGroup::LandingPage) as $key) {
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? $key->default()))],
@@ -121,7 +121,7 @@ class LookSettings extends Page
     private function currentValues(): array
     {
         $values = [];
-        foreach (SnsSettingKey::inGroup(SettingGroup::Look) as $key) {
+        foreach (SnsSettingKey::inGroup(SettingGroup::LandingPage) as $key) {
             // The service hands back typed values; the controls hold and post the stored ids.
             $value = app(SnsSettingService::class)->get($key);
             $values[$key->value] = $value instanceof ModernHome || $value instanceof ModernGroupList ? $value->value : $value;

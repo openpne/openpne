@@ -615,7 +615,6 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
-    'unified/member': { gap: '6' },
     'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     // Compose although it submits nothing: choosing who to write to is one screen with one job.
     'message/new': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
@@ -627,8 +626,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/withdrawal': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/ai/index': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/ai/show': { gap: '6', form: true, context: CONFIG_CONTEXT },
-    'community/show': { foreground: true },
-    'unified/group': { foreground: true },
+    'group/show': { foreground: true },
     'group/topic/show': { foreground: true },
     'group/event/show': { foreground: true },
     'diary/show': { foreground: true },
@@ -649,8 +647,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'community/search',
     'group/topic/recent',
     'group/event/recent',
-    'community/show',
-    'unified/group',
+    'group/show',
     'timeline/index',
     'message/conversations/index',
     'member/search',
@@ -658,7 +655,6 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'notifications/index',
     'friend/requests',
     'member/show',
-    'unified/member',
     'block/add',
     'block/remove',
     'friend/link',
@@ -691,7 +687,7 @@ const groupPlace = (group: PlaceRef): Place => ({ label: group.name, href: `/gro
 const memberPlace = (member: PlaceRef): Place => ({ label: member.name, href: `/member/${member.id}` });
 
 /** The pages that ARE a place, whose own hero names it directly below the header. */
-const PLACE_TOPS = ['community/show', 'unified/group', 'member/show', 'unified/member'] as const;
+const PLACE_TOPS = ['group/show', 'member/show'] as const;
 
 export interface BreadcrumbCrumb {
     label: ChromeLabel | string;

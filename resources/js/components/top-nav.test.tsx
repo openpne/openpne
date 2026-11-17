@@ -60,7 +60,7 @@ test("the bar carries the What's new title", () => {
 });
 
 test("a guest's place top is the home grammar, ending in the way in rather than the menu", () => {
-    const chrome = arrive('unified/member', '/member/9', { auth: { user: null }, profile: { id: 9, name: 'Owner' } });
+    const chrome = arrive('member/show', '/member/9', { auth: { user: null }, profile: { id: 9, name: 'Owner' } });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
@@ -145,7 +145,7 @@ test('a deep page carries the place it is inside, as something to press', () => 
 test('a place top speaks the home grammar — no crumb over its own hero', () => {
     // The three-page symmetry extends to the header: home, a member's page and a group's share one
     // bar, and the place's hero names it directly below where a pill would have repeated it.
-    const chrome = arrive('unified/group', '/groups/7', {
+    const chrome = arrive('group/show', '/groups/7', {
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
 

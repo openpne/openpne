@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { fakeT } from '@/lib/test-i18n';
 import type { AuthUser, FeatureKey } from '@/types';
-import UnifiedMember from './member';
+import MemberShow from './show';
 
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
@@ -54,7 +54,7 @@ function open(user: AuthUser | null, profile: Record<string, unknown> = {}) {
         },
     };
 
-    return render(<UnifiedMember />);
+    return render(<MemberShow />);
 }
 
 /** The fields list leaves the self-introduction out, so this heading is the one place it is read. */

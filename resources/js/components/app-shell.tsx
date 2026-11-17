@@ -64,9 +64,9 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // The body paints --background, so a wrapper here could not recolor what lies behind the shell;
     // cleared on unmount so an admin or auth screen visited next keeps its own paper.
     useLayoutEffect(() => {
-        document.documentElement.classList.add('unified');
+        document.documentElement.classList.add('member-ground');
 
-        return () => document.documentElement.classList.remove('unified');
+        return () => document.documentElement.classList.remove('member-ground');
     }, []);
 
     // The extra pixel is the bottom bar's top hairline; whole class names, because a var built by

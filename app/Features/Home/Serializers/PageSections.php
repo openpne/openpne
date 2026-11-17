@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
  * shape is a contract between the pages rather than a detail of either. Shaping only — every caller
  * has already resolved, under its own clearance, which rows to pass in.
  */
-final class UnifiedSections
+final class PageSections
 {
     /**
      * Photos in the grid, and therefore the most parents worth reading per source: one picture each
@@ -82,8 +82,8 @@ final class UnifiedSections
     }
 
     /**
-     * The joined-group cards. Their own tile markup lays the name over the cover, so the digest grid's
-     * avatarColor/isAi keys (which a group never carries anything in) are left out.
+     * The joined-group cards: their tile lays the name over the cover, and a group carries no avatar
+     * color or AI mark, so the faces grid's keys for those are left out.
      *
      * @param  Collection<int, Group>  $groups  `image` eager-loaded by ListMemberGroups
      * @return list<array{id: int, name: string, imageUrl: string|null, href: string}>
@@ -99,9 +99,9 @@ final class UnifiedSections
     }
 
     /**
-     * The faces grid — the digest's friend shape, which is what the shared tile idioms consume. Named
-     * for what it draws rather than for the relationship: the same grid shows a member's friends on
-     * one page and a group's members on another, and the tiles must not tell them apart.
+     * The faces grid. Named for what it draws rather than for the relationship: the same grid shows
+     * a member's friends on one page and a group's members on another, and the tiles must not tell
+     * them apart.
      *
      * @param  Collection<int, Member>  $people  `avatar.file` eager-loaded by the caller's query
      * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, href: string}>

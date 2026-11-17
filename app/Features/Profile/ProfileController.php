@@ -10,8 +10,8 @@ use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Features\Profile\Queries\EditProfileFields;
 use App\Features\Profile\Queries\ShowProfile;
 use App\Features\Profile\Queries\VisibleAge;
+use App\Features\Profile\Serializers\MemberPageSerializer;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
-use App\Features\Profile\Serializers\UnifiedMemberSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
@@ -81,9 +81,9 @@ class ProfileController extends Controller
                 'layout' => $gadgets->layoutLetter('profile'),
             ]),
             SurfaceResolver::MODERN => function () use ($member, $fields, $isSelf, $lang, $age, $friendStatus, $viewer) {
-                return Inertia::render('unified/member', $viewer === null
-                    ? UnifiedMemberSerializer::guestPage($member, $fields, $lang, $age)
-                    : UnifiedMemberSerializer::page($viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus));
+                return Inertia::render('member/show', $viewer === null
+                    ? MemberPageSerializer::guestPage($member, $fields, $lang, $age)
+                    : MemberPageSerializer::page($viewer, $member, $fields, $isSelf, $lang, $age, $friendStatus));
             },
         ]);
     }

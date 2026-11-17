@@ -26,14 +26,12 @@ export interface UnreadCounts {
     groupTalks: number;
 }
 
-export interface NineTableItem {
+export interface PersonTile {
     id: number;
     name: string;
     imageUrl: string | null;
-    /** Member rows carry the chosen badge color (hex); group rows are always null.
-     *  Required (not optional) so a serializer that forgets it fails type-check. */
+    /** The chosen badge color (hex). Required, so a serializer that forgets it fails type-check. */
     avatarColor: string | null;
-    /** Always false for a group row. */
     isAi: boolean;
     href: string;
 }

@@ -95,13 +95,13 @@ A guest gets the same frame with the member-only parts left out:
 
 ## What the member and group pages may not do
 
-`/member/{id}` renders `unified/member` and `/groups/{group}` renders `unified/group`. Both
+`/member/{id}` renders `member/show` and `/groups/{group}` renders `group/show`. Both
 gather several sources onto one page, under one contract:
 
-- **Read-only projection.** The page re-arranges what the viewer already reads. Same routes, same
-  viewer-scoped queries, same clearance.
-- **No new capability rides the page.** Where it shows something the page it replaced did not,
-  the rows come from a source the viewer already reads, and each file is asked through
+- **Read-only projection.** The page re-arranges what the viewer already reads, through each
+  source's own viewer-scoped query and at the same clearance.
+- **No new capability rides the page.** Every row comes from a source the viewer already reads
+  on that source's own screen, and each file is asked through
   `FilePolicy` when it is served ([`ImageController`](../../app/Http/Controllers/ImageController.php))
   — a parent's read gate is not a permission on the bytes hanging off it. The group page asks
   per file while it builds its picture rows as well.

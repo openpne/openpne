@@ -54,7 +54,7 @@ enum SettingGroup
     case SitePolicy;
 
     /** The page `/` serves and what a joined group's row opens. */
-    case Look;
+    case LandingPage;
 
     /** How much of a group's talk the site notifies about by default, edited on the group settings page. */
     case GroupTalk;

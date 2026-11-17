@@ -10,7 +10,7 @@ import { HOME_CARD } from './home-section';
 import { IdentityCover } from './identity-cover';
 import { derivedIdentityColor } from './identity-visual';
 
-export interface UnifiedProfile {
+export interface HeaderProfile {
     id: number;
     name: string;
     /** The two `srcset` rungs of the cover crop; both null when the member set no picture, and for a guest. */
@@ -40,7 +40,7 @@ export function ProfileHeader({
     meta,
     clampBio = true,
 }: {
-    profile: UnifiedProfile;
+    profile: HeaderProfile;
     as?: 'h1' | 'h2';
     selfLink?: boolean;
     actions?: ReactNode;

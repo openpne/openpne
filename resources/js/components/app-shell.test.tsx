@@ -94,7 +94,7 @@ test('the shell paints the one ground, the color line and the offsets that clear
     const chrome = arrive('dashboard', '/dashboard');
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
-    expect(document.documentElement.classList.contains('unified')).toBe(true);
+    expect(document.documentElement.classList.contains('member-ground')).toBe(true);
     expect(screen.queryByTestId('site-color-line')).not.toBeNull();
     const shell = container.firstElementChild as HTMLElement;
     expect(shell.className).toContain('[--modern-top-offset:calc(3rem+4px+env(safe-area-inset-top))]');

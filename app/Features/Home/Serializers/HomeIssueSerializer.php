@@ -224,9 +224,9 @@ final class HomeIssueSerializer
             ...self::section('talkBursts', $hydrated->items(HomeIssueSection::Talk),
                 fn (array $items): array => array_map(self::burst(...), $items)),
             ...self::section('newcomers', $hydrated->items(HomeIssueSection::Newcomers),
-                fn (array $items): array => UnifiedSections::people(self::sourcesOf($items))),
+                fn (array $items): array => PageSections::people(self::sourcesOf($items))),
             ...self::section('newGroups', $hydrated->items(HomeIssueSection::NewGroups),
-                fn (array $items): array => UnifiedSections::groups(self::sourcesOf($items))),
+                fn (array $items): array => PageSections::groups(self::sourcesOf($items))),
             ...self::section('upcomingEvents', $hydrated->items(HomeIssueSection::UpcomingEvents),
                 fn (array $items): array => array_map(self::upcomingEvent(...), $items)),
         ];

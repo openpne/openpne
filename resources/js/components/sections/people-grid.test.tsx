@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { fakeT } from '@/lib/test-i18n';
-import type { NineTableItem } from '@/types';
+import type { PersonTile } from '@/types';
 import { PeopleGrid, seatRows } from './people-grid';
 
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
@@ -9,7 +9,7 @@ vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
 afterEach(cleanup);
 
-const person = (over: Partial<NineTableItem> = {}): NineTableItem => ({
+const person = (over: Partial<PersonTile> = {}): PersonTile => ({
     id: 1,
     name: 'Shirabe',
     imageUrl: null,
@@ -19,7 +19,7 @@ const person = (over: Partial<NineTableItem> = {}): NineTableItem => ({
     ...over,
 });
 
-const people = (count: number): NineTableItem[] =>
+const people = (count: number): PersonTile[] =>
     Array.from({ length: count }, (_, index) => person({ id: index + 1, name: `Member ${index + 1}`, href: `/member/${index + 1}` }));
 
 test('a full grid is the four-then-five formation the design asks for', () => {
