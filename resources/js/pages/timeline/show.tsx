@@ -1,14 +1,12 @@
-import { AiChip } from '@/components/ai-chip';
+import { PostByline } from '@/components/post-byline';
 import { LinkCard } from '@/components/link-card';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useId, type FormEvent } from 'react';
 import { Trash2 } from 'lucide-react';
 import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { MentionTextarea } from '@/components/compose/mention-textarea';
-import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
-import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { EntityText } from '@/components/entity-text';
 import { DetailReactionChips } from '@/components/reactions/reaction-bar';
@@ -82,19 +80,7 @@ export default function TimelineShow() {
             <Heading variant="page">{t('Post detail')}</Heading>
 
             <Panel bodyClassName="space-y-2">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                    <div className="flex min-w-0 items-center gap-2">
-                        <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 text-link hover:underline">
-                            <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} isAi={post.author.isAi} size="md" decorative />
-                            <span className="truncate">{post.author.name}</span>
-                        </Link>
-                        <AiChip isAi={post.author.isAi} />
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                        <Timestamp at={post.createdAt} preset="absolute" className="text-muted-foreground" />
-                        <RowMenu items={post.author.id === viewerId ? [{ label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deletePost() }] : []} />
-                    </div>
-                </div>
+                <PostByline author={post.author} href={`/member/${post.author.id}/timeline`} at={post.createdAt} menu={<RowMenu items={post.author.id === viewerId ? [{ label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deletePost() }] : []} />} />
                 <p className="whitespace-pre-wrap break-words">
                     <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
                 </p>

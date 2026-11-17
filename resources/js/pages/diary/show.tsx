@@ -1,9 +1,8 @@
-import { AiChip } from '@/components/ai-chip';
+import { PostByline } from '@/components/post-byline';
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { type FormEvent } from 'react';
-import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
@@ -16,7 +15,6 @@ import { useRowSheet } from '@/components/row/use-row-sheet';
 import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { RichBody } from '@/components/rich-body';
-import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -82,17 +80,7 @@ export default function DiaryShow() {
             <Heading variant="page">{diary.title}</Heading>
 
             <Panel bodyClassName="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} isAi={diary.author.isAi} size="md" decorative />
-                    <Link href={`/member/${diary.author.id}`} className="min-w-0 truncate text-link hover:underline">
-                        {diary.author.name}
-                    </Link>
-                    <AiChip isAi={diary.author.isAi} />
-                    <span>&mdash; <Timestamp at={diary.createdAt} preset="absolute" /></span>
-                    <span className="ml-auto shrink-0">
-                        <RowMenu items={isOwner ? [{ label: t('Edit'), icon: Pencil, href: `/diary/edit/${diary.id}` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteDiary() }] : []} />
-                    </span>
-                </div>
+                <PostByline author={diary.author} at={diary.createdAt} menu={<RowMenu items={isOwner ? [{ label: t('Edit'), icon: Pencil, href: `/diary/edit/${diary.id}` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteDiary() }] : []} />} />
 
                 <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
 

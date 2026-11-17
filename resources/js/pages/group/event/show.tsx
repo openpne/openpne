@@ -1,5 +1,4 @@
-import { AiChip } from '@/components/ai-chip';
-import { Avatar } from '@/components/avatar';
+import { PostByline } from '@/components/post-byline';
 import { FileChips } from '@/components/file-chip';
 import { ImageGrid } from '@/components/image-grid';
 import { LinkCard } from '@/components/link-card';
@@ -16,7 +15,7 @@ import { useRowActionsHint } from '@/lib/use-row-actions-hint';
 import { ReactorsDialog } from '@/components/reactions/reactors-dialog';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
-import { CivilDate, Timestamp } from '@/components/timestamp';
+import { CivilDate } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -97,22 +96,7 @@ export default function GroupEventShow() {
             <Heading variant="page">{event.name}</Heading>
 
             <Panel bodyClassName="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} isAi={event.author?.isAi ?? false} size="md" decorative />
-                    {event.author ? (
-                        <Link href={`/member/${event.author.id}`} className="min-w-0 truncate text-link hover:underline">
-                            {event.author.name}
-                        </Link>
-                    ) : (
-                        <span>{t('%Withdrawn_member%')}</span>
-                    )}
-                    <AiChip isAi={event.author?.isAi ?? false} />
-                    <span>&mdash; <Timestamp at={event.createdAt} preset="absolute" /></span>
-                    {event.editedAt && <span className="text-xs">({t('Edited')})</span>}
-                    <span className="ml-auto shrink-0">
-                        <RowMenu items={canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/events/${event.id}/edit` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteEvent() }] : []} />
-                    </span>
-                </div>
+                <PostByline author={event.author} at={event.createdAt} edited={Boolean(event.editedAt)} menu={<RowMenu items={canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/events/${event.id}/edit` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteEvent() }] : []} />} />
 
                 <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                     <dt className="text-muted-foreground">{t('Open date')}</dt>
