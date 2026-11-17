@@ -18,4 +18,4 @@ hand like the rest.
   | the trail under a tree | [Hiking trail on Angel Island 2.jpg](https://commons.wikimedia.org/wiki/File:Hiking_trail_on_Angel_Island_2.jpg) | Mx. Granger |
   | the loaf of bread | [Sourdough bread - January 2026 - Sarah Stierch 02.jpg](https://commons.wikimedia.org/wiki/File:Sourdough_bread_-_January_2026_-_Sarah_Stierch_02.jpg) | Missvain |
   | the bench in the woods | [Treseburg Weisser Hirsch Bank (3).JPG](https://commons.wikimedia.org/wiki/File:Treseburg_Weisser_Hirsch_Bank_(3).JPG) | Angela Huster |
-  | the bench on the summit, also the group's picture | [Bench of the summit of Poncione di Ganna.jpg](https://commons.wikimedia.org/wiki/File:Bench_of_the_summit_of_Poncione_di_Ganna.jpg) | Kaitu |
+  | the bench on the summit | [Bench of the summit of Poncione di Ganna.jpg](https://commons.wikimedia.org/wiki/File:Bench_of_the_summit_of_Poncione_di_Ganna.jpg) | Kaitu |
