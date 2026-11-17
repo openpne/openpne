@@ -43,7 +43,7 @@ expect() {
   php artisan serve --host=127.0.0.1 --port="$port" >"$work/serve.log" 2>&1 &
   server=$!
   for _ in $(seq 1 60); do
-    got=$(curl -s -o "$work/page" --max-time 30 -w '%{http_code}' "http://127.0.0.1:$port$page" || true)
+    got=$(curl -s -o "$work/page" --max-time 10 -w '%{http_code}' "http://127.0.0.1:$port$page" || true)
     [ "$got" != 000 ] && break
     sleep 0.5
   done
@@ -213,7 +213,7 @@ verify() {
 
 update() {
   local old_dir=$1 old_version=$2 new_dir=$3 new_version=$4 mode=${ARCHIVE_DB:-sqlite-default}
-  local root old new env_file storage db theme marker pid
+  local root old new env_file storage db theme marker pid path name
   old_dir=$(cd "$old_dir" && pwd)
   new_dir=$(cd "$new_dir" && pwd)
   work=$(cd "$(mktemp -d)" && pwd -P)
@@ -296,9 +296,9 @@ update() {
     if [ "$mode" = sqlite-default ]; then
       # The fixture has to be one where the shortcut loses data, or this check proves nothing.
       cp "$db" "$work/alone.sqlite"
-      [ "$(sqlite3 "$work/alone.sqlite" "SELECT count(*) FROM members WHERE email = 'probe@example.com'")" = 0 ] \
+      [ "$(sqlite3 "$work/alone.sqlite" 'SELECT count(*) FROM members')" = 0 ] \
         || die "database.sqlite copied alone still holds the member: the fixture no longer leaves rows in the -wal file"
-      [ "$(sqlite3 "$work/backup.sqlite" "SELECT count(*) FROM members WHERE email = 'probe@example.com'")" = 1 ] \
+      [ "$(sqlite3 "$work/backup.sqlite" 'SELECT count(*) FROM members')" = 1 ] \
         || die "the .backup copy does not hold the member"
     fi
   fi
@@ -378,8 +378,12 @@ update() {
   worker=$!
   php artisan up
   [ "$(sqlite3 "$db" 'PRAGMA integrity_check')" = ok ] || die "the database put back does not pass its integrity check"
-  [ "$(sqlite3 "$db" 'SELECT count(*) FROM migrations')" = "$(find database/migrations -name '*.php' | wc -l)" ] \
-    || die "the database put back has run migrations the old release does not have"
+  for path in "$root/openpne-failed"/database/migrations/*.php; do
+    name=$(basename "$path" .php)
+    [ ! -e "database/migrations/$name.php" ] || continue
+    [ "$(sqlite3 "$db" "SELECT count(*) FROM migrations WHERE migration = '$name'")" = 0 ] \
+      || die "the database put back has run $name, which the old release does not have"
+  done
   expect 200 /login
   [ -z "${ARCHIVE_NEW_MARK:-}" ] || ! grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the old release is drawing the new release's login page"
   probe check

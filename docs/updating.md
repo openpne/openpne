@@ -129,7 +129,7 @@ Leave the site down and go back to the release you came from:
    copied file back in place of the database file and remove the `-wal` and `-shm` files beside
    it, which belong to the file it replaces.)
 4. Restore the disk's files, if you copied them in step 2.
-5. Do step 8, then `php artisan up`.
+5. Do step 8, start the queue worker again if you stopped it, then `php artisan up`.
 
 ## From a release archive
 
