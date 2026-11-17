@@ -1,0 +1,372 @@
+#!/usr/bin/env bash
+# A release as an archive that a server installs without Composer or Node
+# (docs/updating.md, "From a release archive").
+#
+#   build <ref> <dir> <version>      write openpne-<version>.tar.gz, .zip and SHA256SUMS into <dir>
+#   verify <dir> <version> <ref>     install each archive in an empty directory, with composer, npm
+#                                    and node made to fail, and ask the site for its pages
+#   update <old dir> <old version> <new dir> <new version>
+#                                    install the old archive, give it a member, an entry and a
+#                                    stored file, then walk docs/updating.md to the new one
+#
+# `update` reads ARCHIVE_DB: sqlite-default (database/database.sqlite in WAL mode, the default),
+# sqlite-outside (an absolute path outside the tree), relocated (that, with .env and storage/
+# outside the tree too) or mysql (DB_* from the environment, an empty database).
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+port=${ARCHIVE_PORT:-8141}
+server=""
+worker=""
+holder=""
+work=""
+
+die() { printf '::error::%s\n' "$*" >&2; exit 1; }
+step() { printf '\n== %s\n' "$*"; }
+commit() { git rev-parse --verify --quiet "$1^{commit}" || die "$1 is not a commit in this repository"; }
+
+stop() { # stop <pid variable name>
+  local pid=${!1}
+  if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; printf -v "$1" ''; fi
+}
+cleanup() { stop server; stop worker; stop holder; if [ -n "$work" ] && [ -z "${ARCHIVE_KEEP:-}" ]; then rm -rf "$work"; fi; }
+trap cleanup EXIT
+
+# One request against a server started for it in the current directory, so each check sees the
+# code and the caches on disk.
+expect() {
+  local want=$1 page=$2 got="" _
+  php artisan serve --host=127.0.0.1 --port="$port" >"$work/serve.log" 2>&1 &
+  server=$!
+  for _ in $(seq 1 60); do
+    got=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port$page" || true)
+    [ "$got" != 000 ] && break
+    sleep 0.5
+  done
+  stop server
+  if [ "$got" != "$want" ]; then
+    cat "$work/serve.log" >&2
+    grep -h '\.ERROR:' storage/logs/*.log 2>/dev/null | tail -n 3 | cut -c1-2000 >&2 || true
+    die "$page answered $got, expected $want"
+  fi
+  printf '%s -> %s\n' "$page" "$got"
+}
+
+set_env() { # set_env <file> <key> <value>: replace the line, commented out or not, or add it
+  if grep -qE "^#? ?$2=" "$1"; then
+    sed -i -E "0,/^#? ?$2=.*/s||$2=$3|" "$1"
+  else
+    printf '%s=%s\n' "$2" "$3" >>"$1"
+  fi
+}
+
+unpack() { # unpack <archive> <into>: prints the directory the archive holds
+  local archive=$1 into=$2 top
+  mkdir -p "$into"
+  case "$archive" in
+    *.tar.gz) tar -xzf "$archive" -C "$into" ;;
+    *.zip) unzip -q "$archive" -d "$into" ;;
+    *) die "$archive is neither a .tar.gz nor a .zip" ;;
+  esac
+  top=$(find "$into" -mindepth 1 -maxdepth 1)
+  [ "$(printf '%s\n' "$top" | wc -l)" = 1 ] && [ -d "$top" ] || die "$archive does not unpack to one directory"
+  printf '%s\n' "$top"
+}
+
+# What a deployment calls and an archive must not need.
+without_build_tools() {
+  local shims=$work/shims tool
+  mkdir -p "$shims"
+  for tool in composer npm npx node; do
+    printf '#!/bin/sh\necho "%s was called: a release archive must not need it" >&2\nexit 97\n' "$tool" >"$shims/$tool"
+    chmod +x "$shims/$tool"
+  done
+  PATH="$shims:$PATH"
+}
+
+build() {
+  local sha out version name
+  sha=$(commit "$1")
+  mkdir -p "$2"
+  out=$(cd "$2" && pwd)
+  version=$3
+  name="openpne-$version"
+  work=$(mktemp -d)
+
+  step "the tree of $sha, as git archive exports it"
+  git archive --format=tar --prefix="$name/" "$sha" | tar -x -C "$work"
+  cd "$work/$name"
+
+  step "dependencies, without the development ones"
+  # --no-scripts: composer's own hooks would run with whatever .env the builder has.
+  composer install --no-dev --optimize-autoloader --no-scripts --no-interaction --no-progress
+  php artisan package:discover
+  php artisan filament:assets
+
+  step "the frontend"
+  npm ci --no-audit --no-fund
+  npm run build
+  rm -rf node_modules
+
+  printf 'version=%s\nsha=%s\n' "$version" "$sha" >RELEASE
+  # Whatever the commands above wrote that belongs to one site rather than to the release.
+  rm -f .env storage/logs/*.log storage/framework/views/*.php storage/*.key public/hot \
+    bootstrap/cache/config.php bootstrap/cache/routes-v7.php bootstrap/cache/events.php
+  rm -rf bootstrap/cache/filament
+
+  step "archives"
+  cd "$work"
+  tar --sort=name --owner=0 --group=0 --numeric-owner -czf "$out/$name.tar.gz" "$name"
+  rm -f "$out/$name.zip"
+  python3 - "$work" "$name" "$out/$name.zip" <<'PY'
+import os, sys, zipfile
+root, name, out = sys.argv[1:4]
+with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+    for path, dirs, files in sorted(os.walk(os.path.join(root, name))):
+        dirs.sort()
+        rel = os.path.relpath(path, root)
+        z.write(path, rel + '/')
+        for f in sorted(files):
+            z.write(os.path.join(path, f), os.path.join(rel, f))
+PY
+  (cd "$out" && sha256sum "$name.tar.gz" "$name.zip" >SHA256SUMS)
+  ls -l "$out"
+}
+
+# check_tree <site> <sha>: what an archive has to hold, and what it must not.
+check_tree() {
+  local site=$1 sha=$2 path failed=0
+  for path in .env.example artisan RELEASE public/index.php public/.htaccess public/robots.txt \
+    public/build/manifest.json public/build/.vite/license.md public/js/filament public/css/filament \
+    vendor/autoload.php bootstrap/cache/packages.php bootstrap/cache/services.php \
+    storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions \
+    storage/framework/views storage/logs database/migrations; do
+    [ -e "$site/$path" ] || { printf '::error::missing from the archive: %s\n' "$path" >&2; failed=1; }
+  done
+  for path in .env .git .github node_modules auth.json public/hot public/storage \
+    bootstrap/cache/config.php bootstrap/cache/routes-v7.php bootstrap/cache/events.php bootstrap/cache/filament \
+    vendor/phpunit vendor/bin/phpunit vendor/laravel/pint; do
+    [ ! -e "$site/$path" ] || { printf '::error::must not be in the archive: %s\n' "$path" >&2; failed=1; }
+  done
+  # A site's own data: a database file, a log, a compiled view, a session, a signing key.
+  path=$({ find "$site/storage" -type f ! -name .gitignore; find "$site/database" -type f -name '*.sqlite*'; } | head -n 5)
+  [ -z "$path" ] || { printf '::error::a site'"'"'s own data is in the archive:\n%s\n' "$path" >&2; failed=1; }
+  grep -qxF "sha=$sha" "$site/RELEASE" || { printf '::error::RELEASE does not name %s\n' "$sha" >&2; failed=1; }
+  [ "$failed" = 0 ] || exit 1
+}
+
+# install <site>: the steps of a new site, in the current directory, on SQLite in the tree.
+install() {
+  cp .env.example .env
+  set_env .env APP_URL "http://127.0.0.1:$port"
+  : >database/database.sqlite
+  php artisan key:generate --force
+  php artisan openpne:install
+  OPENPNE_ADMIN_PASSWORD='archive-check-pass-1' php artisan openpne:admin:create admin
+}
+
+verify() {
+  local dir version sha format site asset
+  dir=$(cd "$1" && pwd)
+  version=$2
+  sha=$(commit "$3")
+  work=$(mktemp -d)
+  (cd "$dir" && sha256sum --check --quiet SHA256SUMS)
+  without_build_tools
+
+  for format in tar.gz zip; do
+    step "openpne-$version.$format in an empty directory"
+    site=$(unpack "$dir/openpne-$version.$format" "$work/$format")
+    check_tree "$site" "$sha"
+    cd "$site"
+    install
+    php artisan openpne:member:invite first@example.com | grep -E '^http://127\.0\.0\.1:[0-9]+/register/[A-Za-z0-9]{40}$' >/dev/null \
+      || die "openpne:member:invite printed no registration link"
+    php artisan optimize
+    expect 200 /login
+    expect 200 /admin/login
+    expect 200 /js/filament/filament/app.js
+    asset=$(php -r 'echo array_values(json_decode(file_get_contents("public/build/manifest.json"), true))[0]["file"];')
+    expect 200 "/build/$asset"
+    cd "$work"
+  done
+  printf '\nverify: both archives of %s install and answer without composer, npm or node\n' "$version"
+}
+
+update() {
+  local old_dir=$1 old_version=$2 new_dir=$3 new_version=$4 mode=${ARCHIVE_DB:-sqlite-default}
+  local root old new env_file storage db theme state marker
+  old_dir=$(cd "$old_dir" && pwd)
+  new_dir=$(cd "$new_dir" && pwd)
+  work=$(mktemp -d)
+  root=$work/srv
+  without_build_tools
+  probe() { php "$here/release-archive-probe.php" "$1" "$root/openpne" "$state"; }
+  state=$work/probe.json
+
+  step "a site on $old_version at $root/openpne ($mode)"
+  old=$(unpack "$old_dir/openpne-$old_version.tar.gz" "$root")
+  mv "$old" "$root/openpne"
+  cd "$root/openpne"
+  cp .env.example .env
+  env_file=$root/openpne/.env
+  storage=$root/openpne/storage
+  db=""
+  case "$mode" in
+    sqlite-default)
+      db=$root/openpne/database/database.sqlite
+      set_env .env DB_JOURNAL_MODE WAL
+      ;;
+    sqlite-outside | relocated)
+      mkdir -p "$work/data"
+      db=$work/data/site.sqlite
+      set_env .env DB_DATABASE "$db"
+      ;;
+    mysql)
+      for key in DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD; do
+        [ -n "${!key:-}" ] || die "ARCHIVE_DB=mysql needs $key in the environment"
+        set_env .env "$key" "${!key}"
+      done
+      ;;
+    *) die "ARCHIVE_DB is sqlite-default, sqlite-outside, relocated or mysql, not $mode" ;;
+  esac
+  [ -z "$db" ] || : >"$db"
+  if [ "$mode" = relocated ]; then
+    # docs/internals/runtime.md, "Key invariants": .env and storage/ may live outside the app root.
+    mkdir -p "$work/etc"
+    mv .env "$work/etc/.env"
+    mv storage "$work/data/storage"
+    env_file=$work/etc/.env
+    storage=$work/data/storage
+    export OPENPNE_ENV_PATH=$work/etc LARAVEL_STORAGE_PATH=$storage
+  fi
+  set_env "$env_file" APP_URL "http://127.0.0.1:$port"
+  set_env "$env_file" OPENPNE_FILES_DISK local
+  php artisan key:generate --force
+  php artisan openpne:install
+  php artisan optimize
+  php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
+  worker=$!
+
+  step "what the operator and the members have put in it"
+  theme=public/opSkinThemePlugin/harbor
+  mkdir -p "$theme/css"
+  printf 'body { color: teal; }\n' >"$theme/css/main.css"
+  printf '# The operator'"'"'s own rule.\nHeader set X-Operator "kept"\n' >>public/.htaccess
+  marker=app/OnlyInTheOldRelease.php
+  printf '<?php\n' >"$marker"
+  if [ "$mode" = sqlite-default ]; then
+    # A connection that read before the writes below keeps them from being checkpointed out of the
+    # -wal file for as long as it stays open.
+    mkfifo "$work/hold"
+    exec 9<>"$work/hold"
+    sqlite3 "$db" <"$work/hold" >/dev/null &
+    holder=$!
+    printf 'BEGIN;\nSELECT count(*) FROM members;\n' >&9
+    sleep 1
+  fi
+  probe seed
+  probe check
+  expect 200 /login
+
+  step "docs/updating.md, from a release archive: stop the site and its worker"
+  php artisan down --render="errors::503"
+  expect 503 /login
+  stop worker
+
+  step "back up"
+  if [ -n "$db" ]; then
+    sqlite3 "$db" ".backup '$work/backup.sqlite'"
+    if [ "$mode" = sqlite-default ]; then
+      # The fixture has to be one where the shortcut loses data, or this check proves nothing.
+      cp "$db" "$work/alone.sqlite"
+      [ "$(sqlite3 "$work/alone.sqlite" "SELECT count(*) FROM members WHERE email = 'probe@example.com'")" = 0 ] \
+        || die "database.sqlite copied alone still holds the member: the fixture no longer leaves rows in the -wal file"
+      [ "$(sqlite3 "$work/backup.sqlite" "SELECT count(*) FROM members WHERE email = 'probe@example.com'")" = 1 ] \
+        || die "the .backup copy does not hold the member"
+    fi
+  fi
+
+  step "remove the caches the running release built"
+  php artisan config:clear
+  php artisan route:clear
+  php artisan view:clear
+  php artisan event:clear
+  php artisan filament:optimize-clear
+
+  step "unpack $new_version beside the site and carry the site's own files into it"
+  new=$(unpack "$new_dir/openpne-$new_version.tar.gz" "$root/unpacked")
+  diff "$root/openpne/.env.example" "$new/.env.example" || true
+  if [ "$mode" != relocated ]; then
+    cp -a "$root/openpne/.env" "$new/.env"
+    rm -rf "$new/storage"
+    cp -a "$root/openpne/storage" "$new/storage"
+  fi
+  cp -a "$root/openpne/$theme" "$new/$theme"
+  # The operator's edit to a file the release ships, as a patch against the archive it came from.
+  old=$(unpack "$old_dir/openpne-$old_version.tar.gz" "$work/pristine")
+  diff -u "$old/public/.htaccess" "$root/openpne/public/.htaccess" >"$work/htaccess.patch" || true
+  cp "$new/public/.htaccess" "$work/new.htaccess"
+  patch --quiet "$new/public/.htaccess" <"$work/htaccess.patch"
+  if [ "$mode" = sqlite-default ]; then
+    cp "$work/backup.sqlite" "$new/database/database.sqlite"
+  fi
+
+  step "put it at the site's path"
+  cd "$root"
+  mv "$root/openpne" "$root/openpne-old"
+  mv "$new" "$root/openpne"
+  cd "$root/openpne"
+
+  step "migrate, rebuild the caches, start the worker, open the site"
+  php artisan migrate --force
+  php artisan optimize
+  php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
+  worker=$!
+  php artisan up
+  stop holder
+
+  step "the site after the update"
+  expect 200 /login
+  expect 200 /admin/login
+  probe check
+  grep -qxF "version=$new_version" RELEASE || die "RELEASE is not the new release's"
+  [ -f "$theme/css/main.css" ] || die "the operator's theme did not come along"
+  [ ! -e "$marker" ] || die "a file only the old release had is still there"
+  grep -qF 'X-Operator' public/.htaccess || die "the operator's rule is gone from public/.htaccess"
+  diff <(grep -vF -e 'X-Operator' -e "The operator's own rule." public/.htaccess) "$work/new.htaccess" >/dev/null \
+    || die "public/.htaccess is not the new release's file with the operator's rule added"
+  sleep 2
+  kill -0 "$worker" 2>/dev/null || die "the queue worker did not stay up under the new release"
+
+  if [ -z "$db" ]; then
+    printf '\nupdate: a site on %s reached %s from its archive and kept its data (%s; going back is walked on SQLite)\n' "$old_version" "$new_version" "$mode"
+    return
+  fi
+
+  step "going back: the old directory at the site's path, the backup in place of the database"
+  php artisan down --render="errors::503"
+  stop worker
+  cd "$root"
+  mv "$root/openpne" "$root/openpne-failed"
+  mv "$root/openpne-old" "$root/openpne"
+  cd "$root/openpne"
+  rm -f "$db" "$db-wal" "$db-shm"
+  cp "$work/backup.sqlite" "$db"
+  php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
+  worker=$!
+  php artisan up
+  expect 200 /login
+  probe check
+  [ -e "$marker" ] || die "going back did not bring back the old release's code"
+
+  printf '\nupdate: a site on %s reached %s from its archive, kept its data, and could go back (%s)\n' "$old_version" "$new_version" "$mode"
+}
+
+usage='usage: release-archive.sh build <ref> <dir> <version> | verify <dir> <version> <ref> | update <old dir> <old version> <new dir> <new version>'
+case "${1:-}" in
+  build) [ $# = 4 ] || die "$usage"; cd "$(git rev-parse --show-toplevel)"; build "$2" "$3" "$4" ;;
+  verify) [ $# = 4 ] || die "$usage"; cd "$(git rev-parse --show-toplevel)"; verify "$2" "$3" "$4" ;;
+  update) [ $# = 5 ] || die "$usage"; update "$2" "$3" "$4" "$5" ;;
+  *) die "$usage" ;;
+esac

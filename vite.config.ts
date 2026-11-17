@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
             tailwindcss(),
         ],
         build: {
+            // The licences of what the bundle contains, for whoever redistributes the build.
+            license: true,
             rolldownOptions: {
                 output: {
                     // Ungrouped, each set of pages sharing a module gets its own, mostly sub-kilobyte, file;

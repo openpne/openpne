@@ -7,6 +7,9 @@ The site is down for the whole update. A release can carry a migration that neit
 code can run across ([invariant 3](internals/runtime.md#key-invariants)), and these steps do not ask
 whether this one does: every update is done in maintenance mode.
 
+The steps are written for a site that is a git checkout. A site installed from a release archive
+follows [From a release archive](#from-a-release-archive), which says where it differs.
+
 ## Before you start
 
 - **Read the notes of the release you are moving to**, and of each release in between if you are
@@ -120,6 +123,88 @@ Leave the site down and go back to the release you came from:
    every table in it. A dump
    replaces only the tables it contains, and a migration that ran before the failure may have
    created one it does not; left behind, that table stops the next attempt at `migrate`. (For
-   SQLite, put the copied file back in place of the database file.)
+   SQLite, put the copied file back in place of the database file, and remove the `-wal` and `-shm`
+   files beside it, which belong to the file it replaces.)
 4. Restore the disk's files, if you copied them in step 2.
 5. Do step 8, then `php artisan up`.
+
+## From a release archive
+
+A release made by the release workflow has `openpne-<version>.tar.gz` and `openpne-<version>.zip`
+among its assets: the release's tree with `vendor/` and the built frontend in it, so the server
+needs neither Composer nor Node. Check a download against the release's `SHA256SUMS`
+(`sha256sum --check --ignore-missing SHA256SUMS`).
+
+A release cut by hand has no archive. A site that updates from archives waits for the next release
+that has one, or builds this one from source on another machine; the archive of an earlier release
+is not this release.
+
+An archive replaces the whole directory, so the steps differ wherever the ones above use git,
+Composer or npm. Below, the site is at `/srv/openpne`, runs `OLD` and moves to `NEW`; use your own
+path and versions. A SQLite site needs the `sqlite3` command for step 2.
+
+- **Before you start**: there is no `main` to have followed, so that check does not apply.
+- **Step 1**, and then **stop the queue worker** rather than wait for it: stop it in whatever
+  supervises it, or take its line out of cron. A worker left running keeps the old directory's
+  code, and the old directory's database file if the database is SQLite inside it. With
+  `QUEUE_CONNECTION=deferred` there is no worker.
+- **Steps 2 and 3** as written.
+- **In place of steps 4 to 6**:
+
+  1. Unpack the release beside the site, not over it: a file the new release no longer has would
+     stay behind and still be loaded.
+
+     ```bash
+     tar -xzf openpne-NEW.tar.gz -C /srv          # makes /srv/openpne-NEW
+     ```
+
+  2. Carry the site's own files into it.
+
+     ```bash
+     cp -a /srv/openpne/.env /srv/openpne-NEW/.env
+     rm -rf /srv/openpne-NEW/storage
+     cp -a /srv/openpne/storage /srv/openpne-NEW/storage
+     diff /srv/openpne/.env.example /srv/openpne-NEW/.env.example   # what the release added
+     ```
+
+     A site that keeps `.env` or `storage/` outside the app root
+     ([runtime.md](internals/runtime.md)) carries neither.
+
+     - **A directory you added** comes along as it is, a theme of your own for one:
+       `cp -a /srv/openpne/public/opSkinThemePlugin/NAME /srv/openpne-NEW/public/opSkinThemePlugin/NAME`.
+       Copy what is yours, not the directory around it: the themes a release ships are the new
+       release's.
+     - **A file of the release that you edited** (`public/.htaccess`, `public/robots.txt`) takes
+       your edit, not your file, or the new release's own changes to it are lost. With the
+       archive the site was installed from:
+
+       ```bash
+       tar -xzf openpne-OLD.tar.gz -C /tmp
+       diff -u /tmp/openpne-OLD/public/.htaccess /srv/openpne/public/.htaccess > htaccess.patch
+       patch /srv/openpne-NEW/public/.htaccess < htaccess.patch
+       ```
+
+       If `patch` rejects a part, stop and bring that part over by hand.
+     - **The database**: nothing for MySQL, and nothing for a SQLite file that `DB_DATABASE` names
+       by a path outside the app root. For SQLite at the default `database/database.sqlite`, put
+       the copy step 2 made at `/srv/openpne-NEW/database/database.sqlite`. Do not copy
+       `database.sqlite` itself: under WAL the last rows committed can still be in the `-wal` file
+       beside it ([changing-database-engine.md](changing-database-engine.md)).
+
+  3. Put the release at the site's path, so the web server, cron and the worker's supervisor go on
+     pointing where they did.
+
+     ```bash
+     mv /srv/openpne /srv/openpne-OLD
+     mv /srv/openpne-NEW /srv/openpne
+     ```
+
+- **Step 7** as written.
+- **Step 8**: reload PHP-FPM, run `php artisan optimize` if your deployment does, and **start the
+  worker** you stopped.
+- **Step 9** as written.
+
+**If a step fails**, leave the site down, move the directories back
+(`mv /srv/openpne /srv/openpne-failed && mv /srv/openpne-OLD /srv/openpne`), restore the database
+as in step 3 of [If a step fails](#if-a-step-fails), reload PHP-FPM, start the worker and run
+`php artisan up`.
