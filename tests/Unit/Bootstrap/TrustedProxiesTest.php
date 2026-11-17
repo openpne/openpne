@@ -31,7 +31,8 @@ final class TrustedProxiesTest extends TestCase
 
     protected function tearDown(): void
     {
-        array_map(unlink(...), glob($this->dir.'/{.env,*.php}', GLOB_BRACE) ?: []);
+        @unlink($this->dir.'/.env');
+        @unlink($this->dir.'/config.php');
         @rmdir($this->dir);
     }
 
@@ -63,7 +64,7 @@ final class TrustedProxiesTest extends TestCase
         $this->assertSame($expected, $this->send($this->app(), $caller)->ip());
     }
 
-    /** The framework trusts every caller on its own hosting's host names when the setting is null. */
+    /** A null setting lets the framework trust every caller under its own hosting's host names, and on Laravel Cloud under any. */
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function test_an_empty_setting_trusts_none_whatever_the_host_is(): void
@@ -77,7 +78,7 @@ final class TrustedProxiesTest extends TestCase
 
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
-    public function test_a_trusted_proxy_sets_the_scheme_and_never_the_host(): void
+    public function test_a_trusted_proxy_sets_the_scheme_and_the_port_and_never_the_host(): void
     {
         $this->envFile('TRUSTED_PROXIES=10.0.0.1');
 
@@ -85,10 +86,12 @@ final class TrustedProxiesTest extends TestCase
             'HTTP_HOST' => 'sns.example.com',
             'HTTP_X_FORWARDED_HOST' => 'elsewhere.example.com',
             'HTTP_X_FORWARDED_PROTO' => 'https',
+            'HTTP_X_FORWARDED_PORT' => '8443',
             'HTTP_X_FORWARDED_PREFIX' => '/elsewhere',
         ]);
 
         $this->assertTrue($request->isSecure());
+        $this->assertSame(8443, $request->getPort());
         $this->assertSame('sns.example.com', $request->getHost());
         $this->assertSame('', $request->getBaseUrl());
     }
