@@ -11,17 +11,20 @@ class PresetProfileSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registers_standard_presets_with_localised_captions(): void
+    public function test_a_new_site_starts_with_birthday_and_self_introduction_both_optional(): void
     {
         $this->seed(PresetProfileSeeder::class);
 
-        $sex = Profile::where('name', 'op_preset_sex')->firstOrFail();
-        $this->assertSame('select', $sex->form_type);
-        $this->assertSame('性別', $sex->getCaption('ja_JP'));
-        $this->assertSame('Sex', $sex->getCaption('en'));
+        $this->assertSame(
+            ['op_preset_birthday', 'op_preset_self_introduction'],
+            Profile::query()->orderBy('sort_order')->pluck('name')->all(),
+        );
+        $this->assertSame(0, Profile::query()->where('is_required', true)->count());
 
-        // Region variants are admin-chosen, not seeded.
-        $this->assertDatabaseMissing('profiles', ['name' => 'op_preset_region']);
+        $birthday = Profile::where('name', 'op_preset_birthday')->firstOrFail();
+        $this->assertSame('date', $birthday->form_type);
+        $this->assertSame('誕生日', $birthday->getCaption('ja_JP'));
+        $this->assertSame('Birthday', $birthday->getCaption('en'));
     }
 
     public function test_every_seeded_profile_has_a_valid_default_visibility(): void
