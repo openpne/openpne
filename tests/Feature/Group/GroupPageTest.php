@@ -21,10 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
-/**
- * Beyond the entrances the shipped page already offered, this pins the two things the layout adds:
- * the groups filed beside this one, and the picture strip whose every file is asked again.
- */
+/** Besides the entrances, this pins the groups filed beside this one and the picture strip whose every file is asked again. */
 class GroupPageTest extends TestCase
 {
     use RefreshDatabase;

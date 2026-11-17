@@ -64,7 +64,7 @@ export function PeopleGrid({ people }: { people: NineTableItem[] }) {
                             <Link
                                 href={person.href}
                                 // aria-label because no name is drawn: the face is the whole tile, and
-                                // the AI marker beside it is aria-hidden (NineTable does the same).
+                                // the AI marker beside it is aria-hidden.
                                 aria-label={label}
                                 title={label}
                                 className="group block focus-visible:outline-none"

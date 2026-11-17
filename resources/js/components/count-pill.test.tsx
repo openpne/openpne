@@ -232,8 +232,8 @@ test('every unread phrase is given the count it names', () => {
         // `lib/member-chrome.ts` has a local `t` building a deferred label whose calls carry no count,
         // so only the translator's own calls are read.
         if (!code.includes("from '@/lib/i18n'")) return [];
-        // Anywhere in the key, not only at its start: `Jump to :count unread messages` and
-        // `%Friends% (:count)` are the same template and were sailing past a `^:count` match.
+        // Anywhere in the key, not only at its start: `Jump to :count unread messages` was sailing
+        // past a `^:count` match.
         const found = code.match(/t\('[^']*:count[^']*'[^)]*\)/g) ?? [];
 
         // The replacement object, not the word: `:count` is itself in every match, which is how the

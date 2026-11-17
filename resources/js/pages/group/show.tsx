@@ -45,10 +45,7 @@ interface GroupShowProps extends PageProps {
     about: GroupAboutData;
 }
 
-/**
- * Every entrance the shipped group page offers is here with the same condition and the same
- * destination (docs/internals/modern-frame.md, "What the member and group pages may not do").
- */
+/** See docs/internals/modern-frame.md, "What the member and group pages may not do". */
 export default function GroupShow() {
     const t = useT();
     const confirm = useConfirm();

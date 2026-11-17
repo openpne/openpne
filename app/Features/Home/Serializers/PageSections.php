@@ -82,8 +82,8 @@ final class PageSections
     }
 
     /**
-     * The joined-group cards. Their own tile markup lays the name over the cover, so the digest grid's
-     * avatarColor/isAi keys (which a group never carries anything in) are left out.
+     * The joined-group cards: their tile lays the name over the cover, and a group carries no avatar
+     * color or AI mark, so the faces grid's keys for those are left out.
      *
      * @param  Collection<int, Group>  $groups  `image` eager-loaded by ListMemberGroups
      * @return list<array{id: int, name: string, imageUrl: string|null, href: string}>
@@ -99,7 +99,7 @@ final class PageSections
     }
 
     /**
-     * The faces grid — the digest's friend shape, which is what the shared tile idioms consume. Named
+     * The faces grid. Named
      * for what it draws rather than for the relationship: the same grid shows a member's friends on
      * one page and a group's members on another, and the tiles must not tell them apart.
      *

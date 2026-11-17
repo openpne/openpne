@@ -25,10 +25,6 @@ export interface CommunitySummary {
     category: CommunityCategory | null;
 }
 
-export interface CommunityDetail extends CommunitySummary {
-    registerPolicy: 'open' | 'approval'; // drives the join-button label
-}
-
 export interface GroupStaffRef {
     id: number;
     name: string;

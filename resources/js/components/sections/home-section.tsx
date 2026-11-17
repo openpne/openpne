@@ -5,9 +5,8 @@ import { Heading } from '@/components/ui/heading';
 import { cn } from '@/lib/utils';
 
 /**
- * The card of the home, member and group pages: softer-cornered and borderless, unlike the app-wide
- * Card, because these pages separate their blocks with background and radius alone. The rest of the
- * surface keeps its bordered card on purpose.
+ * Softer-cornered and borderless on purpose, unlike the app-wide Card: the pages that use it
+ * separate their blocks with background and radius alone.
  */
 export const HOME_CARD = 'overflow-hidden rounded-tile bg-card text-card-foreground';
 

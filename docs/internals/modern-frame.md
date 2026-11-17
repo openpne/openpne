@@ -100,8 +100,8 @@ gather several sources onto one page, under one contract:
 
 - **Read-only projection.** The page re-arranges what the viewer already reads. Same routes, same
   viewer-scoped queries, same clearance.
-- **No new capability rides the page.** Where it shows something the page it replaced did not,
-  the rows come from a source the viewer already reads, and each file is asked through
+- **No new capability rides the page.** Every row comes from a source the viewer already reads
+  on that source's own screen, and each file is asked through
   `FilePolicy` when it is served ([`ImageController`](../../app/Http/Controllers/ImageController.php))
   — a parent's read gate is not a permission on the bytes hanging off it. The group page asks
   per file while it builds its picture rows as well.
