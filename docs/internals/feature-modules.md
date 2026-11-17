@@ -152,7 +152,7 @@ flash reflashed across the 409), and
 [`ClassicOnlyResponseFactory`](../../app/Support/ClassicOnlyResponseFactory.php), the bound
 `Inertia::render()` factory, which answers 404 — so a **Modern-only page** (one with no Classic
 twin: the dashboard, the home issues and their month and day pages, `/groups/recent`, the chat
-conversations, the Modern-only member config detail pages, the look picker) is not there, and a new
+conversations, the Modern-only member config detail pages) is not there, and a new
 one is covered without naming the gate. Classic is the OpenPNE 3 surface, and a feature OpenPNE 3
 never had needs no Classic screen while Classic's own pages cover the ground; a feature OpenPNE 3
 *did* have gets a Classic screen even where OpenPNE 3 had no such page — group talk, which took in
@@ -175,11 +175,9 @@ choice (6) is writable — the member config page sets it — so a member can op
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 
-Within Modern, the **look** is a named set of deviations from the standard layout
-([`App\Support\Look`](../../app/Support/Look.php), shared as the `look` prop). A look
-decides the shell chrome around a page, never the page, its route or its sources, and a
-screen it says nothing about renders standard. Neither a site nor a member chooses it: everyone gets `tabbed`, a
-signed-out visitor without the member-only parts. See [looks.md](looks.md).
+Within Modern there is one frame around every page, the same for every site and member, a
+signed-out visitor getting it without the member-only parts. See
+[modern-frame.md](modern-frame.md).
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern
@@ -206,17 +204,10 @@ flash. The shell and the frame, never a page, also own the positions a package m
 into ([layout-hooks.md](layout-hooks.md)). Per-section defaults live in the chrome registry
 ([`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts)) — the same
 source the nav reads, so nav labels and hub headings cannot drift. The layout
-resolves that chrome once and hands the result to both the shell and the frame, so
-the mobile (< lg) top bar varies with the page class: brand on the latest home issue, the
-section title on a hub (the bar's copy is hidden from assistive technology, so the
-page's own h1 is its one announcement), and on a
-detail page back plus the registry's `scope` — the
-group or member the page belongs to, as one tappable identity block in the
-brand block's grammar. A form (and any page with no single scope) shows its context
-as static centered text instead (a compose screen shows only its close control and
-its actions — see below). The in-page breadcrumb row is therefore
-desktop-only, and so is the heading row's action button: on mobile the registry's
-`action` is the extended FAB
+resolves that chrome once and hands the result to both the shell and the frame. What the
+frame draws from it — the phone header, the bottom tabs, the drawer, the desk-width place bar —
+is [modern-frame.md](modern-frame.md). The heading row's action button is desktop-only: on
+mobile the registry's `action` is the extended FAB
 ([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
 bottom bar. That mobile chrome recedes as a signed-in member reads: scrolling down
 slides both bars away and collapses the FAB (one shell-level listener,
@@ -231,7 +222,7 @@ hub's instant-save controls are not.
 The registry's `compose` flag (which implies `form`) marks the seven screens whose
 job is writing one thing — creating and editing a diary, a topic, an event, a
 message, and posting to the timeline. Below lg those become a full-page sheet: the
-top bar carries a close control with the back control's semantics plus the page's
+top bar carries a close control (in-app history, else the registry's trail) plus the page's
 own action(s), portalled in by
 [`ComposeSheetAction`](../../resources/js/components/compose/compose-sheet-action.tsx).
 A form that submits natively wires them as external submitters
@@ -239,24 +230,24 @@ A form that submits natively wires them as external submitters
 message pair keeps its explicit send/draft click paths, which its forms never routed
 through native submit. The bottom bar is not rendered, and the sheet is one surface:
 the bar draws its bottom hairline only once content has scrolled under it
-([`useScrolled`](../../resources/js/lib/use-scrolled.ts)), the in-page h1 folds to
-`sr-only`, and the panel drops its card chrome — all three back at lg, where the
-page is a page again. Its fields keep the standard boxed controls and visible
+([`useScrolled`](../../resources/js/lib/use-scrolled.ts)), and the panel drops its
+card chrome — both back at lg, where the page is a page again. Its fields keep the standard boxed controls and visible
 labels; the sheet only tightens their inset (box edge 16px below sm). The surface
 enters bottom-to-top and slides back down when the
 close control is used, which is the one exit that animates: a system back and the
 navigation after a submit are immediate. No animation runs under
 `prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
-static-trail form bar.
+header with its trail as static text.
 The registry's `conversation` flag marks a room a member stays in, reading and
-writing in the same place — group talk and a direct message room. Below lg it also
-drops the bottom bar and holds its chrome still, and its composer takes
-`--modern-bottom-offset` as the last of its own padding instead of standing on it, so
-the bar reaches the foot of the screen at every scroll position. Anything left under
-it — a bar sliding away, the home-indicator strip — is a band the conversation shows
-through; a room with no composer to stand there takes that strip back itself. Its top
-bar stays the ordinary back-plus-scope one — a conversation is somewhere you go into,
-not a sheet you close.
+writing in the same place — group talk and a direct message room. Below lg it holds its
+chrome still: the header and the bottom tabs stand while the room is read, and the tabs
+leave only while its composer is engaged ([modern-frame.md](modern-frame.md), "The bottom
+tabs"). Its composer takes `--modern-bottom-offset` as the last of its own padding instead
+of standing on it, so the composer reaches the foot of the screen at every scroll position.
+Anything left under it — the tabs sliding away, the home-indicator strip — is a band the
+conversation shows through; a room with no composer to stand there takes that strip back
+itself. Its header is the ordinary one — a conversation is somewhere you go into, not a
+sheet you close.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

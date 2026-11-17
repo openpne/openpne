@@ -1,13 +1,12 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { ContextHeader } from '@/components/context-header';
 import { FlashMessage } from '@/components/flash-message';
 import { LayoutHook } from '@/components/layout-hook';
 import { PageHeading } from '@/components/page-heading';
 import { PageTabs } from '@/components/page-tabs';
 import { PlaceBar } from '@/components/place-bar';
 import { ActionLink } from '@/components/ui/action-link';
-import { type Chrome, type ChromeLabel, lookSpec } from '@/lib/member-chrome';
+import type { Chrome, ChromeLabel } from '@/lib/member-chrome';
 import { badgePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -27,7 +26,6 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
     const t = useT();
     const { props, url } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
-    const look = lookSpec(props.look);
     // Frame-level gate: hub actions target member-only routes, so a guest (a web-public profile is
     // reachable signed out) sees the frame without the action.
     const action = chrome.action && props.auth.user ? chrome.action : undefined;
@@ -52,28 +50,10 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 action && 'pb-24 lg:pb-8',
             )}
         >
-            {look.placeBar ? (
-                <PlaceBar chrome={chrome} />
-            ) : (
-                chrome.context && (
-                    <ContextHeader
-                        // Below lg the top bar carries this trail; display:none also takes it out of the
-                        // accessibility tree, so only one breadcrumb landmark exists at any width.
-                        className="hidden lg:flex"
-                        items={chrome.context.map((item) => ({
-                            href: item.href,
-                            label: typeof item.label === 'string' ? item.label : label(item.label),
-                        }))}
-                    />
-                )
-            )}
+            <PlaceBar chrome={chrome} />
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
-                    // Only where the mobile bar actually carries the title: the shipped guest bar is
-                    // brand + sign-in and the unified chrome's is the tab pair, so folding for either
-                    // would leave the hub with no visible heading anywhere.
-                    fold={chrome.mode === 'section' && props.auth.user !== null && look.foldsHubHeading}
                     action={
                         action && (
                             <ActionLink href={action.href}>

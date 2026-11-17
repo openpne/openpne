@@ -50,7 +50,6 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
             snsLogo: { color: '#336699', url: null },
             auth: { user },
             enabledFeatures: allOn,
-            look: 'standard',
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
             ...props,
         },
@@ -75,8 +74,8 @@ function StubComposer() {
     );
 }
 
-function room(look: string) {
-    const chrome = arrive('group/talk/index', '/groups/7/talk', { look, group: cyclists });
+function room() {
+    const chrome = arrive('group/talk/index', '/groups/7/talk', { group: cyclists });
     const { container } = renderWithProviders(
         <AppShell chrome={chrome}>
             <StubComposer />
@@ -90,44 +89,30 @@ const bar = () => document.querySelector('nav[aria-label="Navigation"]');
 
 const header = () => document.querySelector('header');
 
-/**
- * Wiring, not values: LookSpec fields whose value vectors coincide are indistinguishable to a
- * registry-value test, so a consumer reading the wrong one surfaces only in what the shell renders.
- * The bottom offset rides along because its value is a look's answer too.
- */
-test.each([
-    // Null = no desktop override at all: the unified bar stands at every width, so the phone's
-    // reserved height is the desktop's too.
-    ['standard', { ground: false, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', placeBar: null, bottom: '3.625rem' }],
-    ['unified', { ground: true, line: false, desktopOffset: null, placeBar: null, bottom: '3rem' }],
-    ['tabbed', { ground: true, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', placeBar: null, bottom: '3.625rem' }],
-] as const)('%s wires ground, the color line and its offsets from its own fields', (look, expected) => {
-    const chrome = arrive('dashboard', '/dashboard', { look });
+/** The offsets are whole declarations, not merely present: one that stopped clearing the line would otherwise pass as long as some value was there. */
+test('the shell paints the one ground, the color line and the offsets that clear them', () => {
+    const chrome = arrive('dashboard', '/dashboard');
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
-    expect(document.documentElement.classList.contains('unified')).toBe(expected.ground);
-    const line = screen.queryByTestId('site-color-line');
-    expect(line !== null).toBe(expected.line);
+    expect(document.documentElement.classList.contains('unified')).toBe(true);
+    expect(screen.queryByTestId('site-color-line')).not.toBeNull();
     const shell = container.firstElementChild as HTMLElement;
-    // The whole declaration, not merely its presence: an offset that stopped clearing the line would
-    // otherwise pass as long as some `lg:` value was there.
-    expect(/lg:\[--modern-top-offset:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected.desktopOffset);
-    expect(/lg:\[--modern-place-bar:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected.placeBar);
-    // The frame is sidebar + content in every look: a width left over from the retired third column
-    // would stand as a dead band beside the page.
+    expect(shell.className).toContain('[--modern-top-offset:calc(3rem+4px+env(safe-area-inset-top))]');
+    expect(/lg:\[--modern-top-offset:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe('lg:[--modern-top-offset:4px]');
+    expect(/lg:\[--modern-place-bar:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(null);
+    // The frame is sidebar + content: a width left over from the retired third column would stand
+    // as a dead band beside the page.
     expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe('max-w-6xl lg:max-w-[58rem]');
-    expect(shell.className).toContain(`[--modern-bottom-offset:calc(${expected.bottom}+1px+env(safe-area-inset-bottom))]`);
+    expect(shell.className).toContain('[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]');
 });
 
 test.each([
-    ['tabbed', 'group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
     // A form's crumb is plain text with no scope, and the editor's toolbar stands below its bar.
-    ['tabbed', 'diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
-    ['tabbed', 'dashboard', '/dashboard', null],
-    ['unified', 'group/talk/index', '/groups/7/talk', null],
-    ['standard', 'group/talk/index', '/groups/7/talk', null],
-] as const)('%s on %s publishes the place bar height only where the bar stands', (look, component, url, expected) => {
-    const chrome = arrive(component, url, { look, group: cyclists });
+    ['diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['dashboard', '/dashboard', null],
+] as const)('%s publishes the place bar height only where the bar stands', (component, url, expected) => {
+    const chrome = arrive(component, url, { group: cyclists });
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
     const shell = container.firstElementChild as HTMLElement;
@@ -139,8 +124,8 @@ test.each([
  * not a visible bug but a permanent one, so this reads the reserved length back off the shell and
  * requires the row that stands in it to be exactly that tall.
  */
-test.each(['standard', 'unified', 'tabbed'] as const)('%s reserves the length its own row stands at', (look) => {
-    const chrome = arrive('dashboard', '/dashboard', { look });
+test('the shell reserves the length the tab row stands at', () => {
+    const chrome = arrive('dashboard', '/dashboard');
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
     const shell = container.firstElementChild as HTMLElement;
@@ -153,7 +138,7 @@ test.each(['standard', 'unified', 'tabbed'] as const)('%s reserves the length it
 });
 
 test('the desktop line is the site color, and only desktop draws it', () => {
-    const chrome = arrive('dashboard', '/dashboard', { look: 'tabbed' });
+    const chrome = arrive('dashboard', '/dashboard');
     renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
     const line = screen.getByTestId('site-color-line');
 
@@ -165,24 +150,8 @@ test('the desktop line is the site color, and only desktop draws it', () => {
     expect(line.className).toContain('lg:block');
 });
 
-/**
- * The shipped answer, unchanged: a conversation draws no bottom bar at all, so its composer is the
- * foot of the screen from the moment the room opens and nothing about focus moves anything.
- */
-test('a conversation under the shipped look has no bottom bar, written in or not', () => {
-    const shell = room('standard');
-
-    expect(bar()).toBeNull();
-    expect(shell.className).toContain('[--modern-bottom-offset:env(safe-area-inset-bottom)]');
-
-    fireEvent.focusIn(screen.getByLabelText('Message'));
-
-    expect(bar()).toBeNull();
-    expect(shell.className).toContain('[--modern-bottom-offset:env(safe-area-inset-bottom)]');
-});
-
-test('a tabbed conversation keeps its bar standing while the room is read', () => {
-    const shell = room('tabbed');
+test('a conversation keeps its bar standing while the room is read', () => {
+    const shell = room();
 
     expect(bar()).not.toBeNull();
     expect(bar()?.className).not.toContain('translate-y-full');
@@ -192,7 +161,7 @@ test('a tabbed conversation keeps its bar standing while the room is read', () =
 });
 
 test('writing takes the bar away and gives its space back, without unmounting it', () => {
-    const shell = room('tabbed');
+    const shell = room();
 
     fireEvent.focusIn(screen.getByLabelText('Message'));
 
@@ -204,7 +173,7 @@ test('writing takes the bar away and gives its space back, without unmounting it
 });
 
 test('an accessory tap inside the composer is not leaving it', () => {
-    room('tabbed');
+    room();
     const field = screen.getByLabelText('Message');
 
     fireEvent.focusIn(field);
@@ -222,10 +191,10 @@ test('an accessory tap inside the composer is not leaving it', () => {
  * One listener for the whole chrome, so a room's two bands cannot fall out of step: reading down a
  * long backlog takes both away, and one scroll up brings both back.
  */
-test('a tabbed conversation holds its chrome still through a scroll', async () => {
+test('a conversation holds its chrome still through a scroll', async () => {
     // Only writing takes the bar away: the composer pins the screen's foot, so hiding it frees nothing.
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
-    room('tabbed');
+    room();
 
     await act(async () => {
         window.dispatchEvent(new Event('wheel'));
@@ -236,20 +205,6 @@ test('a tabbed conversation holds its chrome still through a scroll', async () =
 
     expect(header()?.className).not.toContain('-translate-y-full');
     expect(bar()?.className).not.toContain('translate-y-full');
-});
-
-test('a conversation under the shipped look holds its chrome still', async () => {
-    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
-    room('standard');
-
-    await act(async () => {
-        window.dispatchEvent(new Event('wheel'));
-        (window as { scrollY: number }).scrollY = 400;
-        window.dispatchEvent(new Event('scroll'));
-        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-    });
-
-    expect(header()?.className).not.toContain('-translate-y-full');
 });
 
 // Plain shapes: the test renderer copies an init's own properties onto a fresh DataTransfer, and a real one keeps its types behind getters.

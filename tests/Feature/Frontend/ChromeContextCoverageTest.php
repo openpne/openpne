@@ -33,7 +33,7 @@ class ChromeContextCoverageTest extends TestCase
         $this->assertSame(
             [],
             $unclassified,
-            'Component(s) with no ContextHeader classification — add a `context:` entry to '
+            'Component(s) with no crumb classification — add a `context:` entry to '
             .'member-chrome.ts (directly or via a *Context( helper) or list in NO_CONTEXT_COMPONENTS: '
             .implode(', ', $unclassified),
         );

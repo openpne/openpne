@@ -38,7 +38,6 @@ function arrive(auth: { user: AuthUser | null }) {
             snsLogo: { color: '#336699', url: null },
             auth,
             enabledFeatures: allOn,
-            look: 'standard',
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
             talkNavRooms: null,
         },

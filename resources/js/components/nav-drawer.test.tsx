@@ -29,7 +29,7 @@ const allOn = Object.fromEntries(
 
 const user: AuthUser = { id: 1, name: 'Viewer', email: 'viewer@example.com', imageUrl: null, avatarColor: null, isAi: false };
 
-function arrive(look: string) {
+function arrive() {
     inertia.page = {
         component: 'dashboard',
         url: '/dashboard',
@@ -38,32 +38,22 @@ function arrive(look: string) {
             snsLogo: { color: '#336699', url: null },
             auth: { user },
             enabledFeatures: allOn,
-            look,
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
         },
     };
 }
 
-function openDrawer(labeled = false) {
-    renderWithProviders(<NavDrawer labeled={labeled} />);
+function openDrawer() {
+    renderWithProviders(<NavDrawer />);
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
 }
 
-/**
- * Wiring, not values (the app-shell test's sibling): whether the drawer carries the account rows is
- * `accountInDrawer`'s question alone, and the looks whose bars drop the avatar menu must answer it
- * with rows here — read from the field, not inferred from another look-shaped boolean.
- */
-test.each([
-    ['standard', false],
-    ['unified', true],
-    ['tabbed', true],
-] as const)('%s answers the account rows from its own field', (look, rows) => {
-    arrive(look);
+test('the drawer carries the account rows the bars have no menu for', () => {
+    arrive();
     openDrawer();
 
-    expect(screen.queryByRole('link', { name: 'Profile' }) !== null).toBe(rows);
-    expect(screen.queryByRole('button', { name: 'Sign out' }) !== null).toBe(rows);
+    expect(screen.getByRole('link', { name: 'Profile' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
 });
 
 /**
@@ -71,7 +61,7 @@ test.each([
  * lockup carries — it names the sheet, and it goes somewhere — are checked as one.
  */
 test('the drawer is named by a brand link to the front page', () => {
-    arrive('standard');
+    arrive();
     openDrawer();
 
     const named = screen.getByRole('dialog').getAttribute('aria-labelledby');
@@ -82,8 +72,8 @@ test('the drawer is named by a brand link to the front page', () => {
 });
 
 test('the labeled trigger opens the sheet from its own side, close control staying at the right', () => {
-    arrive('tabbed');
-    openDrawer(true);
+    arrive();
+    openDrawer();
 
     // The trigger names itself with the visible word, so no aria-label doubles it.
     const sheet = screen.getByRole('dialog');
@@ -103,13 +93,13 @@ test('the labeled trigger opens the sheet from its own side, close control stayi
 });
 
 /**
- * Both of the tabbed look's controls carry the word under the glyph, and a tooltip over one of them
- * would float a second copy of what the reader is already looking at.
+ * Both controls carry the word under the glyph, and a tooltip over one of them would float a second
+ * copy of what the reader is already looking at.
  */
-test('the tabbed look shows its words, so nothing floats over them', () => {
+test('the menu and its close control show their words, so nothing floats over them', () => {
     vi.useFakeTimers();
-    arrive('tabbed');
-    renderWithProviders(<NavDrawer labeled />);
+    arrive();
+    renderWithProviders(<NavDrawer />);
 
     const raise = (control: HTMLElement) => {
         fireEvent.pointerMove(control, { pointerType: 'mouse' });
@@ -132,15 +122,4 @@ test('the tabbed look shows its words, so nothing floats over them', () => {
     expect(screen.queryByRole('tooltip')).toBeNull();
 
     vi.useRealTimers();
-});
-
-test('the bare hamburger says what it is instead', () => {
-    arrive('standard');
-    renderWithProviders(<NavDrawer />);
-
-    act(() => {
-        screen.getByRole('button', { name: 'Menu' }).focus();
-    });
-
-    expect(screen.getByRole('tooltip').textContent).toBe('Menu');
 });

@@ -8,7 +8,7 @@ import { LeftNav } from '@/components/left-nav';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
 import { carriesFiles, carriesPick, takesText } from '@/lib/file-drop';
-import { breadcrumbCrumb, type Chrome, chromeRecedes, hasBottomNav, lookSpec } from '@/lib/member-chrome';
+import { breadcrumbCrumb, type Chrome, chromeRecedes, hasBottomNav } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -23,9 +23,9 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // reserves only the home-indicator strip the page would otherwise scroll its last row under.
     const member = props.auth.user !== null;
     const compose = Boolean(chrome.compose);
-    const look = lookSpec(props.look);
     const [composerEngaged, setComposerEngaged] = useState(false);
-    const conversationBar = member && look.bottomBarInConversation && Boolean(chrome.conversation);
+    // The tabs stand in a conversation while it is read and leave once the composer is engaged.
+    const conversationBar = member && Boolean(chrome.conversation);
     const engaged = conversationBar && composerEngaged;
     const bottomNav = member && (hasBottomNav(chrome) || (conversationBar && !engaged));
     // One listener for the whole chrome, so the bars and the action cannot fall out of step.
@@ -62,38 +62,21 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     }, []);
 
     // The body paints --background, so a wrapper here could not recolor what lies behind the shell;
-    // cleared on unmount so an admin or auth screen visited next keeps the shipped paper.
-    const ground = look.ground === 'unified';
+    // cleared on unmount so an admin or auth screen visited next keeps its own paper.
     useLayoutEffect(() => {
-        document.documentElement.classList.toggle('unified', ground);
+        document.documentElement.classList.add('unified');
 
         return () => document.documentElement.classList.remove('unified');
-    }, [ground]);
+    }, []);
 
-    // The extra pixel is the bottom bar's top hairline; written as whole class names, one per case,
-    // because a var built by interpolation is a class Tailwind never sees.
-    const bottomOffset = !bottomNav
-        ? '[--modern-bottom-offset:env(safe-area-inset-bottom)]'
-        : look.bottomBar === 'labeled'
-          ? '[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]'
-          : '[--modern-bottom-offset:calc(3rem+1px+env(safe-area-inset-bottom))]';
-    // The site-color line atop the breadcrumb bar belongs to that bar, so a page's sticky header
-    // offsets by it too.
-    const topOffset =
-        look.topBar === 'breadcrumb'
-            ? '[--modern-top-offset:calc(3rem+4px+env(safe-area-inset-top))]'
-            : '[--modern-top-offset:calc(3rem+env(safe-area-inset-top))]';
-    // Where no desktop bar stands the var still answers for what a sticky page header must clear,
-    // the color line included; one exclusive choice, because two `lg:` rules would have equal weight.
-    const desktopTopOffset = look.desktopTopBar
-        ? undefined
-        : look.colorLine
-          ? 'lg:[--modern-top-offset:4px]'
-          : 'lg:[--modern-top-offset:0px]';
+    // The extra pixel is the bottom bar's top hairline; whole class names, because a var built by
+    // interpolation is a class Tailwind never sees.
+    const bottomOffset = bottomNav
+        ? '[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]'
+        : '[--modern-bottom-offset:env(safe-area-inset-bottom)]';
     // The height place-bar.tsx gives its bar, hairline included, and only where it renders one: a
     // screen with no crumb has nothing for a sticky child to stand below.
-    const placeBarOffset =
-        look.placeBar && breadcrumbCrumb(chrome, !member) !== null ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
+    const placeBarOffset = breadcrumbCrumb(chrome, !member) !== null ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
 
     return (
         <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>
@@ -102,8 +85,9 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     'mx-auto flex min-h-dvh',
                     // The frame is the sidebar plus the content column, so the pair centers as one block.
                     'max-w-6xl lg:max-w-[58rem]',
-                    topOffset,
-                    desktopTopOffset,
+                    // The phone header's height, its 4px site-color line included; at desk width no
+                    // bar stands, and the var answers for the line alone.
+                    '[--modern-top-offset:calc(3rem+4px+env(safe-area-inset-top))] lg:[--modern-top-offset:4px]',
                     placeBarOffset,
                     bottomOffset,
                     'lg:[--modern-bottom-offset:0px]',
@@ -134,17 +118,15 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
-                {(bottomNav || conversationBar) && <BottomNav chrome={chrome} hidden={hidden || engaged} />}
+                {(bottomNav || conversationBar) && <BottomNav hidden={hidden || engaged} />}
                 {/* Desk width only: the phone's copy of the line lives inside the breadcrumb bar,
                     whose height counts it. */}
-                {look.colorLine && (
-                    <div
-                        aria-hidden
-                        data-testid="site-color-line"
-                        className="fixed inset-x-0 top-0 z-30 hidden h-1 bg-(--site-color) lg:block"
-                        style={{ '--site-color': props.snsLogo.color } as CSSProperties}
-                    />
-                )}
+                <div
+                    aria-hidden
+                    data-testid="site-color-line"
+                    className="fixed inset-x-0 top-0 z-30 hidden h-1 bg-(--site-color) lg:block"
+                    style={{ '--site-color': props.snsLogo.color } as CSSProperties}
+                />
                 {/* Zero height in a browser; in a standalone PWA it holds the status-bar area the top bar
                     draws under, so page content does not run beneath the clock once the bar slides off. */}
                 <div

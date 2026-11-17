@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { BottomNav } from './bottom-nav';
 import { fakeT } from '@/lib/test-i18n';
-import { type Chrome, resolveChrome } from '@/lib/member-chrome';
 import type { AuthUser, FeatureKey } from '@/types';
 
 // useT reads the Inertia page for its term map, which a component test has no page to give it.
@@ -28,36 +27,23 @@ const allOn = Object.fromEntries(
 
 const user: AuthUser = { id: 1, name: 'Viewer', email: 'viewer@example.com', imageUrl: null, avatarColor: null, isAi: false };
 
-function arrive(component: string, url: string, props: Record<string, unknown> = {}): Chrome {
+function arrive(component: string, url: string, props: Record<string, unknown> = {}): void {
     inertia.page = {
         component,
         url,
         props: {
             auth: { user },
             enabledFeatures: allOn,
-            look: 'standard',
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
             ...props,
         },
     };
-
-    return resolveChrome(component, inertia.page.props);
 }
 
-/** The middle zone's link: the place the bar says the member is in. */
-const placeLink = (): HTMLElement => {
-    const link = document.querySelector('[data-dive-place]');
-    if (!(link instanceof HTMLElement)) {
-        throw new Error('the unified bar drew no place');
-    }
+test('the bar is four labelled section tabs', () => {
+    arrive('home/issue', '/');
 
-    return link;
-};
-
-test('the shipped bar is four labelled section tabs and names no place', () => {
-    const chrome = arrive('home/issue', '/');
-
-    render(<BottomNav chrome={chrome} />);
+    render(<BottomNav />);
 
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
         '/',
@@ -68,106 +54,37 @@ test('the shipped bar is four labelled section tabs and names no place', () => {
     // The word is on screen, not only in the accessible name an icon-only row would have to lean on.
     expect(screen.getByRole('link', { name: 'Home' }).textContent).toBe('Home');
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
-    expect(document.querySelector('[data-dive-place]')).toBeNull();
 });
 
 /** The issues are under home, so reading one keeps the tab the reader arrived through lit. */
 test('a dated issue still stands on the Home tab', () => {
-    const chrome = arrive('home/archive', '/home/2026/08/20');
+    arrive('home/archive', '/home/2026/08/20');
 
-    render(<BottomNav chrome={chrome} />);
+    render(<BottomNav />);
 
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
 });
 
-test('the shipped row prints every count it carries, each said in words as well', () => {
-    const chrome = arrive('dashboard', '/dashboard', {
+test('the row marks the notification tab alone, and with a dot rather than a number', () => {
+    arrive('dashboard', '/dashboard', {
         unread: { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 },
     });
 
-    render(<BottomNav chrome={chrome} />);
-
-    const groups = screen.getByRole('link', { name: '%Communities% 3 %communities% with new talk messages' });
-    expect(groups.getAttribute('href')).toBe('/groups/mine');
-    expect(groups.textContent).toContain('3');
-    expect(groups.textContent).toContain('%Communities%');
-    expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).textContent).toContain('2');
-    // The DM count is not on this row to print: it stays on the drawer entry that carries it.
-    expect(screen.queryByRole('link', { name: /Messages/ })).toBeNull();
-});
-
-/**
- * The unified row is three zones, and the middle one is the claim: this is where you are, and this is
- * the way back up to its top. A group's talk is inside the group, not inside the talk.
- */
-test('the unified bar names the group a member is inside, from anywhere in it', () => {
-    const chrome = arrive('group/talk/index', '/groups/7/talk', {
-        look: 'unified',
-        group: { id: 7, name: 'Cyclists', imageUrl: null },
-    });
-
-    render(<BottomNav chrome={chrome} />);
-
-    expect(placeLink().textContent).toBe('Cyclists');
-    expect(placeLink().getAttribute('href')).toBe('/groups/7');
-    // Not the page being read, so it is a way out rather than a "you are here".
-    expect(placeLink().getAttribute('aria-current')).toBeNull();
-    expect(screen.getByRole('link', { name: 'Search' }).getAttribute('href')).toBe('/member/search');
-    expect(screen.getByRole('link', { name: 'Notifications' }).getAttribute('href')).toBe('/notifications');
-});
-
-test("the group's own top is where the middle zone already stands", () => {
-    const chrome = arrive('unified/group', '/groups/7', {
-        look: 'unified',
-        group: { id: 7, name: 'Cyclists', imageUrl: null },
-    });
-
-    render(<BottomNav chrome={chrome} />);
-
-    expect(placeLink().getAttribute('aria-current')).toBe('page');
-});
-
-test('a screen that is nowhere in particular falls back to home', () => {
-    const chrome = arrive('notifications/index', '/notifications', { look: 'unified' });
-
-    render(<BottomNav chrome={chrome} />);
-
-    expect(placeLink().textContent).toBe('Home');
-    expect(placeLink().getAttribute('href')).toBe('/');
-});
-
-test('the unified bar says how many notifications are waiting, in words', () => {
-    const chrome = arrive('dashboard', '/dashboard', {
-        look: 'unified',
-        unread: { friendRequests: 0, unreadMessages: 0, notifications: 2, groupTalks: 0 },
-    });
-
-    render(<BottomNav chrome={chrome} />);
-
-    expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).getAttribute('href')).toBe('/notifications');
-});
-
-test('the tabbed row marks the notification tab alone, and with a dot rather than a number', () => {
-    const chrome = arrive('dashboard', '/dashboard', {
-        look: 'tabbed',
-        unread: { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 },
-    });
-
-    const { container } = render(<BottomNav chrome={chrome} />);
+    const { container } = render(<BottomNav />);
 
     // A dot cannot print how many, so the count is said in words, after the word as everywhere.
     expect(screen.getByRole('link', { name: 'Notifications 2 unread notifications' }).getAttribute('href')).toBe('/notifications');
     expect(container.querySelector('.rounded-full.bg-primary')).toBeNull();
-    // Every other tab is left unmarked under this look, its count kept by the drawer's pill.
+    // Every other tab is left unmarked, its count kept by the drawer's pill.
     expect(screen.queryByRole('link', { name: '3 %communities% with new talk messages' })).toBeNull();
     expect(screen.getByRole('link', { name: '%Communities%' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '%Diaries%' })).toBeTruthy();
 });
 
-test('a guest gets no bar at all, whatever the layout', () => {
-    const chrome = arrive('member/show', '/member/9', { look: 'unified', auth: { user: null } });
+test('a guest gets no bar at all', () => {
+    arrive('unified/member', '/member/9', { auth: { user: null } });
 
-    const { container } = render(<BottomNav chrome={chrome} />);
+    const { container } = render(<BottomNav />);
 
     expect(container.innerHTML).toBe('');
 });

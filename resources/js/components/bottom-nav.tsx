@@ -1,18 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
-import { CountPill } from '@/components/count-pill';
-import { headingVariants } from '@/components/ui/heading';
-import {
-    bottomNavSections,
-    type Chrome,
-    divePlace,
-    isSectionActive,
-    lookSpec,
-    MEMBER_SEARCH_SECTION,
-    type NavSection,
-    NOTIFICATIONS_SECTION,
-    type TabMark,
-} from '@/lib/member-chrome';
+import { bottomNavSections, isSectionActive, NOTIFICATIONS_SECTION } from '@/lib/member-chrome';
 import { badgePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { pressPrefetch } from '@/lib/press-prefetch';
@@ -23,7 +11,7 @@ import type { PageProps } from '@/types';
  * Members only: a guest (a web-public profile is reachable signed out) has no member nav to
  * shortcut.
  */
-export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
+export function BottomNav({ hidden }: { hidden?: boolean }) {
     const t = useT();
     const { url, props } = usePage<PageProps>();
     const ref = useRef<HTMLElement>(null);
@@ -43,7 +31,6 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
 
     // Query and hash off first: a tab is matched against the pathname alone.
     const path = url.replace(/[?#].*$/, '');
-    const { bottomBar, tabMark } = lookSpec(props.look);
 
     return (
         <nav
@@ -57,17 +44,20 @@ export function BottomNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean
                 hidden && 'translate-y-full',
             )}
         >
-            {/* AppShell reserves these same lengths as `--modern-bottom-offset`, and a bar taller
-                than the space it was given stands over the page's last rows. */}
-            <ul className={cn('flex items-stretch', bottomBar === 'labeled' ? 'h-[3.625rem]' : 'h-[3rem]')}>
-                {bottomBar === 'dive' ? <DiveRow chrome={chrome} path={path} /> : <LabeledTabs path={path} mark={tabMark} />}
+            {/* AppShell reserves this same length as `--modern-bottom-offset`, and a bar taller than
+                the space it was given stands over the page's last rows. */}
+            <ul className="flex h-[3.625rem] items-stretch">
+                <LabeledTabs path={path} />
             </ul>
         </nav>
     );
 }
 
-/** A shortcut, not the whole nav: the same tabs stay in the drawer. */
-function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
+/**
+ * A shortcut, not the whole nav: the same tabs stay in the drawer. The one mark is a dot on the
+ * notifications tab; the counts live in the drawer (docs/internals/modern-frame.md, "The bottom tabs").
+ */
+function LabeledTabs({ path }: { path: string }) {
     const t = useT();
     const { props } = usePage<PageProps>();
 
@@ -77,7 +67,7 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                 const { href, icon: Icon, label, badge } = section;
                 const active = isSectionActive(section, path);
                 const count = badge ? (props.unread?.[badge.count] ?? 0) : 0;
-                const dotted = mark === 'dot' && href === NOTIFICATIONS_SECTION.href && count > 0;
+                const dotted = href === NOTIFICATIONS_SECTION.href && count > 0;
 
                 return (
                     <li key={href} className="flex-1">
@@ -92,72 +82,15 @@ function LabeledTabs({ path, mark }: { path: string; mark: TabMark }) {
                         >
                             <span className="relative inline-flex">
                                 <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
-                                {mark === 'count' && badge && <CountPill count={count} className="absolute -top-2 -right-2.5" />}
                                 {dotted && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
                             </span>
                             <span className="max-w-full truncate text-2xs leading-none">{t(label.key, label.replacements)}</span>
                             {/* After the word: the name must read word first. */}
-                            {badge && count > 0 && (mark === 'count' || dotted) && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
+                            {badge && dotted && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
                         </Link>
                     </li>
                 );
             })}
         </>
-    );
-}
-
-/**
- * The middle names the place the member has dived into and returns them to its top; it carries a
- * name and no icon because only the flanks behave like tabs.
- */
-function DiveRow({ chrome, path }: { chrome: Chrome; path: string }) {
-    const t = useT();
-    const { component, props } = usePage<PageProps>();
-    const place = divePlace(String(component), props, chrome);
-
-    return (
-        <>
-            <ZoneTab section={MEMBER_SEARCH_SECTION} shortLabel="Search" />
-            <li className="flex min-w-0 flex-1 items-stretch">
-                <Link
-                    href={place.href}
-                    // Standing on the place's own top, the link points at the page it is on.
-                    aria-current={path === place.href ? 'page' : undefined}
-                    data-dive-place={place.href}
-                    className="flex size-full min-w-0 items-center justify-center px-2 text-foreground"
-                >
-                    <span className={cn(headingVariants({ variant: 'bar' }), 'truncate')}>
-                        {typeof place.label === 'string' ? place.label : t(place.label.key, place.label.replacements)}
-                    </span>
-                </Link>
-            </li>
-            <ZoneTab section={NOTIFICATIONS_SECTION} count={props.unread?.notifications ?? 0} />
-        </>
-    );
-}
-
-/**
- * A dot rather than a printed number when something waits; the count stays in the link's accessible
- * name.
- */
-function ZoneTab({ section, count = 0, shortLabel }: { section: NavSection; count?: number; shortLabel?: string }) {
-    const t = useT();
-    const { icon: Icon, label, badge } = section;
-
-    return (
-        <li className="flex w-24 shrink-0 items-stretch">
-            <Link
-                href={section.href}
-                {...pressPrefetch(section.href)}
-                className="flex size-full min-h-11 items-center justify-center gap-1.5 px-1 text-muted-foreground transition hover:text-foreground"
-            >
-                <span className="relative inline-flex">
-                    <Icon className="size-5" aria-hidden />
-                    {count > 0 && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-selected" />}
-                </span>
-                <span className="max-w-full truncate text-sm">{shortLabel ? t(shortLabel) : t(label.key, label.replacements)}</span>
-                {badge && count > 0 && <span className="sr-only">{badgePhrase(t, badge, count)}</span>}
-            </Link>
-        </li>
     );
 }

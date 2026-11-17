@@ -14,7 +14,7 @@ enum ModernGroupList: string
 
     case Group = 'group';
 
-    /** Label as a translation key, like Look: the consumer translates in the reader's locale. */
+    /** Label as a translation key, like Surface: the consumer translates in the reader's locale. */
     public function label(): string
     {
         return match ($this) {

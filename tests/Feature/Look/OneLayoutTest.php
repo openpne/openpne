@@ -35,7 +35,7 @@ class OneLayoutTest extends TestCase
         $this->freshRequestState();
     }
 
-    public function test_a_member_gets_the_tabbed_layout_whatever_a_site_or_a_member_once_chose(): void
+    public function test_rows_left_from_a_layout_choice_change_no_page_a_member_gets(): void
     {
         $viewer = Member::factory()->create();
         $owner = Member::factory()->create();
@@ -43,20 +43,20 @@ class OneLayoutTest extends TestCase
         $this->storeOldChoices($viewer);
 
         $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('look', 'tabbed'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('dashboard')->missing('look'));
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member')->where('look', 'tabbed'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member'));
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/group')->where('look', 'tabbed'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/group'));
     }
 
-    public function test_a_signed_out_visitor_gets_the_same_layout_on_every_page_open_to_one(): void
+    public function test_a_signed_out_visitor_gets_the_same_pages_as_a_member_where_one_is_open(): void
     {
         $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
         $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Open]);
 
         $this->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member')->where('look', 'tabbed')->where('auth.user', null));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member')->where('auth.user', null));
 
         foreach ([
             "/diary/{$diary->getKey()}" => 'diary/show',
@@ -67,7 +67,7 @@ class OneLayoutTest extends TestCase
         ] as $path => $component) {
             $this->get($path)
                 ->assertOk()
-                ->assertInertia(fn (AssertableInertia $page) => $page->component($component)->where('look', 'tabbed')->where('auth.user', null));
+                ->assertInertia(fn (AssertableInertia $page) => $page->component($component)->where('auth.user', null));
         }
     }
 

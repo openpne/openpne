@@ -14,26 +14,17 @@ export interface PageScrolled {
 /**
  * Inertia keeps the document across a navigation, so the flag the previous page ended on is still in
  * state while the next one first paints; the reset is derived here rather than left to the effect,
- * which runs a frame too late. A disabled caller is never scrolled.
+ * which runs a frame too late.
  */
-export function renderedScrolled(state: PageScrolled, url: string, enabled: boolean): boolean {
-    return enabled && state.url === url && state.scrolled;
+export function renderedScrolled(state: PageScrolled, url: string): boolean {
+    return state.url === url && state.scrolled;
 }
 
-export interface ScrolledOptions {
-    /** False attaches no listener: chrome that always draws its seam should not pay for the events. */
-    enabled?: boolean;
-}
-
-export function useScrolled({ enabled = true }: ScrolledOptions = {}): boolean {
+export function useScrolled(): boolean {
     const { url } = usePage();
     const [state, setState] = useState<PageScrolled>({ scrolled: false, url });
 
     useEffect(() => {
-        if (!enabled) {
-            return;
-        }
-
         const read = () =>
             setState((prev) => {
                 const scrolled = pastTop(window.scrollY);
@@ -65,7 +56,7 @@ export function useScrolled({ enabled = true }: ScrolledOptions = {}): boolean {
             }
             window.removeEventListener('scroll', onScroll);
         };
-    }, [url, enabled]);
+    }, [url]);
 
-    return renderedScrolled(state, url, enabled);
+    return renderedScrolled(state, url);
 }

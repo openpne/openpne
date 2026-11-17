@@ -4,21 +4,16 @@ import {
     bottomNavSections,
     breadcrumbCrumb,
     chromeRecedes,
-    divePlace,
     hasBottomNav,
     isHomeComponent,
     isPlaceTop,
     isSectionActive,
-    LOOKS,
-    lookSpec,
     NAV_SECTIONS,
     NO_CONTEXT_COMPONENTS,
     resolveChrome,
     TALK_ROOMS_HREF,
-    unifiedTabs,
     visibleNavSections,
 } from './member-chrome.ts';
-import type { DivePlace } from './member-chrome.ts';
 import type { FeatureKey } from '../types/index.ts';
 
 const allOn: Record<FeatureKey, boolean> = {
@@ -133,7 +128,6 @@ test('a site whose home is the digest keeps the issue in the nav and the digest 
         assert.equal(isSectionActive(home, path), false, path);
         assert.equal(isSectionActive(issue, path), true, path);
     }
-    assert.deepEqual(unifiedTabs(allOn, 'whats_new')[0], home);
 
     assert.ok(isHomeComponent('dashboard', 'whats_new'));
     assert.ok(isHomeComponent('home/issue', 'whats_new'));
@@ -228,7 +222,7 @@ test('the dashboard action goes with the diary unit', () => {
     assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
 });
 
-test('home takes the mobile brand bar rather than a back control', () => {
+test('home takes the mobile brand bar', () => {
     // A dated issue is somewhere below the run of them, and What's new is a hub.
     assert.ok(isHomeComponent('home/issue', 'issue'));
     assert.ok(!isHomeComponent('home/archive', 'issue'));
@@ -274,19 +268,18 @@ test('the run of issues is titled by the same words the crumb into it uses', () 
 });
 
 test('the unified member page is the same screen as the profile it replaces', () => {
-    // Same route, same chrome: the experiment switch must not change what the frame draws.
+    // Same route, same chrome as the page it replaced.
     assert.deepEqual(chrome('unified/member', {}), chrome('member/show', {}));
     assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/member'));
-    // A page about somebody else, so its mobile bar takes the back control rather than the brand row.
+    // A page about somebody else: a place top, not home.
     assert.ok(!isHomeComponent('unified/member', 'issue'));
 });
 
 test('the unified group page is the same screen as the group top it replaces', () => {
-    // Same route, same chrome: the experiment switch must not change what the frame draws.
+    // Same route, same chrome as the page it replaced.
     assert.deepEqual(chrome('unified/group', {}), chrome('community/show', {}));
     assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/group'));
-    // A page about the group itself, so it takes the back control rather than the brand row and
-    // scopes to nothing above it.
+    // A page about the group itself: a place top, scoped to nothing above it.
     assert.ok(!isHomeComponent('unified/group', 'issue'));
     assert.equal(chrome('unified/group', {}).scope, undefined);
 });
@@ -316,7 +309,7 @@ test("another member's list is scoped to that member", () => {
 });
 
 test("the viewer's own hub has no scope", () => {
-    // The hub bar carries the brand, not an identity block: the viewer is not somewhere else.
+    // The hub names its section and no place: the viewer is not somewhere else.
     const hub = chrome('diary/list', { owner, isOwner: true });
 
     assert.equal(hub.mode, 'section');
@@ -380,15 +373,15 @@ const CONVERSATION_SCREENS: Record<string, Record<string, unknown>> = {
     'message/conversation/index': { counterpart: owner },
 };
 
-test('a conversation drops the bottom bar and keeps its chrome still', () => {
+test('a conversation leaves the bottom bar to the shell and keeps its chrome still', () => {
     for (const [component, props] of Object.entries(CONVERSATION_SCREENS)) {
         const room = chrome(component, props);
 
         assert.equal(room.conversation, true, component);
         assert.equal(hasBottomNav(room), false, component);
         assert.equal(chromeRecedes(room), false, component);
-        // Not a sheet: the bar keeps the back control and the room it names, and nothing floats over
-        // a composer that is already on screen.
+        // Not a sheet: the bar keeps the room it names, and nothing floats over a composer that is
+        // already on screen.
         assert.ok(!room.compose, component);
         assert.ok(!room.form, component);
         assert.notEqual(room.scope, undefined, component);
@@ -398,7 +391,7 @@ test('a conversation drops the bottom bar and keeps its chrome still', () => {
 
 test('the withdrawn bucket names itself, since it has no member to be scoped to', () => {
     // Every departed member's messages collapse into one conversation, so there is no profile for the
-    // bar's identity block to link to — the heading carries who it is with instead.
+    // header's place pill to link to — the heading carries who it is with instead.
     const bucket = chrome('message/conversation/index', { counterpart: null });
 
     assert.equal(bucket.conversation, true);
@@ -485,100 +478,14 @@ test('the Messages hub starts a message the way every other hub starts its own t
     assert.equal(hub.tabs, undefined);
 });
 
-// The whole row, not the fields the test author remembered: a value changed by accident is the same
-// edit as a value changed on purpose, and only an exhaustive assert tells them apart.
-test('standard answers every question as the layout the site has always shipped', () => {
-    assert.deepEqual(lookSpec('standard'), {
-        topBar: 'byScreen',
-        desktopTopBar: false,
-        bottomBar: 'labeled',
-        tabMark: 'count',
-        bottomBarInConversation: false,
-        ground: 'standard',
-        accountInDrawer: false,
-        foldsHubHeading: true,
-        colorLine: false,
-        placeBar: false,
-    });
-});
-
-test('unified answers every question', () => {
-    assert.deepEqual(lookSpec('unified'), {
-        topBar: 'unified',
-        desktopTopBar: true,
-        bottomBar: 'dive',
-        tabMark: 'dot',
-        bottomBarInConversation: false,
-        ground: 'unified',
-        accountInDrawer: true,
-        foldsHubHeading: false,
-        colorLine: false,
-        placeBar: false,
-    });
-});
-
-test('tabbed answers every question', () => {
-    assert.deepEqual(lookSpec('tabbed'), {
-        topBar: 'breadcrumb',
-        // Phone furniture: at lg+ the sidebar is where the reader's bearings come from.
-        desktopTopBar: false,
-        bottomBar: 'labeled',
-        tabMark: 'dot',
-        bottomBarInConversation: true,
-        ground: 'unified',
-        accountInDrawer: true,
-        foldsHubHeading: false,
-        colorLine: true,
-        placeBar: true,
-    });
-});
-
-// The shell reads one field per question, so a look that answered only some of them would leave the
-// rest reading `undefined` — falsy, and silently standard-ish rather than standard.
-test('every look answers every question the shell asks', () => {
-    const fields = Object.keys(LOOKS.standard).sort();
-
-    for (const [id, spec] of Object.entries(LOOKS)) {
-        assert.deepEqual(Object.keys(spec).sort(), fields, id);
-    }
-});
-
-test('the unified bar offers home and the groups, and the groups tab goes with its unit', () => {
-    assert.deepEqual(unifiedTabs(allOn, 'issue').map((tab) => tab.href), ['/', '/groups/mine']);
-    assert.deepEqual(unifiedTabs({ ...allOn, group: false }, 'issue').map((tab) => tab.href), ['/']);
-    // Nav entries, not a parallel list: the drawer's label and the tab's are the same object.
-    assert.deepEqual(unifiedTabs(allOn, 'issue')[1], NAV_SECTIONS.find((section) => section.href === '/groups/mine'));
-});
-
-test('the unified tabs light up on the paths their sections own', () => {
-    const current = (path: string) => unifiedTabs(allOn, 'issue').filter((tab) => isSectionActive(tab, path)).map((tab) => tab.href);
-
-    // Home stands for the front page and the issues; the groups tab for every group space.
-    assert.deepEqual(current('/'), ['/']);
-    assert.deepEqual(current('/home/issues'), ['/']);
-    for (const path of ['/groups', '/groups/mine', '/groups/7', '/topics/3', '/events/1']) {
-        assert.deepEqual(current(path), ['/groups/mine'], path);
-    }
-    // Neither tab claims a screen that is in neither place — What's new is a drawer section now,
-    // and the root matching whole is what keeps Home off it.
-    assert.deepEqual(current('/dashboard'), []);
-    assert.deepEqual(current('/diary/list'), []);
-});
-
-const CYCLISTS_PLACE: DivePlace = { label: 'Cyclists', href: '/groups/7' };
-const OWNER_PLACE: DivePlace = { label: 'Owner', href: '/member/1' };
-const HOME_PLACE: DivePlace = { label: { key: 'Home', replacements: undefined }, href: '/' };
+const CYCLISTS_PLACE = { label: 'Cyclists', href: '/groups/7' };
+const OWNER_PLACE = { label: 'Owner', href: '/member/1' };
 
 /**
- * Where the unified bottom bar says the member is standing, enumerated rather than sampled: a screen
- * resolving to the wrong place would carry the reader out of the space they are in. The group and
- * profile tops are the ones scope cannot answer for — they *are* the place.
+ * Where the header says a member is standing, enumerated rather than sampled: a screen resolving to
+ * the wrong place would carry the reader out of the space they are in.
  */
-const DIVE_FIXTURES: { component: string; props: Record<string, unknown>; place: DivePlace }[] = [
-    { component: 'community/show', props: { group: cyclists }, place: CYCLISTS_PLACE },
-    { component: 'unified/group', props: { group: cyclists }, place: CYCLISTS_PLACE },
-    { component: 'member/show', props: { profile: { owner } }, place: OWNER_PLACE },
-    { component: 'unified/member', props: { profile: owner }, place: OWNER_PLACE },
+const PLACE_FIXTURES: { component: string; props: Record<string, unknown>; place: { label: string; href: string } }[] = [
     // Scoped to the group: everything under a group top.
     { component: 'group/talk/index', props: { group: cyclists }, place: CYCLISTS_PLACE },
     { component: 'group/topic/index', props: { group: cyclists, canPost: false }, place: CYCLISTS_PLACE },
@@ -594,39 +501,22 @@ const DIVE_FIXTURES: { component: string; props: Record<string, unknown>; place:
     { component: 'diary/list', props: { owner, isOwner: false }, place: OWNER_PLACE },
     { component: 'timeline/member', props: { owner, isOwner: false }, place: OWNER_PLACE },
     { component: 'message/conversation/index', props: { counterpart: owner }, place: OWNER_PLACE },
-    // Nowhere in particular: a hub, an errand, the viewer's own lists, and the withdrawn bucket
-    // whose counterpart has no page left to stand on.
-    { component: 'home/issue', props: {}, place: HOME_PLACE },
-    { component: 'home/archive', props: {}, place: HOME_PLACE },
-    { component: 'home/issues', props: {}, place: HOME_PLACE },
-    { component: 'dashboard', props: {}, place: HOME_PLACE },
-    { component: 'diary/feed', props: { variant: 'recent' }, place: HOME_PLACE },
-    { component: 'community/search', props: {}, place: HOME_PLACE },
-    { component: 'message/conversations/index', props: {}, place: HOME_PLACE },
-    { component: 'timeline/member', props: { owner, isOwner: true }, place: HOME_PLACE },
-    { component: 'member/search', props: {}, place: HOME_PLACE },
-    { component: 'member/config', props: {}, place: HOME_PLACE },
-    { component: 'notifications/index', props: {}, place: HOME_PLACE },
-    { component: 'message/conversation/index', props: { counterpart: null }, place: HOME_PLACE },
 ];
-
-test('the bar names the place the member is in, and the way back to its top', () => {
-    for (const { component, props, place } of DIVE_FIXTURES) {
-        const page = { enabledFeatures: allOn, ...props };
-
-        assert.deepEqual(divePlace(component, page, resolveChrome(component, page)), place, component);
-    }
-});
-
-test('a page nobody classified is nowhere in particular rather than a broken link', () => {
-    assert.deepEqual(divePlace('some/new/page', { enabledFeatures: allOn }, chrome('some/new/page', {})), HOME_PLACE);
-});
 
 const crumb = (component: string, props: Record<string, unknown>) => {
     const page = { enabledFeatures: allOn, ...props };
 
     return breadcrumbCrumb(resolveChrome(component, page));
 };
+
+test('every screen inside a place crumbs to that place', () => {
+    for (const { component, props, place } of PLACE_FIXTURES) {
+        const answer = crumb(component, props);
+
+        assert.equal(answer?.label, place.label, component);
+        assert.equal(answer?.href, place.href, component);
+    }
+});
 
 test('the breadcrumb claims the place a screen is inside, and it is pressable', () => {
     assert.deepEqual(crumb('group/talk/index', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: true });
@@ -674,14 +564,12 @@ test('a page that IS the place answers no crumb — the header speaks the home g
 });
 
 test('a screen inside no place takes the last crumb of its trail instead of claiming home', () => {
-    // From a screen that is inside nothing divePlace answers home, where a breadcrumb saying "you
-    // are at home" on the email form would be false.
+    // A breadcrumb saying "you are at home" on a screen that is inside nothing would be false.
     assert.deepEqual(crumb('timeline/tag', { tag: 'ride' }), {
         label: { key: '%Activity%', replacements: undefined },
         href: '/timeline',
         link: true,
     });
-    assert.deepEqual(divePlace('timeline/tag', { enabledFeatures: allOn, tag: 'ride' }, chrome('timeline/tag', { tag: 'ride' })), HOME_PLACE);
 });
 
 test("a form's crumb is static text, whatever it would otherwise have been", () => {
