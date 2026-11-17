@@ -28,8 +28,8 @@ trait MigratesUpgradeTargetsOnce
             return;
         }
 
-        // The shared flag, not a private one: a co-resident DatabaseMigrations test drops the schema
-        // and clears it on teardown.
+        // The shared flag, not a private one: a co-resident DatabaseMigrations test clears it on
+        // teardown, and so does a RefreshDatabase test whose transaction a DDL statement ended.
         if (! RefreshDatabaseState::$migrated) {
             $this->artisan('migrate:fresh', $this->migrateFreshUsing());
             $this->app[Kernel::class]->setArtisan(null);
