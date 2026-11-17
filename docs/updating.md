@@ -177,6 +177,7 @@ itself, so that the new tree is its own.
      cp -a /srv/openpne/site/.env /srv/openpne/openpne-NEW/.env
      rm -rf /srv/openpne/openpne-NEW/storage
      cp -a /srv/openpne/site/storage /srv/openpne/openpne-NEW/storage
+     chmod o-rwx /srv/openpne/openpne-NEW/bootstrap/cache    # if the site's own is closed to others
      # what the release added:
      diff /srv/openpne/site/.env.example /srv/openpne/openpne-NEW/.env.example
      ```

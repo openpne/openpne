@@ -89,8 +89,9 @@ sudo mkdir /srv/openpne
 sudo chown www-data:www-data /srv/openpne
 ```
 
-From here on, every command without `sudo` is run as that user, as `sudo -u www-data <command>`,
-and where the guide names `openpne` as a user or a group, read `www-data`.
+From here on, every command without `sudo` is run as that user: put `sudo -u www-data` before it
+(`cd` stays as it is). Where the guide names `openpne` as the site's user or its group, read
+`www-data`; the MySQL user of step 2 is another matter and keeps its name.
 
 ## 1. Put the release in place
 
@@ -355,7 +356,9 @@ the two sections above show:
   [The site user and its directory](#the-site-user-and-its-directory);
 - the packages are `apache2` and `php-fpm`, and the pool is the one of the nginx section;
 - the virtual host is the one of the `mod_php` section, without its two `php_admin_value` lines
-  (the pool has them) and with `.php` handed to the pool's socket through `mod_proxy_fcgi`.
+  (the pool has them) and with `.php` handed to the pool's socket through `mod_proxy_fcgi`:
+  `sudo a2enmod proxy_fcgi`, and inside the `FilesMatch` block
+  `SetHandler "proxy:unix:/run/php/openpne.sock|fcgi://localhost"`.
 
 ## 5. HTTPS, and a proxy in front
 
@@ -389,7 +392,7 @@ Two things run beside the web server, both as the site user.
 ```
 
 **The queue**, which sends mail and notifications and draws the sizes of a posted picture. A worker
-kept running by systemd (with Apache's user, `www-data` in the two lines that name `openpne`):
+kept running by systemd (with Apache's user, `User=www-data` and `Group=www-data`):
 
 ```ini
 # /etc/systemd/system/openpne-worker.service
@@ -487,7 +490,9 @@ too, when it gives you:
 - PHP 8.3 or later, for the web and on the command line, with the extensions
   [above](#what-the-server-needs), `intl` among them;
 - MySQL, or SQLite;
-- Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root.
+- Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
+- PHP for the web running as your own account, as the command line does. Where it runs as a user
+  the host's sites share, the two `chmod` lines of step 2 lock the site out of its own files.
 
 The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are
 as written, in a directory of yours, without the `sudo apt install` lines. Step 4 is the host's own

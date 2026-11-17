@@ -319,6 +319,7 @@ update() {
     rm -rf "$new/storage"
     cp -a "$root/openpne/storage" "$new/storage"
   fi
+  chmod o-rwx "$new/bootstrap/cache"
   cp -a "$root/openpne/$theme" "$new/$theme"
   # The operator's edit to a file the release ships, as a patch against the archive it came from.
   old=$(unpack "$old_dir/openpne-$old_version.tar.gz" "$work/pristine")
@@ -354,6 +355,7 @@ update() {
   probe check
   grep -qxF "version=$new_version" RELEASE || die "RELEASE is not the new release's"
   [ -f "$theme/css/main.css" ] || die "the operator's theme did not come along"
+  [ -z "$(find bootstrap/cache -maxdepth 0 -perm /o=rwx)" ] || die "bootstrap/cache, where cached settings go, is open to other users"
   [ ! -e "$marker" ] || die "a file only the old release had is still there"
   grep -qF 'X-Operator' public/.htaccess || die "the operator's rule is gone from public/.htaccess"
   diff <(grep -vF -e 'X-Operator' -e "The operator's own rule." public/.htaccess) "$work/new.htaccess" >/dev/null \
