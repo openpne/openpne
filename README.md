@@ -59,7 +59,7 @@ checkout and serves the frontend from a development server.
 
 A site that serves people runs a tagged release rather than `main`; see [Releases](#releases).
 [docs/installing.md](docs/installing.md) sets one up on a server: PHP 8.3 or later, SQLite or
-MySQL, a web server, cron, and a way to run queued work. Moving from one release to the next is
+MySQL, a web server, and a way to run queued work. Moving from one release to the next is
 [docs/updating.md](docs/updating.md).
 
 ## Developing

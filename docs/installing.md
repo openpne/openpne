@@ -18,9 +18,9 @@ are headed **Either** and **Or**: do one of them and skip the others. The **Eith
 this guide takes when nothing asks for another: a user made for the site, the release's archive,
 and nginx with PHP-FPM.
 
-In the configuration examples, a comment separates **what the site needs** from **what is yours**
-to set for your server. The names `openpne` and `/srv/openpne` are this guide's own: others do as
-well, used throughout.
+In the examples for PHP-FPM, the web server and the worker, a comment separates **what the site
+needs** from **what is yours** to set for your server. The names `openpne` and `/srv/openpne` are
+this guide's own: others do as well, used throughout.
 
 A server you administer is what the steps assume. A host where you cannot is covered by
 [On a shared host](#on-a-shared-host).
@@ -178,6 +178,9 @@ DB_SYNCHRONOUS=NORMAL
 touch /srv/openpne/database.sqlite
 chmod 600 /srv/openpne/database.sqlite
 ```
+
+The site needs the first two lines. The other two are how a site that serves people runs on
+SQLite ([changing-database-engine.md](changing-database-engine.md)): set them before it does.
 
 ### Or: MySQL
 
@@ -355,9 +358,10 @@ the two sections above show:
 - the site user is the one made for the site, the first **Either** of
   [The site user and its directory](#the-site-user-and-its-directory);
 - the packages are `apache2` and `php-fpm`, and the pool is the one of the nginx section;
+- the commands are those of the `mod_php` section, with `proxy_fcgi` added to the modules
+  `a2enmod` enables;
 - the virtual host is the one of the `mod_php` section, without its two `php_admin_value` lines
-  (the pool has them) and with `.php` handed to the pool's socket through `mod_proxy_fcgi`:
-  `sudo a2enmod proxy_fcgi`, and inside the `FilesMatch` block
+  (the pool has them) and with `.php` handed to the pool's socket: inside the `FilesMatch` block,
   `SetHandler "proxy:unix:/run/php/openpne.sock|fcgi://localhost"`.
 
 ## 5. HTTPS, and a proxy in front
@@ -484,9 +488,10 @@ are never removed: their rows and images pile up
 ## 7. Mail
 
 Until mail is set up, `MAIL_MAILER=log` sends nothing, and the site still says a message was sent
-(it is written to `storage/logs/` only at `LOG_LEVEL=debug`). The site sends mail for registration
-and invitation links, password resets, address changes and sign-in codes, and for the notifications
-a member has switched on. For an SMTP server, in `.env`:
+(it is written to `storage/logs/` only at `LOG_LEVEL=debug`). The site depends on mail for
+registration and invitation links, for signing in and getting back into an account (sign-in codes,
+password and two-factor resets), for notices of changes to an account, and for the notifications a
+member has switched on. For an SMTP server, in `.env`:
 
 ```ini
 MAIL_MAILER=smtp
@@ -523,7 +528,7 @@ there. All of those send mail.
   `sqlite3 -readonly /srv/openpne/database.sqlite ".backup '/path/to/copy.sqlite'"` writes a
   consistent copy while the site runs; copying the file alone can lose the latest rows. A copy
   holds everything the database does: keep it where only the site user reads it.
-- **Update** by [updating.md](updating.md), release by release.
+- **Update** by [updating.md](updating.md).
 - **After editing `.env`**, restart the queue worker if you run one
   (`sudo systemctl restart openpne-worker`): it read the settings when it started. A site that has
   run `php artisan optimize` runs it again; the file it writes under `bootstrap/cache` holds the
@@ -545,11 +550,12 @@ too, when it gives you:
 - PHP for the web running as your own account, as the command line does. Where it runs as a user
   the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.
 
-The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are
-as written, in a directory of yours, without the `sudo apt install` lines. Step 4 is the host's own
+The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are as
+written, in a directory of yours, without the `sudo apt install` lines. Step 4 is the host's own
 setting that makes the release's `public/` the document root; nothing outside `public/` may be
-reachable from the web. Step 6 is the way of working the queue that the host allows, and the
-scheduler if the host has cron. An update is [updating.md](updating.md), in the directories you
-have.
+reachable from the web. PHP's two upload sizes of step 4 are set by whatever means the host gives.
+Step 5 is as written: a host that ends TLS in front of your site is a proxy in front. Step 6 is the
+way of working the queue that the host allows, and the scheduler if the host has cron. An update is
+[updating.md](updating.md), in the directories you have.
 
 This guide does not walk through any one host.
