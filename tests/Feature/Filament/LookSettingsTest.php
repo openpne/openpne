@@ -92,7 +92,7 @@ class LookSettingsTest extends TestCase
         app()->setLocale('en');
         $name = LookSettings::getNavigationLabel();
 
-        $this->assertSame('Entry page settings', $name);
+        $this->assertSame('Landing page settings', $name);
         $this->assertSame(2, substr_count((string) file_get_contents(app_path('Upgrade/Runner/UpgradeRunner.php')), "the {$name} page"));
         $this->assertStringContainsString("the {$name} page", (string) file_get_contents(base_path('docs/upgrading-from-openpne3.md')));
     }

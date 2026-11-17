@@ -53,7 +53,7 @@ enum SettingGroup
     /** The terms of service / privacy policy bodies, edited on the site policy page. */
     case SitePolicy;
 
-    /** The page `/` serves and what a joined group's row opens; the two layout keys in it are read by nothing. */
+    /** The page `/` serves and what a joined group's row opens. */
     case Look;
 
     /** How much of a group's talk the site notifies about by default, edited on the group settings page. */

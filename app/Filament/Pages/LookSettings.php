@@ -57,12 +57,12 @@ class LookSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Entry page settings');
+        return __('Landing page settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Entry page settings');
+        return __('Landing page settings');
     }
 
     public function mount(): void
