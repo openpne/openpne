@@ -124,7 +124,10 @@ test.each([
 
 test.each([
     ['tabbed', 'group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    // A form's crumb is plain text with no scope, and the editor's toolbar stands below its bar.
+    ['tabbed', 'diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
     ['tabbed', 'dashboard', '/dashboard', null],
+    ['unified', 'group/talk/index', '/groups/7/talk', null],
     ['standard', 'group/talk/index', '/groups/7/talk', null],
 ] as const)('%s on %s publishes the place bar height only where the bar stands', (look, component, url, expected) => {
     const chrome = arrive(component, url, { look, group: cyclists });
