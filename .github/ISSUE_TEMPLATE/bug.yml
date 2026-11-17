@@ -1,0 +1,67 @@
+name: Bug report
+description: Something in a running site that does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a site that runs and does something wrong; a site that would not install or update has its own form. English or Japanese, either is fine.
+
+        Leave out secrets: `APP_KEY`, passwords, tokens, and anything about your members. A security problem goes to the [private report form](https://github.com/openpne/openpne/security/advisories/new), not here.
+  - type: input
+    id: version
+    attributes:
+      label: OpenPNE version
+      description: The release, from the archive's name or its `RELEASE` file, or the commit (`git rev-parse --short HEAD`).
+      placeholder: v4.0.0-alpha.1
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - Member pages, Modern
+        - Member pages, Classic
+        - Admin panel
+        - Command line (artisan)
+        - MCP
+        - Upgrade from OpenPNE 3
+        - Something else
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: From a page or a command anyone can reach, one step a line.
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      description: For a problem on a page.
+      placeholder: Safari on iOS 26
+  - type: input
+    id: environment
+    attributes:
+      label: PHP, database and web server
+      description: With their versions, when the problem may depend on them.
+      placeholder: PHP 8.5, MySQL 8.4, nginx with PHP-FPM
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: The last lines of the newest `storage/logs/laravel-*.log`, when a page answered 500 or a command failed.
+      render: text
