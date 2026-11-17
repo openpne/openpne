@@ -1,31 +1,15 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, ChevronRight, X } from 'lucide-react';
-import { type ComponentType, type CSSProperties, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
-import { Avatar } from '@/components/avatar';
-import { AvatarMenu } from '@/components/avatar-menu';
+import { X } from 'lucide-react';
+import { type CSSProperties, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
-import { CommunityImage } from '@/components/community-image';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { headingVariants } from '@/components/ui/heading';
 import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
-import { badgePhrase } from '@/lib/count-phrase';
-import { markedName } from '@/lib/identity-mark';
 import { useT } from '@/lib/i18n';
-import {
-    breadcrumbCrumb,
-    type Chrome,
-    type ChromeLabel,
-    type ChromeScope,
-    isHomeComponent,
-    isPlaceTop,
-    isSectionActive,
-    lookSpec,
-    NOTIFICATIONS_SECTION,
-    unifiedTabs,
-} from '@/lib/member-chrome';
+import { breadcrumbCrumb, type Chrome, type ChromeLabel, isHomeComponent, isPlaceTop } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
@@ -41,13 +25,11 @@ const BAR_ACTION_HIT = "relative after:absolute after:inset-x-0 after:-inset-y-1
 function TopBar({
     hidden,
     seam = true,
-    persistent = false,
     line,
     children,
 }: {
     hidden?: boolean;
     seam?: boolean;
-    persistent?: boolean;
     /** Site color for the 4px line atop the row, which is part of the bar: the height var counts it
      *  and it slides away with the bar. */
     line?: string;
@@ -69,9 +51,7 @@ function TopBar({
             ref={ref}
             inert={hidden || undefined}
             className={cn(
-                'sticky top-0 z-20 flex h-(--modern-top-offset) items-center gap-2 border-b bg-background/90 pt-safe pr-safe-3 pl-safe-3 backdrop-blur transition-transform duration-200 motion-reduce:transition-none',
-                // The unified bar is the header at every width; the shipped bars are phone furniture.
-                !persistent && 'lg:hidden',
+                'sticky top-0 z-20 flex h-(--modern-top-offset) items-center gap-2 border-b bg-background/90 pt-safe pr-safe-3 pl-safe-3 backdrop-blur transition-transform duration-200 motion-reduce:transition-none lg:hidden',
                 seam ? 'border-border' : 'border-transparent',
                 // The padding restates the status-bar inset because it replaces the base padding
                 // rather than adding to it.
@@ -87,29 +67,15 @@ function TopBar({
     );
 }
 
-/**
- * One target with two faces: back on a detail or form page, close on a compose sheet, where `sheet`
- * plays the slide back down before the navigation runs.
- */
-function LeadingControl({
-    target,
-    label,
-    icon: Icon,
-    sheet,
-}: {
-    target: BackTarget;
-    label: string;
-    icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
-    sheet?: boolean;
-}) {
+/** The compose sheet's way out: the slide back down plays before the navigation runs. */
+function SheetClose({ target, label }: { target: BackTarget; label: string }) {
     const exit = useComposeExit();
-    const glyph = <Icon className="size-6" aria-hidden />;
-    const leave = (navigate: () => void) => (sheet ? exit(navigate) : navigate());
+    const glyph = <X className="size-6" aria-hidden />;
 
     if (target.type === 'history') {
         return (
             <Tip label={label}>
-                <button type="button" onClick={() => leave(() => window.history.back())} className={BAR_CONTROL}>
+                <button type="button" onClick={() => exit(() => window.history.back())} className={BAR_CONTROL}>
                     {glyph}
                 </button>
             </Tip>
@@ -120,125 +86,20 @@ function LeadingControl({
     // browser's to answer.
     return (
         <Tip label={label}>
-            {sheet ? (
-                <a
-                    href={target.href}
-                    className={BAR_CONTROL}
-                    onClick={(event) => {
-                        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-                            return;
-                        }
-                        event.preventDefault();
-                        exit(() => router.visit(target.href));
-                    }}
-                >
-                    {glyph}
-                </a>
-            ) : (
-                <Link href={target.href} className={BAR_CONTROL}>
-                    {glyph}
-                </Link>
-            )}
+            <a
+                href={target.href}
+                className={BAR_CONTROL}
+                onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                        return;
+                    }
+                    event.preventDefault();
+                    exit(() => router.visit(target.href));
+                }}
+            >
+                {glyph}
+            </a>
         </Tip>
-    );
-}
-
-/**
- * The scope is the member the page is about, not the viewer, so it can be an AI account: the bar is
- * one truncating line with no room for an AiChip, so the accessible name carries the marker instead.
- * Exported only so that name can be tested; TopNav is its one caller.
- */
-export function ScopeIdentity({ scope }: { scope: ChromeScope }) {
-    const t = useT();
-    const label = markedName(scope.name, scope.kind === 'member' && scope.isAi, t);
-
-    return (
-        <div className="flex min-w-0 flex-1 items-center justify-center">
-            <Link
-                href={scope.kind === 'group' ? `/groups/${scope.id}` : `/member/${scope.id}`}
-                aria-label={label}
-                // Full bar height: the block paints at 32 to sit with its name, but it is a link, and
-                // the bar's targets are all 48.
-                className="flex min-h-12 min-w-0 max-w-full items-center gap-2"
-            >
-                {scope.kind === 'group' ? (
-                    <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
-                ) : (
-                    <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} isAi={scope.isAi} size="sm" decorative />
-                )}
-                <span className={cn(headingVariants({ variant: 'bar' }), 'truncate')}>{scope.name}</span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            </Link>
-        </div>
-    );
-}
-
-/**
- * Only the top level: a detail, a form, a sheet and a room keep their own bar, which says where the
- * reader is (docs/internals/feature-modules.md, "Surface responsibilities").
- */
-function UnifiedBar({ hidden }: { hidden?: boolean }) {
-    const t = useT();
-    const { url, props } = usePage<PageProps>();
-    // Query and hash off first: the Home tab is matched against the whole path.
-    const path = url.replace(/[?#].*$/, '');
-    const notifications = props.unread?.notifications ?? 0;
-
-    return (
-        // No seam: this bar and the top of the page are one surface.
-        <TopBar hidden={hidden} seam={false} persistent>
-            {/* The drawer is phone furniture: at desk width the sidebar holds the same nav, and the
-                design's desk header carries no hamburger beside it. */}
-            <span className="lg:hidden">
-                <NavDrawer />
-            </span>
-            {/* Not a landmark: the phone already carries one named nav (the bottom bar), and a second
-                with the same name is a landmark list a reader cannot tell apart. */}
-            <div className="flex min-w-0 flex-1 items-stretch justify-center">
-                {unifiedTabs(props.enabledFeatures, props.modernHome).map((section) => {
-                    const active = isSectionActive(section, path);
-
-                    return (
-                        <Link
-                            key={section.href}
-                            href={section.href}
-                            {...pressPrefetch(section.href)}
-                            aria-current={active ? 'page' : undefined}
-                            className="group relative flex min-h-12 min-w-0 items-center px-3"
-                        >
-                            <span
-                                className={cn(
-                                    headingVariants({ variant: 'bar' }),
-                                    'truncate transition',
-                                    !active && 'font-normal text-muted-foreground group-hover:text-foreground',
-                                )}
-                            >
-                                {t(section.label.key, section.label.replacements)}
-                            </span>
-                            {/* A dot rather than an underline: at this height an underline would land
-                                on the bar's own hairline and read as part of it. */}
-                            {active && (
-                                <span aria-hidden className="absolute inset-x-0 bottom-1.5 mx-auto size-1.5 rounded-full bg-primary" />
-                            )}
-                        </Link>
-                    );
-                })}
-            </div>
-            {/* The dot is not a number, so the link's name carries the count for a reader who cannot
-                see it. */}
-            <Tip
-                label={
-                    notifications > 0
-                        ? badgePhrase(t, NOTIFICATIONS_SECTION.badge, notifications)
-                        : t(NOTIFICATIONS_SECTION.label.key)
-                }
-            >
-                <Link href={NOTIFICATIONS_SECTION.href} {...pressPrefetch(NOTIFICATIONS_SECTION.href)} className={cn(BAR_CONTROL, 'relative')}>
-                    <NOTIFICATIONS_SECTION.icon className="size-6" aria-hidden />
-                    {notifications > 0 && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-selected" />}
-                </Link>
-            </Tip>
-        </TopBar>
     );
 }
 
@@ -260,10 +121,7 @@ function GuestEntry({ className }: { className?: string }) {
     );
 }
 
-/**
- * The tabbed look's phone header (docs/internals/looks.md, "The registry"). A compose sheet is the
- * exception, being a mode rather than a class: it keeps its own ✕ header.
- */
+/** The site mark, then where the reader is (docs/internals/modern-frame.md, "The phone header"). */
 function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
     const { component, props } = usePage<PageProps>();
@@ -298,8 +156,8 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                     ›
                 </span>
             )}
-            {/* A hub's own h1 stays in the page under this look, so the bar's copy of it is a second
-                announcement of the same words — hidden, like the shipped hub bar's. */}
+            {/* A hub's own h1 stays in the page, so the bar's copy of it would be a second
+                announcement of the same words. */}
             {hubTitle && (
                 <span aria-hidden className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate')}>
                     {label(hubTitle)}
@@ -316,146 +174,36 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                     // A form's crumb goes nowhere, so it must not look as though it does.
                     <span className="min-w-0 truncate text-sm text-muted-foreground">{text(crumb.label)}</span>
                 ))}
-            {guest ? <GuestEntry className="ml-auto" /> : <NavDrawer labeled />}
+            {guest ? <GuestEntry className="ml-auto" /> : <NavDrawer />}
         </TopBar>
     );
 }
 
 /**
- * The mobile (< lg) top bar, varying by page class (docs/internals/feature-modules.md, "Surface
- * responsibilities").
+ * The mobile (< lg) top bar: one grammar on every screen class, a compose sheet excepted because its
+ * ✕ is how a mode is left (docs/internals/modern-frame.md, "The phone header").
  */
 export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
+    return chrome.compose ? <SheetBar chrome={chrome} hidden={hidden} /> : <BreadcrumbBar chrome={chrome} hidden={hidden} />;
+}
+
+function SheetBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
-    const { component, props } = usePage<PageProps>();
-    const { auth } = props;
     const tracker = backTracker();
     const slotRef = useComposeSlotRef();
-    // Only the sheet needs this: everywhere else the bar's hairline is unconditional, and a listener
-    // for a border that never changes is a listener nobody asked for.
-    const scrolled = useScrolled({ enabled: Boolean(chrome.compose) });
+    const scrolled = useScrolled();
     // Subscribed rather than read at render: Inertia fires `navigate` after React has swapped the
     // page, so a plain read would size the new page's bar against the previous page's depth.
     const inAppHistory = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot) > 0;
-    const label = (l: ChromeLabel) => t(l.key, l.replacements);
 
-    const brand = (
-        <Link href="/" className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
-            <BrandMark size="sm" />
-            <BrandName className="truncate" />
-        </Link>
-    );
-
-    // Ahead of the class split below, which this look does not make, and of the guest's bar, which
-    // it replaces; the compose sheet is excepted because its ✕ is how a mode is left.
-    if (lookSpec(props.look).topBar === 'breadcrumb' && !chrome.compose) {
-        return <BreadcrumbBar chrome={chrome} hidden={hidden} />;
-    }
-
-    // A guest has no member nav to open and no account menu, so the bar stays identity + the way in.
-    if (!auth.user) {
-        return (
-            <TopBar hidden={hidden}>
-                {brand}
-                <GuestEntry />
-            </TopBar>
-        );
-    }
-
-    // Home and the hubs are one bar under the unified chrome; everything below them is untouched.
-    const topLevel = isHomeComponent(String(component), props.modernHome) || chrome.mode === 'section';
-    if (lookSpec(props.look).topBar === 'unified' && topLevel) {
-        return <UnifiedBar hidden={hidden} />;
-    }
-
-    // Home is named rather than derived: it shares the detail pages' chrome mode, but there is
-    // nothing above it to go back to.
-    if (!topLevel) {
-        const target = backTarget(inAppHistory, chrome.context);
-
-        if (chrome.compose) {
-            return (
-                <TopBar hidden={hidden} seam={scrolled}>
-                    <LeadingControl target={target} label={t('Close')} icon={X} sheet />
-                    {/* BAR_ACTION_HIT as a descendant variant: the actions arrive through a portal. */}
-                    <div
-                        ref={slotRef}
-                        className="ml-auto flex items-center gap-2 [&_button]:relative [&_button::after]:absolute [&_button::after]:-inset-y-1.5 [&_button::after]:inset-x-0 [&_button::after]:content-['']"
-                    />
-                </TopBar>
-            );
-        }
-
-        return (
-            <TopBar hidden={hidden}>
-                <LeadingControl target={target} label={t('Back')} icon={ArrowLeft} />
-                {/* The !form guard is a second belt: the registry test already pins form ⇒ no scope,
-                    but a form must never carry a link beside an unsaved form even if that slips. */}
-                {chrome.scope && !chrome.form ? (
-                    <>
-                        <ScopeIdentity scope={chrome.scope} />
-                        {/* Balances the back control, so the identity centers on the bar. */}
-                        <span className="-mr-1 size-12 shrink-0" aria-hidden />
-                    </>
-                ) : (
-                    chrome.context && (
-                        <>
-                            {/* No scope to be in — a form, or a message with no single counterparty. */}
-                            <p className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden text-sm whitespace-nowrap text-muted-foreground">
-                                {chrome.context.map((item, i) => (
-                                    <span
-                                        key={item.href}
-                                        className={cn(
-                                            'flex min-w-0 items-center gap-1',
-                                            // The registry's shape distinction: member text arrives as a plain
-                                            // string, app vocabulary as a translatable label — unless the label
-                                            // interpolates member text (":name's %diary%"), as unbounded as one.
-                                            typeof item.label !== 'string' && !item.label.replacements && 'shrink-0',
-                                        )}
-                                    >
-                                        {i > 0 && (
-                                            <span aria-hidden className="shrink-0">
-                                                ›
-                                            </span>
-                                        )}
-                                        <span className="min-w-0 truncate">
-                                            {typeof item.label === 'string' ? item.label : label(item.label)}
-                                        </span>
-                                    </span>
-                                ))}
-                            </p>
-                            {/* Balances the back control, mirrored -mr-1 against its -ml-1, so the
-                                text centers on the bar. */}
-                            <span className="-mr-1 size-12 shrink-0" aria-hidden />
-                        </>
-                    )
-                )}
-            </TopBar>
-        );
-    }
-
-    // aria-hidden here: the in-page h1, folded to sr-only, is the page's one announcement of the title.
-    if (chrome.mode === 'section' && chrome.title) {
-        return (
-            <TopBar hidden={hidden}>
-                <NavDrawer />
-                <span aria-hidden className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 flex-1 truncate text-center')}>
-                    {label(chrome.title)}
-                </span>
-                <AvatarMenu user={auth.user} compact />
-            </TopBar>
-        );
-    }
-
-    // The brand is a label here, not a link: the nav's brand row and the Home tab are the links to `/`.
     return (
-        <TopBar hidden={hidden}>
-            <NavDrawer />
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-                <BrandMark size="sm" />
-                <BrandName className="truncate" />
-            </div>
-            <AvatarMenu user={auth.user} compact />
+        <TopBar hidden={hidden} seam={scrolled}>
+            <SheetClose target={backTarget(inAppHistory, chrome.context)} label={t('Close')} />
+            {/* BAR_ACTION_HIT as a descendant variant: the actions arrive through a portal. */}
+            <div
+                ref={slotRef}
+                className="ml-auto flex items-center gap-2 [&_button]:relative [&_button::after]:absolute [&_button::after]:-inset-y-1.5 [&_button::after]:inset-x-0 [&_button::after]:content-['']"
+            />
         </TopBar>
     );
 }

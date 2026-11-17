@@ -47,7 +47,7 @@ interface UnifiedGroupProps extends PageProps {
 
 /**
  * Every entrance the shipped group page offers is here with the same condition and the same
- * destination (docs/internals/looks.md, "What a look may not do").
+ * destination (docs/internals/modern-frame.md, "What the member and group pages may not do").
  */
 export default function UnifiedGroup() {
     const t = useT();

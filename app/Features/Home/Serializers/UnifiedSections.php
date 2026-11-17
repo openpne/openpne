@@ -12,7 +12,7 @@ use App\Models\TimelinePost;
 use Illuminate\Support\Collection;
 
 /**
- * The projections the unified layout's pages share: the same React components read all three, so the
+ * The projections the home, member and group pages share: the same React components read all three, so the
  * shape is a contract between the pages rather than a detail of either. Shaping only — every caller
  * has already resolved, under its own clearance, which rows to pass in.
  */

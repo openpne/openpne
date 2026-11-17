@@ -86,7 +86,6 @@ function arrive(props: Record<string, unknown>) {
             name: 'Test SNS',
             auth: { user },
             enabledFeatures: allOn,
-            look: 'standard',
             unread: null,
             locale: 'en',
             timezone: 'Asia/Tokyo',

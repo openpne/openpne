@@ -39,7 +39,6 @@ function arrive(component: string, props: Record<string, unknown> = {}) {
         props: {
             auth: { user },
             enabledFeatures: allOn,
-            look: 'standard',
             unread: null,
             flash: { status: null, error: null },
             ...props,
@@ -56,54 +55,27 @@ function hubHeadingRow(props: Record<string, unknown>): Element | null {
     return screen.getByRole('heading', { name: 'Notifications' }).parentElement;
 }
 
-const trail = () => screen.queryByRole('navigation', { name: 'Breadcrumb' });
-
 const placeBar = () => screen.queryByTestId('place-bar');
 
-/**
- * The fold is a claim that the mobile bar is showing the title instead, and only the shipped hub bar
- * does. A guest's is brand + sign-in and the unified layout's is the tab pair, so folding under
- * either leaves the hub with a visible name nowhere on a phone.
- */
-test('a hub folds its heading under the bar that carries the title', () => {
-    expect(hubHeadingRow({})?.className).toContain('max-lg:sr-only');
+/** The phone header's copy of a hub's name is hidden from assistive technology, so the page's own heading must stay on screen. */
+test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a hub keeps its heading on screen for %s', (_who, props) => {
+    expect(hubHeadingRow(props)?.className).not.toContain('sr-only');
 });
 
-test('a hub keeps its heading under the unified bar, which carries tabs instead', () => {
-    expect(hubHeadingRow({ look: 'unified' })?.className).not.toContain('sr-only');
-});
-
-test('a hub keeps its heading for a guest, whose bar carries no title either', () => {
-    expect(hubHeadingRow({ auth: { user: null } })?.className).not.toContain('sr-only');
-});
-
-/**
- * Where a look answers "where am I" with the place bar, that is the whole answer: the trail it
- * replaces must not stand beside it, or the desk shows the same claim twice in two vocabularies.
- */
-test('the place bar stands in place of the trail, not beside it', () => {
-    arrive('group/talk/index', { look: 'tabbed', group: cyclists });
+test('the place bar is the desk answer to where the reader is: the place, as a pill with its face', () => {
+    arrive('group/talk/index', { group: cyclists });
 
     const pill = placeBar()?.querySelector('a');
     expect(pill?.getAttribute('href')).toBe('/groups/7');
     expect(pill?.textContent).toBe('Cyclists');
     // The face the phone header cannot carry: there the brand mark is the bar's one image.
     expect(pill?.querySelector('img')?.getAttribute('src')).toBe('/img/cyclists.png');
-    expect(trail()).toBeNull();
-});
-
-test.each(['standard', 'unified'] as const)('%s keeps the crumb trail it has always drawn', (look) => {
-    arrive('group/talk/index', { look, group: cyclists });
-
-    expect(trail()?.className).toContain('hidden lg:flex');
-    expect(trail()?.textContent).toBe('Cyclists');
-    expect(placeBar()).toBeNull();
 });
 
 test('a form says where it is without offering a way out of it', () => {
     // The rule the phone header states at its own crumb, kept at desk width: a pressable-looking
     // crumb beside unsaved input is what neither bar may paint.
-    arrive('community/edit', { look: 'tabbed', group: cyclists });
+    arrive('community/edit', { group: cyclists });
 
     expect(placeBar()?.textContent).toBe('Cyclists');
     expect(placeBar()?.querySelector('a')).toBeNull();
@@ -112,7 +84,7 @@ test('a form says where it is without offering a way out of it', () => {
 /** A guest's crumb is the phone bar's rule again at desk width: the author's entries, and no face standing for a page behind the login wall. */
 test("a guest's place bar leads to the author's entries, faceless", () => {
     const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
-    arrive('diary/show', { look: 'tabbed', auth: { user: null }, diary: { author } });
+    arrive('diary/show', { auth: { user: null }, diary: { author } });
 
     const pill = placeBar()?.querySelector('a');
     expect(pill?.getAttribute('href')).toBe('/diary/listMember/9');
@@ -123,7 +95,7 @@ test("a guest's place bar leads to the author's entries, faceless", () => {
 
 test("a member's place bar on the same entry is the author's page, with the face", () => {
     const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
-    arrive('diary/show', { look: 'tabbed', diary: { author } });
+    arrive('diary/show', { diary: { author } });
 
     const pill = placeBar()?.querySelector('a');
     expect(pill?.getAttribute('href')).toBe('/member/9');
@@ -133,7 +105,7 @@ test("a member's place bar on the same entry is the author's page, with the face
 test.each(['dashboard', 'notifications/index'])('%s is inside nothing, so no place bar stands over it', (component) => {
     // The sidebar's brand and its active row already answer for these; a bar repeating them would be
     // furniture with nothing to say.
-    arrive(component, { look: 'tabbed' });
+    arrive(component);
 
     expect(placeBar()).toBeNull();
 });
@@ -150,8 +122,7 @@ test('the main hooks follow the URL: a new page gets fresh nodes, the same page 
             props: {
                 auth: { user },
                 enabledFeatures: allOn,
-                look: 'standard',
-                unread: null,
+                    unread: null,
                 flash: { status: null, error: null },
                 layoutHooks: { 'modern.main_start': '<b>top</b>', 'modern.main_end': '<b>foot</b>' },
             },

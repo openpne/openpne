@@ -98,83 +98,6 @@ export function chromeRecedes(chrome: Chrome): boolean {
     return !chrome.form && !chrome.conversation;
 }
 
-export type TabMark = 'count' | 'dot';
-
-interface LookSpec {
-    /** 'byScreen' = the per-screen-class bars; 'unified' = the persistent tab pair on the top level
-     *  only, deep pages keeping the byScreen bars; 'breadcrumb' = every screen class but a compose
-     *  sheet, which is a mode rather than a class. */
-    topBar: 'byScreen' | 'unified' | 'breadcrumb';
-    /** Reserves `--modern-top-offset` at lg+, which the place bar and the conversations read. */
-    desktopTopBar: boolean;
-    /** Which row the phone bottom bar draws. 'labeled' = each tab's icon over its full label;
-     *  'dive' = the search | place | notifications zones. */
-    bottomBar: 'dive' | 'labeled';
-    /** 'count' = the number, on every tab whose section carries a badge; 'dot' = the notifications
-     *  tab alone, every other tab unmarked. Only the labelled row wears these; the dive row draws
-     *  its own marks. */
-    tabMark: TabMark;
-    bottomBarInConversation: boolean;
-    ground: 'standard' | 'unified';
-    /** A bar with no AvatarMenu needs them. */
-    accountInDrawer: boolean;
-    foldsHubHeading: boolean;
-    colorLine: boolean;
-    placeBar: boolean;
-}
-
-/**
- * A question becomes a field when its answer varies by look, including inside a single bar once two
- * looks draw the same row and differ within it; what no look varies stays in the component that
- * draws it (docs/internals/looks.md, "The registry").
- */
-export const LOOKS = {
-    standard: {
-        topBar: 'byScreen',
-        desktopTopBar: false,
-        bottomBar: 'labeled',
-        tabMark: 'count',
-        bottomBarInConversation: false,
-        ground: 'standard',
-        accountInDrawer: false,
-        foldsHubHeading: true,
-        colorLine: false,
-        placeBar: false,
-    },
-    unified: {
-        topBar: 'unified',
-        desktopTopBar: true,
-        bottomBar: 'dive',
-        tabMark: 'dot',
-        bottomBarInConversation: false,
-        ground: 'unified',
-        accountInDrawer: true,
-        foldsHubHeading: false,
-        colorLine: false,
-        placeBar: false,
-    },
-    tabbed: {
-        topBar: 'breadcrumb',
-        desktopTopBar: false,
-        bottomBar: 'labeled',
-        tabMark: 'dot',
-        bottomBarInConversation: true,
-        ground: 'unified',
-        accountInDrawer: true,
-        foldsHubHeading: false,
-        colorLine: true,
-        placeBar: true,
-    },
-} as const satisfies Record<string, LookSpec>;
-
-export type LookId = keyof typeof LOOKS;
-
-/** One accessor, so a consumer reads the field it means rather than a boolean that happens to be
- *  true of one other look. */
-export function lookSpec(look: LookId): LookSpec {
-    return LOOKS[look];
-}
-
 export interface NavSection {
     href: string;
     match: string[];
@@ -222,7 +145,7 @@ const GROUPS_SECTION: NavSection & { badge: CountBadge } = {
     feature: 'group',
 };
 
-/** Named because the unified chrome draws its bell from it: one entry, one phrase for the count. */
+/** Named because the bottom bar marks this tab alone: one entry, one phrase for the count. */
 export const NOTIFICATIONS_SECTION: NavSection & { badge: CountBadge } = {
     href: '/notifications',
     match: ['/notifications'],
@@ -232,7 +155,7 @@ export const NOTIFICATIONS_SECTION: NavSection & { badge: CountBadge } = {
 };
 
 /** Named for the same reason: the unified bottom bar's search zone is this entry. */
-export const MEMBER_SEARCH_SECTION: NavSection = {
+const MEMBER_SEARCH_SECTION: NavSection = {
     href: '/member/search',
     match: ['/member/search'],
     icon: Search,
@@ -321,10 +244,6 @@ export function bottomNavSections(enabled: Record<FeatureKey, boolean>, home: Mo
         homeSection(home),
         ...BOTTOM_NAV_HREFS.map((href) => visible.find((section) => section.href === href)).filter((section) => section !== undefined),
     ];
-}
-
-export function unifiedTabs(enabled: Record<FeatureKey, boolean>, home: ModernHomeId): NavSection[] {
-    return enabled.group ? [homeSection(home), GROUPS_SECTION] : [homeSection(home)];
 }
 
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
@@ -700,7 +619,6 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
-    // The unified look's member page: the same screen as the profile it replaces, so the same chrome.
     'unified/member': { gap: '6' },
     'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     // Compose although it submits nothing: choosing who to write to is one screen with one job.
@@ -714,7 +632,6 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/ai/index': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/ai/show': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
-    // The unified look's group page: the same screen as the group top it replaces, so the same chrome.
     'unified/group': { foreground: true },
     'group/topic/show': { foreground: true },
     'group/event/show': { foreground: true },
@@ -763,7 +680,7 @@ export function resolveChrome(
 }
 
 /** A name is member text, so it is a plain string. */
-export interface DivePlace {
+interface Place {
     label: ChromeLabel | string;
     href: string;
 }
@@ -773,46 +690,12 @@ interface PlaceRef {
     name: string;
 }
 
-const groupPlace = (group: PlaceRef): DivePlace => ({ label: group.name, href: `/groups/${group.id}` });
+const groupPlace = (group: PlaceRef): Place => ({ label: group.name, href: `/groups/${group.id}` });
 
-const memberPlace = (member: PlaceRef): DivePlace => ({ label: member.name, href: `/member/${member.id}` });
+const memberPlace = (member: PlaceRef): Place => ({ label: member.name, href: `/member/${member.id}` });
 
-const HOME_PLACE: DivePlace = { label: HOME_SECTION.label, href: HOME_SECTION.href };
-
-/**
- * The pages that ARE a place. They are read from their own props because scope alone would put a
- * member standing on a group's front page nowhere.
- */
+/** The pages that ARE a place, whose own hero names it directly below the header. */
 const PLACE_TOPS = ['community/show', 'unified/group', 'member/show', 'unified/member'] as const;
-
-// Typed off PLACE_TOPS on purpose: a dive target that is not a place top would need this bond taken
-// apart first, or it would silently strip that screen's crumb.
-const DIVE_PLACES: Record<(typeof PLACE_TOPS)[number], (props: Record<string, unknown>) => DivePlace> = {
-    'community/show': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
-    'unified/group': (props) => groupPlace((props as unknown as { group: PlaceRef }).group),
-    'member/show': (props) => memberPlace((props as unknown as { profile: { owner: PlaceRef } }).profile.owner),
-    'unified/member': (props) => memberPlace((props as unknown as { profile: PlaceRef }).profile),
-};
-
-export function divePlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace {
-    return ownPlace(component, props, chrome) ?? HOME_PLACE;
-}
-
-function ownPlace(component: string, props: Record<string, unknown>, chrome: Chrome): DivePlace | null {
-    if (isPlaceTop(component)) {
-        return DIVE_PLACES[component as (typeof PLACE_TOPS)[number]](props);
-    }
-
-    const { scope } = chrome;
-    if (scope?.kind === 'group') {
-        return groupPlace(scope);
-    }
-    if (scope?.kind === 'member') {
-        return memberPlace(scope);
-    }
-
-    return null;
-}
 
 export interface BreadcrumbCrumb {
     label: ChromeLabel | string;
@@ -821,10 +704,7 @@ export interface BreadcrumbCrumb {
     link: boolean;
 }
 
-/**
- * The three pages speak the home grammar in the breadcrumb header — mark and site name, no crumb
- * (docs/internals/looks.md, "The registry").
- */
+/** These pages speak the home grammar in the header: mark and site name, no crumb (docs/internals/modern-frame.md, "The phone header"). */
 export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
@@ -843,10 +723,9 @@ function guestCrumb(chrome: Chrome): BreadcrumbCrumb | null {
 }
 
 /**
- * Deliberately not divePlace, which answers home from anywhere that is not a place: a breadcrumb
- * claims where the reader is, and "you are at home" on a settings page would be false. A form takes
- * its trail rather than its scope: the scope tier is pressable by construction, and the bar must
- * never carry a link beside unsaved input.
+ * A screen inside no place answers its trail's last item and never home, since "you are at home" on
+ * a settings page would be false. A form takes its trail rather than its scope: the scope tier is
+ * pressable by construction, and the bar must never carry a link beside unsaved input.
  */
 export function breadcrumbCrumb(chrome: Chrome, guest = false): BreadcrumbCrumb | null {
     if (guest) {

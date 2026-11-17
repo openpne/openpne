@@ -42,7 +42,6 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
         props: {
             auth: { user },
             enabledFeatures: allOn,
-            look: 'standard',
             unread: { friendRequests: 0, unreadMessages: 0, notifications: 0, groupTalks: 0 },
             ...props,
         },
@@ -62,13 +61,14 @@ const named = (...names: string[]): void => {
 const counted = { friendRequests: 4, unreadMessages: 5, notifications: 2, groupTalks: 3 };
 
 /*
- * The bar's tab draws the pill ahead of the visible word, so its phrase is a separate sr-only span
- * after the word: every control names itself word first.
+ * The bar's one mark is a dot on the notifications tab, so its phrase is a separate sr-only span
+ * after the word: the control names itself word first, and the tabs with no mark say only the word.
  */
 test('the bar tab is named word first', () => {
-    render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread: counted })} />);
+    arrive('dashboard', '/dashboard', { unread: counted });
+    render(<BottomNav />);
 
-    named('%Communities% 3 %communities% with new talk messages', 'Notifications 2 unread notifications');
+    named('%Communities%', 'Notifications 2 unread notifications');
 });
 
 test('a nav entry is named word first, as it was', () => {
@@ -97,9 +97,10 @@ test('a count of one is said in the singular, on every phrase the nav carries', 
 
 test('the bar tab says one in the singular too', () => {
     const unread = { friendRequests: 1, unreadMessages: 1, notifications: 1, groupTalks: 1 };
-    render(<BottomNav chrome={arrive('dashboard', '/dashboard', { unread })} />);
+    arrive('dashboard', '/dashboard', { unread });
+    render(<BottomNav />);
 
-    named('%Communities% 1 %community% with new talk messages', 'Notifications 1 unread notification');
+    named('Notifications 1 unread notification');
 });
 
 test('a hub tab is named word first, as it was', () => {

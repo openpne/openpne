@@ -14,7 +14,7 @@ const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
 
 /**
  * Only where a screen is inside something: home, a hub and anything the sidebar's own active row
- * already names render nothing (docs/internals/looks.md, "The registry"). It is a surface rather
+ * already names render nothing (docs/internals/modern-frame.md, "Desk width"). It is a surface rather
  * than a pill floating on nothing — left transparent it took the clicks of everything that scrolled
  * under it.
  */

@@ -175,11 +175,9 @@ choice (6) is writable — the member config page sets it — so a member can op
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 
-Within Modern, the **look** is a named set of deviations from the standard layout
-([`App\Support\Look`](../../app/Support/Look.php), shared as the `look` prop). A look
-decides the shell chrome around a page, never the page, its route or its sources, and a
-screen it says nothing about renders standard. Neither a site nor a member chooses it: everyone gets `tabbed`, a
-signed-out visitor without the member-only parts. See [looks.md](looks.md).
+Within Modern there is one frame around every page, the same for every site and member, a
+signed-out visitor getting it without the member-only parts. See
+[modern-frame.md](modern-frame.md).
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern
@@ -206,17 +204,10 @@ flash. The shell and the frame, never a page, also own the positions a package m
 into ([layout-hooks.md](layout-hooks.md)). Per-section defaults live in the chrome registry
 ([`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts)) — the same
 source the nav reads, so nav labels and hub headings cannot drift. The layout
-resolves that chrome once and hands the result to both the shell and the frame, so
-the mobile (< lg) top bar varies with the page class: brand on the latest home issue, the
-section title on a hub (the bar's copy is hidden from assistive technology, so the
-page's own h1 is its one announcement), and on a
-detail page back plus the registry's `scope` — the
-group or member the page belongs to, as one tappable identity block in the
-brand block's grammar. A form (and any page with no single scope) shows its context
-as static centered text instead (a compose screen shows only its close control and
-its actions — see below). The in-page breadcrumb row is therefore
-desktop-only, and so is the heading row's action button: on mobile the registry's
-`action` is the extended FAB
+resolves that chrome once and hands the result to both the shell and the frame. What the
+frame draws from it — the phone header, the bottom tabs, the drawer, the desk-width place bar —
+is [modern-frame.md](modern-frame.md). The heading row's action button is desktop-only: on
+mobile the registry's `action` is the extended FAB
 ([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
 bottom bar. That mobile chrome recedes as a signed-in member reads: scrolling down
 slides both bars away and collapses the FAB (one shell-level listener,
@@ -231,7 +222,7 @@ hub's instant-save controls are not.
 The registry's `compose` flag (which implies `form`) marks the seven screens whose
 job is writing one thing — creating and editing a diary, a topic, an event, a
 message, and posting to the timeline. Below lg those become a full-page sheet: the
-top bar carries a close control with the back control's semantics plus the page's
+top bar carries a close control (in-app history, else the registry's trail) plus the page's
 own action(s), portalled in by
 [`ComposeSheetAction`](../../resources/js/components/compose/compose-sheet-action.tsx).
 A form that submits natively wires them as external submitters

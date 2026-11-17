@@ -151,7 +151,7 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
                 // The card's own edges, from the card: below lg both run to the screen, at lg both
                 // come back inside the frame — they are one surface split by a border, not two.
                 BLEED_EDGES,
-                // The transition is for the look whose bottom bar leaves when someone writes: the var
+                // The transition is for the bottom bar leaving when someone writes: the var
                 // jumps, but the length it computes to is what animates.
                 'sticky bottom-0 z-10 border-t border-border bg-background px-3 pt-2 pb-offset-2 transition-[padding-bottom] duration-200 motion-reduce:transition-none sm:px-4',
                 dragging && 'ring-2 ring-ring ring-inset',

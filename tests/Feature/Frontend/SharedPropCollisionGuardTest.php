@@ -23,7 +23,7 @@ class SharedPropCollisionGuardTest extends TestCase
     {
         $shared = $this->sharedPropNames();
         $this->assertNotEmpty($shared, 'share() answered no props — the guard has gone stale.');
-        $this->assertContains('look', $shared);
+        $this->assertContains('modernHome', $shared);
         // From parent::share(), which a source scrape of the middleware would never see: a page
         // prop named `errors` would swallow Inertia's validation bag the same silent way.
         $this->assertContains('errors', $shared);
