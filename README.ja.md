@@ -55,5 +55,6 @@ docker compose exec app php artisan openpne:member:invite you@example.com
 
 - 開発の手順: [README.md](README.md#developing)(英語)
 - OpenPNE 3 からの移行: [docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)(英語)
+- 入れられない・更新できない、不具合の報告: [New issue](https://github.com/openpne/openpne/issues/new/choose) のフォーム(項目は英語、記入は日本語でかまいません)
 - 脆弱性の報告: [SECURITY.md](SECURITY.md)(英語)
 - ライセンス: Apache License 2.0([LICENSE](LICENSE))

@@ -147,6 +147,12 @@ Running an OpenPNE 3 site? [docs/upgrading-from-openpne3.md](docs/upgrading-from
 migrates its data into a fresh OpenPNE 4 install — rehearsed against a dump while the old site keeps
 serving, then repeated as the cutover.
 
+## Reporting a problem
+
+A site that will not install or update, and a bug in one that runs, each have a form under
+[New issue](https://github.com/openpne/openpne/issues/new/choose). A report in Japanese is as welcome
+as one in English.
+
 ## Security
 
 Found a vulnerability? [SECURITY.md](SECURITY.md) says how to report it privately.

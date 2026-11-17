@@ -5,9 +5,15 @@ body:
   - type: markdown
     attributes:
       value: |
-        For a site that would not install, start, or move to the next release. English or Japanese, either is fine.
+        For a site that would not install, start, or move to the next release; a failed upgrade from OpenPNE 3 goes to the bug report form. English or Japanese, either is fine.
 
-        Leave out secrets: `APP_KEY`, passwords, tokens, and anything about your members. A security problem goes to the [private report form](https://github.com/openpne/openpne/security/advisories/new), not here.
+        This issue is public. Before pasting output or a log, take out:
+
+        - registration, invitation and password-reset links (anyone who opens one can use it), and sign-in codes: a command prints them, and a site whose mail goes to the log writes the whole message there;
+        - `APP_KEY`, passwords and tokens;
+        - anything about your members.
+
+        A security problem goes to the [private report form](https://github.com/openpne/openpne/security/advisories/new), not here.
   - type: dropdown
     id: method
     attributes:
@@ -25,7 +31,7 @@ body:
     attributes:
       label: OpenPNE version
       description: The release, from the archive's name or its `RELEASE` file, or the commit (`git rev-parse --short HEAD`). For an update, the release you left and the one you were moving to.
-      placeholder: v4.0.0-alpha.1
+      placeholder: 4.0.0-alpha.1
     validations:
       required: true
   - type: input
@@ -38,7 +44,7 @@ body:
     id: php
     attributes:
       label: PHP version
-      description: The first line of `php -v`.
+      description: The first line of `php -v`, and the version the web server runs when it is another.
       placeholder: PHP 8.5.4 (cli)
   - type: input
     id: database
@@ -74,11 +80,11 @@ body:
     id: output
     attributes:
       label: Output
-      description: The command's output, or the error the page showed, as text.
+      description: The command's output, or the error the page showed, as text. A link the command printed is a credential; replace it with `<link>`.
       render: text
   - type: textarea
     id: log
     attributes:
       label: Log
-      description: The last lines of the newest `storage/logs/laravel-*.log`, and of the web server's error log when a page answered 500 or stayed blank.
+      description: The last lines of the newest `storage/logs/laravel-*.log` (read as the user the site runs as), and of the web server's error log when a page answered 500 or stayed blank. Take out any mail message and any link in them.
       render: text
