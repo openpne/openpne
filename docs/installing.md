@@ -366,19 +366,44 @@ Serve the site over HTTPS. With `APP_ENV=production` every link the site writes 
 its cookies are sent over HTTPS only, wherever TLS ends: over plain `http://` the pages load and
 nobody can sign in.
 
-When TLS ends in the web server above, add the certificate to its configuration and nothing else.
-When it ends in something in front of it (a load balancer, a CDN, another nginx), the site sees
-that proxy's address as every member's, and the limits on sign-in attempts count everyone together.
-**Only then**, name the proxy in `.env`, by address or range, comma-separated; with nothing in
-front of the web server the setting stays empty:
+Where TLS ends decides one line of `.env`, `TRUSTED_PROXIES`: the addresses the site believes
+when they say which client a request came from. Something in front of the web server (a load
+balancer, a CDN, another nginx) is that client as far as the site can see, so without the line
+every member has the proxy's address and the limits on sign-in attempts count everyone together.
+**Do one of the three below.**
+
+### Either: nothing in front
+
+TLS ends in the web server of step 4: add the certificate to its configuration. The setting stays
+empty, as `.env.example` has it:
+
+```ini
+TRUSTED_PROXIES=
+```
+
+### Or: one proxy in front
+
+Instead of the section above. A load balancer or another web server ends TLS and passes requests
+on; name its address, as the web server of step 4 sees it:
 
 ```ini
 TRUSTED_PROXIES=10.0.0.5
 ```
 
-The proxy has to send `X-Forwarded-For`, and to pass the `Host` header through unchanged. Do not
-name an address that anyone other than the proxy can send requests from: whoever can is believed
-about the address they come from. See [runtime.md](internals/runtime.md#reverse-proxy--https).
+### Or: several proxies, or a range of them
+
+Instead of both sections above. A CDN reaches the server from many addresses; name the ranges it
+publishes and each proxy between it and the web server as well, separated by commas with no space
+after them (a space in an unquoted value makes `.env` unreadable, and every page fails):
+
+```ini
+TRUSTED_PROXIES=203.0.113.0/24,198.51.100.0/24,10.0.0.5
+```
+
+With a proxy in front, it has to send `X-Forwarded-For` and to pass the `Host` header through
+unchanged. Name no address that anyone other than a proxy can send requests from: whoever can is
+believed about the address they come from. See
+[runtime.md](internals/runtime.md#reverse-proxy--https).
 
 ## 6. Background work
 
