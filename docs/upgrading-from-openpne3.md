@@ -43,9 +43,10 @@ can run at all, and one decides how to take the dump.
 
 ## 1. Install OpenPNE 4 on a fresh database
 
-Install it the ordinary way — [with Docker](../README.md#developing) or
-[without](../README.md#without-docker) — with one thing set before you start it: `.env` must point at
-a **fresh, empty MySQL database**, not the SQLite default. These are the settings the rest of this
+Install it the ordinary way — on a server by [installing.md](installing.md), or on your own machine
+[with Docker](../README.md#developing) or [without](../README.md#without-docker) — with one thing
+set before you start it: `.env` must point at a **fresh, empty MySQL database**, not the SQLite
+default. These are the settings the rest of this
 document refers to as `DB_*`:
 
 ```dotenv
@@ -69,11 +70,17 @@ The first container start with the Docker setup runs the migrations itself, afte
 dependencies and generating `APP_KEY`; on the host, run `php artisan migrate`. Skip
 `openpne:admin:create` too: the administrators arrive with the data.
 
+On a server set up by [installing.md](installing.md), that makes its step 3
+`php artisan key:generate` and `php artisan migrate --force` (and `passport:keys`, if wanted), and
+leaves out its step 8: the members arrive with the data as well. Its steps 4 to 7 (the web server, HTTPS, background work,
+mail) are as written there, and have to be in place before the site is opened to members.
+
 Compose ships no database of its own, so with Docker `DB_HOST` has to name a MySQL server the
 *container* can reach: `127.0.0.1` there means the container itself, not your machine.
 
 **Where to run the commands.** Every `php artisan …` below runs from the application root, on the
-machine holding that `.env`. With the Docker setup, prefix them:
+machine holding that `.env`, as the user the site runs as (a command run as another leaves files
+the site cannot write to). With the Docker setup, prefix them:
 `docker compose exec app php artisan …`.
 
 ## 2. Restore the OpenPNE 3 dump

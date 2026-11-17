@@ -50,8 +50,16 @@ Run them in the app root, as the user the site runs as.
 2. **Back up**, now that nothing is writing: a dump of the database, and `.env` if it is not
    already kept somewhere else. With the default `OPENPNE_FILES_DISK=blob` the stored files are in
    that dump. If the setting names a disk, copy what the disk holds at the same moment, so the
-   rows and the files they point to match. For SQLite,
-   `sqlite3 database/database.sqlite ".backup '/path/to/copy.sqlite'"` writes a consistent copy.
+   rows and the files they point to match. For SQLite, the database is the file `DB_DATABASE`
+   names, or `database/database.sqlite` in the app root when it names none, and this writes a
+   consistent copy of it:
+
+   ```bash
+   sqlite3 -readonly /path/to/database.sqlite ".backup '/path/to/copy.sqlite'"
+   ```
+
+   `-readonly` makes a wrong path an error. Without it `sqlite3` creates an empty database at
+   that path and copies that, and says nothing.
 
 3. **Remove the caches the running release built**, while its code is still the one checked out:
 
@@ -143,9 +151,10 @@ next release that has one, or builds this one from source on another machine; th
 earlier release is not this release.
 
 An archive replaces the whole directory, so the steps differ wherever the ones above use git,
-Composer or npm. Below, the site is at `/srv/openpne`, runs `OLD` and moves to `NEW`; use your own
-path and versions. The user the site runs as has to be able to write to the directory above it
-(`/srv` here), and unpacks the archive itself, so that the new tree is its own.
+Composer or npm. Below, the site is at `/srv/openpne/site`, as [installing.md](installing.md) sets
+one up, runs `OLD` and moves to `NEW`; use your own path and versions. The user the site runs as
+has to be able to write to the directory above it (`/srv/openpne` here), and unpacks the archive
+itself, so that the new tree is its own.
 
 - **Before you start**: there is no `main` to have followed, so that check does not apply.
 - **Step 1**, and then **stop the queue worker** rather than wait for it: stop it in whatever
@@ -159,55 +168,64 @@ path and versions. The user the site runs as has to be able to write to the dire
      stay behind and still be loaded.
 
      ```bash
-     tar -xzf openpne-NEW.tar.gz -C /srv          # makes /srv/openpne-NEW
+     tar -xzf /srv/openpne/openpne-NEW.tar.gz -C /srv/openpne   # makes /srv/openpne/openpne-NEW
      ```
 
   2. Carry the site's own files into it.
 
      ```bash
-     cp -a /srv/openpne/.env /srv/openpne-NEW/.env
-     rm -rf /srv/openpne-NEW/storage
-     cp -a /srv/openpne/storage /srv/openpne-NEW/storage
-     diff /srv/openpne/.env.example /srv/openpne-NEW/.env.example   # what the release added
+     cp -a /srv/openpne/site/.env /srv/openpne/openpne-NEW/.env
+     rm -rf /srv/openpne/openpne-NEW/storage
+     cp -a /srv/openpne/site/storage /srv/openpne/openpne-NEW/storage
+     chmod o-rwx /srv/openpne/openpne-NEW/bootstrap/cache    # if the site's own is closed to others
+     # what the release added:
+     diff /srv/openpne/site/.env.example /srv/openpne/openpne-NEW/.env.example
      ```
 
-     Give `/srv/openpne-NEW/.env` what the last command shows it needs. The copy of `storage/`
-     takes the room and the time of everything in it, stored files included when
+     Give `/srv/openpne/openpne-NEW/.env` what the last command shows it needs. The copy of
+     `storage/` takes the room and the time of everything in it, stored files included when
      `OPENPNE_FILES_DISK` names a local disk. A site that keeps `.env` or `storage/` outside the
-     app root ([runtime.md](internals/runtime.md)) carries neither.
+     app root ([runtime.md](internals/runtime.md)) carries neither, and runs the `chmod` line all
+     the same: `bootstrap/cache` is in the release's tree.
 
-     - **A directory or a file you added** comes along as it is, a theme of your own for one:
-       `cp -a /srv/openpne/public/opSkinThemePlugin/NAME /srv/openpne-NEW/public/opSkinThemePlugin/NAME`.
+     - **A directory or a file you added** comes along as it is, a theme of your own for one.
        Copy what is yours, not the directory around it: the themes a release ships are the new
        release's.
+
+       ```bash
+       cp -a /srv/openpne/site/public/opSkinThemePlugin/NAME \
+         /srv/openpne/openpne-NEW/public/opSkinThemePlugin/NAME
+       ```
+
      - **A file of the release that you edited** (`public/.htaccess`, `public/robots.txt`) takes
        your edit, not your file, or the new release's own changes to it are lost. With the
        archive of the release the site runs:
 
        ```bash
-       tar -xzf openpne-OLD.tar.gz -C /tmp
-       diff -u /tmp/openpne-OLD/public/.htaccess /srv/openpne/public/.htaccess > htaccess.patch
-       patch /srv/openpne-NEW/public/.htaccess < htaccess.patch
+       tar -xzf /srv/openpne/openpne-OLD.tar.gz -C /tmp
+       diff -u /tmp/openpne-OLD/public/.htaccess /srv/openpne/site/public/.htaccess \
+         > /tmp/htaccess.patch
+       patch /srv/openpne/openpne-NEW/public/.htaccess < /tmp/htaccess.patch
        ```
 
        If `patch` rejects a part, stop and bring that part over by hand.
      - **The database**: nothing for MySQL, and nothing for a SQLite file that `DB_DATABASE` names
        by a path outside the app root. For SQLite at the default `database/database.sqlite`, put
-       the copy step 2 made at `/srv/openpne-NEW/database/database.sqlite`. Do not copy
+       the copy step 2 made at `/srv/openpne/openpne-NEW/database/database.sqlite`. Do not copy
        `database.sqlite` itself: under WAL the last rows committed can still be in the `-wal` file
        beside it ([changing-database-engine.md](changing-database-engine.md)).
 
   3. Put the release at the site's path, so the web server, cron and the worker's supervisor go on
-     pointing where they did, and enter it again: a shell that was in `/srv/openpne` is in the
+     pointing where they did, and enter it again: a shell that was in `/srv/openpne/site` is in the
      directory that was moved away, whatever its prompt says.
 
      ```bash
-     mv /srv/openpne /srv/openpne-OLD
-     mv /srv/openpne-NEW /srv/openpne
-     cd /srv/openpne
+     mv /srv/openpne/site /srv/openpne/openpne-OLD
+     mv /srv/openpne/openpne-NEW /srv/openpne/site
+     cd /srv/openpne/site
      ```
 
-     `/srv/openpne-OLD` must not exist beforehand: `mv` would put the site inside it.
+     `/srv/openpne/openpne-OLD` must not exist beforehand: `mv` would put the site inside it.
 
 - **Step 7** as written.
 - **Step 8**: reload PHP-FPM, run `php artisan optimize` if your deployment does, and **start the
@@ -221,10 +239,12 @@ path and versions. The user the site runs as has to be able to write to the dire
    again. If the failure came before that, the site is where it was: move nothing.
 
    ```bash
-   mv /srv/openpne /srv/openpne-failed
-   mv /srv/openpne-OLD /srv/openpne
-   cd /srv/openpne
+   mv /srv/openpne/site /srv/openpne/openpne-failed
+   mv /srv/openpne/openpne-OLD /srv/openpne/site
+   cd /srv/openpne/site
    ```
+
+   `/srv/openpne/openpne-failed` must not exist beforehand either.
 
 3. Do steps 1, 3 and 4 of [If a step fails](#if-a-step-fails): the `.env` if it is kept outside the
    app root and you changed it, the database, the disk's files.

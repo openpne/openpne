@@ -10,8 +10,8 @@
 #                                    stored file, then walk docs/updating.md to the new one
 #
 # `update` reads ARCHIVE_DB: sqlite-default (database/database.sqlite in WAL mode, the default),
-# sqlite-outside (an absolute path outside the tree), relocated (that, with .env and storage/
-# outside the tree too) or mysql (DB_* from the environment, an empty database). ARCHIVE_NEW_MARK,
+# sqlite-outside (WAL too, at an absolute path outside the tree), relocated (that, with .env and
+# storage/ outside the tree too) or mysql (DB_* from the environment, an empty database). ARCHIVE_NEW_MARK,
 # when set, is text only the new release's login page has: the page must have it after the update
 # and must have lost it after going back.
 set -euo pipefail
@@ -239,6 +239,7 @@ update() {
       mkdir -p "$work/data"
       db=$work/data/site.sqlite
       set_env .env DB_DATABASE "$db"
+      set_env .env DB_JOURNAL_MODE WAL
       ;;
     mysql)
       for key in DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD; do
@@ -292,7 +293,7 @@ update() {
 
   step "back up"
   if [ -n "$db" ]; then
-    sqlite3 "$db" ".backup '$work/backup.sqlite'"
+    sqlite3 -readonly "$db" ".backup '$work/backup.sqlite'"
     if [ "$mode" = sqlite-default ]; then
       # The fixture has to be one where the shortcut loses data, or this check proves nothing.
       cp "$db" "$work/alone.sqlite"
@@ -318,6 +319,7 @@ update() {
     rm -rf "$new/storage"
     cp -a "$root/openpne/storage" "$new/storage"
   fi
+  chmod o-rwx "$new/bootstrap/cache"
   cp -a "$root/openpne/$theme" "$new/$theme"
   # The operator's edit to a file the release ships, as a patch against the archive it came from.
   old=$(unpack "$old_dir/openpne-$old_version.tar.gz" "$work/pristine")
@@ -353,6 +355,7 @@ update() {
   probe check
   grep -qxF "version=$new_version" RELEASE || die "RELEASE is not the new release's"
   [ -f "$theme/css/main.css" ] || die "the operator's theme did not come along"
+  [ -z "$(find bootstrap/cache -maxdepth 0 -perm /o=rwx)" ] || die "bootstrap/cache, where cached settings go, is open to other users"
   [ ! -e "$marker" ] || die "a file only the old release had is still there"
   grep -qF 'X-Operator' public/.htaccess || die "the operator's rule is gone from public/.htaccess"
   diff <(grep -vF -e 'X-Operator' -e "The operator's own rule." public/.htaccess) "$work/new.htaccess" >/dev/null \

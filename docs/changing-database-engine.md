@@ -40,9 +40,10 @@ wal
 
 Backing the site up is then one command, not one file copy. Under WAL a committed row can still be
 in the `-wal` file beside the database, so copying the database on its own quietly produces a backup
-missing the newest writes. `sqlite3 database.sqlite ".backup out.sqlite"` takes the whole of it and
-keeps WAL mode; `VACUUM INTO` also takes the whole of it but produces a file in the default journal
-mode, so a database restored from one needs setting again.
+missing the newest writes. `sqlite3 -readonly database.sqlite ".backup out.sqlite"` takes the whole
+of it and keeps WAL mode (`-readonly` makes a wrong path an error, where `sqlite3` would create an
+empty database there and copy that); `VACUUM INTO` also takes the whole of it but produces a file in
+the default journal mode, so a database restored from one needs setting again.
 
 **How much fsync to pay for that.** `DB_SYNCHRONOUS` is the other half of the WAL decision, and takes
 `OFF`, `NORMAL`, `FULL` or `EXTRA`. Unset leaves SQLite's own `FULL`, which flushes to disk on every
