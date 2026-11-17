@@ -26,7 +26,7 @@ const at = '2026-11-12T13:00:00Z';
 test('the name and the date are on lines of their own', () => {
     const { container } = render(<PostByline author={author} at={at} />);
 
-    const name = container.querySelector('a[href="/member/3"]');
+    const name = container.querySelector('a[href="/member/3"]:not([aria-hidden])');
     const date = container.querySelector('time');
 
     expect(name?.textContent).toBe('Rin');
@@ -35,10 +35,14 @@ test('the name and the date are on lines of their own', () => {
     expect(name?.parentElement?.contains(date ?? null)).toBe(false);
 });
 
-test('the name leads where the page says', () => {
+test('the avatar and the name lead where the page says, and only the name is offered to a keyboard', () => {
     const { container } = render(<PostByline author={author} href="/member/3/timeline" at={at} />);
 
-    expect(container.querySelector('a')?.getAttribute('href')).toBe('/member/3/timeline');
+    const links = [...container.querySelectorAll('a')];
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/member/3/timeline', '/member/3/timeline']);
+    expect(links.map((a) => a.getAttribute('aria-hidden'))).toEqual(['true', null]);
+    expect(links.map((a) => a.getAttribute('tabindex'))).toEqual(['-1', null]);
+    expect(links.at(1)?.textContent).toBe('Rin');
 });
 
 test('a withdrawn author has a placeholder and no link', () => {
@@ -57,11 +61,10 @@ test('an edit is marked beside the date', () => {
     expect(edited.container.querySelector('time')?.parentElement?.textContent).toContain('(Edited)');
 });
 
-test('the menu is shown only when the page gives one', () => {
-    const without = render(<PostByline author={author} at={at} />);
-    expect(without.container.querySelector('button')).toBeNull();
-    cleanup();
+test('the menu the page gives sits after the name and the date', () => {
+    const { container } = render(<PostByline author={author} at={at} menu={<button type="button">more</button>} />);
 
-    const withMenu = render(<PostByline author={author} at={at} menu={<button type="button">more</button>} />);
-    expect(withMenu.container.querySelector('button')?.textContent).toBe('more');
+    const button = container.querySelector('button');
+    expect(button?.textContent).toBe('more');
+    expect(button?.compareDocumentPosition(container.querySelector('time') as Node)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
 });
