@@ -25,7 +25,7 @@ use Tests\TestCase;
  * Beyond the entrances the shipped page already offered, this pins the two things the layout adds:
  * the groups filed beside this one, and the picture strip whose every file is asked again.
  */
-class UnifiedGroupTest extends TestCase
+class GroupPageTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -150,7 +150,7 @@ class UnifiedGroupTest extends TestCase
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/group')
+                ->component('group/show')
                 ->where('group.id', $group->getKey())
                 ->where('group.name', $group->name)
                 ->where('group.bio', 'what this group is for')
@@ -193,7 +193,7 @@ class UnifiedGroupTest extends TestCase
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")->assertOk()
-            ->assertInertia(fn ($page) => $page->component('unified/group')->has('about.createdOn')->where('about.admin', null));
+            ->assertInertia(fn ($page) => $page->component('group/show')->has('about.createdOn')->where('about.admin', null));
         $faces = $this->queriesWith('group_members', 'limit 9');
         $topics = $this->queriesWith('group_topics', 'comments_count');
         $events = $this->queriesWith('participants_count');
@@ -309,7 +309,7 @@ class UnifiedGroupTest extends TestCase
         DB::enableQueryLog();
         $this->actingAs($stranger)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/group')
+                ->component('group/show')
                 ->where('recentTopics', null)
                 ->where('recentEvents', null)
                 ->where('canViewTalk', false)

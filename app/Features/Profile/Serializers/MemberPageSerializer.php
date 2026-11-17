@@ -6,7 +6,7 @@ use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\Friend\Queries\ListFriends;
 use App\Features\Group\Queries\ListMemberGroups;
-use App\Features\Home\Serializers\UnifiedSections;
+use App\Features\Home\Serializers\PageSections;
 use App\Features\Profile\Data\ProfileFieldValue;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Models\Member;
@@ -18,7 +18,7 @@ use Illuminate\Support\Collection;
  * viewer's clearance. The page-level gates and the fields' own visibility are the controller's,
  * already applied.
  */
-final class UnifiedMemberSerializer
+final class MemberPageSerializer
 {
     private const DIARY_ROWS = 3;
 
@@ -45,21 +45,21 @@ final class UnifiedMemberSerializer
         // The same rows feed both halves of the "latest" section: the newest few as list rows, all of
         // them as picture sources.
         $diaries = Feature::Diary->enabled()
-            ? (new RecentMemberDiaries)($viewer, $owner, UnifiedSections::PHOTOS)->load('images.file')
+            ? (new RecentMemberDiaries)($viewer, $owner, PageSections::PHOTOS)->load('images.file')
             : collect();
 
         return [
             'profile' => self::profile($owner, $fields, $lang, $isSelf, $age, $friendStatus),
             'fields' => ProfileSerializer::fieldRows($fields, $lang),
             // A joined group is public to anyone who may open the page, so this takes no viewer.
-            'groups' => UnifiedSections::groups(Feature::Group->enabled()
+            'groups' => PageSections::groups(Feature::Group->enabled()
                 ? (new ListMemberGroups)->take($owner, self::GROUPS)
                 : collect()),
-            'friends' => UnifiedSections::people(Feature::Friend->enabled()
+            'friends' => PageSections::people(Feature::Friend->enabled()
                 ? (new ListFriends)->take($viewer, $owner, self::FRIENDS)
                 : collect()),
-            'recentPhotos' => UnifiedSections::photos($diaries, Feature::Timeline->enabled()
-                ? (new MemberTimeline)->take($viewer, $owner, UnifiedSections::PHOTOS)
+            'recentPhotos' => PageSections::photos($diaries, Feature::Timeline->enabled()
+                ? (new MemberTimeline)->take($viewer, $owner, PageSections::PHOTOS)
                 : collect()),
             'recentDiaries' => $diaries->take(self::DIARY_ROWS)->map([DiarySerializer::class, 'summary'])->values()->all(),
         ];

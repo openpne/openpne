@@ -267,23 +267,6 @@ test('the run of issues is titled by the same words the crumb into it uses', () 
     assert.deepEqual(list.context, [{ href: '/', label: { key: 'Home', replacements: undefined } }]);
 });
 
-test('the unified member page is the same screen as the profile it replaces', () => {
-    // Same route, same chrome as the page it replaced.
-    assert.deepEqual(chrome('unified/member', {}), chrome('member/show', {}));
-    assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/member'));
-    // A page about somebody else: a place top, not home.
-    assert.ok(!isHomeComponent('unified/member', 'issue'));
-});
-
-test('the unified group page is the same screen as the group top it replaces', () => {
-    // Same route, same chrome as the page it replaced.
-    assert.deepEqual(chrome('unified/group', {}), chrome('community/show', {}));
-    assert.ok(NO_CONTEXT_COMPONENTS.includes('unified/group'));
-    // A page about the group itself: a place top, scoped to nothing above it.
-    assert.ok(!isHomeComponent('unified/group', 'issue'));
-    assert.equal(chrome('unified/group', {}).scope, undefined);
-});
-
 test('a community-scoped page is scoped to the group', () => {
     const group = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
 
@@ -401,7 +384,7 @@ test('the withdrawn bucket names itself, since it has no member to be scoped to'
 });
 
 test('an ordinary page keeps the bottom bar and lets its chrome recede', () => {
-    for (const component of ['dashboard', 'notifications/index', 'community/show', 'group/topic/index']) {
+    for (const component of ['dashboard', 'notifications/index', 'group/show', 'group/topic/index']) {
         const page = chrome(component, { group: cyclists, canPost: true });
 
         assert.equal(hasBottomNav(page), true, component);
@@ -541,23 +524,24 @@ test("a guest's crumb leads only where a guest may go", () => {
 });
 
 test("a guest's place top, hub and site policy answer no crumb, as a member's do", () => {
-    assert.equal(guestCrumb('unified/member', { profile: owner }), null);
+    assert.equal(guestCrumb('member/show', { profile: owner }), null);
     assert.equal(guestCrumb('diary/feed', { variant: 'all' }), null);
     // The page's own heading names a policy directly below the bar.
     assert.equal(guestCrumb('policy/show', { kind: 'terms' }), null);
 });
 
 test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {
-    // The three-page symmetry extends to the header, and the place's own hero names it directly
-    // below: naming it twice in 60px was the duplication the owner asked out of.
+    // The place's own hero names it directly below: naming it twice in 60px was the duplication the
+    // owner asked out of.
     for (const [component, props] of [
-        ['unified/group', { group: cyclists }],
-        ['community/show', { group: cyclists }],
-        ['unified/member', { profile: owner }],
-        ['member/show', { profile: { owner } }],
+        ['group/show', { group: cyclists }],
+        ['member/show', { profile: owner }],
     ] as const) {
         assert.equal(isPlaceTop(component), true);
         assert.equal(crumb(component, props), null);
+        assert.ok(NO_CONTEXT_COMPONENTS.includes(component));
+        assert.ok(!isHomeComponent(component, 'issue'));
+        assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).scope, undefined);
     }
     assert.equal(isPlaceTop('group/talk/index'), false);
     assert.equal(isPlaceTop('dashboard'), false);

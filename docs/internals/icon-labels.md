@@ -79,7 +79,7 @@ it held is lost. A pointer attached later raises panels on controls mounted from
   raised over one. Moving them to `aria-disabled` plus a click guard was considered and dropped: the
   behavior change is real and the reward is a control's own name, when what a disabled control needs
   said is *why it cannot be pressed* — a different feature.
-- **`title=` for truncation.** The remaining native `title` attributes (nine-table, people-grid) give
+- **`title=` for truncation.** The remaining native `title` attributes (people-grid) give
   the full text of a line that had to be cut. That is a different job from naming a control, and it
   stays.
 

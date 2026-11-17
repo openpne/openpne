@@ -11,21 +11,21 @@ import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
 import { GroupAbout } from '../community/group-about';
 import type { CommunityRoleSlug, EventSummary, GroupAbout as GroupAboutData, TopicSummary } from '../community/types';
-import { BoardCards } from './board-cards';
-import { GroupGrid, type HomeGroup } from './group-grid';
-import { HOME_CARD, HomeSection } from './home-section';
-import { PeopleGrid } from './people-grid';
-import { type HomePhoto, PhotoGrid } from './photo-grid';
-import { ProfileHeader, type UnifiedProfile } from './profile-header';
+import { BoardCards } from '@/components/sections/board-cards';
+import { GroupGrid, type HomeGroup } from '@/components/sections/group-grid';
+import { HOME_CARD, HomeSection } from '@/components/sections/home-section';
+import { PeopleGrid } from '@/components/sections/people-grid';
+import { type HomePhoto, PhotoGrid } from '@/components/sections/photo-grid';
+import { ProfileHeader, type HeaderProfile } from '@/components/sections/profile-header';
 
-interface UnifiedGroupIdentity extends UnifiedProfile {
+interface GroupIdentity extends HeaderProfile {
     memberCount: number;
     categoryName: string | null;
     registerPolicy: 'open' | 'approval'; // drives the join-button label
 }
 
-interface UnifiedGroupProps extends PageProps {
-    group: UnifiedGroupIdentity;
+interface GroupShowProps extends PageProps {
+    group: GroupIdentity;
     viewerRole: CommunityRoleSlug | null;
     isPending: boolean;
     isTransferNominee: boolean; // the viewer is the pending admin-transfer nominee → the accept/reject card
@@ -49,14 +49,14 @@ interface UnifiedGroupProps extends PageProps {
  * Every entrance the shipped group page offers is here with the same condition and the same
  * destination (docs/internals/modern-frame.md, "What the member and group pages may not do").
  */
-export default function UnifiedGroup() {
+export default function GroupShow() {
     const t = useT();
     const confirm = useConfirm();
     const {
         group, viewerRole, isPending, isTransferNominee, canManage, canJoin, canLeave, members,
         categoryGroups, recentTopics, canPostTopic, recentEvents, canPostEvent, canViewTalk,
         talkPreview, talkUnread, recentPhotos, about,
-    } = usePage<UnifiedGroupProps>().props;
+    } = usePage<GroupShowProps>().props;
 
     const join = () => router.post(`/groups/${group.id}/join`);
     const leave = async () => {

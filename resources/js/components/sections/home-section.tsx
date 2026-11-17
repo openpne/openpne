@@ -5,9 +5,9 @@ import { Heading } from '@/components/ui/heading';
 import { cn } from '@/lib/utils';
 
 /**
- * The unified surface's card: softer-cornered and borderless, unlike the app-wide Card, because the
- * mock this page follows separates its blocks with background and radius alone. Scoped to this page —
- * the rest of the surface keeps its bordered card on purpose.
+ * The card of the home, member and group pages: softer-cornered and borderless, unlike the app-wide
+ * Card, because these pages separate their blocks with background and radius alone. The rest of the
+ * surface keeps its bordered card on purpose.
  */
 export const HOME_CARD = 'overflow-hidden rounded-tile bg-card text-card-foreground';
 

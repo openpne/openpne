@@ -7,7 +7,7 @@ import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
 import type { AuthUser, FeatureKey, NineTableItem } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
-import type { HomeGroup } from '../unified/group-grid';
+import type { HomeGroup } from '@/components/sections/group-grid';
 import type { Issue, IssueStory, TalkBurst, TalkExcerptMessage, UpcomingEvent } from './types';
 
 vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));

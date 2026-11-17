@@ -212,7 +212,7 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
-            self::ModernHome, self::ModernGroupList => SettingGroup::Look,
+            self::ModernHome, self::ModernGroupList => SettingGroup::LandingPage,
             self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
             self::ImageUploadBrowserShrink => SettingGroup::Images,
@@ -324,7 +324,7 @@ enum SnsSettingKey: string
             SettingGroup::Timeline => $this->op3SourceName() !== null,
             SettingGroup::Auth, SettingGroup::Surface, SettingGroup::Features,
             SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard,
-            SettingGroup::Ai, SettingGroup::Look,
+            SettingGroup::Ai, SettingGroup::LandingPage,
             SettingGroup::GroupTalk, SettingGroup::Images, SettingGroup::Theme,
             SettingGroup::Capacity => false,
         };

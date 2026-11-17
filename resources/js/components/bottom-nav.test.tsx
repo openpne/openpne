@@ -82,7 +82,7 @@ test('the row marks the notification tab alone, and with a dot rather than a num
 });
 
 test('a guest gets no bar at all', () => {
-    arrive('unified/member', '/member/9', { auth: { user: null } });
+    arrive('member/show', '/member/9', { auth: { user: null } });
 
     const { container } = render(<BottomNav />);
 

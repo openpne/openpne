@@ -141,7 +141,7 @@ class GroupManageRoutesTest extends TestCase
         // The manage entry on the group page is gated on canManage; viewerRole distinguishes admin
         // (also sees Pending members) from sub-admin.
         $this->actingAs($admin)->get(route('group.show', $group))
-            ->assertInertia(fn ($page) => $page->component('unified/group')->where('canManage', true)->where('viewerRole', 'admin'));
+            ->assertInertia(fn ($page) => $page->component('group/show')->where('canManage', true)->where('viewerRole', 'admin'));
         $this->actingAs($sub)->get(route('group.show', $group))
             ->assertInertia(fn ($page) => $page->where('canManage', true)->where('viewerRole', 'sub_admin'));
         $this->actingAs($member)->get(route('group.show', $group))
@@ -198,7 +198,7 @@ class GroupManageRoutesTest extends TestCase
         $group->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
 
         $this->actingAs($nominee)->get(route('group.show', $group))
-            ->assertInertia(fn ($page) => $page->component('unified/group')->where('isTransferNominee', true));
+            ->assertInertia(fn ($page) => $page->component('group/show')->where('isTransferNominee', true));
         $this->actingAs($other)->get(route('group.show', $group))
             ->assertInertia(fn ($page) => $page->where('isTransferNominee', false));
     }

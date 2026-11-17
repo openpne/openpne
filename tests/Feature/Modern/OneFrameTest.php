@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Look;
+namespace Tests\Feature\Modern;
 
 use App\Models\Diary;
 use App\Models\Group;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
-class OneLayoutTest extends TestCase
+class OneFrameTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -45,9 +45,9 @@ class OneLayoutTest extends TestCase
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page->component('dashboard')->missing('look'));
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('member/show'));
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/group'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('group/show'));
     }
 
     public function test_a_signed_out_visitor_gets_the_same_pages_as_a_member_where_one_is_open(): void
@@ -56,7 +56,7 @@ class OneLayoutTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Open]);
 
         $this->get("/member/{$owner->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member')->where('auth.user', null));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('member/show')->where('auth.user', null));
 
         foreach ([
             "/diary/{$diary->getKey()}" => 'diary/show',

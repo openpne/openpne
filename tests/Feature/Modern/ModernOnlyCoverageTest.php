@@ -206,11 +206,11 @@ class ModernOnlyCoverageTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('timeline/tag'));
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
-            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('unified/member'));
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('member/show'));
         $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('diary/show'));
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
-            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('unified/group'));
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('group/show'));
 
         $aiAccount = Member::factory()->aiAccount($viewer)->create();
         $this->actingAs($viewer)->get("/member/config/ai/{$aiAccount->getKey()}")

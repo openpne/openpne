@@ -24,7 +24,7 @@ use Tests\TestCase;
  * Viewer and owner are different members here, so this exercises the clearance matrix the home slice
  * cannot.
  */
-class UnifiedMemberTest extends TestCase
+class MemberPageTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -111,7 +111,7 @@ class UnifiedMemberTest extends TestCase
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->has('fields')
                 ->has('groups')
                 ->has('friends')
@@ -154,7 +154,7 @@ class UnifiedMemberTest extends TestCase
 
         $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.isSelf', true)
                 ->where('profile.friendStatus', null)
             );
@@ -188,7 +188,7 @@ class UnifiedMemberTest extends TestCase
         $this->get("/member/{$owner->getKey()}")
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.name', 'Public Owner')
                 ->where('profile.isSelf', false)
                 ->where('profile.friendStatus', null)
@@ -232,7 +232,7 @@ class UnifiedMemberTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('profile.friendStatus', null)
             );
     }
@@ -460,7 +460,7 @@ class UnifiedMemberTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('unified/member')
+                ->component('member/show')
                 ->where('enabledFeatures.directMessage', false)
             );
     }

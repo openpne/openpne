@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
  * shape is a contract between the pages rather than a detail of either. Shaping only — every caller
  * has already resolved, under its own clearance, which rows to pass in.
  */
-final class UnifiedSections
+final class PageSections
 {
     /**
      * Photos in the grid, and therefore the most parents worth reading per source: one picture each

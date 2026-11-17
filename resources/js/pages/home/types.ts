@@ -3,7 +3,7 @@ import type { MentionEntity } from '@/lib/entity-split';
 import type { NineTableItem, PageProps } from '@/types';
 import type { CommunityActivityEntry } from '../community/activity-row';
 import type { MemberRef } from '../community/types';
-import type { HomeGroup } from '../unified/group-grid';
+import type { HomeGroup } from '@/components/sections/group-grid';
 import type { IssueMonth } from './issue-months';
 
 export interface IssueRef {

@@ -7,8 +7,8 @@ namespace Tests\Feature\Filament;
 use App\Filament\Pages\BannerSettings;
 use App\Filament\Pages\DesignSettings;
 use App\Filament\Pages\ImageSettings;
+use App\Filament\Pages\LandingPageSettings;
 use App\Filament\Pages\LoginScreenSettings;
-use App\Filament\Pages\LookSettings;
 use App\Filament\Pages\ThemeSettings;
 use App\Models\AdminUser;
 use Filament\Facades\Filament;
@@ -19,7 +19,7 @@ class ModernScreensClassicOnlyTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const MODERN_PAGES = [LookSettings::class, LoginScreenSettings::class, ImageSettings::class];
+    private const MODERN_PAGES = [LandingPageSettings::class, LoginScreenSettings::class, ImageSettings::class];
 
     private const CLASSIC_PAGES = [DesignSettings::class, BannerSettings::class, ThemeSettings::class];
 

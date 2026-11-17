@@ -7,7 +7,7 @@ use App\Features\Group\Queries\CategoryGroups;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
-use App\Features\Home\Serializers\UnifiedSections;
+use App\Features\Home\Serializers\PageSections;
 use App\Files\FileOwners;
 use App\Files\PostAttachments;
 use App\Models\Group;
@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Gate;
  * the rows behind them once for both layouts. The two additions this layout brings — the
  * same-category groups and the picture strip — are gathered here, each behind a gate it answered.
  */
-final class UnifiedGroupSerializer
+final class GroupPageSerializer
 {
     /**
      * @param  Collection<int, GroupMember>  $members  the 9-face preview, `member.avatar.file` loaded
@@ -64,7 +64,7 @@ final class UnifiedGroupSerializer
             'canManage' => $canManage,
             'canJoin' => $canJoin,
             'canLeave' => $canLeave,
-            'members' => UnifiedSections::people($members->pluck('member')),
+            'members' => PageSections::people($members->pluck('member')),
             'categoryGroups' => self::categoryGroups($group),
             'recentTopics' => $recentTopics === null ? null : GroupTopicSerializer::summaries($recentTopics),
             'canPostTopic' => $canPostTopic,
@@ -166,7 +166,7 @@ final class UnifiedGroupSerializer
             }
         }
 
-        return UnifiedSections::photosFromParents($parents);
+        return PageSections::photosFromParents($parents);
     }
 
     /**
@@ -182,7 +182,7 @@ final class UnifiedGroupSerializer
             ->with('images.file')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->limit(UnifiedSections::PHOTOS)
+            ->limit(PageSections::PHOTOS)
             ->get()
             ->each(fn (Model $parent) => $parent->setRelation('group', $parents->getParent()));
     }

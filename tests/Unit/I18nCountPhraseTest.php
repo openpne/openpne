@@ -23,8 +23,6 @@ class I18nCountPhraseTest extends TestCase
         'Connected apps: :count' => null,
         ':count selected' => null,
         'Digit :number of :count' => null,
-        '%Friends% (:count)' => null,
-        'Joined %communities% (:count)' => null,
         // Read by the framework, not the app: the reset mail's expiry is config (60), and the validation
         // summary carries its own singular.
         'This password reset link will expire in :count minutes.' => null,

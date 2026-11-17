@@ -107,20 +107,6 @@ class GroupSerializer
     }
 
     /**
-     * @param  iterable<GroupMember>  $members
-     * @return list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, isAi: bool, role: string}>
-     */
-    public static function members(iterable $members): array
-    {
-        $rows = [];
-        foreach ($members as $membership) {
-            $rows[] = self::member($membership);
-        }
-
-        return $rows;
-    }
-
-    /**
      * @param  LengthAwarePaginator<int, Group>  $paginator
      * @return array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */

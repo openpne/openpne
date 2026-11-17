@@ -95,7 +95,7 @@ A guest gets the same frame with the member-only parts left out:
 
 ## What the member and group pages may not do
 
-`/member/{id}` renders `unified/member` and `/groups/{group}` renders `unified/group`. Both
+`/member/{id}` renders `member/show` and `/groups/{group}` renders `group/show`. Both
 gather several sources onto one page, under one contract:
 
 - **Read-only projection.** The page re-arranges what the viewer already reads. Same routes, same

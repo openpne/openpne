@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { BookOpen } from 'lucide-react';
 import { Timestamp } from '@/components/timestamp';
-import type { DiarySummary } from '../diary/types';
+import type { DiarySummary } from '@/pages/diary/types';
 
 /**
  * Title-first rather than the canonical DiaryRow: on a page entirely about one member the byline
