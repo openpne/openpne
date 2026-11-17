@@ -40,10 +40,10 @@ then copy the fix from `main` onto the renamed branch as well (the checks ask fo
    report carries one).
 2. **Publish the draft** it leaves under Releases, without changing its tag or its files, and
    keeping the `<!-- release: … -->` line when you edit the notes. Publishing creates the tag. A
-   check then compares the tag and the attached files with what was drafted. If it fails, its
-   last `::error::` line says what to do: delete the release and the tag and draft again, or, when
-   GitHub did not answer, run the check again. A failure without such a line is not about the
-   release: run the check again.
+   check then compares the tag and the attached files with what was drafted. If it fails, the
+   last error it reports says what to do: delete the release and the tag and draft again, or, when
+   GitHub did not answer, run the check again. A failure that reports no such error is not about
+   the release: run the check again.
 3. Delete the branch.
 
 ## After publishing

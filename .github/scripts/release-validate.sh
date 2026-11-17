@@ -160,7 +160,7 @@ published() {
 
   [ "$tag" = "$drafted" ] \
     || die "the release was drafted as $drafted and published as $tag: the checks find a release by its tag name. $remedy"
-  at=$(git rev-parse --verify --quiet "refs/tags/$tag^{commit}") || die "the tag $tag is not in this checkout. This says nothing about the release: run this again."
+  at=$(git rev-parse --verify --quiet "refs/tags/$tag^{commit}") || die "the tag $tag is not in this checkout: run this again. If it is still missing, the tag was removed after the release was published: delete the release and draft it again."
   [ "$at" = "$commit" ] \
     || die "$tag points at $at, but the draft was checked as $commit: the release holds something that was not checked. $remedy"
 

@@ -35,7 +35,7 @@ in_sync() { # in_sync <what> <ls-remote flag> <remote pattern> <prefix to strip>
     || die "could not ask origin for its $1 (the reason is above). This says nothing about what is being checked: run this again."
   remote=$(printf '%s\n' "$listing" | awk -v p="$4" '$2 !~ /\^\{\}$/ { sub("^" p, "", $2); print $2 }' | { grep -E "$5" || true; } | sort)
   [ "$remote" = "$6" ] \
-    || die "the $1 here differ from origin's (here: $(printf '%s' "$6" | grep -c . || true), origin: $(printf '%s' "$remote" | grep -c . || true)): git fetch --prune --prune-tags origin"
+    || die "the $1 here differ from origin's (here: $(printf '%s' "$6" | grep -c . || true), origin: $(printf '%s' "$remote" | grep -c . || true)): git fetch --prune --prune-tags origin, or, in a workflow run, run it again"
 }
 
 last_release() {
