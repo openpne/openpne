@@ -44,7 +44,7 @@ can run at all, and one decides how to take the dump.
 ## 1. Install OpenPNE 4 on a fresh database
 
 Install it the ordinary way — on a server by [installing.md](installing.md), or on your own machine
-[with Docker](../README.md#developing) or [without](../README.md#without-docker) — with one thing
+[with Docker](../README.md#to-try-or-develop-docker-compose) or [without](developing.md#without-docker) — with one thing
 set before you start it: `.env` must point at a **fresh, empty MySQL database**, not the SQLite
 default. These are the settings the rest of this
 document refers to as `DB_*`:
