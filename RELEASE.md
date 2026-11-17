@@ -56,7 +56,9 @@ run until it is put right.
 Put back what changed. If a file is gone and cannot be put back (the archives are not built the
 same twice), remove every file from that release and change `sums=<hash>` in its line to
 `sums=none`. It is then read as a release without archives: the next run skips the update from
-them, so the update that a site which took that release from its archive makes goes unrehearsed.
+them, so the update that a site which took that release from its archive makes goes unrehearsed,
+and that site can no longer download the archive it runs, which
+[docs/updating.md](docs/updating.md) uses to carry its edits to the release's files.
 
 ## By hand
 
