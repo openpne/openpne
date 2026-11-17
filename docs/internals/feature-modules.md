@@ -209,8 +209,8 @@ into ([layout-hooks.md](layout-hooks.md)). Per-section defaults live in the chro
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame, so
 the mobile (< lg) top bar varies with the page class: brand on the latest home issue, the
-section title on a hub (its in-page h1 folds to `sr-only` there, so the
-title is announced once), and on a
+section title on a hub (the bar's copy is hidden from assistive technology, so the
+page's own h1 is its one announcement), and on a
 detail page back plus the registry's `scope` — the
 group or member the page belongs to, as one tappable identity block in the
 brand block's grammar. A form (and any page with no single scope) shows its context

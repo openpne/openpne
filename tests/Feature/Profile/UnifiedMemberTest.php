@@ -160,7 +160,7 @@ class UnifiedMemberTest extends TestCase
             );
     }
 
-    /** The owner has every kind of row the member page lists, each at the widest audience it can take. */
+    /** The owner has every kind of row the member page lists at the widest audience it can take, and one field kept to members. */
     public function test_a_guest_gets_the_heading_and_the_fields_alone(): void
     {
         $this->setSnsSetting(SnsSettingKey::TimelineAllowWebPublic, true);

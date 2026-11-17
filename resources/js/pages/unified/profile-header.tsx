@@ -105,7 +105,14 @@ export function ProfileHeader({
                 {meta}
 
                 {profile.bio && (
-                    <p className={cn('mt-1 break-words text-sm text-muted-foreground', clampBio ? 'line-clamp-2' : 'whitespace-pre-wrap')}>
+                    <p
+                        className={cn(
+                            'mt-1 break-words text-sm text-muted-foreground',
+                            // Shown whole it may run to paragraphs, which read from a left edge; the
+                            // fitted box keeps a single line centered under the name.
+                            clampBio ? 'line-clamp-2' : 'mx-auto w-fit max-w-full whitespace-pre-wrap text-left',
+                        )}
+                    >
                         <UserText text={profile.bio} />
                     </p>
                 )}

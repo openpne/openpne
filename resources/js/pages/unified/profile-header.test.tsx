@@ -30,6 +30,8 @@ test('a page that has nothing else to say the subject with shows it whole', () =
 
     expect(container.querySelector('.line-clamp-2')).toBeNull();
     expect(container.textContent).toContain('and a second');
+    // Paragraphs read from a left edge, where the two-line lead-in stays centered with the name.
+    expect(container.querySelector('p')?.className).toContain('text-left');
 });
 
 test('an empty self-introduction leaves no room behind it', () => {
