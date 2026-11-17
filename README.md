@@ -104,7 +104,8 @@ Notes:
   `OPENPNE_IMAGE_PROCESSOR=imgproxy` in `.env` to process pictures through it
   instead of GD (`docs/internals/images.md`, "Processing").
 - If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080` before
-  `bin/dev-up`. Port `5173` is fixed (Vite always binds it
+  `bin/dev-up`, and give `APP_URL` in `.env` the same port if an earlier
+  start has already created that file. Port `5173` is fixed (Vite always binds it
   inside the container and `public/hot` references that port, so a
   host-side remap would not actually redirect the browser).
 
