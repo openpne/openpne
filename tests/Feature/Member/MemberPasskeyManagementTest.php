@@ -249,6 +249,7 @@ class MemberPasskeyManagementTest extends TestCase
 
     public function test_the_window_lapses_after_fifteen_minutes(): void
     {
+        $this->freezeTime();
         $member = Member::factory()->create();
         $this->reauth($member);
 
