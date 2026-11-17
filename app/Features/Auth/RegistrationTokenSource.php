@@ -11,5 +11,5 @@ enum RegistrationTokenSource: string
 {
     case Selfservice = 'self';      // The registrant requested it themselves at /register (open mode only).
     case MemberInvite = 'member_invite'; // A member invited the address; completion auto-friends the inviter.
-    case AdminInvite = 'admin_invite';   // An admin invited the address from the admin panel.
+    case AdminInvite = 'admin_invite';   // An administrator invited the address, or an operator did from the command line.
 }

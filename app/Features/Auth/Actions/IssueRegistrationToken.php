@@ -5,6 +5,7 @@ namespace App\Features\Auth\Actions;
 use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\MemberCapacityReached;
 use App\Features\Auth\RegistrationTokenSource;
+use App\Mail\Template\MailUrlMapper;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\RegistrationLinkNotification;
@@ -28,12 +29,40 @@ class IssueRegistrationToken
         ?string $message = null,
     ): IssueResult {
         $email = Str::lower(trim($email));
+        [$result, $raw] = $this->issue($email, $source, $inviter);
 
+        if ($raw !== null) {
+            Notification::route('mail', $email)->notify(
+                new RegistrationLinkNotification($raw, app()->getLocale(), $source, $inviter?->name, $message),
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * The link itself instead of a mail carrying it: nothing shows the address can receive mail, so
+     * the caller vouches for it, which only the operator's command may (docs/internals/security.md,
+     * "Registration links").
+     */
+    public function unmailedLink(string $email, RegistrationTokenSource $source): IssueResult|string
+    {
+        [$result, $raw] = $this->issue(Str::lower(trim($email)), $source, null);
+
+        return $raw === null ? $result : MailUrlMapper::resolve('member/register?token='.$raw);
+    }
+
+    /**
+     * @param  string  $email  already trimmed and lowercased
+     * @return array{IssueResult, ?string} the raw token only when one was issued
+     */
+    private function issue(string $email, RegistrationTokenSource $source, ?Member $inviter): array
+    {
         // Case-insensitive so the no-op holds on any collation: members.email is lowercased on the
         // app's own creation paths, but an upgraded row can be verbatim mixed-case, and a
         // case-sensitive store (SQLite/PostgreSQL) would otherwise miss it and leak a token + mail.
         if (Member::whereRaw('lower(email) = ?', [$email])->exists()) {
-            return IssueResult::AlreadyMember;
+            return [IssueResult::AlreadyMember, null];
         }
 
         // A single atomic upsert, so two concurrent first requests cannot race the unique index into a
@@ -55,13 +84,9 @@ class IssueRegistrationToken
         try {
             $this->capacity->reserveToken($email, $write);
         } catch (MemberCapacityReached) {
-            return IssueResult::CapacityFull;
+            return [IssueResult::CapacityFull, null];
         }
 
-        Notification::route('mail', $email)->notify(
-            new RegistrationLinkNotification($raw, app()->getLocale(), $source, $inviter?->name, $message),
-        );
-
-        return IssueResult::Issued;
+        return [IssueResult::Issued, $raw];
     }
 }

@@ -461,6 +461,44 @@ is a credential like a minted token, and a signed-in session alone does not
 make one. A password change or reset ends every OAuth grant of the member, with
 the other devices.
 
+## Registration links
+
+A person joins a site by opening a registration link (`/register/{token}`); an AI account
+(`CreateAiAccount`) and a member an upgrade imports are created without one.
+[`IssueRegistrationToken`](../../app/Features/Auth/Actions/IssueRegistrationToken.php) is the one
+place that writes a link ([capacity.md](capacity.md), "Where a seat is taken"), and
+`registration_tokens` holds only a hash of it. A mailed link's raw token is also in the queued
+notification until the mail is sent (under the `database` queue, in `jobs`, then `failed_jobs`
+if delivery fails) and in whatever the mailer keeps, the application log under `MAIL_MAILER=log`.
+
+| Issued by | Stored `source` | Allowed while `registration_mode` is |
+|---|---|---|
+| the registrant, at `/register` | `self` | `open` |
+| a member, at `/invite` | `member_invite` | `open`, `invite` |
+| an administrator, in the admin panel | `admin_invite` | anything but `closed` |
+| an operator, with `php artisan openpne:member:invite` | `admin_invite` | anything but `closed` |
+
+- **The mode is asked twice**, when the link is issued and again when it is opened
+  (`RegistrationMode::allows`), so a link outlives neither a tightened mode nor its lifetime
+  (`OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES`, 24 hours by default).
+- **One link per address, used once.** A newer link for an address replaces the older one,
+  whoever issued either, and completing the registration deletes it in the transaction that
+  creates the member.
+- **Why the address is believed.** The first three links are mailed, so opening one shows the
+  registrant reads that mailbox. The operator's link is printed instead: nothing shows the address
+  receives mail, and the operator who ran the command vouches for it, as they do for an
+  administrator they create. Only that command may print one (`RegistrationLinkPrintersTest`): an
+  administrator handed the link could register any address as a member. A member carries no mark of
+  which link it used (`email_verified_at` is unused on every path), and the security log says only
+  that a link was printed for an address (`registration.link_printed`, [logging.md](logging.md)),
+  not that the member registered through it.
+- **What a wrong address costs.** The password reset goes to the registered address, and so do
+  the two-factor reset link, and the sign-in code of a member with a passkey and no authenticator
+  app. A member registered under a mailbox they cannot read cannot recover the account by mail, and
+  whoever reads that mailbox can take it over unless an authenticator app guards it
+  ([Member two-factor authentication](#member-two-factor-authentication)). Changing the address
+  (`RequestEmailChange`) confirms the new one by mail.
+
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in
