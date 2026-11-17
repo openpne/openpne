@@ -95,8 +95,9 @@ Every look inherits the same contract:
 
 - **Read-only projection.** A look re-arranges what the viewer already reads. Same routes,
   same viewer-scoped queries, same clearance.
-- **No new capability rides a look.** Whatever a look's chrome shows comes from a source the
-  viewer already reads, and each file is asked again through `FilePolicy` — a parent's read
-  gate is not a permission on the bytes hanging off it.
+- **No new capability rides a look.** Where the member and group pages show something the
+  pages they replaced did not, the rows come from a source the viewer already reads and each
+  file is asked again through `FilePolicy` — a parent's read gate is not a permission on the
+  bytes hanging off it.
 - **Nothing is stored differently.** A look reads the rows every other look reads and writes
   none of its own.
