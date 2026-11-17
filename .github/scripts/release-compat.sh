@@ -2,7 +2,8 @@
 # What a site that follows the tagged releases is promised: it can update from the last release to
 # this commit (docs/updating.md).
 #
-#   last-release                  print the highest release tag, or nothing when there is none
+#   last-release [<tag>]          print the highest release tag, <tag> left out, or nothing when
+#                                 there is none
 #   baseline [<branch>]           the same, unless a release/<version> branch is ahead of it and
 #                                 the change is not going onto a release branch itself
 #   migrations <baseline> <ref>   refuse a change to a migration the baseline already shipped
@@ -36,11 +37,11 @@ in_sync() { # in_sync <what> <ls-remote flag> <remote pattern> <prefix to strip>
 }
 
 last_release() {
-  local tags top
+  local except=${1:-} tags top
   export LC_ALL=C
   tags=$(git tag --list 'v[0-9]*' | { grep -E "$tag_re" || true; } | sort)
   in_sync "release tags" --tags 'refs/tags/v[0-9]*' 'refs/tags/' "$tag_re" "$tags"
-  top=$(printf '%s\n' "$tags" | sed -n 's/^v//p' | by_version | head -n 1)
+  top=$(printf '%s\n' "$tags" | { grep -vxF -e "$except" || true; } | sed -n 's/^v//p' | by_version | head -n 1)
   [ -z "$top" ] || printf 'v%s\n' "$top"
 }
 
@@ -181,9 +182,9 @@ rehearse() {
 }
 
 case "${1:-}" in
-  last-release) last_release ;;
+  last-release) last_release "${2:-}" ;;
   baseline) baseline "${2:-}" ;;
   migrations) [ $# = 3 ] || die "usage: release-compat.sh migrations <baseline> <ref>"; migrations "$2" "$3" ;;
   rehearse) [ $# = 3 ] || die "usage: release-compat.sh rehearse <baseline> <ref>"; rehearse "$2" "$3" ;;
-  *) die "usage: release-compat.sh last-release | baseline [<branch>] | migrations <baseline> <ref> | rehearse <baseline> <ref>" ;;
+  *) die "usage: release-compat.sh last-release [<tag>] | baseline [<branch>] | migrations <baseline> <ref> | rehearse <baseline> <ref>" ;;
 esac

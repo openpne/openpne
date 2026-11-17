@@ -30,9 +30,9 @@ original_of() {
 # parent gives; one whose conflict was resolved by hand never is, whatever the resolution.
 same_as_original() { # same_as_original <copy> <original>
   local merged status=0
-  merged=$(git merge-tree --write-tree --merge-base="$2^" "$1^" "$2" 2>&1) || status=$?
+  merged=$(git merge-tree --write-tree --merge-base="$2^" "$1^" "$2" 2>/dev/null) || status=$?
   # 1 is a conflict; anything above is git failing, which is not "differs".
-  [ "$status" -le 1 ] || die "git merge-tree could not compare $1 with $2 (it needs git 2.40 or later): $merged"
+  [ "$status" -le 1 ] || die "git merge-tree could not compare $1 with $2 (it needs git 2.40 or later)"
   [ "$status" = 0 ] && [ "${merged%%$'\n'*}" = "$(git rev-parse "$1^{tree}")" ]
 }
 
@@ -115,12 +115,12 @@ published() {
 
   # Every other tag counts, a higher one too: this runs when the release is published, and a
   # draft is checked as an update from the highest tag there was.
-  top=$(git tag --list 'v[0-9]*' | grep -E '^v[0-9][^/]*$' | grep -vxF "$tag" | sed -n 's/^v//p' | sed 's/-/~/' | sort -V | tail -n 1 | sed 's/~/-/' || true)
+  top=$("$here/release-compat.sh" last-release "$tag")
   if [ -z "$top" ]; then
     [ "$baseline" = none ] || die "the draft of $tag was checked as an update from $baseline, which is not a tag here"
   else
-    if [ "$baseline" != "v$top" ] || [ "$baseline_sha" != "$(git rev-parse "v$top^{commit}")" ]; then
-      die "the draft of $tag was checked as an update from $baseline, but the highest other release is v$top: another release was published in between. Delete this release and its tag, and draft it again."
+    if [ "$baseline" != "$top" ] || [ "$baseline_sha" != "$(git rev-parse "$top^{commit}")" ]; then
+      die "the draft of $tag was checked as an update from $baseline, but the highest other release is $top: another release was published in between. Delete this release and its tag, and draft it again."
     fi
   fi
   note "$tag is at $commit, the commit its draft was checked as, updating from $baseline"
