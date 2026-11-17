@@ -16,11 +16,7 @@ test('overscroll counts as the top', () => {
 const scrolled: PageScrolled = { scrolled: true, url: '/diary/new' };
 
 test('a flag belongs to the page it was decided on', () => {
-    assert.equal(renderedScrolled(scrolled, '/diary/new', true), true);
+    assert.equal(renderedScrolled(scrolled, '/diary/new'), true);
     // Inertia keeps the document across a navigation; the page arriving must paint unscrolled.
-    assert.equal(renderedScrolled(scrolled, '/diary/edit/1', true), false);
-});
-
-test('a disabled caller is never scrolled', () => {
-    assert.equal(renderedScrolled(scrolled, '/diary/new', false), false);
+    assert.equal(renderedScrolled(scrolled, '/diary/edit/1'), false);
 });

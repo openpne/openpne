@@ -152,7 +152,7 @@ flash reflashed across the 409), and
 [`ClassicOnlyResponseFactory`](../../app/Support/ClassicOnlyResponseFactory.php), the bound
 `Inertia::render()` factory, which answers 404 — so a **Modern-only page** (one with no Classic
 twin: the dashboard, the home issues and their month and day pages, `/groups/recent`, the chat
-conversations, the Modern-only member config detail pages, the look picker) is not there, and a new
+conversations, the Modern-only member config detail pages) is not there, and a new
 one is covered without naming the gate. Classic is the OpenPNE 3 surface, and a feature OpenPNE 3
 never had needs no Classic screen while Classic's own pages cover the ground; a feature OpenPNE 3
 *did* have gets a Classic screen even where OpenPNE 3 had no such page — group talk, which took in
@@ -230,24 +230,24 @@ A form that submits natively wires them as external submitters
 message pair keeps its explicit send/draft click paths, which its forms never routed
 through native submit. The bottom bar is not rendered, and the sheet is one surface:
 the bar draws its bottom hairline only once content has scrolled under it
-([`useScrolled`](../../resources/js/lib/use-scrolled.ts)), the in-page h1 folds to
-`sr-only`, and the panel drops its card chrome — all three back at lg, where the
-page is a page again. Its fields keep the standard boxed controls and visible
+([`useScrolled`](../../resources/js/lib/use-scrolled.ts)), and the panel drops its
+card chrome — both back at lg, where the page is a page again. Its fields keep the standard boxed controls and visible
 labels; the sheet only tightens their inset (box edge 16px below sm). The surface
 enters bottom-to-top and slides back down when the
 close control is used, which is the one exit that animates: a system back and the
 navigation after a submit are immediate. No animation runs under
 `prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
-static-trail form bar.
+header with its trail as static text.
 The registry's `conversation` flag marks a room a member stays in, reading and
-writing in the same place — group talk and a direct message room. Below lg it also
-drops the bottom bar and holds its chrome still, and its composer takes
-`--modern-bottom-offset` as the last of its own padding instead of standing on it, so
-the bar reaches the foot of the screen at every scroll position. Anything left under
-it — a bar sliding away, the home-indicator strip — is a band the conversation shows
-through; a room with no composer to stand there takes that strip back itself. Its top
-bar stays the ordinary back-plus-scope one — a conversation is somewhere you go into,
-not a sheet you close.
+writing in the same place — group talk and a direct message room. Below lg it holds its
+chrome still: the header and the bottom tabs stand while the room is read, and the tabs
+leave only while its composer is engaged ([modern-frame.md](modern-frame.md), "The bottom
+tabs"). Its composer takes `--modern-bottom-offset` as the last of its own padding instead
+of standing on it, so the composer reaches the foot of the screen at every scroll position.
+Anything left under it — the tabs sliding away, the home-indicator strip — is a band the
+conversation shows through; a room with no composer to stand there takes that strip back
+itself. Its header is the ordinary one — a conversation is somewhere you go into, not a
+sheet you close.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

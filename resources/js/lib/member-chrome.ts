@@ -86,10 +86,7 @@ export interface Chrome {
     conversation?: boolean;
 }
 
-/**
- * The shell draws the bar and reserves its space (`--modern-bottom-offset`) from this one answer, so
- * the two cannot disagree.
- */
+/** False for a conversation too: there the shell stands the tabs itself, until the composer is engaged. */
 export function hasBottomNav(chrome: Chrome): boolean {
     return !chrome.compose && !chrome.conversation;
 }
@@ -154,7 +151,6 @@ export const NOTIFICATIONS_SECTION: NavSection & { badge: CountBadge } = {
     badge: { count: 'notifications', label: t(':count unread notifications'), one: t('1 unread notification') },
 };
 
-/** Named for the same reason: the unified bottom bar's search zone is this entry. */
 const MEMBER_SEARCH_SECTION: NavSection = {
     href: '/member/search',
     match: ['/member/search'],

@@ -309,7 +309,7 @@ test("another member's list is scoped to that member", () => {
 });
 
 test("the viewer's own hub has no scope", () => {
-    // The hub bar carries the brand, not an identity block: the viewer is not somewhere else.
+    // The hub names its section and no place: the viewer is not somewhere else.
     const hub = chrome('diary/list', { owner, isOwner: true });
 
     assert.equal(hub.mode, 'section');
@@ -373,7 +373,7 @@ const CONVERSATION_SCREENS: Record<string, Record<string, unknown>> = {
     'message/conversation/index': { counterpart: owner },
 };
 
-test('a conversation drops the bottom bar and keeps its chrome still', () => {
+test('a conversation leaves the bottom bar to the shell and keeps its chrome still', () => {
     for (const [component, props] of Object.entries(CONVERSATION_SCREENS)) {
         const room = chrome(component, props);
 
@@ -391,7 +391,7 @@ test('a conversation drops the bottom bar and keeps its chrome still', () => {
 
 test('the withdrawn bucket names itself, since it has no member to be scoped to', () => {
     // Every departed member's messages collapse into one conversation, so there is no profile for the
-    // bar's identity block to link to — the heading carries who it is with instead.
+    // header's place pill to link to — the heading carries who it is with instead.
     const bucket = chrome('message/conversation/index', { counterpart: null });
 
     assert.equal(bucket.conversation, true);

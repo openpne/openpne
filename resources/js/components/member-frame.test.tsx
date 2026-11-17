@@ -122,7 +122,7 @@ test('the main hooks follow the URL: a new page gets fresh nodes, the same page 
             props: {
                 auth: { user },
                 enabledFeatures: allOn,
-                    unread: null,
+                unread: null,
                 flash: { status: null, error: null },
                 layoutHooks: { 'modern.main_start': '<b>top</b>', 'modern.main_end': '<b>foot</b>' },
             },

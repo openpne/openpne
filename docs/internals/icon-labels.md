@@ -12,8 +12,8 @@ one argument.
 </Tip>
 ```
 
-The rule is per state, not per component: the same control can be icon-only in one look and carry its
-word in another (nav-drawer.tsx's trigger), and only the wordless arm takes a `Tip`. Where a word is
+The rule is per state, not per component: a control that is icon-only in one state and carries its
+word in another takes a `Tip` in the wordless state alone. Where a word is
 already on screen, nothing is added — a floated copy of what the reader can see, or an `aria-label`
 spelling something else over it, both say something the visible label does not.
 

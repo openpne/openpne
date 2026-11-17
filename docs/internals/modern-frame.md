@@ -21,6 +21,7 @@ the row.
 | Home, a member's page, a group's page | `[mark]` + the site name. These pages ARE a place: a member's and a group's name themselves in their own hero directly below |
 | A hub | `[mark] › section`. The bar's copy of the title is hidden from assistive technology; the page's own h1 stays on screen and is its one announcement |
 | A screen inside a place | `[mark] › place`, the place a pill that leads to its top |
+| A screen inside no place, with a trail | `[mark] › trail`, the trail's last item a pill that leads to it |
 | A form | `[mark] › trail`, as static text |
 | A screen inside nothing, with no trail | `[mark]` alone |
 
@@ -72,8 +73,8 @@ content column center as one block.
 
 On a screen deep enough to be inside somewhere, a sticky place bar
 ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
-column: the phone header's crumb in the same pill, carrying the place's face. Home, a hub and
-anything the sidebar's own active row already names draw none. The bar is one height on every
+column: the phone header's crumb in the same pill, carrying the place's face. Home, a hub, a
+member's or a group's own page and anything the sidebar's own active row already names draw none. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
 banner and day indicator, and the editor's toolbar. A screen with no place bar leaves the
@@ -100,7 +101,9 @@ gather several sources onto one page, under one contract:
 - **Read-only projection.** The page re-arranges what the viewer already reads. Same routes, same
   viewer-scoped queries, same clearance.
 - **No new capability rides the page.** Where it shows something the page it replaced did not,
-  the rows come from a source the viewer already reads and each file is asked again through
-  `FilePolicy` — a parent's read gate is not a permission on the bytes hanging off it.
+  the rows come from a source the viewer already reads, and each file is asked through
+  `FilePolicy` when it is served ([`ImageController`](../../app/Http/Controllers/ImageController.php))
+  — a parent's read gate is not a permission on the bytes hanging off it. The group page asks
+  per file while it builds its picture rows as well.
 - **Nothing is stored for it.** The page reads the rows every other screen reads and writes none
   of its own.
