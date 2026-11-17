@@ -221,7 +221,8 @@ What the two static rules are for, and why the pages PHP answers with are left u
 ### Apache
 
 Apache serves the same directory. The release's `public/.htaccess` carries the rewrite, the
-compression and the cache header, so the virtual host only has to allow it:
+compression and the cache header, so the virtual host has to allow it, and to keep Apache's own
+configuration from compressing the pages PHP answers with:
 
 ```apache
 # /etc/apache2/sites-available/openpne.conf
@@ -232,6 +233,9 @@ compression and the cache header, so the virtual host only has to allow it:
         AllowOverride All
         Require all granted
     </Directory>
+    <FilesMatch "\.php$">
+        SetEnv no-gzip 1
+    </FilesMatch>
     php_admin_value upload_max_filesize 16M
     php_admin_value post_max_size 32M
 </VirtualHost>
