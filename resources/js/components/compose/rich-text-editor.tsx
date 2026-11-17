@@ -581,7 +581,7 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
 
             // The host Panel has to pass `overflow="visible"`, or the sticky resolves against the
             // clipped card instead of the page.
-            className="sticky top-(--modern-top-offset) z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
+            className="sticky top-below-place-0 z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
         >
             {compact ? (
                 <>

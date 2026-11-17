@@ -102,7 +102,7 @@ test.each([
     // reserved height is the desktop's too.
     ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', placeBar: null, width: 'max-w-6xl xl:max-w-7xl', bottom: '3.625rem' }],
     ['unified', { ground: true, rail: false, line: false, desktopOffset: null, placeBar: null, width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3rem' }],
-    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', placeBar: 'lg:[--modern-place-bar:calc(2.75rem+1px)]', width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3.625rem' }],
+    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', placeBar: null, width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3.625rem' }],
 ] as const)('%s wires ground, rail, the color line and its offsets from its own fields', (look, expected) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
@@ -120,6 +120,21 @@ test.each([
     // the retired rail's width must not survive as a dead band beside the page.
     expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe(expected.width);
     expect(shell.className).toContain(`[--modern-bottom-offset:calc(${expected.bottom}+1px+env(safe-area-inset-bottom))]`);
+});
+
+test.each([
+    ['tabbed', 'group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    // A form's crumb is plain text with no scope, and the editor's toolbar stands below its bar.
+    ['tabbed', 'diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['tabbed', 'dashboard', '/dashboard', null],
+    ['unified', 'group/talk/index', '/groups/7/talk', null],
+    ['standard', 'group/talk/index', '/groups/7/talk', null],
+] as const)('%s on %s publishes the place bar height only where the bar stands', (look, component, url, expected) => {
+    const chrome = arrive(component, url, { look, group: cyclists });
+    const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
+
+    const shell = container.firstElementChild as HTMLElement;
+    expect(/lg:\[--modern-place-bar:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected);
 });
 
 /**
