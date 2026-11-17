@@ -143,9 +143,10 @@ next release that has one, or builds this one from source on another machine; th
 earlier release is not this release.
 
 An archive replaces the whole directory, so the steps differ wherever the ones above use git,
-Composer or npm. Below, the site is at `/srv/openpne`, runs `OLD` and moves to `NEW`; use your own
-path and versions. The user the site runs as has to be able to write to the directory above it
-(`/srv` here), and unpacks the archive itself, so that the new tree is its own.
+Composer or npm. Below, the site is at `/srv/openpne/site`, as [installing.md](installing.md) sets
+one up, runs `OLD` and moves to `NEW`; use your own path and versions. The user the site runs as
+has to be able to write to the directory above it (`/srv/openpne` here), and unpacks the archive
+itself, so that the new tree is its own.
 
 - **Before you start**: there is no `main` to have followed, so that check does not apply.
 - **Step 1**, and then **stop the queue worker** rather than wait for it: stop it in whatever
@@ -159,55 +160,61 @@ path and versions. The user the site runs as has to be able to write to the dire
      stay behind and still be loaded.
 
      ```bash
-     tar -xzf openpne-NEW.tar.gz -C /srv          # makes /srv/openpne-NEW
+     tar -xzf openpne-NEW.tar.gz -C /srv/openpne   # makes /srv/openpne/openpne-NEW
      ```
 
   2. Carry the site's own files into it.
 
      ```bash
-     cp -a /srv/openpne/.env /srv/openpne-NEW/.env
-     rm -rf /srv/openpne-NEW/storage
-     cp -a /srv/openpne/storage /srv/openpne-NEW/storage
-     diff /srv/openpne/.env.example /srv/openpne-NEW/.env.example   # what the release added
+     cp -a /srv/openpne/site/.env /srv/openpne/openpne-NEW/.env
+     rm -rf /srv/openpne/openpne-NEW/storage
+     cp -a /srv/openpne/site/storage /srv/openpne/openpne-NEW/storage
+     # what the release added:
+     diff /srv/openpne/site/.env.example /srv/openpne/openpne-NEW/.env.example
      ```
 
-     Give `/srv/openpne-NEW/.env` what the last command shows it needs. The copy of `storage/`
-     takes the room and the time of everything in it, stored files included when
+     Give `/srv/openpne/openpne-NEW/.env` what the last command shows it needs. The copy of
+     `storage/` takes the room and the time of everything in it, stored files included when
      `OPENPNE_FILES_DISK` names a local disk. A site that keeps `.env` or `storage/` outside the
      app root ([runtime.md](internals/runtime.md)) carries neither.
 
-     - **A directory or a file you added** comes along as it is, a theme of your own for one:
-       `cp -a /srv/openpne/public/opSkinThemePlugin/NAME /srv/openpne-NEW/public/opSkinThemePlugin/NAME`.
+     - **A directory or a file you added** comes along as it is, a theme of your own for one.
        Copy what is yours, not the directory around it: the themes a release ships are the new
        release's.
+
+       ```bash
+       cp -a /srv/openpne/site/public/opSkinThemePlugin/NAME \
+         /srv/openpne/openpne-NEW/public/opSkinThemePlugin/NAME
+       ```
+
      - **A file of the release that you edited** (`public/.htaccess`, `public/robots.txt`) takes
        your edit, not your file, or the new release's own changes to it are lost. With the
        archive of the release the site runs:
 
        ```bash
        tar -xzf openpne-OLD.tar.gz -C /tmp
-       diff -u /tmp/openpne-OLD/public/.htaccess /srv/openpne/public/.htaccess > htaccess.patch
-       patch /srv/openpne-NEW/public/.htaccess < htaccess.patch
+       diff -u /tmp/openpne-OLD/public/.htaccess /srv/openpne/site/public/.htaccess > htaccess.patch
+       patch /srv/openpne/openpne-NEW/public/.htaccess < htaccess.patch
        ```
 
        If `patch` rejects a part, stop and bring that part over by hand.
      - **The database**: nothing for MySQL, and nothing for a SQLite file that `DB_DATABASE` names
        by a path outside the app root. For SQLite at the default `database/database.sqlite`, put
-       the copy step 2 made at `/srv/openpne-NEW/database/database.sqlite`. Do not copy
+       the copy step 2 made at `/srv/openpne/openpne-NEW/database/database.sqlite`. Do not copy
        `database.sqlite` itself: under WAL the last rows committed can still be in the `-wal` file
        beside it ([changing-database-engine.md](changing-database-engine.md)).
 
   3. Put the release at the site's path, so the web server, cron and the worker's supervisor go on
-     pointing where they did, and enter it again: a shell that was in `/srv/openpne` is in the
+     pointing where they did, and enter it again: a shell that was in `/srv/openpne/site` is in the
      directory that was moved away, whatever its prompt says.
 
      ```bash
-     mv /srv/openpne /srv/openpne-OLD
-     mv /srv/openpne-NEW /srv/openpne
-     cd /srv/openpne
+     mv /srv/openpne/site /srv/openpne/openpne-OLD
+     mv /srv/openpne/openpne-NEW /srv/openpne/site
+     cd /srv/openpne/site
      ```
 
-     `/srv/openpne-OLD` must not exist beforehand: `mv` would put the site inside it.
+     `/srv/openpne/openpne-OLD` must not exist beforehand: `mv` would put the site inside it.
 
 - **Step 7** as written.
 - **Step 8**: reload PHP-FPM, run `php artisan optimize` if your deployment does, and **start the
@@ -221,9 +228,9 @@ path and versions. The user the site runs as has to be able to write to the dire
    again. If the failure came before that, the site is where it was: move nothing.
 
    ```bash
-   mv /srv/openpne /srv/openpne-failed
-   mv /srv/openpne-OLD /srv/openpne
-   cd /srv/openpne
+   mv /srv/openpne/site /srv/openpne/openpne-failed
+   mv /srv/openpne/openpne-OLD /srv/openpne/site
+   cd /srv/openpne/site
    ```
 
 3. Do steps 1, 3 and 4 of [If a step fails](#if-a-step-fails): the `.env` if it is kept outside the
