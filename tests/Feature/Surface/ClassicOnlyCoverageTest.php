@@ -6,7 +6,6 @@ use App\Models\Group;
 use App\Models\Member;
 use App\Support\ClassicOnlyHandoff;
 use App\Support\ClassicOnlyResponseFactory;
-use App\Support\Look;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -32,7 +31,6 @@ class ClassicOnlyCoverageTest extends TestCase
         'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
         'member.config.mfa.edit', 'member.config.passkeys.edit', 'member.config.notifications.edit', 'member.config.ai',
-        'member.config.look.edit',
     ];
 
     /** Same set as ModernOnlyCoverageTest: fetched by a shell's or a form's own script, not pages. */
@@ -167,17 +165,6 @@ class ClassicOnlyCoverageTest extends TestCase
         ] as $uri) {
             self::assertClassic($this->actingAs($viewer)->get($uri));
         }
-    }
-
-    /** With one look the picker redirects to the settings page; with two it is a Modern-only page. */
-    public function test_the_look_picker_is_not_there_once_it_has_a_choice(): void
-    {
-        $viewer = Member::factory()->create();
-
-        $this->actingAs($viewer)->get('/member/config/look')->assertRedirect(route('member.config'));
-
-        $this->setSnsSetting(SnsSettingKey::SelectableLooks, [Look::Unified]);
-        $this->actingAs($viewer)->get('/member/config/look')->assertNotFound();
     }
 
     /** The classification guard covers only parameterless routes, so representative parameterized ones are asserted here. */

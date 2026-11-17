@@ -41,10 +41,8 @@ default applies to every member who has not made an explicit choice. The default
   to the [surface fallback](feature-modules.md#surface-selection)". So it has a distinct read,
   [`Member::preferredSurface(): ?Surface`](../../app/Models/Member.php), rather than going
   through `Member::preference()` (which is typed to return a non-null `Visibility`).
-- `PreferredLook` is tri-state the same way, for [`App\Support\Look`](../../app/Support/Look.php):
-  absent (or unreadable) means "no member choice — defer to the site default"
-  ([looks.md](looks.md#resolution)). Read via `Member::preferredLook(): ?Look`; a row naming a look
-  the site no longer offers is ignored on read and deleted when the administrator narrows the set.
+- `PreferredLook` is a key no code reads or writes any more
+  ([looks.md](looks.md#stored-values-that-are-no-longer-read)).
 - `ComposeEditor` stores an [`App\Support\ComposeEditor`](../../app/Support/ComposeEditor.php)
   (`rich` | `markdown` | `plain`) with a **concrete** default (`Rich`): a corrupt row fails closed to
   `Rich`, never `null`. Read via [`Member::composeEditor(): ComposeEditor`](../../app/Models/Member.php),
@@ -57,9 +55,9 @@ default applies to every member who has not made an explicit choice. The default
   because motion nobody chose is the side to fail to. Read via `Member::autoplayAnimations()`; what
   it switches is [images.md](images.md#which-placements-animate).
 
-Writes go through `Member::setPreference()` / `setPreferredSurface()` / `setPreferredLook()` /
+Writes go through `Member::setPreference()` / `setPreferredSurface()` /
 `setComposeEditor()` / `setAutoplayAnimations()` / `dismissRowActionsHint()` (store an explicit value, even one equal to the default) and
-`resetPreference()` / `resetPreferredSurface()` / `resetPreferredLook()` (delete the row, back to
+`resetPreference()` / `resetPreferredSurface()` (delete the row, back to
 default-following). `setPreference($default)` is **not** the same as a reset.
 
 ## The config page
@@ -116,9 +114,6 @@ out of the write path.
   absent rather than inert. It posts to `member.config.autoplay` like the other instant-apply radios;
   unlike the surface POST that endpoint is not gated on the processor, since a value stored under GD
   is harmless and simply takes effect once frames are kept.
-- **Layout** is Modern-only (a look only changes how Modern renders) and is the one section that
-  saves nothing itself: it starts a preview, and the preview bar is what keeps or drops it
-  ([looks.md](looks.md#trying-a-look-on)). It is absent while the site offers fewer than two looks.
 
 The OpenPNE 3 `/member/config?category=accessBlock` URL is preserved: `show()` redirects just
 that category to the Block list. The seeded config nav link renders because `/member/config` is a
@@ -141,8 +136,8 @@ such unique. All disposition of `member_config` names (migrated vs dropped) is r
 1. `PreferenceKey` is the only list of preferences; the case value is the stored `key`, and the
    codec branches on the case so keys may carry different value types.
 2. An absent row means "follow the default". Visibility keys, `ComposeEditor`, `PushDelivery`,
-   `AutoplayAnimations` and `RowActionsHint` have concrete defaults; `PreferredSurface` and `PreferredLook` default to
-   `null` (defer to the surface fallback / the site default). Reset deletes the row; it is not
+   `AutoplayAnimations` and `RowActionsHint` have concrete defaults; `PreferredSurface` defaults to
+   `null` (defer to the surface fallback). Reset deletes the row; it is not
    `setPreference($default)`.
 3. The config page saves each section independently, so the diary section's read-time clamp is
    never written back. The surface section is binary; `updateSurface()` pins only an actual change

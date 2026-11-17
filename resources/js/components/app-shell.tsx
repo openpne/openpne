@@ -5,7 +5,6 @@ import { BottomNav } from '@/components/bottom-nav';
 import { ComposeSheetProvider, useComposeExitState } from '@/components/compose/compose-sheet-action';
 import { ConfirmDialogHost } from '@/components/confirm-dialog';
 import { LeftNav } from '@/components/left-nav';
-import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
 import { carriesFiles, carriesPick, takesText } from '@/lib/file-drop';
@@ -101,9 +100,8 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
             <div
                 className={cn(
                     'mx-auto flex min-h-dvh',
-                    // Without the third column the frame is the sidebar plus the content column, so
-                    // the pair centers as one block.
-                    look.rightRail ? 'max-w-6xl xl:max-w-7xl' : 'max-w-6xl lg:max-w-[58rem]',
+                    // The frame is the sidebar plus the content column, so the pair centers as one block.
+                    'max-w-6xl lg:max-w-[58rem]',
                     topOffset,
                     desktopTopOffset,
                     placeBarOffset,
@@ -133,7 +131,6 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     <TopNav chrome={chrome} hidden={hidden} />
                     {children}
                 </div>
-                {look.rightRail && <RightRail />}
                 <ConfirmDialogHost />
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />

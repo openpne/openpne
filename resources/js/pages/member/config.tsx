@@ -47,9 +47,6 @@ interface ConfigForm {
     surface?: { value: string; description: string; options: Option[] };
     // Absent while the image processor drops frames (GD): nothing animates for the switch to stop.
     autoplayAnimations?: { value: string; options: Option[] };
-    // Absent while the site offers fewer than two looks; `current` is the stored choice's label
-    // (null = following the site default), never the label of the look being rendered.
-    look?: { current: string | null; default: string };
 }
 
 interface Connection {
@@ -150,7 +147,6 @@ export default function MemberConfig() {
     const diaryField = form.diary;
     const profileField = form.profileVisibility;
     const surfaceField = form.surface;
-    const lookField = form.look;
     const autoplayField = form.autoplayAnimations;
 
     // Preference radios apply on selection (no per-section save button); SavedIndicator is the
@@ -385,26 +381,6 @@ export default function MemberConfig() {
                                 </FormActions>
                             </FormSection>
                         </form>
-                    </GroupItem>
-                )}
-
-                {/* A row, not a picker: what separates the looks takes a table to state, so the
-                    choice lives on its own page and this says only which one is in force. */}
-                {lookField && (
-                    <GroupItem>
-                        <DetailRow
-                            title={t('Layout')}
-                            value={
-                                lookField.current
-                                    ? t(lookField.current)
-                                    : t('Match the site default (currently :look)', { look: t(lookField.default) })
-                            }
-                            action={
-                                <ActionLink href="/member/config/look" variant="outline" size="sm">
-                                    {t('Change')}
-                                </ActionLink>
-                            }
-                        />
                     </GroupItem>
                 )}
             </SettingsGroup>

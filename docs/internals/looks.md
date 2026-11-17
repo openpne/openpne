@@ -7,6 +7,9 @@ of code a look owns is the size of its deviation, not the size of the product.
 Looks are a Modern-surface concept. Which surface a request gets (Classic or Modern) is a
 separate, earlier question — see [feature-modules.md](feature-modules.md).
 
+A site does not choose among them and neither does a member: every member is served `tabbed`
+and a signed-out visitor `standard` ([Resolution](#resolution)). `unified` is served to no one.
+
 ## The registry
 
 A look is declared twice, once per side of the wire:
@@ -27,13 +30,13 @@ field whose name answers the question being asked rather than one that happens t
 
 The looks today:
 
-- **`standard`** — the layout the site has always shipped. Deviates in nothing.
+- **`standard`** — deviates in nothing. The frame a signed-out visitor gets.
 - **`unified`** — the experiment: `/member/{id}` renders `unified/member` instead of
   `member/show`, and `/groups/{group}` renders `unified/group` instead of
-  `community/show`; the bars become the persistent header plus dive row, the shell paints
-  the unified ground, and the right rail is dropped. Those two pages are the only swap:
+  `community/show`; the bars become the persistent header plus dive row, and the shell
+  paints the unified ground. Those two pages are the only swap:
   `/` renders the same page under every look ([home-issues.md](home-issues.md#routes)).
-- **`tabbed`** — the same swapped pages, different chrome, phone scope for now. Every
+- **`tabbed`** — the same swapped pages, different chrome. Every
   screen class speaks one header grammar: the site mark, then where you are — `[mark]` +
   the site name on the three pages that ARE a place (home, a member's, a group's — a
   member's and a group's name themselves again in their own hero directly below),
@@ -74,60 +77,16 @@ Two decisions inside `tabbed` are deliberate rather than pending:
 
 [`LookResolver::resolve()`](../../app/Support/LookResolver.php) answers once per request,
 and [`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php) shares
-the id as the `look` prop so no consumer resolves it a second time. The chain:
+the id as the `look` prop so no consumer resolves it a second time:
 
-1. **Guest clamp** — no member on the request, `standard`. A look is a member's way around
-   their own pages, and a signed-out visitor reaches none of them; the pages a guest does
-   reach (a web-public profile) have no viewer for a look's serializer to render against.
-2. **Member choice** — `PreferenceKey::PreferredLook`, while the site still offers it; a
-   row outside the selectable set is ignored rather than honoured.
-3. **Site default** — `SnsSettingKey::DefaultLook` in `sns_settings`, edited on the
-   *UI layout settings* admin page. A stored value no registered look answers to decodes
-   to `standard`.
-
-Layer 2 reads `member_preferences` once per Inertia navigation; the relation is
-instance-cached, so a request that also reads another preference shares the query.
-
-### Choosing a look
-
-The picker is a member-config detail page, `GET /member/config/look`
-(`member.config.look.edit`), that *describes* the looks: a table comparing them dimension
-by dimension, then one card per selectable look, then an explicit save. The settings hub
-keeps a row naming the current choice and linking here, the same shape as email and
-password.
-
-A live try-on was built and retired. It rendered the chosen look with a bar offering to
-keep or drop it, on the reasoning that a look is best judged by being seen — but seeing a
-look without knowing what to look at communicated nothing, so the differences are spelled
-out instead. The session tier that carried it is gone from the resolver.
-
-`POST /member/config/look` (`choice`: a look id, or the literal `default`) writes the
-preference or clears it, back to following the site's, and answers with a full page load
-back to the picker — the whole shell re-drawing in the chosen look is the confirmation.
-`UpdateLookRequest::authorize()` refuses an id outside the selectable set (403) rather than
-relying on the picker's absence, and the GET redirects to the settings page while fewer
-than two looks are selectable.
-
-### Which looks a member may pick
-
-`SnsSettingKey::SelectableLooks` — the registry's one list-valued key, stored as a CSV of
-ids — is what the administrator offers. The effective set is that ∪ the site default (which
-is always pickable, being what "follow the site default" follows), derived in exactly one
-place, `LookResolver::selectable()`: the resolver, the config serializer, the preview
-request and the admin cleanup all read it from there rather than re-deriving the union.
-Fewer than two, and the member config page serves no layout section at all.
-
-Narrowing the set does not strand the members who chose what was removed. Inside the same
-transaction as the save, the admin page deletes every `preferred_look` row outside the set
-*it is establishing* — computed from the posted values, since the settings cache still
-holds the old ones — and the success notification reports how many members were returned to
-the default. A row that outlives that (a look dropped from the registry, a hand-written
-value) is ignored on read.
+- **A member** gets `tabbed`. Nothing a site or a member stores changes that: there is no
+  setting for it and no picker.
+- **A signed-out visitor** gets `standard`. The pages a look swaps render against a viewer,
+  and the pages a guest does reach (a web-public profile, a web-public entry) have none.
 
 ## What a look may not do
 
-Every look inherits the same contract, which is what makes switching one on a decision
-rather than a deploy:
+Every look inherits the same contract:
 
 - **Read-only projection.** A look re-arranges what the viewer already reads. Same routes,
   same viewer-scoped queries, same clearance.
@@ -135,13 +94,11 @@ rather than a deploy:
   replaces did not, the rows come from a source the viewer already reads and each file is
   asked again through `FilePolicy` — a parent's read gate is not a permission on the bytes
   hanging off it.
-- **Nothing is stored differently.** `standard` renders the pre-look pages and chrome
-  unchanged — the shared `look` prop replacing the retired `unifiedLayout` boolean is the
-  one wire-format difference — so switching back restores the previous pages with no data
-  to undo.
+- **Nothing is stored differently.** A look reads the rows every other look reads and writes
+  none of its own.
 
-## Migration note
+## Stored values that are no longer read
 
-The mechanism replaces `modern_unified_home`, a site-wide bool. A site that had it on
-converts to `default_look = unified`; every other site to the absent-row default,
-`standard`.
+`default_look` and `selectable_looks` in `sns_settings`, and a member's `preferred_look`
+preference, were the site default, the looks offered to members and a member's own choice. A
+row of any of them left on a site has no effect.

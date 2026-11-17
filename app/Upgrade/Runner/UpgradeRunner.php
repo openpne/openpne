@@ -406,7 +406,7 @@ final class UpgradeRunner
         app(SnsSettingService::class)->clearCache();
 
         if ($inserted > 0) {
-            $report->nextStep('The Modern home shows the What\'s new lists, the page nearest the OpenPNE 3 home; "Page shown as home" on the UI layout settings page offers the other.');
+            $report->nextStep('The Modern home shows the What\'s new lists, the page nearest the OpenPNE 3 home; "Page shown as home" on the Home and group entry settings page offers the other.');
         }
     }
 
@@ -424,7 +424,7 @@ final class UpgradeRunner
         app(SnsSettingService::class)->clearCache();
 
         if ($inserted > 0) {
-            $report->nextStep('Under Modern a joined group opens its top, as an OpenPNE 3 community did, rather than its talk; the UI layout settings page offers the talk.');
+            $report->nextStep('Under Modern a joined group opens its top, as an OpenPNE 3 community did, rather than its talk; the Home and group entry settings page offers the talk.');
         }
     }
 

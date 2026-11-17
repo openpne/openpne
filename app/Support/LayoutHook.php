@@ -24,7 +24,6 @@ enum LayoutHook: string
     case ModernLeftNavEnd = 'modern.left_nav_end';
     case ModernMainStart = 'modern.main_start';
     case ModernMainEnd = 'modern.main_end';
-    case ModernRightRailEnd = 'modern.right_rail_end';
     case ModernAuthStart = 'modern.auth_start';
     case ModernAuthEnd = 'modern.auth_end';
 

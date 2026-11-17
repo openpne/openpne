@@ -175,13 +175,12 @@ choice (6) is writable — the member config page sets it — so a member can op
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
 
-Within Modern, a second and much narrower mechanism picks the **look**: a named set of
-deviations from the standard layout ([`App\Support\Look`](../../app/Support/Look.php),
-resolved per request by [`LookResolver`](../../app/Support/LookResolver.php) and shared as
-the `look` prop). A look swaps page components and shell chrome, never routes or sources,
-and a screen it says nothing about renders standard. The site default is
-`SnsSettingKey::DefaultLook`; `standard` renders the pre-look output unchanged. See
-[looks.md](looks.md).
+Within Modern, the **look** is a named set of deviations from the standard layout
+([`App\Support\Look`](../../app/Support/Look.php), resolved per request by
+[`LookResolver`](../../app/Support/LookResolver.php) and shared as the `look` prop). A look
+swaps page components and shell chrome, never routes or sources, and a screen it says nothing
+about renders standard. Neither a site nor a member chooses it: a member gets `tabbed`, a
+signed-out visitor `standard`. See [looks.md](looks.md).
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern

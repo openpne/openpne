@@ -57,7 +57,6 @@ React shell draws:
 | `ModernLeftNavEnd` | last child of the left `<aside>` ([`left-nav.tsx`](../../resources/js/components/left-nav.tsx)) | lg and wider |
 | `ModernMainStart` | inside `<main>`, after the flash, before the page ([`member-frame.tsx`](../../resources/js/components/member-frame.tsx)) | every width, every member-frame page |
 | `ModernMainEnd` | inside `<main>`, after the page | every width |
-| `ModernRightRailEnd` | last child of the right `<aside>` ([`right-rail.tsx`](../../resources/js/components/right-rail.tsx)); a guest, who has no rail of their own, still gets the column when this renders | xl and wider, looks that have a rail (`unified` has none) |
 | `ModernAuthStart` | before the brand block ([`auth-layout.tsx`](../../resources/js/layouts/auth-layout.tsx)), as an `<aside>` | the login, registration and recovery screens |
 | `ModernAuthEnd` | after the language switcher, as an `<aside>` | the same screens |
 
@@ -73,7 +72,7 @@ script that arrives by `innerHTML` never runs; the scripts run again only when t
 Two lifetimes follow from Inertia's persistent layout, which keeps the shell and the frame mounted
 while pages change under them:
 
-- `ModernLeftNavEnd` and `ModernRightRailEnd` mount once per full page load, like the two Blade positions.
+- `ModernLeftNavEnd` mounts once per full page load, like the two Blade positions.
 - `ModernMainStart` and `ModernMainEnd` are keyed on the URL, so a new URL (a query change
   included) gets fresh nodes and its scripts run again; a visit that lands on the same URL — a
   redirect back after a form post, a link to the current page — keeps them. Fresh per URL, not per

@@ -14,7 +14,6 @@ use App\Models\GroupMessageImage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicImage;
 use App\Models\Member;
-use App\Support\Look;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -35,12 +34,6 @@ class UnifiedGroupTest extends TestCase
         parent::setUp();
 
         config(['openpne.surface_mode' => 'modern_default']);
-    }
-
-    private function unifiedOn(): void
-    {
-        $this->setSnsSetting(SnsSettingKey::DefaultLook, Look::Unified);
-        $this->freshRequestState();
     }
 
     private function join(Group $group, Member $member, string $role = 'member'): GroupMember
@@ -143,38 +136,7 @@ class UnifiedGroupTest extends TestCase
         ];
     }
 
-    public function test_the_shipped_group_page_is_untouched_while_the_switch_is_off(): void
-    {
-        $category = GroupCategory::factory()->create();
-        $group = Group::factory()->create(['group_category_id' => $category->getKey()]);
-        Group::factory()->create(['group_category_id' => $category->getKey()]);
-        $viewer = Member::factory()->create();
-        $this->picture($this->topic($group, '2026-08-16 10:00:00', $viewer));
-
-        DB::enableQueryLog();
-        $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('community/show')
-                ->where('group.id', $group->getKey())
-                ->where('group.name', $group->name)
-                ->where('group.registerPolicy', 'open')
-                ->where('viewerRole', null)
-                ->where('canJoin', true)
-                ->has('members')
-                ->has('recentTopics', 1)
-                ->has('recentEvents')
-                ->where('canViewTalk', true)
-                // The unified payload's own keys are absent while the switch is off.
-                ->missing('categoryGroups')
-                ->missing('recentPhotos')
-            );
-        $experiment = [...$this->queriesWith('members_count', 'group_category_id'), ...$this->photoQueries()];
-        DB::disableQueryLog();
-
-        $this->assertSame([], $experiment, 'the switched-off experiment still cost the page a query');
-    }
-
-    public function test_the_switch_swaps_the_page_for_the_same_group(): void
+    public function test_a_member_gets_the_page_for_the_group(): void
     {
         $file = File::factory()->create();
         $category = GroupCategory::factory()->create();
@@ -185,7 +147,6 @@ class UnifiedGroupTest extends TestCase
         ]);
         $viewer = Member::factory()->create();
         $this->join($group, $viewer);
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -229,7 +190,6 @@ class UnifiedGroupTest extends TestCase
         $this->join($group, $viewer);
         $this->topic($group, '2026-08-16 10:00:00', $viewer);
         $this->event($group, '2026-08-16 10:00:00', $viewer);
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")->assertOk()
@@ -250,7 +210,6 @@ class UnifiedGroupTest extends TestCase
     {
         $group = Group::factory()->create();
         $viewer = Member::factory()->create();
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -268,7 +227,6 @@ class UnifiedGroupTest extends TestCase
         // Same entry, different word on it: the button's label is drawn from the policy.
         $group = Group::factory()->approval()->create();
         $viewer = Member::factory()->create();
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -282,7 +240,6 @@ class UnifiedGroupTest extends TestCase
         $group = Group::factory()->approval()->create();
         $viewer = Member::factory()->create();
         $this->apply($group, $viewer);
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -297,7 +254,6 @@ class UnifiedGroupTest extends TestCase
         $group = Group::factory()->create();
         $viewer = Member::factory()->create();
         $this->join($group, $viewer, 'subAdmin');
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -313,7 +269,6 @@ class UnifiedGroupTest extends TestCase
         $group = Group::factory()->create();
         $viewer = Member::factory()->create();
         $this->join($group, $viewer, 'admin');
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -330,7 +285,6 @@ class UnifiedGroupTest extends TestCase
         $nominee = Member::factory()->create();
         $this->join($group, $nominee);
         $group->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
-        $this->unifiedOn();
 
         $this->actingAs($nominee)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->where('isTransferNominee', true));
@@ -351,7 +305,6 @@ class UnifiedGroupTest extends TestCase
         $this->picture($this->message($group, '2026-08-16 10:00:00', $author));
         $this->picture($this->topic($group, '2026-08-16 10:00:00', $author));
         $this->picture($this->event($group, '2026-08-16 10:00:00', $author));
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($stranger)->get("/groups/{$group->getKey()}")
@@ -390,7 +343,6 @@ class UnifiedGroupTest extends TestCase
         $elsewhere = Group::factory()->create();
         $this->join($elsewhere, $author);
         $strayFile = $this->picture($this->message($elsewhere, '2026-08-16 11:00:00', $author));
-        $this->unifiedOn();
 
         $messageHref = "/groups/{$group->getKey()}/talk?m={$message->getKey()}";
 
@@ -435,7 +387,6 @@ class UnifiedGroupTest extends TestCase
         foreach (range(1, 5) as $number) {
             $cut[$number] = $this->picture($older, $number);
         }
-        $this->unifiedOn();
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}")
             ->assertInertia(function (AssertableInertia $page) use ($newer, $older, $group) {
@@ -464,7 +415,6 @@ class UnifiedGroupTest extends TestCase
         $topic = $this->topic($group, '2026-08-16 10:00:00', $author);
         $allowed = $this->picture($topic, number: 1);
         $refused = $this->picture($topic, number: 2, linked: false);
-        $this->unifiedOn();
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->has('recentPhotos', 1))
@@ -500,8 +450,6 @@ class UnifiedGroupTest extends TestCase
             'group_message_id' => $message->getKey(), 'file_id' => $dangling->getKey(), 'number' => 4,
         ]);
 
-        $this->unifiedOn();
-
         // The foreign file's URL appears once for its own parent (in the other group), never here.
         $this->actingAs($author)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page->has('recentPhotos', 1))
@@ -521,7 +469,6 @@ class UnifiedGroupTest extends TestCase
         $this->picture($this->topic($group, '2026-08-16 10:01:00', $author));
 
         $this->setSnsSetting(SnsSettingKey::FeatureGroupTopicEnabled, false);
-        $this->unifiedOn();
 
         DB::enableQueryLog();
         $this->actingAs($author)->get("/groups/{$group->getKey()}")
@@ -552,7 +499,6 @@ class UnifiedGroupTest extends TestCase
         $member = Member::factory()->create();
         $this->join($group, $member);
         $stranger = Member::factory()->create();
-        $this->unifiedOn();
 
         // Biggest first, and the group the page is about is not one of its own neighbours.
         $expected = fn (AssertableInertia $page) => $page
@@ -575,7 +521,6 @@ class UnifiedGroupTest extends TestCase
         $older = Group::factory()->create(['group_category_id' => $category->getKey()]);
         $newer = Group::factory()->create(['group_category_id' => $category->getKey()]);
         $viewer = Member::factory()->create();
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -589,7 +534,6 @@ class UnifiedGroupTest extends TestCase
         $group = Group::factory()->create(['group_category_id' => null]);
         Group::factory()->create(['group_category_id' => null]);
         $viewer = Member::factory()->create();
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -610,7 +554,6 @@ class UnifiedGroupTest extends TestCase
             'member_id' => $author->getKey(),
             'body' => 'the latest word',
         ]);
-        $this->unifiedOn();
 
         $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page

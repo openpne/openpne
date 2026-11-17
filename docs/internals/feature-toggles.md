@@ -179,15 +179,6 @@ dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinT
 second unit per context — `activityBox` goes on the home, where it is the friend feed, and stays on a
 profile, where it is the owner's own timeline).
 
-And a surface whose purpose outlives the unit **falls back to a unit-independent variant** instead
-of disappearing. The right rail's faces grid answers "who is on this SNS", which a site that
-switched friends off — because everyone there already knows everyone — still asks: with `friend`
-off it samples all members ([`RandomMembers`](../../app/Features/Member/Queries/RandomMembers.php))
-under the same block and visibility rules, and the payload names which audience it shipped
-(`people.kind`) so the heading and the view-all link follow. A section whose purpose *is* the unit —
-the joined-group grid beside it — still empties. Neither reinterprets nor widens a stored
-audience, and neither rewrites a row.
-
 ## Upgrade
 
 An upgraded site comes up with what OpenPNE 3 had switched off still switched off. Two sources feed

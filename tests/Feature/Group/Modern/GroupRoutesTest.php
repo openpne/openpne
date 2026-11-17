@@ -66,7 +66,7 @@ class GroupRoutesTest extends TestCase
         $this->actingAs($member)
             ->get("/groups/{$group->getKey()}")
             ->assertInertia(fn ($page) => $page
-                ->component('community/show')
+                ->component('unified/group')
                 ->where('group.id', $group->getKey())
                 ->has('group.name')
                 ->where('group.registerPolicy', 'open')
@@ -108,7 +108,7 @@ class GroupRoutesTest extends TestCase
         $this->actingAs($member)
             ->get("/groups/{$group->getKey()}")
             ->assertInertia(fn ($page) => $page
-                ->component('community/show')
+                ->component('unified/group')
                 ->where('recentTopics.0.author.name', $member->name)
             );
     }
@@ -184,6 +184,6 @@ class GroupRoutesTest extends TestCase
 
         $this->actingAs($member)
             ->get("/groups/{$group->getKey()}")
-            ->assertInertia(fn ($page) => $page->component('community/show'));
+            ->assertInertia(fn ($page) => $page->component('unified/group'));
     }
 }

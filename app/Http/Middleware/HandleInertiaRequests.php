@@ -2,11 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Features\Friend\Queries\RandomFriends;
 use App\Features\GroupTalk\Queries\NavTalkRooms;
-use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
-use App\Features\Member\Queries\RandomMembers;
 use App\Files\ImageUploadPolicy;
 use App\Models\Member;
 use App\Notifications\Push\WebPushConfig;
@@ -68,7 +65,7 @@ class HandleInertiaRequests extends Middleware
             'enabledFeatures' => $user
                 ? Feature::enabledMap()
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),
-            // Resolved once for the request and never null: a guest's is always `standard`.
+            // Resolved once for the request and never null.
             'look' => LookResolver::resolve($request)->value,
             'modernHome' => app(SnsSettingService::class)->get(SnsSettingKey::ModernHome)->value,
             'groupList' => app(SnsSettingService::class)->get(SnsSettingKey::ModernGroupList)->value,
@@ -79,9 +76,6 @@ class HandleInertiaRequests extends Middleware
             'rowActionsHint' => fn () => $user?->rowActionsHint()->value,
             'imageUpload' => fn () => ImageUploadPolicy::shared(),
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
-            // A plain closure, not Inertia::optional: the rail shows on first render, so the prop must
-            // be present then.
-            'rightRail' => $user ? fn () => $this->rightRail($user) : null,
             'layoutHooks' => fn () => app(LayoutHooks::class)->clientMap(),
             // Null rather than an empty list for a guest or while talk is off; the nav renders no room
             // section on null.
@@ -108,22 +102,6 @@ class HandleInertiaRequests extends Middleware
             'timezone' => config('app.timezone'),
             'terms' => $this->termsForClient($locale),
         ];
-    }
-
-    /**
-     * The faces grid outlives `friend`: switched off, it samples the whole SNS rather than emptying
-     * (docs/internals/feature-toggles.md) — the same rows under the same permissions, a wider pool.
-     *
-     * @return array<string, mixed>
-     */
-    private function rightRail(Member $user): array
-    {
-        $friends = Feature::Friend->enabled();
-
-        return RightRailSerializer::rail(
-            $friends ? 'friends' : 'members',
-            $friends ? (new RandomFriends)($user) : (new RandomMembers)($user),
-        );
     }
 
     /**

@@ -329,18 +329,18 @@ change from a problem when you go through it.
   previous host name is not rewritten.
 - **Surface** — the site looks like OpenPNE 3 (the "Classic" surface), matching what its members
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
-  after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the
-  Modern surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover
-  below starts with the Modern branding. There, the home is the "What's new" lists, the page nearest
-  the OpenPNE 3 home (the UI layout settings page offers the daily issue instead); the joined
+  after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the Modern
+  surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover below starts
+  with the Modern branding. There, the home is the "What's new" lists, the page nearest the OpenPNE
+  3 home (the Home and group entry settings page offers the daily issue instead); the joined
   communities' topics and events are the two tabs after *Joined* and *All* under the communities
   entry, as the recent-list gadgets' "More" was on the PC layout, and a community on the *Joined*
   list opens its page, as it did in OpenPNE 3, rather than its talk (the same settings page offers
-  the talk). If your OpenPNE 3 site had its smartphone layout switched
-  off (a free-area script setting `disable_smt`, say) and phones should keep seeing the PC layout,
-  choose `php artisan openpne:surface-mode classic_only` instead: nothing Modern is shown and members
-  cannot switch; the community timeline posts the upgrade brought over are read and written on the
-  group's talk screen, drawn in the OpenPNE 3 timeline box.
+  the talk). If your OpenPNE 3 site had its smartphone layout switched off (a free-area script
+  setting `disable_smt`, say) and phones should keep seeing the PC layout, choose `php artisan
+  openpne:surface-mode classic_only` instead: nothing Modern is shown and members cannot switch; the
+  community timeline posts the upgrade brought over are read and written on the group's talk screen,
+  drawn in the OpenPNE 3 timeline box.
 - **Browser-tab icon** — none, as in OpenPNE 3. This version otherwise shows a generated icon
   (the brand color with the site name's initial); choose it, or upload your own, on the Branding
   page.

@@ -24,7 +24,6 @@ use App\Http\Requests\Member\RequestEmailChangeRequest;
 use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
 use App\Http\Requests\Member\UpdateAutoplayAnimationsRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
-use App\Http\Requests\Member\UpdateLookRequest;
 use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\UpdateProfileVisibilityRequest;
@@ -35,7 +34,6 @@ use App\Mcp\OAuth\Connections;
 use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\Feature;
-use App\Support\LookResolver;
 use App\Support\PreferenceKey;
 use App\Support\SecurityLog;
 use App\Support\Surface;
@@ -296,44 +294,6 @@ class MemberConfigController extends Controller
             ? route('member.config')
             : route('member.config', ['category' => MemberConfigCategory::General->value]);
 
-        return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
-    }
-
-    public function editLook(): InertiaResponse|RedirectResponse
-    {
-        // With one selectable look there is nothing to choose, and a closed gate lands on the settings
-        // page rather than 404ing.
-        if (count(LookResolver::selectable()) < 2) {
-            return redirect()->route('member.config');
-        }
-
-        return Inertia::render('member/config/look', [
-            'lookChoice' => MemberConfigSerializer::lookForm($this->viewer()),
-        ]);
-    }
-
-    /** `default` clears the choice, back to following the site's look. */
-    public function updateLook(UpdateLookRequest $request): Response
-    {
-        $look = $request->look();
-
-        if ($look === null) {
-            $this->viewer()->resetPreferredLook();
-        } else {
-            $this->viewer()->setPreferredLook($look);
-        }
-
-        $request->session()->flash('status', __('Settings updated.'));
-
-        return $this->fullLoad($request, route('member.config.look.edit'));
-    }
-
-    /**
-     * Every look POST changes what the whole shell renders, so an XHR redirect would leave the running
-     * SPA drawing the previous one.
-     */
-    private function fullLoad(Request $request, string $target): Response
-    {
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
     }
 

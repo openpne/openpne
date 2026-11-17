@@ -109,7 +109,6 @@ export interface PageProps {
     rowActionsHint: 'shown' | 'dismissed' | null;
     imageUpload: ImageUploadPolicy;
     unread: UnreadCounts | null;
-    rightRail: RightRail | null;
     /** Raw HTML a package registered per shell position, non-empty entries only (docs/internals/layout-hooks.md). */
     layoutHooks: Record<string, string>;
     /** Null for a guest and while `groupTalk` is off. */

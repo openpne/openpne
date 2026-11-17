@@ -27,8 +27,6 @@ vi.mock('@inertiajs/react', () => ({
 // Mocked because each brings its own page reads and effects; the two bars stay real, since where
 // they stand is the subject.
 vi.mock('@/components/left-nav', () => ({ LeftNav: () => null }));
-// A marker rather than null: whether the shell seats the rail at all is one of the wiring answers.
-vi.mock('@/components/right-rail', () => ({ RightRail: () => <div data-testid="right-rail" /> }));
 vi.mock('@/components/unread-sync', () => ({ UnreadSync: () => null }));
 vi.mock('@/components/confirm-dialog', () => ({ ConfirmDialogHost: () => null }));
 vi.mock('@/components/action-fab', () => ({ ActionFab: () => null }));
@@ -100,15 +98,14 @@ const header = () => document.querySelector('header');
 test.each([
     // Null = no desktop override at all: the unified bar stands at every width, so the phone's
     // reserved height is the desktop's too.
-    ['standard', { ground: false, rail: true, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', placeBar: null, width: 'max-w-6xl xl:max-w-7xl', bottom: '3.625rem' }],
-    ['unified', { ground: true, rail: false, line: false, desktopOffset: null, placeBar: null, width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3rem' }],
-    ['tabbed', { ground: true, rail: false, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', placeBar: null, width: 'max-w-6xl lg:max-w-[58rem]', bottom: '3.625rem' }],
-] as const)('%s wires ground, rail, the color line and its offsets from its own fields', (look, expected) => {
+    ['standard', { ground: false, line: false, desktopOffset: 'lg:[--modern-top-offset:0px]', placeBar: null, bottom: '3.625rem' }],
+    ['unified', { ground: true, line: false, desktopOffset: null, placeBar: null, bottom: '3rem' }],
+    ['tabbed', { ground: true, line: true, desktopOffset: 'lg:[--modern-top-offset:4px]', placeBar: null, bottom: '3.625rem' }],
+] as const)('%s wires ground, the color line and its offsets from its own fields', (look, expected) => {
     const chrome = arrive('dashboard', '/dashboard', { look });
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
     expect(document.documentElement.classList.contains('unified')).toBe(expected.ground);
-    expect(screen.queryByTestId('right-rail') !== null).toBe(expected.rail);
     const line = screen.queryByTestId('site-color-line');
     expect(line !== null).toBe(expected.line);
     const shell = container.firstElementChild as HTMLElement;
@@ -116,9 +113,9 @@ test.each([
     // otherwise pass as long as some `lg:` value was there.
     expect(/lg:\[--modern-top-offset:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected.desktopOffset);
     expect(/lg:\[--modern-place-bar:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(expected.placeBar);
-    // Rail-less looks shrink the frame to sidebar + content so the pair centers as one block —
-    // the retired rail's width must not survive as a dead band beside the page.
-    expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe(expected.width);
+    // The frame is sidebar + content in every look: a width left over from the retired third column
+    // would stand as a dead band beside the page.
+    expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe('max-w-6xl lg:max-w-[58rem]');
     expect(shell.className).toContain(`[--modern-bottom-offset:calc(${expected.bottom}+1px+env(safe-area-inset-bottom))]`);
 });
 
