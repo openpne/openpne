@@ -102,9 +102,123 @@ jobs:
           ALLOWED: ${{ inputs.allow_advisories }}
         run: checks/.github/scripts/release-audit.sh
 
+  archive:
+    name: Archives
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # The image ci.yml's mysql-shard job pins: bump the tag and the digest there, in
+      # release-compat.yml and here together.
+      MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
+      VERSION: ${{ inputs.version }}
+      SHA: ${{ needs.validate.outputs.sha }}
+      BASELINE: ${{ needs.validate.outputs.baseline }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      # The oldest PHP a site may run: the archive's vendor/ has to install there.
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+      # The scripts are main's; the tree is the release's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: checks
+          sparse-checkout: .github/scripts
+      - name: Build the archives
+        run: checks/.github/scripts/release-archive.sh build "$SHA" "$RUNNER_TEMP/archive" "$VERSION"
+      - name: Install each archive without Composer or Node
+        run: checks/.github/scripts/release-archive.sh verify "$RUNNER_TEMP/archive" "$VERSION" "$SHA"
+      # A site updates from the files it downloaded, so the rehearsal starts from those, checked as
+      # release-verify.yml checked them when the last release was published.
+      - name: Download the last release's archives
+        id: last
+        if: env.BASELINE != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          BODY=$(gh release view "$BASELINE" --json body --jq .body)
+          export BODY
+          checks/.github/scripts/release-validate.sh attached "$BASELINE" "$RUNNER_TEMP/last"
+          have=$(checks/.github/scripts/release-validate.sh archives "$BASELINE" "$RUNNER_TEMP/last")
+          if [ "$have" != attached ]; then
+            echo "::notice::$BASELINE was released without archives: the update from its archive is not rehearsed"
+          fi
+          echo "have=$have" >> "$GITHUB_OUTPUT"
+      - name: Update from the last release's archive (SQLite)
+        if: steps.last.outputs.have == 'attached'
+        run: >-
+          checks/.github/scripts/release-archive.sh update
+          "$RUNNER_TEMP/last" "${BASELINE#v}" "$RUNNER_TEMP/archive" "$VERSION"
+      - name: Start MySQL
+        if: steps.last.outputs.have == 'attached'
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if docker pull "$MYSQL_IMAGE"; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              echo "::error::could not pull $MYSQL_IMAGE after 5 attempts"
+              exit 1
+            fi
+            echo "pull attempt $attempt failed; retrying in $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+          docker run -d --name mysql -p 3306:3306 --tmpfs /var/lib/mysql:rw \
+            -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=openpne_archive \
+            --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -psecret" \
+            --health-interval=5s --health-timeout=5s --health-retries=20 \
+            "$MYSQL_IMAGE"
+          for _ in $(seq 1 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' mysql)
+            if [ "$status" = healthy ]; then
+              exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' mysql)" != true ]; then
+              echo "::error::MySQL exited during startup"
+              docker logs mysql
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::MySQL did not become healthy within 200s (last status: $status)"
+          docker logs mysql
+          exit 1
+      - name: Update from the last release's archive (MySQL)
+        if: steps.last.outputs.have == 'attached'
+        env:
+          ARCHIVE_DB: mysql
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: openpne_archive
+          DB_USERNAME: root
+          DB_PASSWORD: secret
+        run: >-
+          checks/.github/scripts/release-archive.sh update
+          "$RUNNER_TEMP/last" "${BASELINE#v}" "$RUNNER_TEMP/archive" "$VERSION"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-archives
+          path: ${{ runner.temp }}/archive
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+          compression-level: 0
+
   draft:
     name: Draft the release
-    needs: [validate, ci, compat, audit]
+    needs: [validate, ci, compat, audit, archive]
     # Spelled out because a skipped `compat` would otherwise skip this job, and so that nothing but
     # success (or the first release's skip) on every check reaches it.
     if: >-
@@ -112,10 +226,11 @@ jobs:
       && needs.validate.result == 'success'
       && needs.ci.result == 'success'
       && needs.audit.result == 'success'
+      && needs.archive.result == 'success'
       && (needs.compat.result == 'success'
           || (needs.compat.result == 'skipped' && needs.validate.outputs.baseline == ''))
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: write
     env:
@@ -135,18 +250,25 @@ jobs:
             echo "::error::a draft is waiting for another release ($others): publish or delete it first, then start this one again"
             exit 1
           fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-archives
+          path: archive
       - name: Draft v${{ inputs.version }}
         run: |
           set -euo pipefail
+          (cd archive && sha256sum --check --strict SHA256SUMS)
           if [ "$(gh release view "v$VERSION" --json isDraft --jq .isDraft 2>/dev/null || true)" = true ]; then
             gh release delete "v$VERSION" --yes
           fi
           # release-verify.yml reads this line when the draft is published.
-          marker="<!-- release: tag=v$VERSION commit=$SHA baseline=${BASELINE:-none} baseline_commit=${BASELINE_SHA:-none} -->"
+          sums=$(sha256sum archive/SHA256SUMS | cut -d' ' -f1)
+          marker="<!-- release: tag=v$VERSION commit=$SHA baseline=${BASELINE:-none} baseline_commit=${BASELINE_SHA:-none} sums=$sums -->"
+          files=("archive/openpne-$VERSION.tar.gz" "archive/openpne-$VERSION.zip" archive/SHA256SUMS)
           if [ -n "$BASELINE" ]; then
-            gh release create "v$VERSION" --target "$SHA" --draft --prerelease --title "v$VERSION" \
+            gh release create "v$VERSION" "${files[@]}" --target "$SHA" --draft --prerelease --title "v$VERSION" \
               --notes "$marker" --generate-notes --notes-start-tag "$BASELINE"
           else
-            gh release create "v$VERSION" --target "$SHA" --draft --prerelease --title "v$VERSION" \
+            gh release create "v$VERSION" "${files[@]}" --target "$SHA" --draft --prerelease --title "v$VERSION" \
               --notes "$marker"$'\n\n'"The first alpha release."
           fi
