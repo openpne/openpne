@@ -49,13 +49,13 @@ class InviteMemberCommand extends Command
             return self::FAILURE;
         }
 
-        SecurityLog::event('registration.link_issued', ['email' => $email, 'via' => 'cli']);
+        SecurityLog::event('registration.link_printed', ['email' => $email, 'via' => 'cli']);
 
         $lifetime = CarbonInterval::minutes((int) config('openpne.registration.token_ttl_minutes'))->cascade()->locale('en')->forHumans();
         $this->line($link);
         $this->newLine();
-        $this->info("Whoever opens this link registers as [{$email}]. It works once, for {$lifetime}, and a newer link for the address replaces it.");
-        $this->comment('The link starts with APP_URL ('.config('app.url').'): if the site answers somewhere else, fix APP_URL and issue it again.');
+        $this->info("Whoever completes the form behind this link registers as [{$email}]. It works once, for {$lifetime}, and a newer link for the address replaces it.");
+        $this->comment('The link starts with '.url('/').', which comes from APP_URL: if the site answers somewhere else, fix APP_URL and issue it again.');
 
         return self::SUCCESS;
     }

@@ -28,10 +28,11 @@ class IssueRegistrationToken
         ?Member $inviter = null,
         ?string $message = null,
     ): IssueResult {
+        $email = Str::lower(trim($email));
         [$result, $raw] = $this->issue($email, $source, $inviter);
 
         if ($raw !== null) {
-            Notification::route('mail', Str::lower(trim($email)))->notify(
+            Notification::route('mail', $email)->notify(
                 new RegistrationLinkNotification($raw, app()->getLocale(), $source, $inviter?->name, $message),
             );
         }
@@ -41,20 +42,22 @@ class IssueRegistrationToken
 
     /**
      * The link itself instead of a mail carrying it: nothing shows the address can receive mail, so
-     * the caller is the one vouching for it (docs/internals/security.md, "Registration links").
+     * the caller vouches for it, which only the operator's command may (docs/internals/security.md,
+     * "Registration links").
      */
     public function link(string $email, RegistrationTokenSource $source): IssueResult|string
     {
-        [$result, $raw] = $this->issue($email, $source, null);
+        [$result, $raw] = $this->issue(Str::lower(trim($email)), $source, null);
 
         return $raw === null ? $result : MailUrlMapper::resolve('member/register?token='.$raw);
     }
 
-    /** @return array{IssueResult, ?string} the raw token only when one was issued */
+    /**
+     * @param  string  $email  already trimmed and lowercased
+     * @return array{IssueResult, ?string} the raw token only when one was issued
+     */
     private function issue(string $email, RegistrationTokenSource $source, ?Member $inviter): array
     {
-        $email = Str::lower(trim($email));
-
         // Case-insensitive so the no-op holds on any collation: members.email is lowercased on the
         // app's own creation paths, but an upgraded row can be verbatim mixed-case, and a
         // case-sensitive store (SQLite/PostgreSQL) would otherwise miss it and leak a token + mail.

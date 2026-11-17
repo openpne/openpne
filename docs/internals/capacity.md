@@ -57,7 +57,8 @@ writes a registration token.
 
 A live link's own seat is not counted against a re-mail to the same address, so the gate never
 refuses one; the entry screens, which pause for every visitor, are what keep a full site from
-re-mailing. The link still completes while the members alone are below the cap.
+re-mailing. `openpne:member:invite` has no such screen, so on a full site it still prints a new link
+for an address that holds one. The link still completes while the members alone are below the cap.
 
 A link is a seat whoever asked for it: on an open site, addresses that never complete hold seats
 until their links expire, bounded only by the `register-email` limiter and the TTL. That is

@@ -25,7 +25,6 @@ class InviteMemberCommandTest extends TestCase
 
     private const FORM = ['name' => 'Newcomer', 'password' => 'sufficiently-long-pw', 'password_confirmation' => 'sufficiently-long-pw'];
 
-    /** Runs the command for $email and returns the link it printed. */
     private function invite(string $email = 'newcomer@example.com'): string
     {
         $status = Artisan::call('openpne:member:invite', ['email' => $email]);
@@ -104,8 +103,9 @@ class InviteMemberCommandTest extends TestCase
         $this->assertDatabaseCount('members', 1);
     }
 
-    public function test_an_address_a_member_already_uses_is_refused(): void
+    public function test_an_address_a_member_already_uses_is_refused_and_logs_nothing(): void
     {
+        $this->captureSecurityLog();
         Member::factory()->create(['email' => 'taken@example.com']);
 
         $this->artisan('openpne:member:invite', ['email' => 'Taken@Example.com'])
@@ -113,6 +113,17 @@ class InviteMemberCommandTest extends TestCase
             ->assertFailed();
 
         $this->assertDatabaseCount('registration_tokens', 0);
+        $this->assertSame([], $this->securityRecords());
+    }
+
+    public function test_it_says_how_long_the_link_lives_and_where_it_points(): void
+    {
+        config(['openpne.registration.token_ttl_minutes' => 90]);
+
+        $this->artisan('openpne:member:invite', ['email' => 'newcomer@example.com'])
+            ->expectsOutputToContain('for 1 hour 30 minutes')
+            ->expectsOutputToContain('starts with '.url('/').',')
+            ->assertSuccessful();
     }
 
     public function test_something_that_is_not_an_address_is_refused(): void
@@ -124,7 +135,6 @@ class InviteMemberCommandTest extends TestCase
         $this->assertDatabaseCount('registration_tokens', 0);
     }
 
-    /** MemberCapacity::reserveToken keeps the seat of a live link, so only a new address is refused. */
     public function test_a_full_site_refuses_a_new_address_but_reissues_for_one_holding_a_link(): void
     {
         $this->setSnsSetting(SnsSettingKey::MemberCapacity, 2);
@@ -169,18 +179,18 @@ class InviteMemberCommandTest extends TestCase
 
         $link = $this->invite();
 
-        $context = $this->assertOneSecurityEvent('registration.link_issued');
+        $context = $this->assertOneSecurityEvent('registration.link_printed');
         $this->assertSame(['email' => 'newcomer@example.com', 'via' => 'cli'], $context);
         $this->assertStringNotContainsString(substr($link, -40), json_encode($this->securityRecords(), JSON_THROW_ON_ERROR));
     }
 
-    public function test_a_refused_issue_logs_nothing(): void
+    public function test_a_closed_site_logs_nothing(): void
     {
         $this->captureSecurityLog();
         $this->mode('closed');
 
         $this->artisan('openpne:member:invite', ['email' => 'newcomer@example.com'])->assertFailed();
 
-        $this->assertSame([], $this->securityRecords('registration.link_issued'));
+        $this->assertSame([], $this->securityRecords());
     }
 }

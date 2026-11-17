@@ -463,10 +463,13 @@ the other devices.
 
 ## Registration links
 
-A member account is created only by opening a registration link (`/register/{token}`).
+A person joins a site by opening a registration link (`/register/{token}`); an AI account
+(`CreateAiAccount`) and a member an upgrade imports are created without one.
 [`IssueRegistrationToken`](../../app/Features/Auth/Actions/IssueRegistrationToken.php) is the one
-place that writes a link ([capacity.md](capacity.md), "Where a seat is taken"), and it stores a
-hash: the raw token exists only in the link.
+place that writes a link ([capacity.md](capacity.md), "Where a seat is taken"), and
+`registration_tokens` holds only a hash of it. A mailed link's raw token is also in the queued
+notification until the mail is sent (`jobs`, then `failed_jobs` if delivery fails) and in whatever
+the mailer keeps, the application log under `MAIL_MAILER=log`.
 
 | Issued by | Stored `source` | Allowed while `registration_mode` is |
 |---|---|---|
@@ -484,12 +487,15 @@ hash: the raw token exists only in the link.
 - **Why the address is believed.** The first three links are mailed, so opening one shows the
   registrant reads that mailbox. The operator's link is printed instead: nothing shows the address
   receives mail, and the operator who ran the command vouches for it, as they do for an
-  administrator they create. A member carries no mark of which it was (`email_verified_at` is
-  unused on every path); the security log has it (`registration.link_issued`,
-  [logging.md](logging.md)).
-- **What a wrong address costs.** The password reset goes to the registered address, so an account
-  registered under a mailbox its member cannot read can be taken over by whoever reads it. Changing
-  the address (`RequestEmailChange`) confirms the new one by mail.
+  administrator they create. Only that command may print one (`RegistrationLinkPrintersTest`): an
+  administrator handed the link could register any address as a member. A member carries no mark of
+  which link it used (`email_verified_at` is unused on every path), and the security log says only
+  that a link was printed for an address (`registration.link_printed`, [logging.md](logging.md)),
+  not that the member registered through it.
+- **What a wrong address costs.** The password reset, the two-factor reset link and the sign-in
+  code all go to the registered address. An account registered under a mailbox its member cannot
+  read is one the member cannot recover and whoever reads that mailbox can take over. Changing the
+  address (`RequestEmailChange`) confirms the new one by mail.
 
 ## Password policy
 

@@ -6,9 +6,9 @@ use Illuminate\Support\Facades\Log;
 use Stringable;
 
 /**
- * An event carries the actor and guard where one is resolved, the attempted identifier only for
- * failed-login, lockout and email-change events, and never a password, token, session id, recovery
- * code or raw credentials array (docs/internals/logging.md).
+ * An event carries the actor and guard where one is resolved, an email address or attempted
+ * identifier only for the events docs/internals/logging.md names under "PII / injection contract",
+ * and never a password, token, session id, recovery code or raw credentials array.
  */
 final class SecurityLog
 {
