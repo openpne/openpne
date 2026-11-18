@@ -1020,8 +1020,11 @@ Route::get('/m/community/{group}/event/new', fn (int $group) => $mCompat("/group
 // 308 keeps the method for stale in-flight forms; the canonical target resolves the surface itself.
 Route::any('/m/{path?}', function (Request $request, string $path = '') {
     $query = $request->getQueryString();
+    $target = '/'.$path;
+    // A target that begins with an empty segment goes behind `/.`, since a Location of `//x` would leave this host.
+    $target = str_starts_with($target, '//') ? '/.'.$target : $target;
 
-    return redirect()->to('/'.$path.($query === null ? '' : '?'.$query), 308);
+    return redirect()->to($target.($query === null ? '' : '?'.$query), 308);
 })->where('path', '.*')->name('compat.m_prefix');
 
 // A router-level 404 has no session, locale or Classic shell; routing it here makes it an ordinary

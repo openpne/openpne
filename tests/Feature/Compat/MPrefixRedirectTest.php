@@ -32,6 +32,17 @@ class MPrefixRedirectTest extends TestCase
             ->assertRedirect('/notifications/read-all');
     }
 
+    public function test_a_target_that_begins_with_an_empty_segment_stays_on_this_host(): void
+    {
+        $redirects = [
+            '/m//evil.example/x?a=1' => 'http://localhost/.//evil.example/x?a=1',
+            '/m/%2F%2Fevil.example/x?a=1' => 'http://localhost/.///evil.example/x?a=1',
+        ];
+        foreach ($redirects as $url => $location) {
+            $this->assertSame($location, $this->get($url)->assertStatus(308)->headers->get('Location'), $url);
+        }
+    }
+
     public function test_the_bare_m_prefix_redirects_to_the_root(): void
     {
         $this->get('/m')
