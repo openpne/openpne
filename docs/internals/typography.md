@@ -62,8 +62,8 @@ title red without leaving two color utilities on one element for the stylesheet'
 ## What the rule does not cover
 
 - **Authored content** — `<strong>` in anything rendered through `RichBody`, and the `.rich-body`
-  rules in `app.css`. That covers member bodies as well as the admin-written login message and policy
-  pages: the writer's emphasis, not the interface's.
+  rules in `app.css`. That covers member bodies as well as the admin-written login message, home notice and
+  policy pages: the writer's emphasis, not the interface's.
 - **Identity marks** — [`BrandMark`](../../resources/js/components/brand-mark.tsx),
   [`BrandName`](../../resources/js/components/brand-name.tsx),
   [`InitialBadge`](../../resources/js/components/initial-badge.tsx). Site identity rather than text

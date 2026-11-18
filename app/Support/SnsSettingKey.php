@@ -649,9 +649,9 @@ enum SnsSettingKey: string
 
     /**
      * Maximum stored size in BYTES. The Design CSS/HTML, the login screen message, the policy
-     * bodies and the home notice are multi-line free text bounded only by the `sns_settings.value` TEXT column (65535
-     * bytes, matching OpenPNE 3's sns_config.value), so they are validated by byte length, not the
-     * char-count maxLength() the short identity fields use.
+     * bodies and the home notice are multi-line free text bounded only by the `sns_settings.value`
+     * TEXT column (65535 bytes, matching OpenPNE 3's sns_config.value), so they are validated by
+     * byte length, not the char-count maxLength() the short identity fields use.
      */
     public function maxBytes(): int
     {

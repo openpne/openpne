@@ -63,7 +63,7 @@ class HomeNoticeTest extends TestCase
         HomeIssue::factory()->create(['issue_date' => $day->toDateString(), 'window_start' => $window->start, 'published_at' => $window->end]);
 
         $this->actingAs(Member::factory()->create())->get('/home/2026/08/26')->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('home/archive')->missing('notice'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('home/archive')->where('notice', null));
     }
 
     public function test_a_blank_notice_or_one_that_renders_to_nothing_is_no_notice(): void

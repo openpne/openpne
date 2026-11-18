@@ -29,8 +29,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pick the page `/` serves (App\Support\ModernHome), what a joined group's row opens
- * (App\Support\ModernGroupList) and the notice the home shows on top. `sns_settings` is authoritative; each value is stored verbatim on
+ * Pick the page `/` serves (App\Support\ModernHome) and what a joined group's row opens
+ * (App\Support\ModernGroupList). `sns_settings` is authoritative; each value is stored verbatim on
  * save and resolves to its registry default while no row exists.
  *
  * @property-read Schema $form

@@ -371,7 +371,7 @@ checkpoint except the six settings stamps, which write no `openpne4_upgrade_stat
 | `brand_favicon_fallback` stamp | no OpenPNE 3 source column; OpenPNE 3 showed no browser-tab icon ([site-icon.md](site-icon.md)) | insert-if-absent, only after full success, independent of the surface stamp |
 | `modern_home` stamp (`whats_new`) | no OpenPNE 3 source column; the digest is the Modern page nearest the OpenPNE 3 home ([home-issues.md](home-issues.md#routes)) | insert-if-absent, only after full success, independent of the surface stamp; a run resumed after the Landing page settings page was saved in between finds the row that save wrote, and keeps it |
 | `modern_group_list` stamp (`group`) | no OpenPNE 3 source column; an OpenPNE 3 community opened on its top, and a community that never used its timeline arrives with an empty talk ([group-talk.md](group-talk.md#the-joined-group-list-is-a-room-list)) | insert-if-absent, only after full success, independent of the surface stamp; a row the Landing page settings page saved in between stands |
-| `home_notice` stamp (`HomeNoticeStamp`) | no OpenPNE 3 source column; the value is drawn from the migrated gadgets ("Home notice") | written over an absent or `''` row only, only after full success, independent of the surface stamp; the Landing page settings page saves `''` for an untouched notice, and a completed site never reaches the stamp |
+| `home_notice` stamp (`HomeNoticeStamp`) | no OpenPNE 3 source column; the value is drawn from the migrated gadgets ("Home notice") | written over an absent or blank (whitespace only) row only, only after full success, independent of the surface stamp; the Landing page settings page saves `''` for an untouched notice, and a completed site never reaches the stamp |
 | OpenPNE 3 form-default stamp (`SnsSettingKey::op3FormDefault()`, today `sns_name` = `MySNS`) | an `INSERT ... SELECT` copies rows, and the key has none in a source whose admin never saved the page; OpenPNE 3 then showed its form default, which differs from the default here | insert-if-absent after the settings step, only after full success; a copied or operator-set row stands |
 
 `PasswordWrap` writes `bcrypt(md5hex)` at cost 10 with `password_scheme = md5_bcrypt`; login
@@ -500,12 +500,13 @@ autolinked where OpenPNE 3 left them as text.
 
 The Modern home shows `home_notice` ([home-issues.md](home-issues.md#routes)). `HomeNoticeStamp`
 converts the `informationBox` gadgets in the home's `top` zone with `OperatorHtmlMarkdown` and joins
-them with a blank line in the order Classic draws them (`sort_order`, NULL last, then `id`). It
-copies only when the home layout renders `top` (`GadgetService::activeZones('home')`), so a box
-`layoutB` / `layoutC` hid stays off the Modern home too. The boxes with content it leaves — that
-hidden `top`, and the home's `sideMenu` / `contents` / `bottom` — are one `W-HOME-NOTICE-NOT-COPIED`
-warning naming each; a box that converts to nothing is not counted, and the `sidebanner` boxes are
-not the home's. A notice over 65535 bytes is `W-HOME-NOTICE-TOO-LARGE` and not copied. What the
+them with a blank line by `sort_order` as Classic draws them, NULL last; boxes with the same
+`sort_order`, whose order Classic leaves to the database, go by `id`. It copies only when the home
+layout renders `top` (`GadgetService::activeZones('home')`), so a box `layoutB` / `layoutC` hid
+stays off the Modern home too. The boxes with content it leaves — that hidden `top`, and the home's
+`sideMenu` / `contents` / `bottom` — are one `W-HOME-NOTICE-NOT-COPIED` warning naming each, and
+marking a zone the layout does not render; a box that converts to nothing is not counted, and the
+`sidebanner` boxes are not the home's. A notice over 65535 bytes is `W-HOME-NOTICE-TOO-LARGE` and not copied. What the
 conversion drops is counted with the gadget's own `value_markdown` ("Operator HTML"). Once copied,
 the notice and the gadgets are separate values.
 

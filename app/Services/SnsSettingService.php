@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Overrides are cached in tiers (the keys below) so the per-request hot path never deserializes the
- * design blobs, the custom CSS body, the login message or the home notice. Every read and every forget goes through
- * the memoized store, or a forget would leave this request answering from before it
- * (docs/internals/runtime.md, "Cache reads").
+ * design blobs, the custom CSS body, the login message or the home notice. Every read and every
+ * forget goes through the memoized store, or a forget would leave this request answering from
+ * before it (docs/internals/runtime.md, "Cache reads").
  */
 class SnsSettingService
 {
@@ -160,7 +160,6 @@ class SnsSettingService
         });
     }
 
-    /** The stored home notice, or '' when unset. */
     private function homeNotice(): string
     {
         return Cache::memo()->remember(self::HOME_NOTICE_CACHE_KEY, self::CACHE_TTL, function (): string {

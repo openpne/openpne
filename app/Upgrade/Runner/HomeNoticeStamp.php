@@ -12,13 +12,11 @@ use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Copies the home's top information boxes into the Modern home notice once the walk is through
- * (docs/internals/upgrade.md, "Home notice"). Writes only over an absent or empty row: saving the
- * Landing page settings page writes '' for an untouched notice, and a completed site never reaches this.
+ * Writes only over an absent or blank row: saving the Landing page settings page writes '' for an
+ * untouched notice, and a completed site never reaches this (docs/internals/upgrade.md, "Home notice").
  */
 final class HomeNoticeStamp
 {
-    /** An information box on the home with content, left on Classic only. */
     public const W_NOT_COPIED = 'W-HOME-NOTICE-NOT-COPIED';
 
     public const W_TOO_LARGE = 'W-HOME-NOTICE-TOO-LARGE';
@@ -40,7 +38,7 @@ final class HomeNoticeStamp
         }
 
         app(SnsSettingService::class)->clearCache();
-        $topShown = in_array(self::ZONE, app(GadgetService::class)->activeZones('home'), true);
+        $shown = app(GadgetService::class)->activeZones('home');
 
         $copied = [];
         $left = [];
@@ -49,17 +47,17 @@ final class HomeNoticeStamp
             if ($markdown === '') {
                 continue;
             }
-            if ($topShown && $box->zone === self::ZONE) {
+            if ($box->zone === self::ZONE && in_array(self::ZONE, $shown, true)) {
                 $copied[] = $markdown;
             } else {
-                $left[] = "#{$box->id} ".($box->zone === self::ZONE ? 'top, which the home layout does not show' : $box->zone);
+                $left[] = "#{$box->id} {$box->zone}".(in_array($box->zone, $shown, true) ? '' : ', which the home layout does not show');
             }
         }
 
         if ($left !== []) {
             $report->warning(new Warning(
                 self::W_NOT_COPIED,
-                count($left).' information box(es) on the home stay on Classic only, not copied to the Modern home notice: '.implode('; ', $left).'.',
+                count($left).' information box(es) on the home not copied to the Modern home notice: '.implode('; ', $left).'.',
                 count($left),
             ));
         }
@@ -79,8 +77,13 @@ final class HomeNoticeStamp
         }
 
         $key = SnsSettingKey::HomeNotice->value;
-        $written = DB::table('sns_settings')->insertOrIgnore(['key' => $key, 'value' => $notice])
-            ?: DB::table('sns_settings')->where('key', $key)->where('value', '')->update(['value' => $notice]);
+        $current = DB::table('sns_settings')->where('key', $key)->value('value');
+        if ($current !== null && trim($current) !== '') {
+            return;
+        }
+        $written = $current === null
+            ? DB::table('sns_settings')->insertOrIgnore(['key' => $key, 'value' => $notice])
+            : DB::table('sns_settings')->where('key', $key)->where('value', $current)->update(['value' => $notice]);
 
         app(SnsSettingService::class)->clearCache();
 
@@ -89,7 +92,7 @@ final class HomeNoticeStamp
         }
     }
 
-    /** @return list<object{id: int, zone: string, value: string|null}> in the order Classic draws them */
+    /** @return list<object{id: int, zone: string, value: string|null}> by `sort_order` as Classic draws them, with `id` settling ties Classic leaves to the database */
     private function boxes(): array
     {
         return DB::table('gadgets')

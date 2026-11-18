@@ -94,6 +94,8 @@ class HomeController extends Controller
         /** @var Member $viewer */
         $viewer = $request->user();
         $now = CarbonImmutable::now();
+        // Read before publishing: a failed publication may take the cache store with it, and the page must still render.
+        $notice = $this->notice(ModernHome::Issue);
         $issue = $latest($now);
 
         // Nothing published yet is not an absence to report: the site has a front page from its
@@ -110,7 +112,7 @@ class HomeController extends Controller
                 $now,
             );
 
-        return Inertia::render('home/issue', [...$page, 'notice' => $this->notice(ModernHome::Issue)]);
+        return Inertia::render('home/issue', [...$page, 'notice' => $notice]);
     }
 
     public function dashboard(

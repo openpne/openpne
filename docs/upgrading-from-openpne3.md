@@ -190,7 +190,7 @@ data the upgrade does not recognise, not carried.
 | `W-ACTIVITY-TEMPLATE-RENDERED` / `W-ACTIVITY-TEMPLATE-DROPPED` / `W-ACTIVITY-TEMPLATE-UNKNOWN` | Template activities (`diary` / `community_topic` / `community_event`), with where they land. The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; one in a thread that is not migrated goes with it; a template OpenPNE 4 does not know keeps its stored text. |
 | `W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN` / `W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS` / `W-ACTIVITY-TEMPLATE-KEPT-NO-LINK` / `W-ACTIVITY-TEMPLATE-KEPT-UNFIT` | After the copy, template rows whose line could not be rendered keep their stored text, counted by reason: a template OpenPNE 4 does not know, parameters that are not what OpenPNE 3 wrote, a link that names no OpenPNE 4 page, or a link alone longer than the body allows. |
 | `W-UPLOAD-OWNERLESS` | Upload-plugin files whose member or community the upgrade does not carry. They arrive with no owner, so their `/f/show` links answer 404; delete them in the source, or afterwards with `php artisan openpne:prune-ownerless-files` (`--dry-run` first) or in the admin file list. |
-| `W-HOME-NOTICE-NOT-COPIED` | Information boxes on the home that the Modern home notice does not carry: one in the top area that the home layout hides, or one in the side, center or bottom area. They stay on the Classic home; write what Modern members should see on the Landing page settings page. |
+| `W-HOME-NOTICE-NOT-COPIED` | Information boxes on the home that the Modern home notice does not carry: one in the side, center or bottom area, or in an area the home layout does not show (the line says which). Classic shows them as it did; write what Modern members should see on the Landing page settings page. |
 | `W-HOME-NOTICE-TOO-LARGE` | The home's top information boxes are longer than the Modern home notice holds, so nothing was copied; write a shorter notice on the Landing page settings page. |
 | `W-THEME-UNKNOWN-PACKAGE` / `W-THEME-MISSING-PACKAGE` | The skin OpenPNE 3 showed cannot be reproduced yet: the site wore the first package on its disk (which the run cannot see), or `Theme_used` names a package not under `public/opSkinThemePlugin`. The default skin shows until the package is copied in and chosen (see [Bringing an OpenPNE 3 theme](#bringing-an-openpne-3-theme)). |
 
@@ -486,8 +486,9 @@ order; its `js/` is not loaded. What the package carries is yours to check befor
 Rehearse until the dry run holds no surprises and verification passes. Set what phone visitors
 will see, since they get the Modern surface and none of the Classic-only customisations (custom CSS
 and HTML, gadgets, navigation, banners, theme): the brand color and logo under *Branding settings*,
-the login message under *Login page settings* (not needed on a `classic_only` site, where phones
-get the PC layout). Then migrate the data people will actually keep using:
+the login message under *Login page settings*, and the home notice under *Landing page settings*,
+which the upgrade copied once from the information boxes at the top of the OpenPNE 3 home (not
+needed on a `classic_only` site, where phones get the PC layout). Then migrate the data people will actually keep using:
 
 1. Stop writes to OpenPNE 3 — maintenance mode, or however that site takes traffic. From here on,
    nothing new is being written that the dump could miss.

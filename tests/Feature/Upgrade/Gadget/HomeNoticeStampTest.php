@@ -14,6 +14,7 @@ use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
 class HomeNoticeStampTest extends UpgradeSqlTestCase
@@ -31,18 +32,30 @@ class HomeNoticeStampTest extends UpgradeSqlTestCase
         $this->box(2, 'top', 5, '<p><strong>Second</strong></p>');
         $this->box(3, 'top', 1, '<p>First <a href="/diary">link</a></p>');
 
+        app(SnsSettingService::class)->get(SnsSettingKey::HomeNotice);
         $lines = $this->stamp();
 
         $this->assertSame("First [link](/diary)\n\n**Second**\n\nThird", $this->notice());
+        $this->assertSame($this->notice(), app(SnsSettingService::class)->get(SnsSettingKey::HomeNotice));
         $this->assertStringContainsString('copied to the Modern home notice', implode("\n", $lines));
         $this->assertStringNotContainsString('WARN', implode("\n", $lines));
     }
 
-    public function test_an_empty_row_is_written_and_a_written_one_stands(): void
+    public function test_a_notice_past_the_short_setting_limit_is_copied_whole(): void
+    {
+        $this->box(1, 'top', 0, '<p>'.str_repeat('あ', 100).'</p>');
+
+        $this->stamp();
+
+        $this->assertSame(str_repeat('あ', 100), $this->notice());
+    }
+
+    #[DataProvider('blankRows')]
+    public function test_a_blank_row_is_written_and_a_written_one_stands(string $blank): void
     {
         $this->box(1, 'top', 0, '<p>From OpenPNE 3</p>');
 
-        DB::table('sns_settings')->insert(['key' => 'home_notice', 'value' => '']);
+        DB::table('sns_settings')->insert(['key' => 'home_notice', 'value' => $blank]);
         $this->stamp();
         $this->assertSame('From OpenPNE 3', $this->notice());
 
@@ -52,16 +65,45 @@ class HomeNoticeStampTest extends UpgradeSqlTestCase
         $this->assertStringNotContainsString('copied to the Modern home notice', implode("\n", $lines));
     }
 
-    public function test_a_layout_without_the_top_copies_nothing_and_names_the_box(): void
+    /** @return array<string, array{string}> */
+    public static function blankRows(): array
     {
-        DB::table('sns_settings')->insert(['key' => SnsSettingKey::GadgetHomeLayout->value, 'value' => 'layoutB']);
+        return ['empty' => [''], 'whitespace' => ["  \n"]];
+    }
+
+    /** The settings cache is warmed on the default layout first, so a stamp reading it stale would copy. */
+    #[DataProvider('layoutsWithoutTheTop')]
+    public function test_a_layout_without_the_top_copies_nothing_and_names_the_box(string $layout, string $hiddenSide): void
+    {
+        app(SnsSettingService::class)->get(SnsSettingKey::GadgetHomeLayout);
+        DB::table('sns_settings')->insert(['key' => SnsSettingKey::GadgetHomeLayout->value, 'value' => $layout]);
         $this->box(7, 'top', 0, '<p>Hidden</p>');
+        $this->box(8, 'sideMenu', 0, '<p>Side</p>');
 
         $lines = implode("\n", $this->stamp());
 
         $this->assertDatabaseMissing('sns_settings', ['key' => 'home_notice']);
-        $this->assertStringContainsString('WARN '.HomeNoticeStamp::W_NOT_COPIED.': 1 information box(es)', $lines);
-        $this->assertStringContainsString('#7 top, which the home layout does not show', $lines);
+        $this->assertStringContainsString('WARN '.HomeNoticeStamp::W_NOT_COPIED.': 2 information box(es)', $lines);
+        $this->assertStringContainsString('#7 top, which the home layout does not show; #8 sideMenu'.$hiddenSide.'.', $lines);
+    }
+
+    /** @return array<string, array{string, string}> */
+    public static function layoutsWithoutTheTop(): array
+    {
+        return [
+            'B' => ['layoutB', ''],
+            'C' => ['layoutC', ', which the home layout does not show'],
+        ];
+    }
+
+    public function test_a_stored_layout_a_copies_the_top(): void
+    {
+        DB::table('sns_settings')->insert(['key' => SnsSettingKey::GadgetHomeLayout->value, 'value' => 'layoutA']);
+        $this->box(1, 'top', 0, '<p>Top</p>');
+
+        $this->stamp();
+
+        $this->assertSame('Top', $this->notice());
     }
 
     public function test_the_other_home_zones_are_reported_and_the_side_banner_and_empty_boxes_are_not(): void
@@ -126,6 +168,18 @@ class HomeNoticeStampTest extends UpgradeSqlTestCase
         $this->assertSame('Welcome', app(SnsSettingService::class)->get(SnsSettingKey::HomeNotice));
     }
 
+    public function test_a_run_that_fails_after_the_gadgets_copies_nothing(): void
+    {
+        $this->seedGadget(1, 'top', 'informationBox', 0);
+        $this->seedConfig(1, 'value', '<p>Welcome</p>');
+
+        $runner = new UpgradeRunner(new InsertSelectCompiler, [new GadgetUpgrade, new GadgetConfigUpgrade, new BrokenGadgetUpgrade]);
+
+        $this->assertFalse($runner->run(new RunOptions, function (): void {}));
+        $this->assertSame(1, DB::table('gadgets')->count());
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'home_notice']);
+    }
+
     /**
      * @param  list<string>  $targets
      * @return list<string>
@@ -184,5 +238,13 @@ class HomeNoticeStampTest extends UpgradeSqlTestCase
             'created_at' => '2018-03-04 12:34:56',
             'updated_at' => '2019-06-07 01:02:03',
         ]);
+    }
+}
+
+final class BrokenGadgetUpgrade extends GadgetUpgrade
+{
+    public function targetTable(): string
+    {
+        return 'no_such_table';
     }
 }

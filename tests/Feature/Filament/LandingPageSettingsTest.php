@@ -88,10 +88,17 @@ class LandingPageSettingsTest extends TestCase
         Livewire::test(LandingPageSettings::class)->assertSet('data.'.SnsSettingKey::HomeNotice->value, $body);
     }
 
-    public function test_a_notice_over_the_column_is_refused(): void
+    public function test_a_notice_up_to_the_column_is_saved_and_one_byte_over_is_refused(): void
     {
         Livewire::test(LandingPageSettings::class)
-            ->set('data.'.SnsSettingKey::HomeNotice->value, str_repeat('あ', 21846))
+            ->set('data.'.SnsSettingKey::HomeNotice->value, str_repeat('あ', 21845))
+            ->call('save')
+            ->assertHasNoErrors();
+        $this->assertSame(65535, strlen((string) DB::table('sns_settings')->where('key', SnsSettingKey::HomeNotice->value)->value('value')));
+        DB::table('sns_settings')->where('key', SnsSettingKey::HomeNotice->value)->delete();
+
+        Livewire::test(LandingPageSettings::class)
+            ->set('data.'.SnsSettingKey::HomeNotice->value, str_repeat('あ', 21845).'a')
             ->call('save')
             ->assertHasErrors('data.'.SnsSettingKey::HomeNotice->value);
 

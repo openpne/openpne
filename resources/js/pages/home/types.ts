@@ -103,7 +103,7 @@ export interface IssuePageProps extends PageProps {
     prev: IssueRef | null;
     /** Always null on the current issue — there is nothing after it yet. */
     next: IssueRef | null;
-    /** Null unless this page is the one `/` serves. */
+    /** Null unless this page is the one `/` serves; a past day's page sends null too. */
     notice: SiteNoticeBody | null;
 }
 

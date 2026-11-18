@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { RichBody } from '@/components/rich-body';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -20,8 +20,12 @@ export function SiteNotice({ notice }: { notice: SiteNoticeBody | null }) {
     const [overflows, setOverflows] = useState(false);
     const [open, setOpen] = useState(false);
     const html = notice?.bodyHtml ?? null;
+    const [shownHtml, setShownHtml] = useState(html);
 
-    useEffect(() => setOpen(false), [html]);
+    if (html !== shownHtml) {
+        setShownHtml(html);
+        setOpen(false);
+    }
 
     useLayoutEffect(() => {
         const node = inner.current;

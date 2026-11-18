@@ -76,9 +76,9 @@ export default function HomeIssue() {
         return (
             <>
                 <Head title={t('What happened')} />
+                <SiteNotice notice={notice} />
                 {/* Today's dateline over nothing: the site still has a front page, it just has
                     nothing on it yet. */}
-                <SiteNotice notice={notice} />
                 <Masthead from={today} to={today} />
                 {auth.user && <WelcomePanel name={auth.user.name} enabledFeatures={enabledFeatures} />}
                 <p className="text-sm text-muted-foreground">{t('The first post will appear here the next morning.')}</p>
