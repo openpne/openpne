@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\TermSettings;
+use App\Http\Middleware\SetLocale;
 use App\Models\AdminUser;
+use App\Services\TermService;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\TextInput;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
@@ -113,6 +116,42 @@ class TermSettingsTest extends TestCase
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('data.ja__friend', 'ともだち');
+    }
+
+    public function test_a_label_names_the_term_by_its_default_in_the_panel_language_and_its_key(): void
+    {
+        DB::table('term_overrides')->insert([
+            ['name' => 'community', 'locale' => 'ja', 'value' => 'サークル'],
+            ['name' => 'community', 'locale' => 'en', 'value' => 'club'],
+        ]);
+
+        foreach (['ja' => 'グループ (community)', 'en' => 'Group (community)'] as $panelLocale => $expected) {
+            app()->setLocale($panelLocale);
+
+            $component = Livewire::test(TermSettings::class);
+            foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
+                $component->assertFormFieldExists(
+                    "{$locale}__community",
+                    fn (TextInput $field): bool => $field->getLabel() === $expected,
+                );
+            }
+        }
+    }
+
+    public function test_every_label_pairs_the_ja_default_with_its_key_under_a_ja_panel(): void
+    {
+        app()->setLocale('ja');
+        $captions = TermService::defaults('ja');
+
+        $component = Livewire::test(TermSettings::class);
+        foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
+            foreach (array_keys(TermService::defaults($locale)) as $name) {
+                $component->assertFormFieldExists(
+                    "{$locale}__{$name}",
+                    fn (TextInput $field): bool => $field->getLabel() === "{$captions[$name]} ({$name})",
+                );
+            }
+        }
     }
 
     public function test_unrelated_overrides_are_not_touched_when_saving_others(): void
