@@ -53,7 +53,13 @@ final class InsertSelectCompiler
             $selectList[] = $column->selectSql()." AS `{$name}`";
         }
 
-        return $this->resolve('SELECT '.implode(', ', $selectList)."\n".$this->fromClause($step, $sourcePrefix, $sourceDatabase), $step, $sourcePrefix, $sourceDatabase);
+        return $this->compileQuery($step, implode(', ', $selectList), '', $sourcePrefix, $sourceDatabase);
+    }
+
+    /** $selectList and $tail around the FROM and WHERE that compile() reads the source with. */
+    public function compileQuery(UpgradeStep $step, string $selectList, string $tail = '', string $sourcePrefix = '', ?string $sourceDatabase = null): string
+    {
+        return $this->resolve("SELECT {$selectList}\n".$this->fromClause($step, $sourcePrefix, $sourceDatabase).$tail, $step, $sourcePrefix, $sourceDatabase);
     }
 
     private function fromClause(UpgradeStep $step, string $sourcePrefix, ?string $sourceDatabase): string

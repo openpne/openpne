@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Support\PreferenceKey;
 use App\Support\Visibility;
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
@@ -30,6 +31,11 @@ class MemberPreferenceUpgrade extends UpgradeStep
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
+    }
+
+    public function audiences(): array
+    {
+        return [new Audience('value', ['value' => ['`member_config`.`value`', Audience::publicFlagScale()]], partitionBy: ['key'])];
     }
 
     public function filter(): ?string

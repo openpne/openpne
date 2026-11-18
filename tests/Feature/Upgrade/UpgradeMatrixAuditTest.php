@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade;
 
 use App\Mail\Template\MailTemplate;
 use App\Upgrade\ActiveMember;
+use App\Upgrade\Audience;
 use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
@@ -47,6 +48,27 @@ class UpgradeMatrixAuditTest extends TestCase
             foreach (Schema::getColumnListing($step->targetTable()) as $column) {
                 $this->assertContains($column, $accounted,
                     "{$step->targetTable()}.{$column} exists but no mapping, targetDefaults() or pendingTargets() covers it");
+            }
+        }
+    }
+
+    public function test_every_audience_column_is_declared_for_verify(): void
+    {
+        foreach (StepRegistry::all() as $step) {
+            $columns = $step->columns();
+            $declared = array_map(static fn (Audience $audience): string => $audience->column, $step->audiences());
+
+            foreach (array_keys($columns) as $column) {
+                if (preg_match('/visibility|_access$|^is_public/', $column) === 1) {
+                    $this->assertContains($column, $declared,
+                        "{$step->targetTable()}.{$column} reads as an audience but ".class_basename($step).'::audiences() does not declare it');
+                }
+            }
+
+            foreach ($step->audiences() as $audience) {
+                foreach ([$audience->column, ...$audience->partitionBy] as $column) {
+                    $this->assertArrayHasKey($column, $columns, class_basename($step)."::audiences() names {$column}, which the step does not map");
+                }
             }
         }
     }

@@ -101,12 +101,15 @@ final class ActivityThread
     /** The activity flag onto Visibility, an identity CASE pinned to the enum; an unknown flag yields NULL so the NOT NULL column refuses it. */
     public static function visibilityCase(string $flagExpr): string
     {
-        $arms = implode(' ', array_map(
-            static fn (Visibility $v): string => sprintf('WHEN %d THEN %d', $v->value, $v->value),
-            Visibility::cases(),
-        ));
+        $arms = implode(' ', array_map(static fn (int $flag): string => "WHEN {$flag} THEN {$flag}", self::flags()));
 
         return "CASE {$flagExpr} {$arms} ELSE NULL END";
+    }
+
+    /** @return list<int> the activity flags visibilityCase() names */
+    public static function flags(): array
+    {
+        return array_map(static fn (Visibility $v): int => $v->value, Visibility::cases());
     }
 
     /** SQL boolean over the alias `activity_image`: its activity lands where $landing (over the alias `activity_data`) says. */

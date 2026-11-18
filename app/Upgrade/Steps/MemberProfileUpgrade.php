@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Support\Visibility;
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
@@ -55,6 +56,11 @@ class MemberProfileUpgrade extends UpgradeStep
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
+    }
+
+    public function audiences(): array
+    {
+        return [new Audience('visibility', ['public_flag' => [$this->rawPublicFlag(), [null, 0, ...Audience::publicFlagScale()]]])];
     }
 
     public function filter(): ?string

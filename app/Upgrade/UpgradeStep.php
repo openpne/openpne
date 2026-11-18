@@ -85,6 +85,17 @@ abstract class UpgradeStep
     }
 
     /**
+     * Target columns that hold an audience; verify compares each one's distribution with the source's
+     * under this step's filter and mapping (docs/internals/upgrade.md, "Audience distribution").
+     *
+     * @return list<Audience>
+     */
+    public function audiences(): array
+    {
+        return [];
+    }
+
+    /**
      * Optional SQL boolean restricting which source rows are copied (the WHERE clause),
      * e.g. when one source table feeds several target tables by a flag. null = all rows.
      */

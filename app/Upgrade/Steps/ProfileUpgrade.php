@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Support\Visibility;
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
@@ -48,6 +49,14 @@ class ProfileUpgrade extends UpgradeStep
             'sort_order' => Column::source('sort_order'),
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
+        ];
+    }
+
+    public function audiences(): array
+    {
+        return [
+            new Audience('default_visibility', ['default_public_flag' => ['`default_public_flag`', [0, ...Audience::publicFlagScale()]]]),
+            new Audience('is_public_web', ['is_public_web' => ['`is_public_web`', [0, 1]]]),
         ];
     }
 }

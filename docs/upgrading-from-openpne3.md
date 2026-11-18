@@ -263,10 +263,19 @@ each step's source rows, the number it recorded, and the rows it owns in the tar
 every file has its bytes at the right length and pointing at the right place, and no stored bytes
 belong to a file that is not there; that every migrated
 template activity holds the line the upgrade renders for it; that every group membership is read up to
-its group's migrated talk (a message read since counts, the untouched default does not); and that no OpenPNE 3 password hash is left behind. The template
+its group's migrated talk (a message read since counts, the untouched default does not); that for
+every column saying who may see something (a diary, a timeline post, a profile item and its field,
+a member's profile page and preferences, a group's topics, a file), each audience holds as many rows
+as the upgrade's rule gives the source; and that no OpenPNE 3 password hash is left behind. The template
 lines are compared against a fresh render, so leave the site's terms as they were until verification
 passes (the language and address it was upgraded under are remembered); a term renamed later makes
 this check report the lines it touched.
+
+**An audience value the upgrade was not written for fails, even when it was copied.** The `audience:`
+lines name the OpenPNE 3 values found, how many rows hold each, and where they landed (`→` the value
+OpenPNE 4 stored; for a diary, post or profile item 0 is anyone, 1 members, 2 friends, 3 the author
+alone). A value outside the expected ones either stopped its step or landed where the rule's fallback
+put it, which nobody chose: set those rows to the audience you mean in OpenPNE 3, then upgrade again with `--force-restart`.
 
 **Row counts agree trivially when both sides are empty.** A step that migrated nothing — because a
 source table was not what you assumed, or because it matched no rows — reports the same pass as one
