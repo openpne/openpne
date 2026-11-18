@@ -19,7 +19,7 @@ return new class extends Migration
     {
         foreach (self::TABLES as $name => $pair) {
             Schema::table($name, function (Blueprint $table) {
-                $table->timestamp('created_at')->change();
+                $table->dateTime('created_at')->change();
             });
             $this->recreateDistinctTriggers($name, $pair);
         }
@@ -29,7 +29,7 @@ return new class extends Migration
     {
         foreach (self::TABLES as $name => $pair) {
             Schema::table($name, function (Blueprint $table) {
-                $table->timestamp('created_at')->useCurrent()->change();
+                $table->dateTime('created_at')->useCurrent()->change();
             });
             $this->recreateDistinctTriggers($name, $pair);
         }

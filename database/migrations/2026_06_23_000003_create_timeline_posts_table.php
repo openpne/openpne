@@ -15,7 +15,7 @@ return new class extends Migration
             // OpenPNE 3 activity_data.body is string(140), so the cap here is 140.
             $table->string('body', 140);
             $table->unsignedTinyInteger('visibility')->default(1); // Visibility::Members
-            $table->timestamps();
+            $table->datetimes();
 
             $table->foreign('in_reply_to_id')->references('id')->on('timeline_posts')->cascadeOnDelete();
             $table->index(['member_id', 'created_at']);

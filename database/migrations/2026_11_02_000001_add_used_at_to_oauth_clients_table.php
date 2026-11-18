@@ -14,7 +14,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('oauth_clients', function (Blueprint $table) {
-            $table->timestamp('used_at')->nullable()->after('revoked');
+            $table->dateTime('used_at')->nullable()->after('revoked');
         });
 
         // A client that already holds a code or token was used before the column existed.

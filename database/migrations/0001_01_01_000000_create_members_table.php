@@ -14,7 +14,7 @@ return new class extends Migration
             // Nullable so an OpenPNE 3 member without a usable address upgrades to a login-impossible
             // row; unique still admits many NULLs (NULLs are distinct) on both MySQL and SQLite.
             $table->string('email')->nullable()->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->dateTime('email_verified_at')->nullable();
             $table->string('password')->nullable();
             // Copied verbatim from OpenPNE 3 member.is_login_rejected, so a banned member stays banned.
             $table->boolean('is_login_rejected')->default(false);
@@ -23,13 +23,13 @@ return new class extends Migration
             // every member-facing request.
             $table->string('locale')->nullable();
             $table->rememberToken();
-            $table->timestamps();
+            $table->datetimes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
-            $table->timestamp('created_at')->nullable();
+            $table->dateTime('created_at')->nullable();
         });
 
         // Laravel's database session handler writes the authenticated id to a hard-coded `user_id`

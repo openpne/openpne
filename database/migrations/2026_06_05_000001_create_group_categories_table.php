@@ -16,7 +16,7 @@ return new class extends Migration
             $table->boolean('is_allow_member_group')->default(true);
             $table->integer('sort_order')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('group_categories')->nullOnDelete();
-            $table->timestamps();
+            $table->datetimes();
         });
     }
 

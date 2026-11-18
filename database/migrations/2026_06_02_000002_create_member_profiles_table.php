@@ -16,7 +16,7 @@ return new class extends Migration
             $table->text('value')->nullable();
             $table->dateTime('value_datetime')->nullable();
             $table->unsignedTinyInteger('visibility')->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             // SQLite does not auto-index FK columns; MySQL/InnoDB does.
             $table->index('member_id');

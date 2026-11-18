@@ -13,8 +13,8 @@ return new class extends Migration
             $table->string('type');
             $table->morphs('notifiable');
             $table->text('data');
-            $table->timestamp('read_at')->nullable();
-            $table->timestamps();
+            $table->dateTime('read_at')->nullable();
+            $table->datetimes();
 
             $table->index(['notifiable_type', 'notifiable_id', 'created_at'], 'notifications_notifiable_recent_index');
         });

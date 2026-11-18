@@ -18,7 +18,7 @@ return new class extends Migration
             // TEXT (not VARCHAR): OpenPNE 3 comment body is Doctrine `type: string` = MySQL TEXT
             // with no validator length limit, so migrated long comments must not be truncated.
             $table->text('body');
-            $table->timestamps();
+            $table->datetimes();
 
             // Not unique: OpenPNE 3's own index is not unique and migrated data may carry duplicate
             // (diary_id, number) (docs/internals/diary.md, "Comment numbering").

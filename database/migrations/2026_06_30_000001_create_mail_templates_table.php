@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('key', 64)->unique();
             $table->boolean('is_enabled')->default(true);
-            $table->timestamps();
+            $table->datetimes();
         });
 
         // `subject` is nullable: the appended signature template has a body only.
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('locale', 5);
             $table->string('subject')->nullable();
             $table->text('body');
-            $table->timestamps();
+            $table->datetimes();
             $table->unique(['mail_template_id', 'locale']);
         });
     }

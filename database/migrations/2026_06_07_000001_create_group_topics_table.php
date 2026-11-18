@@ -21,7 +21,7 @@ return new class extends Migration
             // OpenPNE 3's "last activity" bump, carried for upgrade fidelity and null until OpenPNE 3
             // first bumps it; the board here orders by updated_at.
             $table->dateTime('topic_updated_at')->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->index(['group_id', 'updated_at']);
         });

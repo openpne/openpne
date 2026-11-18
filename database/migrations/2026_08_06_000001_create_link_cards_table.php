@@ -32,11 +32,11 @@ return new class extends Migration
             $table->unsignedInteger('image_height')->nullable();
 
             $table->unsignedTinyInteger('failure_count')->default(0);
-            $table->timestamp('fetched_at')->nullable();
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamp('next_attempt_at')->nullable()->index();
+            $table->dateTime('fetched_at')->nullable();
+            $table->dateTime('expires_at')->nullable();
+            $table->dateTime('next_attempt_at')->nullable()->index();
 
-            $table->timestamps();
+            $table->datetimes();
         });
     }
 

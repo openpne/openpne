@@ -23,9 +23,9 @@ return new class extends Migration
             $table->unsignedBigInteger('thread_id')->nullable();
             // OpenPNE 3 is_send inverted: a draft is authored but not delivered to the recipient.
             $table->boolean('is_draft')->default(false);
-            $table->timestamp('sender_deleted_at')->nullable();
-            $table->timestamp('sender_purged_at')->nullable();
-            $table->timestamps();
+            $table->dateTime('sender_deleted_at')->nullable();
+            $table->dateTime('sender_purged_at')->nullable();
+            $table->datetimes();
 
             $table->index(['sender_id', 'is_draft', 'sender_deleted_at']);
             $table->index('thread_id');
@@ -37,10 +37,10 @@ return new class extends Migration
             // Keep the receipt when the recipient is deleted (OpenPNE 3 Member onDelete: set null).
             $table->foreignId('recipient_id')->nullable()->constrained('members')->nullOnDelete();
             // null = unread (OpenPNE 3 is_read=0).
-            $table->timestamp('read_at')->nullable();
-            $table->timestamp('recipient_deleted_at')->nullable();
-            $table->timestamp('recipient_purged_at')->nullable();
-            $table->timestamps();
+            $table->dateTime('read_at')->nullable();
+            $table->dateTime('recipient_deleted_at')->nullable();
+            $table->dateTime('recipient_purged_at')->nullable();
+            $table->datetimes();
 
             // Named: the conventional name exceeds MySQL's 64-character identifier limit.
             $table->index(['recipient_id', 'recipient_deleted_at'], 'direct_message_recipients_recipient_id_deleted_at_index');

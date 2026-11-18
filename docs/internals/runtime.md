@@ -69,11 +69,10 @@ Key invariants:
    a database default: `friend_requests`, `friendships`, `member_blocks` and
    `group_join_requests` refuse an unstamped row rather than stamping it
    themselves (the upgrade importer maps each source timestamp explicitly). On
-   MySQL that refusal rests on strict mode, which the connection config sets, and
-   on `explicit_defaults_for_timestamp`, which MySQL 8 turns on; without the
-   former an unstamped row stores a zero date, without the latter the column
-   regains a database default. The one column still defaulting to the database
-   clock is the talk read cursor `group_members.talk_read_at`, a backstop
+   MySQL that refusal rests on strict mode, which the connection config sets;
+   without it an unstamped row stores a zero date. Two columns still default to
+   the database clock: `failed_jobs.failed_at`, which Laravel always stamps
+   itself, and the talk read cursor `group_members.talk_read_at`, a backstop
    described in [group-talk.md](group-talk.md), "Unread".
 2. **The client formats in the site's zone, not the browser's.** Instants are
    serialized as offset-bearing ISO and the zone travels with them as the
@@ -94,6 +93,11 @@ Key invariants:
    `Y-m-d` calendar day with no instant attached; reading one as an instant shifts
    it a day for viewers west of UTC. The client has separate formatters and will
    render a misrouted value verbatim rather than shift it.
+4. **Times are stored as `DATETIME`, never `TIMESTAMP`.** MySQL converts a
+   `TIMESTAMP` through the connection's `time_zone` on every read and write and
+   refuses a value outside 1970 to 2038-01-19 UTC; a `DATETIME` keeps the wall-clock
+   value as written. Migrations use `datetimes()` / `dateTime()`, and a schema test
+   on the MySQL lane fails on any `TIMESTAMP` column.
 
 ### Upgrading from OpenPNE 3
 

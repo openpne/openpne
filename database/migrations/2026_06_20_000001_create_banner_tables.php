@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('name', 64)->unique();
             $table->boolean('is_use_html')->default(false);
             $table->text('html')->nullable();
-            $table->timestamps();
+            $table->datetimes();
         });
 
         Schema::create('banner_images', function (Blueprint $table) {
@@ -24,7 +24,7 @@ return new class extends Migration
             $table->text('url')->nullable();
             // Image label, used as the <img> alt (OpenPNE 3 banner_image.name).
             $table->string('name', 64)->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->foreign('file_id')->references('id')->on('files')->cascadeOnDelete();
         });
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('banner_id')->constrained('banners')->cascadeOnDelete();
             $table->foreignId('banner_image_id')->constrained('banner_images')->cascadeOnDelete();
-            $table->timestamps();
+            $table->datetimes();
         });
     }
 

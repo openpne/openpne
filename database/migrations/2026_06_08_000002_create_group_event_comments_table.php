@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('member_id')->nullable()->constrained('members')->nullOnDelete();
             $table->unsignedInteger('number');
             $table->text('body');
-            $table->timestamps();
+            $table->datetimes();
 
             // Not unique: `number` is a racy max+1 and migrated data may carry duplicates
             // (docs/internals/group-boards.md, "Comment threads page by id").

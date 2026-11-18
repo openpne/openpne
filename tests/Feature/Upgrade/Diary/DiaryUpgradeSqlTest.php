@@ -35,6 +35,21 @@ class DiaryUpgradeSqlTest extends UpgradeSqlTestCase
         ]);
     }
 
+    /** Both values are outside what a TIMESTAMP column accepts. */
+    public function test_preserves_dates_before_1970_and_after_2038(): void
+    {
+        $owner = Member::factory()->create();
+        $this->seedSourceDiary(1, $owner->getKey(), ['created_at' => '1960-01-01 00:00:00', 'updated_at' => '2040-01-01 00:00:00']);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('diaries', [
+            'id' => 1,
+            'created_at' => '1960-01-01 00:00:00',
+            'updated_at' => '2040-01-01 00:00:00',
+        ]);
+    }
+
     public function test_preserves_long_text_title_and_body(): void
     {
         // OpenPNE 3 diary.title/body are TEXT; a >255-char value must not truncate.

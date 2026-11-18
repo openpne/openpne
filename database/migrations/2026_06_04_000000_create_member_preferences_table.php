@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('member_id')->constrained('members')->cascadeOnDelete();
             $table->string('key');
             $table->string('value');
-            $table->timestamps();
+            $table->datetimes();
 
             // The unique index is member_id-prefixed, so it also backs the member-anchored reads
             // and, on SQLite, the delete cascade.

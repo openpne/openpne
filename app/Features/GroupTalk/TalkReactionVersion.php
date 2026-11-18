@@ -7,7 +7,7 @@ use App\Models\GroupMessage;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Not a timestamp: a MySQL timestamp is second-precise, so a strict `>` watermark would silently
+ * Not a timestamp: a time column is second-precise, so a strict `>` watermark would silently
  * drop every change that shared its second.
  */
 final class TalkReactionVersion

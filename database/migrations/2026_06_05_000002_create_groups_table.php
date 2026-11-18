@@ -21,7 +21,7 @@ return new class extends Migration
             // Signed INT to match files.id; SET NULL on file delete mirrors the OpenPNE 3
             // community.file_id FK.
             $table->integer('file_id')->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->foreign('file_id')->references('id')->on('files')->nullOnDelete();
         });

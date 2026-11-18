@@ -13,7 +13,7 @@ return new class extends Migration
         foreach (self::TABLES as $table) {
             Schema::table($table, function (Blueprint $table): void {
                 $table->foreignId('link_card_id')->nullable()->constrained('link_cards')->nullOnDelete();
-                $table->timestamp('link_card_synced_at')->nullable();
+                $table->dateTime('link_card_synced_at')->nullable();
             });
         }
     }

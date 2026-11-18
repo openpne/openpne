@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('kind');
             $table->string('channel');
             $table->boolean('is_enabled');
-            $table->timestamps();
+            $table->datetimes();
 
             // member_id-prefixed so it also serves the FK and the member-anchored reads.
             $table->unique(['member_id', 'kind', 'channel']);
