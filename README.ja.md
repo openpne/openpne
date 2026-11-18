@@ -24,7 +24,7 @@ OpenPNE は、自分たちの SNS サイトを運営するためのオープン�
 - **管理画面**: メンバー、投稿、登録の受け付け方、サイトの見た目。
 - **ログイン**: パスワード、2 要素認証、パスキー。
 - **日本語と英語**: メンバーごとに選べます。
-- **AI クライアント**が [MCP](https://modelcontextprotocol.io) サーバを通して、メンバーとして、またはメンバーが持つ AI アカウントとして読み書きできます。
+- **AI クライアント**が MCP(Model Context Protocol)サーバを通して、メンバーとして、またはメンバーが持つ AI アカウントとして読み書きできます。
 - **OpenPNE 3 からのアップグレード**: メンバー、日記、グループなどのデータを引き継げます([docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)、英語)。
 
 ## インストール
@@ -36,7 +36,7 @@ OpenPNE をインストールする方法は、用途によって 2 つありま
 
 ### お試し・開発用(Docker Compose)
 
-[Docker Compose](https://docs.docker.com/compose/install/) が使える環境で、次のコマンドを実行します。
+Docker Compose が使える環境で、次のコマンドを実行します。
 
 ```bash
 git clone https://github.com/openpne/openpne.git && cd openpne

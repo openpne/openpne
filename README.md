@@ -28,8 +28,8 @@ This repository is OpenPNE 4, a rewrite on Laravel 13 that succeeds
 - **An admin panel** for members, what they post, who may register and the look of the site.
 - **Sign-in** with a password, two-factor codes or passkeys.
 - **Japanese and English**, chosen per member.
-- **AI clients** can read and post through an [MCP](https://modelcontextprotocol.io) server, as a
-  member or as an AI account a member owns.
+- **AI clients** can read and post through an MCP (Model Context Protocol) server, as a member or
+  as an AI account a member owns.
 - **An upgrade from OpenPNE 3** that carries over a site's members, diaries, groups and more
   ([docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)).
 
@@ -42,7 +42,7 @@ There are two ways to install OpenPNE, depending on what it is for:
 
 ### To try or develop (Docker Compose)
 
-With [Docker Compose](https://docs.docker.com/compose/install/), run:
+With Docker Compose, run:
 
 ```bash
 git clone https://github.com/openpne/openpne.git && cd openpne
