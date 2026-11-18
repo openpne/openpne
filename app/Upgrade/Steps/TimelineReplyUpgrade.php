@@ -2,6 +2,7 @@
 
 namespace App\Upgrade\Steps;
 
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
@@ -28,6 +29,11 @@ class TimelineReplyUpgrade extends UpgradeStep
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
+    }
+
+    public function audiences(): array
+    {
+        return [new Audience('visibility', ['root public_flag' => [ActivityThread::rootColumn('activity_data', 'public_flag'), ActivityThread::flags()]])];
     }
 
     public function filter(): ?string

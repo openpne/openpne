@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Support\Visibility;
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
@@ -35,6 +36,14 @@ class DiaryUpgrade extends UpgradeStep
     public function targetDefaults(): array
     {
         return ['link_card_id', 'link_card_synced_at'];
+    }
+
+    public function audiences(): array
+    {
+        return [new Audience('visibility', [
+            'public_flag' => ['`diary`.`public_flag`', Audience::publicFlagScale()],
+            'is_open' => ['`diary`.`is_open`', [0, 1]],
+        ])];
     }
 
     public function gaps(): array

@@ -46,6 +46,7 @@ class VerifierAbsentOptionalTest extends UpgradeSqlTestCase
 
         $this->assertFalse($report->failed(), $out);
         $this->assertStringContainsString('PASS DiaryUpgrade', $out);
+        $this->assertStringContainsString('PASS audience:DiaryUpgrade.visibility: no rows', $out);
     }
 
     public function test_an_uninstalled_like_plugin_passes_the_runner_and_verify(): void

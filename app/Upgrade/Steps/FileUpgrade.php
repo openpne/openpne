@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Upgrade\ActiveMember;
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
@@ -33,6 +34,11 @@ class FileUpgrade extends UpgradeStep
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
+    }
+
+    public function audiences(): array
+    {
+        return [new Audience('explicit_visibility', ['admin image' => [self::adminImage('`file`.`name`'), [0, 1]]])];
     }
 
     public function targetDefaults(): array

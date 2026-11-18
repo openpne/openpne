@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Support\Visibility;
 use App\Upgrade\ActiveMember;
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
@@ -44,6 +45,15 @@ class MemberUpgrade extends UpgradeStep
         return ['email_verified_at', 'password_scheme', 'remember_token',
             'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
             'avatar_color', 'owner_member_id'];
+    }
+
+    /** NULL is a member who never saved the choice; the page offered only these two tiers (docs/internals/member-profile.md, "Profile page audience"). */
+    public function audiences(): array
+    {
+        return [new Audience('profile_visibility', ['profile_page_public_flag' => [
+            $this->memberConfigValueLatest('profile_page_public_flag'),
+            [null, Visibility::Members->openPne3PublicFlag(), Visibility::Open->openPne3PublicFlag()],
+        ]])];
     }
 
     /** Only activated members are carried; ActiveMember explains what the inactive rows are. */

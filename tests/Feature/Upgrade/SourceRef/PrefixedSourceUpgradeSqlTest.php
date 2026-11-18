@@ -6,8 +6,10 @@ use App\Models\Member;
 use App\Support\PreferenceKey;
 use App\Support\Visibility;
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
+use App\Upgrade\Verify\AudienceCheck;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
@@ -52,5 +54,12 @@ class PrefixedSourceUpgradeSqlTest extends UpgradeSqlTestCase
             'key' => PreferenceKey::DiaryDefaultVisibility->value,
             'value' => (string) Visibility::Open->value,
         ]);
+
+        $lines = [];
+        (new AudienceCheck(new InsertSelectCompiler))->verify([new MemberPreferenceUpgrade], new RunOptions(sourcePrefix: 'op_'), [],
+            function (string $name, bool $pass, string $detail) use (&$lines): void {
+                $lines[] = ($pass ? 'PASS' : 'FAIL')." {$name}: {$detail}";
+            });
+        $this->assertSame(['PASS audience:MemberPreferenceUpgrade.value: key=diary_default_visibility value=4 → 0: 1'], $lines);
     }
 }

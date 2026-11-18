@@ -72,13 +72,15 @@ final class UpgradeVerifier
             $this->verifyStep($report, $out, $step, $options, $absent);
         }
 
+        $record = fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail);
+        (new AudienceCheck($this->compiler))->verify($steps, $options, $absent, $record);
+
         // file_bin is no step's target, so its check is gated on this run migrating files.
         if (in_array('files', $this->targetTables(), true)) {
             $this->verifyFileBin($report, $out);
             $this->verifyAdminImages($report, $out);
         }
 
-        $record = fn (string $name, bool $pass, string $detail) => $this->record($report, $out, $name, $pass, $detail);
         if ($this->readsSourceTable('activity_data')) {
             (new ActivityTemplateCheck)->verify($options, $this->targetTables(), $record);
             (new TalkReadCursorCheck)->verify($options, $this->targetTables(), $record);

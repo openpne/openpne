@@ -5,6 +5,7 @@ namespace App\Upgrade\Steps;
 use App\Features\Group\JoinPolicy;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Upgrade\Audience;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
@@ -47,6 +48,11 @@ class GroupUpgrade extends UpgradeStep
     public function targetDefaults(): array
     {
         return ['talk_reaction_seq'];
+    }
+
+    public function audiences(): array
+    {
+        return [new Audience('topic_read_access', ['public_flag' => [$this->configValueLatest('public_flag'), [null, '', 'public', 'auth_commu_member']]])];
     }
 
     /** The latest `community_config` value for a name (the KV table has no uniqueness), else NULL. */

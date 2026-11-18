@@ -456,11 +456,34 @@ reads status, not verify.
   on its rows alone.
 - **`ClassicThemeCheck`** requires the stored `classic_theme` to be empty or to name a package under
   `public/opSkinThemePlugin`; it consults no checkpoint.
+- **`AudienceCheck`** compares each audience column's distribution, source against target, and
+  fails on a source value no step expects ("Audience distribution" below).
 - **Check B**: every `files` row has a `file_bin` row with `byte_size == LENGTH(bin)`, no `file_bin`
   row is without its `files` row (`file_bin:orphans` — the rewire validates none), and the FK is
   rewired; every `admin_*` file is public (`files:admin_images`).
 - **Check C**: no bare MD5 remains, every `md5_bcrypt` row holds a bcrypt string, and no unknown
   scheme exists.
+
+## Audience distribution
+
+`AudienceCheck` covers every target column a step declares in `UpgradeStep::audiences()`, with the
+source values that column's mapping reads.
+
+- The source is grouped by those values and the mapped value, both read through the step's own
+  `columns()` expression and the FROM and WHERE `compile()` uses (`InsertSelectCompiler::compileQuery()`),
+  so no rule is restated and a row the step leaves behind is not counted; a source query that reads
+  an absent optional plugin table anywhere, column subqueries included, counts as no rows. The target is grouped by the column, within `partitionBy`,
+  under `targetFilter()`. A value whose two counts differ fails with the table, the value and both counts.
+- Each declared source value lists the values its mapping was written for. Any other value fails, an
+  `ELSE` arm's catch included (an unknown `member_config` flag lands on `Members`): nobody decided that
+  row's audience.
+- Values are grouped and compared as bytes, so a variant a `_ci` collation would match (`Public`,
+  `'4 '`) is reported rather than folded into the value it resembles.
+- It checks the data against the rule, not the rule against OpenPNE 3: a wrong mapping writes and
+  verifies the same, so each step's own tests pin its mapping.
+- `sns_settings` declares none: its site-wide audience settings are setting values, outside this check.
+- `group_messages` declares none: the flag decides whether a community thread lands at all
+  (`ActivityThread::groupRoot()`), which Check A counts and the activity preflight reports.
 
 ## Site policy bodies
 
