@@ -57,7 +57,7 @@ class ReadDirectMessagesTool extends DirectMessageTool
 
         return Response::structured([
             'memberId' => (int) $counterpart->getKey(),
-            ...McpConversationSerializer::page($page, $viewer, $counterpart),
+            ...McpConversationSerializer::page($page, $viewer),
         ]);
     }
 

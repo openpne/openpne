@@ -101,12 +101,12 @@ has needs an answer here.
 | `sender_purged_at` / `recipient_purged_at` | the same, permanently — the row survives for the other side. |
 | `parent_id` / `thread_id` | lineage the reply flow writes; a conversation is linear and neither reads nor writes it. |
 | withdrawn member | the bucket above, with `author` serialized as null and drawn as the `withdrawn_member` term. |
-| several recipients (upgraded OpenPNE 3 multi-recipient sends and community messages) | the row appears in each recipient's conversation, and `read` is **that** conversation's receipt. |
+| several recipients (upgraded OpenPNE 3 multi-recipient sends and community messages) | the row appears in each recipient's conversation. |
 | no recipient (an upgraded letter whose receipts were all quarantined, or a community message every other member had opted out of or was inactive for) | the sender's Classic sent box lists it as sent to the `withdrawn_member` term; it sits in no conversation, and its `/message/read/<id>` lands the sender in the withdrawn-member chat. |
 
-`read` is the sender's own view of delivery: true once the counterpart's receipt carries a `read_at`.
-A received message reports null — reading it is what the reader is doing — and so does anything in the
-withdrawn bucket, where no receipt names a member.
+A receipt's `read_at` is its recipient's own state — the unread line, the badges, the inbox mark — and
+**the sender is never told** whether the counterpart has opened a message: nothing the screens or the
+MCP tools give the sender varies with it.
 
 ## Writing
 
@@ -168,8 +168,7 @@ and a "you have read up to here" line would be a lie the moment it met one of th
 
 Unread means the **received** arm and nothing else: a message written by the counterpart, visible in
 this conversation, whose receipt the viewer has not opened. The viewer's own messages carry no unread
-state — `read` on them is the counterpart's delivery, not the viewer's reading — and a receipt the
-viewer has trashed is not on the screen to be read either.
+state, and a receipt the viewer has trashed is not on the screen to be read either.
 
 [`ConversationUnreadSnapshot`](../../app/Features/DirectMessage/Queries/ConversationUnreadSnapshot.php)
 answers the count and that first message, or null when nothing is waiting, and `show` ships it as
@@ -311,8 +310,8 @@ published content, and a private message is not that.
 4. Every read of messages orders by a time column and a unique key: `(created_at, id)` in the
    conversation reads and cursors, and each mailbox box's own time column and row id in the list and
    its prev / next.
-5. `read` is answered by the receipt of the conversation being read, never by whichever receipt the
-   relation holds first.
+5. A receipt's `read_at` reaches only its recipient. No payload shown to the sender — screen or MCP —
+   varies with whether the counterpart has opened the message.
 6. The chat screens add no column and no table: everything they show is the mailbox's own rows, and
    both readings stay correct at once — unread included, which is `read_at` and nothing besides.
 7. The unread boundary is the first unread received message. Only the received arm has unread state,

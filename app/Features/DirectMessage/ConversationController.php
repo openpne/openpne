@@ -98,11 +98,11 @@ class ConversationController extends Controller
         }
 
         $message->setRelation('sender', $viewer->loadMissing('avatar.file'));
-        // PostImages creates the join rows through the relation without populating it, so both are
+        // PostImages creates the join rows through the relation without populating it, so they are
         // loaded here rather than lazily in the serializer.
-        $message->load(['files.file', 'recipients']);
+        $message->load('files.file');
 
-        return response()->json(ConversationMessageSerializer::message($message, $viewer, $counterpart), 201);
+        return response()->json(ConversationMessageSerializer::message($message, $viewer), 201);
     }
 
     /** Fire-and-forget: no body comes back, and the shell's own refresh is what moves the badge. */
@@ -163,7 +163,6 @@ class ConversationController extends Controller
                     ? $query->latest($viewer, $counterpart)
                     : $query->around($viewer, $counterpart, ConversationCursor::of($anchor)),
                 $viewer,
-                $counterpart,
             ),
             'anchor' => $anchor === null ? null : (int) $anchor->getKey(),
             // A refused pair gets no composer rather than one shown dead.
@@ -211,7 +210,7 @@ class ConversationController extends Controller
             default => $query->latest($viewer, $counterpart),
         };
 
-        return response()->json(ConversationMessageSerializer::page($page, $viewer, $counterpart));
+        return response()->json(ConversationMessageSerializer::page($page, $viewer));
     }
 
     /**

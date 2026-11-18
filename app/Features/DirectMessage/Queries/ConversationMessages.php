@@ -121,10 +121,8 @@ class ConversationMessages
     /** @return Builder<DirectMessage> */
     private function query(Member $viewer, ?Member $counterpart): Builder
     {
-        // `recipients` is unconstrained so the serializer stays the one place that says which
-        // receipt answers for this conversation.
         return ConversationScope::apply(
-            DirectMessage::query()->with('sender.avatar.file', 'files.file', 'recipients'),
+            DirectMessage::query()->with('sender.avatar.file', 'files.file'),
             $viewer,
             $counterpart,
         );

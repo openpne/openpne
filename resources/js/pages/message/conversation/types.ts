@@ -9,8 +9,6 @@ export interface ConversationMessage extends ChatStreamRow {
     subject: string | null;
     author: MessageMember | null; // null → the author has withdrawn from the SNS
     isOwn: boolean;
-    /** Whether the counterpart has opened this message. Only ever set on the viewer's own; null otherwise. */
-    read: boolean | null;
     images: GridImage[];
     files: AttachmentFile[];
 }

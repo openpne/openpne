@@ -54,9 +54,9 @@ class McpConversationSerializer
     }
 
     /**
-     * @return array{id: int, body: string, subject: string|null, authorId: int|null, authorName: string|null, authorIsAi: bool, isOwn: bool, read: bool|null, createdAt: string, cursor: string, hasImages: bool, imageCount: int, fileCount: int}
+     * @return array{id: int, body: string, subject: string|null, authorId: int|null, authorName: string|null, authorIsAi: bool, isOwn: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, fileCount: int}
      */
-    public static function message(DirectMessage $message, Member $viewer, Member $counterpart): array
+    public static function message(DirectMessage $message, Member $viewer): array
     {
         $attachments = PostAttachments::partition($message->files);
         $images = $attachments['images']->count();
@@ -70,7 +70,6 @@ class McpConversationSerializer
             'authorName' => $message->sender?->name,
             'authorIsAi' => (bool) $message->sender?->isAiAccount(),
             'isOwn' => (int) $message->sender_id === (int) $viewer->getKey(),
-            'read' => ConversationMessageSerializer::read($message, (int) $viewer->getKey(), $counterpart),
             'createdAt' => CarbonImmutable::instance($message->created_at)->toIso8601String(),
             'cursor' => (string) ConversationCursor::of($message),
             'hasImages' => $images > 0,
@@ -82,10 +81,10 @@ class McpConversationSerializer
     /**
      * @return array{messages: list<array<string, mixed>>, hasOlder: bool, hasNewer: bool, previousCursor: string|null, nextCursor: string|null}
      */
-    public static function page(ConversationPage $page, Member $viewer, Member $counterpart): array
+    public static function page(ConversationPage $page, Member $viewer): array
     {
         $messages = $page->messages
-            ->map(fn (DirectMessage $message): array => self::message($message, $viewer, $counterpart))
+            ->map(fn (DirectMessage $message): array => self::message($message, $viewer))
             ->values()
             ->all();
 

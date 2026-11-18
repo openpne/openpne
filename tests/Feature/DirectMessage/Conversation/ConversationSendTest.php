@@ -68,7 +68,6 @@ class ConversationSendTest extends ConversationTestCase
         $this->assertSame($paged, $written);
         $this->assertNull($written['subject']);
         $this->assertTrue($written['isOwn']);
-        $this->assertFalse($written['read']);
     }
 
     /** Nothing to say and nothing to show: the one thing the bar cannot send. */
