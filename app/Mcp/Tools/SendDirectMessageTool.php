@@ -78,11 +78,11 @@ class SendDirectMessageTool extends DirectMessageTool
         }
 
         $message->setRelation('sender', $sender);
-        $message->load(['files', 'recipients']);
+        $message->load('files');
 
         return Response::structured([
             'memberId' => (int) $recipient->getKey(),
-            'message' => McpConversationSerializer::message($message, $sender, $recipient),
+            'message' => McpConversationSerializer::message($message, $sender),
         ]);
     }
 

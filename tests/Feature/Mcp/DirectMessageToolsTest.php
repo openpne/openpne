@@ -64,7 +64,6 @@ class DirectMessageToolsTest extends McpTestCase
                 ->where('memberId', $owner->getKey())
                 ->where('message.body', "morning\nthree things")
                 ->where('message.isOwn', true)
-                ->where('message.read', false)
                 ->where('message.authorIsAi', true)
                 ->etc());
 
@@ -215,11 +214,10 @@ class DirectMessageToolsTest extends McpTestCase
                 ->etc());
     }
 
-    public function test_a_page_reports_the_counterparts_receipt_and_the_files_a_message_carries(): void
+    public function test_a_page_reports_the_files_a_message_carries(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
-        $opened = $this->deliver($viewer, $other, 'opened', now()->subMinutes(3));
-        $opened->recipients()->update(['read_at' => now()]);
+        $this->deliver($viewer, $other, 'earlier', now()->subMinutes(3));
         $attached = $this->deliver($other, $viewer, '', now()->subMinutes(2));
         DirectMessageFile::factory()->create([
             'direct_message_id' => $attached->getKey(),
@@ -232,10 +230,8 @@ class DirectMessageToolsTest extends McpTestCase
         OpenPneServer::tool(ReadDirectMessagesTool::class, ['member_id' => $other->getKey()])
             ->assertOk()
             ->assertStructuredContent(function ($json) use (&$cursor): void {
-                $json->where('messages.0.read', true)
-                    ->where('messages.1.hasImages', false)
+                $json->where('messages.1.hasImages', false)
                     ->where('messages.1.fileCount', 1)
-                    ->where('messages.2.read', false)
                     ->etc();
                 $cursor = $json->toArray()['messages'][2]['cursor'];
             });
@@ -244,9 +240,34 @@ class DirectMessageToolsTest extends McpTestCase
             ->assertOk()
             ->assertStructuredContent(fn ($json) => $json
                 ->has('messages', 2)
-                ->where('messages.0.body', 'opened')
+                ->where('messages.0.body', 'earlier')
                 ->where('messages.1.fileCount', 1)
                 ->etc());
+    }
+
+    /** Every field is compared, so a receipt leaking under some other name fails as surely as `read`. */
+    public function test_a_page_does_not_tell_the_sender_whether_the_counterpart_has_opened_a_message(): void
+    {
+        [$viewer, $other] = Member::factory()->count(2)->create();
+        $sent = $this->deliver($viewer, $other, 'sent');
+        $this->acting($viewer);
+        $page = function () use ($other): array {
+            $content = null;
+            OpenPneServer::tool(ReadDirectMessagesTool::class, ['member_id' => $other->getKey()])
+                ->assertOk()
+                ->assertStructuredContent(function ($json) use (&$content): void {
+                    $content = $json->toArray();
+                    $json->etc();
+                });
+
+            return $content;
+        };
+        $before = $page();
+
+        $sent->recipients()->update(['read_at' => now()]);
+
+        $this->assertSame($before, $page());
+        $this->assertArrayNotHasKey('read', $before['messages'][0]);
     }
 
     public function test_reading_pages_a_conversation_and_marks_nothing_read(): void
@@ -261,7 +282,7 @@ class DirectMessageToolsTest extends McpTestCase
             ->assertOk()
             ->assertStructuredContent(function ($json) use (&$cursor, $other): void {
                 $json->where('memberId', $other->getKey())
-                    ->where('messages.0.body', 'first')->where('messages.0.isOwn', false)->where('messages.0.read', null)
+                    ->where('messages.0.body', 'first')->where('messages.0.isOwn', false)
                     ->where('messages.1.body', 'second')->where('messages.1.isOwn', true)
                     ->etc();
                 $cursor = $json->toArray()['nextCursor'];

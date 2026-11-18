@@ -64,8 +64,6 @@ export function ConversationMessageRow({
                         )}
                         <AiChip isAi={author?.isAi ?? false} />
                         <Timestamp at={message.createdAt} preset="clockTime" className="shrink-0" />
-                        {/* Only ever on the viewer's own: a message they received is one they are reading. */}
-                        {message.read === true && <span className="shrink-0 text-xs">{t('Read (adjective)')}</span>}
                     </div>
                     {/* h2, because the page title is the h1 and nothing sits between: h3 would skip a
                         rank. */}

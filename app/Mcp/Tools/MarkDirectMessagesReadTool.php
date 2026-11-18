@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Title;
 
 #[Name('mark-direct-messages-read')]
 #[Title('Mark a direct-message conversation read')]
-#[Description('Record that you have read your conversation with a member as far as one message: every message they sent you up to it is marked read, and their side sees it as read. Naming an older message changes nothing already read.')]
+#[Description('Record that you have read your conversation with a member as far as one message: every message they sent you up to it is marked read. Naming an older message changes nothing already read.')]
 class MarkDirectMessagesReadTool extends DirectMessageTool
 {
     public function handle(Request $request, MarkConversationRead $markRead, DirectMessageNotificationRows $feedRows): Response

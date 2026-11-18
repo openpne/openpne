@@ -4,7 +4,6 @@ namespace Tests\Feature\DirectMessage\Conversation;
 
 use App\Files\ImageLadder;
 use App\Models\DirectMessageFile;
-use App\Models\DirectMessageRecipient;
 use App\Models\File;
 use App\Models\Member;
 
@@ -57,53 +56,21 @@ class ConversationSerializerTest extends ConversationTestCase
         $this->assertFalse($page['messages'][1]['isOwn']);
     }
 
-    public function test_read_reports_only_on_the_viewers_own_messages(): void
+    /** Every prop of both readings is compared, so a receipt leaking under some other name fails as surely as `read`. */
+    public function test_the_sender_is_not_told_whether_the_counterpart_has_opened_a_message(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
-        $this->deliver($viewer, $other, ['body' => 'opened', 'created_at' => now()->subMinutes(3)], ['read_at' => now()]);
-        $this->deliver($viewer, $other, ['body' => 'unopened', 'created_at' => now()->subMinutes(2)]);
-        // A message the viewer received: reading it is what they are doing, so there is nothing to report.
-        $this->deliver($other, $viewer, ['body' => 'theirs', 'created_at' => now()->subMinute()], ['read_at' => now()]);
+        $sent = $this->deliver($viewer, $other, ['body' => 'sent']);
+        $read = fn (): array => [
+            json_encode($this->actingAs($viewer)->get("/messages/{$other->getKey()}")->viewData('page')['props']),
+            $this->actingAs($viewer)->getJson("/messages/{$other->getKey()}/messages")->json(),
+        ];
+        $before = $read();
 
-        $page = $this->actingAs($viewer)->getJson("/messages/{$other->getKey()}/messages")->json();
+        $sent->recipients()->update(['read_at' => now()]);
 
-        $this->assertTrue($page['messages'][0]['read']);
-        $this->assertFalse($page['messages'][1]['read']);
-        $this->assertNull($page['messages'][2]['read']);
-    }
-
-    /**
-     * An upgraded OpenPNE 3 send may carry several receipts, and each recipient reads it in their own
-     * conversation — so the answer is this conversation's receipt, not whichever one comes first.
-     */
-    public function test_read_is_answered_by_the_receipt_of_the_conversation_being_read(): void
-    {
-        [$viewer, $opened, $unopened] = Member::factory()->count(3)->create();
-        $message = $this->deliver($viewer, $opened, ['body' => 'to both'], ['read_at' => now()]);
-        DirectMessageRecipient::factory()->create([
-            'direct_message_id' => $message->getKey(),
-            'recipient_id' => $unopened->getKey(),
-        ]);
-
-        $this->actingAs($viewer)
-            ->getJson("/messages/{$opened->getKey()}/messages")
-            ->assertJsonPath('messages.0.read', true);
-        $this->actingAs($viewer)
-            ->getJson("/messages/{$unopened->getKey()}/messages")
-            ->assertJsonPath('messages.0.read', false);
-    }
-
-    /** No receipt in the withdrawn bucket names a member, so no delivery state can be attributed. */
-    public function test_the_withdrawn_bucket_reports_no_read_state(): void
-    {
-        [$viewer, $leaving] = Member::factory()->count(2)->create();
-        $this->deliver($viewer, $leaving, ['body' => 'sent'], ['read_at' => now()]);
-        $leaving->delete();
-
-        $this->actingAs($viewer)
-            ->getJson('/messages/withdrawn/messages')
-            ->assertJsonPath('messages.0.read', null)
-            ->assertJsonPath('messages.0.author.id', $viewer->getKey());
+        $this->assertSame($before, $read());
+        $this->assertArrayNotHasKey('read', $before[1]['messages'][0]);
     }
 
     public function test_a_withdrawn_author_serializes_as_a_null_author(): void
