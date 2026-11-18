@@ -56,17 +56,21 @@ class ConversationSerializerTest extends ConversationTestCase
         $this->assertFalse($page['messages'][1]['isOwn']);
     }
 
-    /** Every field is compared, so a receipt leaking under some other name fails as surely as `read`. */
+    /** Every prop of both readings is compared, so a receipt leaking under some other name fails as surely as `read`. */
     public function test_the_sender_is_not_told_whether_the_counterpart_has_opened_a_message(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
         $sent = $this->deliver($viewer, $other, ['body' => 'sent']);
-        $before = $this->actingAs($viewer)->getJson("/messages/{$other->getKey()}/messages")->json();
+        $read = fn (): array => [
+            json_encode($this->actingAs($viewer)->get("/messages/{$other->getKey()}")->viewData('page')['props']),
+            $this->actingAs($viewer)->getJson("/messages/{$other->getKey()}/messages")->json(),
+        ];
+        $before = $read();
 
         $sent->recipients()->update(['read_at' => now()]);
 
-        $this->assertSame($before, $this->actingAs($viewer)->getJson("/messages/{$other->getKey()}/messages")->json());
-        $this->assertArrayNotHasKey('read', $before['messages'][0]);
+        $this->assertSame($before, $read());
+        $this->assertArrayNotHasKey('read', $before[1]['messages'][0]);
     }
 
     public function test_a_withdrawn_author_serializes_as_a_null_author(): void
