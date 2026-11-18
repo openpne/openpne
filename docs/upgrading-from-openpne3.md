@@ -275,7 +275,7 @@ this check report the lines it touched.
 **An audience value the upgrade was not written for fails, even when it was copied.** The `audience:`
 lines name the OpenPNE 3 values found, how many rows hold each, and where they landed (`→` the value
 OpenPNE 4 stored; for a diary, post or profile item 0 is anyone, 1 members, 2 friends, 3 the author
-alone). A value outside the expected ones either stopped its step or landed where the rule's fallback
+alone; for a group's topics 1 is anyone, 2 its members). A value outside the expected ones either stopped its step or landed where the rule's fallback
 put it, which nobody chose: set those rows to the audience you mean in OpenPNE 3, then upgrade again with `--force-restart`.
 
 **Row counts agree trivially when both sides are empty.** A step that migrated nothing — because a

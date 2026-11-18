@@ -107,6 +107,8 @@ class AudienceCheckTest extends UpgradeSqlTestCase
     public function test_a_source_value_the_step_does_not_expect_fails_though_its_rows_were_copied(): void
     {
         DB::table('member_config')->where('name', 'profile_page_public_flag')->update(['value' => '2']);
+        $this->config(2, 'profile_page_public_flag', '');
+        $this->diary(5, 1, 1, 2);
         // Each variant comes after the row it would fold into under a _ci collation.
         $this->config(1, 'age_public_flag', '3 ');
         $this->groupConfig(2, 'public_flag', 'Auth_Commu_Member');
@@ -114,11 +116,12 @@ class AudienceCheckTest extends UpgradeSqlTestCase
 
         $out = $this->upgradeAndCheck();
 
-        $this->assertStringContainsString('FAIL audience:MemberUpgrade.profile_visibility: member values the step does not expect: profile_page_public_flag=2 (1 rows → 1)', $out);
+        $this->assertStringContainsString('FAIL audience:MemberUpgrade.profile_visibility: member values the step does not expect: profile_page_public_flag="" (1 rows → 1), profile_page_public_flag=2 (1 rows → 1)', $out);
+        $this->assertStringContainsString('FAIL audience:DiaryUpgrade.visibility: diary values the step does not expect: public_flag=1 is_open=2 (1 rows → 1)', $out);
         $this->assertStringContainsString('FAIL audience:MemberPreferenceUpgrade.value: member_config values the step does not expect: key=age_visibility value="3 " (1 rows → 3)', $out);
         $this->assertStringContainsString('FAIL audience:GroupUpgrade.topic_read_access: community values the step does not expect: public_flag=Auth_Commu_Member (1 rows → 2)', $out);
         $this->assertStringContainsString('FAIL audience:MemberProfileUpgrade.visibility: member_profile values the step does not expect: public_flag=9 (1 rows → NULL)', $out);
-        $this->assertSame(4, substr_count($out, 'FAIL'), $out);
+        $this->assertSame(5, substr_count($out, 'FAIL'), $out);
     }
 
     public function test_the_mapping_is_the_step_s_own_so_one_that_differs_from_the_run_fails(): void
