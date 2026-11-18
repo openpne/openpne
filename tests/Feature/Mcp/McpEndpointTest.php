@@ -166,8 +166,11 @@ class McpEndpointTest extends McpTestCase
 
         $cases = [
             'https://sns.example' => 200,
+            'https://sns.example:443' => 200,
             'http://localhost:3000' => 200,
             'http://127.0.0.1:6274' => 200,
+            'http://[::1]:3000' => 200,
+            'http://sns.example' => 403,
             'https://evil.example' => 403,
             'https://sns.example.evil.example' => 403,
             'null' => 403,

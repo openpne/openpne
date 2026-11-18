@@ -23,7 +23,7 @@ this realm too; only the consent screen (`/oauth/authorize`) is a member page, s
 be signed in to answer it. It is a dual-surface page like any other member page
 ([`ConsentPage`](../../app/Mcp/OAuth/ConsentPage.php)): the Classic form posts the same fields.
 
-A request whose `Origin` header names anything but `APP_URL` or the caller's own machine
+A request to `/mcp` whose `Origin` header names anything but `APP_URL` or the caller's own machine
 (`localhost`, `127.0.0.1`, `[::1]`, any port) is answered `403` even with a valid token — the
 DNS-rebinding check the MCP transport specification requires, done by `laravel/mcp`, with no
 `allowed_origins` added in `config/mcp.php`. A client that sends no `Origin`, such as a CLI or a
