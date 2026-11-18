@@ -364,9 +364,12 @@ change from a problem when you go through it.
   `op_diary_plugin_diary_comment_api_limit`), the Google Maps options, `daily_news_day`, the
   feature-phone mail-posting option (`op_diary_plugin_use_email_post`) and colour slots
   (`mobile_frontend_core_color_*`), `richtextarea_*` (the rich-text editor is frozen),
-  `pc_home_information` (OpenPNE 3 itself
+  `op_timeline_plugin_view_photo` (see *Timeline* below), `pc_home_information` (OpenPNE 3 itself
   rendered the information box from the gadget's own config, never from this row, which the
-  gadget upgrade carries). `image_max_filesize` is not a site setting here but an environment
+  gadget upgrade carries). `enable_cmd` is dropped too, and with it the embedded player or map
+  OpenPNE 3's PC pages drew for a YouTube, niconico or Google Maps URL in diaries, community
+  topics and events, their comments and community descriptions: here every URL in a body is a
+  link. `image_max_filesize` is not a site setting here but an environment
   variable, `OPENPNE_IMAGE_MAX_UPLOAD_KB`; the report (dry run and real run alike) prints the value
   to set, or tells you the OpenPNE 3 value could not be read as a size. A copied setting whose
   OpenPNE 3 row holds NULL (the admin screens wrote an empty string, so only a hand-edited row does)
@@ -415,7 +418,12 @@ change from a problem when you go through it.
   live at, since those links are stored. Whether new diaries, topics and events keep announcing
   themselves follows the OpenPNE 3 settings (*Settings → Timeline settings → Automatic posts*).
   An HTML entity such as `&amp;` in a timeline post or talk message is carried as stored and shown
-  as written, not decoded.
+  as written, not decoded. A URL in a timeline post or talk message shows as a link, as in every
+  body. OpenPNE 3's timeline plugin showed a URL containing `.jpg`, `.jpeg`, `.png` or `.gif` as
+  the image itself (from plugin version 1.2.8 on, whatever `op_timeline_plugin_view_photo` said),
+  and could show a YouTube, niconico or Google Maps URL as an embedded player or map (see
+  `enable_cmd` above); neither is drawn here. Turning on *Settings → Link preview settings* does
+  not bring the image back: a preview is drawn only for a URL that leads to a web page.
 - **Group talk** — a community's timeline becomes that group's talk. Talk shows every message in
   the group to everyone who may open the group today, including messages by people who have since
   left it and by people who have blocked the reader (OpenPNE 3 hid both); each member starts with the
