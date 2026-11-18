@@ -20,6 +20,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Edit the term names that are substituted into `%name%` placeholders across
@@ -149,13 +150,17 @@ class TermSettings extends Page
     private function buildSections(): array
     {
         $sections = [];
+        // Both sections caption a term by its default in the panel's language, never by a stored value.
+        $captions = TermService::defaults(app()->getLocale());
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
             $defaults = TermService::defaults($locale);
 
             $fields = [];
             foreach ($defaults as $name => $default) {
+                $caption = Str::ucfirst($captions[$name] ?? $default);
+
                 $fields[] = TextInput::make(self::fieldKey($name, $locale))
-                    ->label($name)
+                    ->label("{$caption} ({$name})")
                     ->placeholder($default)
                     ->maxLength(255);
             }
