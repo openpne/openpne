@@ -10,6 +10,7 @@ use App\Mcp\McpAbilities;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Laravel\Passport\Passport;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class FlowTest extends OAuthTestCase
 {
@@ -35,13 +36,28 @@ class FlowTest extends OAuthTestCase
         }
     }
 
-    public function test_a_linked_prompt_login_does_not_end_the_session(): void
+    /** @return array<string, array{string}> */
+    public static function linkedPrompts(): array
+    {
+        // The index-wrapped values are `login` only after Passport trims each value by its index's digits.
+        return [
+            'login' => ['prompt=login'],
+            'login beside consent' => ['prompt=consent%20login'],
+            'login wrapped in its index, first' => ['prompt=0login'],
+            'login wrapped in its index, second' => ['prompt=consent%201login1'],
+            'none' => ['prompt=none'],
+            'an array' => ['prompt%5B%5D=login'],
+        ];
+    }
+
+    #[DataProvider('linkedPrompts')]
+    public function test_a_linked_prompt_leaves_the_session_on_the_consent_screen(string $query): void
     {
         $viewer = Member::factory()->create();
         $client = $this->registerClient();
         [, $challenge] = $this->pkce();
 
-        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&prompt=login')
+        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&'.$query)
             ->assertOk()
             ->assertInertia(fn ($page) => $page->component('auth/oauth-authorize'));
         $this->assertAuthenticatedAs($viewer, 'member');

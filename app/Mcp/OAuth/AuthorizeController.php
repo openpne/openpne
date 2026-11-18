@@ -14,9 +14,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Passport skips the consent screen for a client the user already holds a live token with, and
- * `prompt=login` ends the member session on a GET anyone can link to; here every connection chooses
- * who it speaks for on a screen that is never skipped, and a session ends only where the member ends it.
+ * Passport skips the consent screen for a client the user already holds a live token with; here every
+ * connection chooses who it speaks for on a screen that is never skipped.
  */
 class AuthorizeController extends AuthorizationController
 {
@@ -26,7 +25,9 @@ class AuthorizeController extends AuthorizationController
         ResponseInterface $psrResponse,
         AuthorizationViewResponse $viewResponse
     ): Response|AuthorizationViewResponse {
-        $request->query->set('prompt', $request->string('prompt')->explode(' ')->reject(fn (string $p): bool => $p === 'login')->implode(' '));
+        // With that screen never skipped, `prompt` could only end the session from a link (`login`, which
+        // Passport also reads in `0login`) or tell the client whether the visitor is signed in (`none`).
+        $request->merge(['prompt' => '']);
 
         return parent::authorize($psrRequest, $request, $psrResponse, $viewResponse);
     }
