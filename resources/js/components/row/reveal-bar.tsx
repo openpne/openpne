@@ -12,7 +12,10 @@ export const REVEAL_BAR =
 /** The classes a row carries to host the bar: the bar's anchor, and a lift above its neighbours while its controls are out. */
 export const REVEAL_ROW = 'group relative hover:z-10 has-[:focus-visible]:z-10 has-[[aria-expanded=true]]:z-10 has-[[data-ack]]:z-10';
 
-/** What a press must not start (the lens and the image menu a held finger raises would land on the sheet), and the tint of the row a sheet is open for. */
+/** Set on the pressed row while its sheet is open; PRESS_ROW's tint is written against this name, which Tailwind cannot read through a variable. */
+export const SHEET_TARGET = 'data-sheet-target';
+
+/** What a press must not start (the lens and the image menu a held finger raises would land on the sheet). */
 export const PRESS_ROW = 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none] data-sheet-target:bg-selected/12';
 
 /** The caller decides whether there is a bar at all: an empty frame over a row with no power over itself is the caller's mistake to avoid. */

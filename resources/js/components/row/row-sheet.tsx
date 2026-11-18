@@ -1,6 +1,7 @@
 import { Copy, Link, Reply, TextSelect, Trash2, Users } from 'lucide-react';
 import { useLayoutEffect } from 'react';
 import { ActionSheet, SHEET_GROUP, SHEET_ITEM } from './action-sheet';
+import { SHEET_TARGET } from './reveal-bar';
 import type { SelectableText } from './select-text-sheet';
 import type { ReactionChip } from '@/lib/reactions/types';
 import { useT } from '@/lib/i18n';
@@ -8,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { ReactionPickerGrid } from '@/components/reactions/reaction-bar';
 
 export { SHEET_GROUP, SHEET_ITEM };
+
+const SUBJECT_LIMIT = 140;
 
 /**
  * One answer for the sheet's item and the row's gate: split, the gate can open a sheet with nothing
@@ -34,6 +37,8 @@ export interface RowSheetProps {
     /** Who wrote the row and when, drawn again beside the body when it is offered for selection. */
     author?: SelectableText['author'];
     createdAt?: string;
+    images?: { thumbnailUrl: string }[];
+    files?: { name: string }[];
     /** The row's chips as it draws them — taps still on the wire included. */
     chips: ReactionChip[];
     vocabulary: string[];
@@ -47,7 +52,7 @@ export interface RowSheetProps {
     onDelete?: (returnFocusTo: HTMLElement | null) => void;
     /** Absent where the row has no address of its own. */
     link?: () => string;
-    /** Where focus goes when the sheet closes: the row that was pressed. */
+    /** Where focus goes when the sheet closes: the row that was pressed, which must carry PRESS_ROW for the mark the sheet sets on it to show. */
     returnFocusTo: HTMLElement | null;
     /** Asked to show the row's words on their own, selectable, once the sheet has left. */
     onSelectText: (text: SelectableText) => void;
@@ -75,27 +80,29 @@ export function rowSheetOpens(props: { body: string; chips: ReactionChip[]; canR
  * suppresses the selection lens. Every choice closes the sheet before what it opens arrives: two
  * modals over each other would fight over the focus.
  */
-export function RowSheet({ body, author, createdAt, chips, vocabulary, canReact, onToggle, onShowReactors, onReply, onDelete, link, returnFocusTo, onSelectText, onClose, title, deleteLabel }: RowSheetProps) {
+export function RowSheet({ body, author, createdAt, images, files, chips, vocabulary, canReact, onToggle, onShowReactors, onReply, onDelete, link, returnFocusTo, onSelectText, onClose, title, deleteLabel }: RowSheetProps) {
     const t = useT();
     const canCopy = canCopyText(body);
     const canLink = link !== undefined && canCopyLink();
     const hasBody = body.trim() !== '';
-    // Marked under a light scrim rather than dimmed with the rest, so where the row sits also says which one the sheet acts on (docs/internals/reactions.md, "The row").
     useLayoutEffect(() => {
         if (returnFocusTo === null) {
             return;
         }
-        returnFocusTo.setAttribute('data-sheet-target', '');
+        returnFocusTo.setAttribute(SHEET_TARGET, '');
 
-        return () => returnFocusTo.removeAttribute('data-sheet-target');
+        return () => returnFocusTo.removeAttribute(SHEET_TARGET);
     }, [returnFocusTo]);
-    // One line, as a reply names what it answers: enough to tell the row from its neighbours, not to read it.
+    const thumbnail = images?.[0]?.thumbnailUrl;
+    // Enough to tell the row from its neighbours, not to read it: the sheet's description is read out whole, so it is cut here rather than by the line's width.
+    const words = hasBody ? [...body.trim().replace(/\s+/g, ' ')].slice(0, SUBJECT_LIMIT).join('') : (files?.[0]?.name ?? (thumbnail !== undefined ? t('Image') : ''));
     const subject =
-        author !== undefined || hasBody ? (
-            <p className="flex min-w-0 items-baseline gap-2 text-sm">
-                {author !== undefined && <span className="shrink-0">{author?.name ?? t('%Withdrawn_member%')}</span>}
-                {author !== undefined && hasBody && ' '}
-                {hasBody && <span className="min-w-0 truncate text-muted-foreground">{body.trim()}</span>}
+        author !== undefined || words !== '' ? (
+            <p className="flex min-w-0 items-center gap-2 text-sm">
+                {author !== undefined && <span className="max-w-1/2 shrink-0 truncate">{author?.name ?? t('%Withdrawn_member%')}</span>}
+                {author !== undefined && words !== '' && ' '}
+                {thumbnail !== undefined && <img src={thumbnail} alt="" className="size-5 shrink-0 rounded object-cover" />}
+                {words !== '' && <span className="min-w-0 truncate text-muted-foreground">{words}</span>}
             </p>
         ) : undefined;
 

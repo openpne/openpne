@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
+import { PRESS_ROW, SHEET_TARGET } from './reveal-bar';
 import { RowSheet, rowSheetOpens } from './row-sheet';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
@@ -62,10 +63,38 @@ function description(): string | null {
     return id === null ? null : (document.getElementById(id)?.textContent ?? null);
 }
 
-test('the sheet names its row by who wrote it and how it begins, and is described by that line', () => {
+test('the sheet names its row by who wrote it and how it begins, on one line, and is described by that line', () => {
     open({ body: '  first line\nsecond line  ' });
 
-    expect(description()).toBe('Rin first line\nsecond line');
+    expect(description()).toBe('Rin first line second line');
+});
+
+test('a long body is cut before it reaches the description, which is read out whole', () => {
+    open({ body: '\u{1F600}'.repeat(200) });
+
+    expect(description()).toBe(`Rin ${'\u{1F600}'.repeat(140)}`);
+});
+
+test('a row of pictures alone is named by its first picture, and one of files alone by its first file', () => {
+    const images = [{ thumbnailUrl: '/a.jpg' }, { thumbnailUrl: '/b.jpg' }];
+    const files = [{ name: 'notes.pdf' }];
+
+    open({ body: '', images });
+    expect(description()).toBe('Rin Image');
+    expect(screen.getByRole('dialog').querySelector('img')?.getAttribute('src')).toBe('/a.jpg');
+    cleanup();
+
+    open({ body: '', files });
+    expect(description()).toBe('Rin notes.pdf');
+    cleanup();
+
+    open({ body: '', images, files });
+    expect(description()).toBe('Rin notes.pdf');
+    cleanup();
+
+    open({ images });
+    expect(description()).toBe('Rin words');
+    expect(screen.getByRole('dialog').querySelector('img')?.getAttribute('src')).toBe('/a.jpg');
 });
 
 test('a withdrawn author is named as withdrawn, and a row with no author is named by its words alone', () => {
@@ -87,10 +116,14 @@ test('the pressed row is marked only while its sheet is open, over a page dimmed
     const { row } = open();
     const scrim = screen.getByRole('dialog').previousElementSibling;
 
-    expect(row.hasAttribute('data-sheet-target')).toBe(true);
+    expect(row.hasAttribute(SHEET_TARGET)).toBe(true);
     expect(scrim?.className).toContain('bg-black/25');
     expect(scrim?.className).not.toContain('backdrop-blur');
 
     cleanup();
-    expect(row.hasAttribute('data-sheet-target')).toBe(false);
+    expect(row.hasAttribute(SHEET_TARGET)).toBe(false);
+});
+
+test('the pressed row\'s tint is written against the name the sheet marks it with', () => {
+    expect(PRESS_ROW.split(' ')).toContainEqual(expect.stringMatching(new RegExp(`^${SHEET_TARGET}:bg-`)));
 });

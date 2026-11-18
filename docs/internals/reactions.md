@@ -108,12 +108,14 @@ Every surface draws a reacted-to thing one of two ways
 The press is offered only where `(pointer: coarse)` holds
 ([`lib/use-long-press.ts`](../../resources/js/lib/use-long-press.ts)), the same query the row's
 `select-none` and `-webkit-touch-callout: none` key on: a laptop with a touch screen keeps the OS
-selection lens and the cursor's bar. The sheet covers the lower half of the screen, where the
-newest rows sit, so it names the row it acts on: one line under the grabber with the author and the
-start of the body, which is also the sheet's accessible description. Above the sheet, the page is
-dimmed lightly and not blurred, and the pressed row is tinted while the sheet is open, so a row
-higher up is also found by where it sits. Every other dialog and sheet, including what a choice on
-this one opens, dims and blurs the page as before. A held row cannot be part-selected, so the sheet offers
+selection lens and the cursor's bar. The sheet rises over the lower part of the screen, where the
+pressed row may well be, so it names the row it acts on: one line under the grabber with the author
+and the start of the body, the first picture beside it, and with no words the first file's name or
+the word for a picture. That line is also the sheet's accessible description, cut to 140 characters.
+Above the sheet, the page is dimmed lightly and not blurred, and the pressed row is tinted while the
+sheet is open, so a row left in view is also found by where it sits. What a choice on the sheet
+opens (the reactor list, the confirmation, Select text) dims and blurs the page, as the header's
+menu sheet does. A held row cannot be part-selected, so the sheet offers
 **Select text**: the row drawn again under that heading, its body selected as it appears, in a sheet
 of its own where the lens works. That sheet does not slide in: iOS paints a selection made during
 the slide where the content stood at that instant, and one made after it comes late. The body is

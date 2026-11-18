@@ -152,6 +152,8 @@ export default function TimelineShow() {
                         body: reply.body,
                         author: reply.author,
                         createdAt: reply.createdAt,
+                        images: reply.images,
+                        files: reply.files,
                         chips: rowsReactions.chips(reply.id, reply.reactions),
                         vocabulary: reactionVocabulary,
                         canReact: true,

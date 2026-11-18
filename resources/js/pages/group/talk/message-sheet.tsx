@@ -56,6 +56,8 @@ export function TalkMessageSheet({
             body={message.body}
             author={message.author}
             createdAt={message.createdAt}
+            images={message.images}
+            files={message.files}
             chips={chips}
             vocabulary={vocabulary}
             canReact={canReact}
