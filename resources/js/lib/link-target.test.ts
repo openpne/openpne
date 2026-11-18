@@ -33,6 +33,35 @@ test('a path that begins with a doubled slash stays a path on this host', () => 
     assert.equal(inAppHref('https://sns.example.test//?a=1#b', 'sns.example.test'), '/?a=1#b');
 });
 
+test('whatever the spelling, the path of a link to this host lands on this host', () => {
+    const spellings = [
+        'https://sns.example.test////////evil.example/x',
+        'https://sns.example.test\\/evil.example/x',
+        'https://sns.example.test/\\/evil.example/x',
+        'https:sns.example.test//evil.example/x',
+        'https:\\\\sns.example.test//evil.example/x',
+        ' \thttps://sns.example.test//evil.example/x',
+        'https://sns.example.test/\t/evil.example/x',
+        'https://sns.example.test/\r\n/evil.example/x',
+        'https://sns.example.test/%2F%2Fevil.example/x',
+        'https://sns.example.test/%5C%5Cevil.example/x',
+        'https://sns.example.test//@evil.example/x',
+        'https://evil.example@sns.example.test//evil.example/x',
+        'https://sns.example.test/a/..//evil.example/x',
+        'https://sns.example.test/%2e%2e//evil.example/x',
+        'https://sns.example.test//?next=//evil.example',
+        'https://sns.example.test/sns//evil.example/x',
+    ];
+    // Resolved as the browser resolves an href, from the root and from a page of a sub-directory install.
+    for (const href of spellings) {
+        const path = inAppHref(href, 'sns.example.test');
+        assert.notEqual(path, null, href);
+        for (const page of ['https://sns.example.test/', 'http://sns.example.test/sns/diary/1']) {
+            assert.equal(new URL(path!, page).host, 'sns.example.test', `${href} from ${page}`);
+        }
+    }
+});
+
 test('a non-http scheme or a relative reference is not one of ours', () => {
     assert.equal(inAppHref('javascript:alert(1)', 'sns.example.test'), null);
     assert.equal(inAppHref('/diary/1', 'sns.example.test'), null);
