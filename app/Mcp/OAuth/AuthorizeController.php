@@ -20,13 +20,16 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AuthorizeController extends AuthorizationController
 {
+    /** Kept rather than `login` struck out: Passport passes each value's index to `trim()` as the characters to strip, so `0login` reaches it as `login`. */
+    private const PROMPTS = ['none', 'consent', 'select_account'];
+
     public function authorize(
         ServerRequestInterface $psrRequest,
         Request $request,
         ResponseInterface $psrResponse,
         AuthorizationViewResponse $viewResponse
     ): Response|AuthorizationViewResponse {
-        $request->query->set('prompt', $request->string('prompt')->explode(' ')->reject(fn (string $p): bool => $p === 'login')->implode(' '));
+        $request->merge(['prompt' => $request->string('prompt')->explode(' ')->intersect(self::PROMPTS)->implode(' ')]);
 
         return parent::authorize($psrRequest, $request, $psrResponse, $viewResponse);
     }

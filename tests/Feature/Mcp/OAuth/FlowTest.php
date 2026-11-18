@@ -10,6 +10,7 @@ use App\Mcp\McpAbilities;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Laravel\Passport\Passport;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class FlowTest extends OAuthTestCase
 {
@@ -35,16 +36,40 @@ class FlowTest extends OAuthTestCase
         }
     }
 
-    public function test_a_linked_prompt_login_does_not_end_the_session(): void
+    /** @return array<string, array{string}> */
+    public static function loginPrompts(): array
+    {
+        // The last two are `login` only after Passport trims each value by its index's digits.
+        return [
+            'alone' => ['login'],
+            'beside consent' => ['consent login'],
+            'first, wrapped in its index' => ['0login'],
+            'second, wrapped in its index' => ['consent 1login1'],
+        ];
+    }
+
+    #[DataProvider('loginPrompts')]
+    public function test_a_linked_prompt_login_does_not_end_the_session(string $prompt): void
     {
         $viewer = Member::factory()->create();
         $client = $this->registerClient();
         [, $challenge] = $this->pkce();
 
-        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&prompt=login')
+        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&prompt='.rawurlencode($prompt))
             ->assertOk()
             ->assertInertia(fn ($page) => $page->component('auth/oauth-authorize'));
         $this->assertAuthenticatedAs($viewer, 'member');
+    }
+
+    public function test_prompt_none_still_reaches_passport(): void
+    {
+        $viewer = Member::factory()->create();
+        $client = $this->registerClient();
+        [, $challenge] = $this->pkce();
+
+        $response = $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&prompt=none');
+
+        $this->assertSame('consent_required', $this->redirectQuery($response)['error']);
     }
 
     public function test_the_consent_screen_withholds_creation_once_the_site_cap_is_reached(): void
