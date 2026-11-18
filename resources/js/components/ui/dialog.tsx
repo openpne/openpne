@@ -8,6 +8,7 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 export const DialogTitle = DialogPrimitive.Title;
+export const DialogDescription = DialogPrimitive.Description;
 
 /**
  * Below sm it anchors near the top rather than the vertical center: the soft keyboard shrinks the
@@ -67,11 +68,18 @@ export function SheetContent({
     closeLabel = 'Close',
     side = 'left',
     animated = true,
+    scrim = 'dim',
     ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string; side?: 'left' | 'right' | 'bottom'; animated?: boolean }) {
+}: ComponentProps<typeof DialogPrimitive.Content> & {
+    closeLabel?: string;
+    side?: 'left' | 'right' | 'bottom';
+    animated?: boolean;
+    /** `light` leaves the page readable behind the sheet, for a sheet that acts on something on it. */
+    scrim?: 'dim' | 'light';
+}) {
     return (
         <DialogPrimitive.Portal>
-            <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+            <DialogPrimitive.Overlay className={cn('fixed inset-0 z-50', scrim === 'dim' ? 'bg-black/50 backdrop-blur-sm' : 'bg-black/25')} />
             <DialogPrimitive.Content
                 className={cn(
                     // Edge-to-edge by construction (inset-y-0), so it pads for all three insets it can

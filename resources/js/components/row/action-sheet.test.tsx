@@ -63,3 +63,9 @@ test('a sheet rises from the foot of the screen unless told to stand in place', 
     );
     expect(screen.getByRole('dialog').className).not.toContain('animate-sheet');
 });
+
+test('a sheet not told otherwise dims and blurs the page', () => {
+    open(false);
+
+    expect(screen.getByRole('dialog').previousElementSibling?.className).toContain('backdrop-blur-sm');
+});

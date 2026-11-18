@@ -195,6 +195,8 @@ export default function DiaryShow() {
                         body: comment.body,
                         author: comment.author,
                         createdAt: comment.createdAt,
+                        images: comment.images,
+                        files: comment.files,
                         chips: canReact ? commentReactions.chips(comment.id, comment.reactions) : comment.reactions,
                         vocabulary: reactionVocabulary,
                         canReact,

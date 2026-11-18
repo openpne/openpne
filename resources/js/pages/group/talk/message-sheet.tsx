@@ -56,6 +56,8 @@ export function TalkMessageSheet({
             body={message.body}
             author={message.author}
             createdAt={message.createdAt}
+            images={message.images}
+            files={message.files}
             chips={chips}
             vocabulary={vocabulary}
             canReact={canReact}
@@ -68,7 +70,6 @@ export function TalkMessageSheet({
             onSelectText={onSelectText}
             onClose={onClose}
             title={t('Message actions')}
-            // The sheet names no message, so the action must say what it acts on.
             deleteLabel={t('Delete message')}
         />
     );

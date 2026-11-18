@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
+import { PRESS_ROW, SHEET_TARGET } from './reveal-bar';
 import { RowSheet, rowSheetOpens } from './row-sheet';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
@@ -54,4 +55,75 @@ test('select text hands the row\'s words on with who wrote them and when', () =>
 
     fireEvent.click(screen.getByRole('button', { name: 'Select text' }));
     expect(spies.onSelectText).toHaveBeenCalledWith({ body: 'words', author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:00:00+09:00' });
+});
+
+function description(): string | null {
+    const id = screen.getByRole('dialog').getAttribute('aria-describedby');
+
+    return id === null ? null : (document.getElementById(id)?.textContent ?? null);
+}
+
+test('the sheet names its row by who wrote it and how it begins, on one line, and is described by that line', () => {
+    open({ body: '  first line\nsecond line  ' });
+
+    expect(description()).toBe('Rin first line second line');
+});
+
+test('a long body is cut before it reaches the description, which is read out whole', () => {
+    open({ body: '\u{1F600}'.repeat(200) });
+
+    expect(description()).toBe(`Rin ${'\u{1F600}'.repeat(140)}`);
+});
+
+test('a row of pictures alone is named by its first picture, and one of files alone by its first file', () => {
+    const images = [{ thumbnailUrl: '/a.jpg' }, { thumbnailUrl: '/b.jpg' }];
+    const files = [{ name: 'notes.pdf' }];
+
+    open({ body: '', images });
+    expect(description()).toBe('Rin Image');
+    expect(screen.getByRole('dialog').querySelector('img')?.getAttribute('src')).toBe('/a.jpg');
+    cleanup();
+
+    open({ body: '', files });
+    expect(description()).toBe('Rin notes.pdf');
+    cleanup();
+
+    open({ body: '', images, files });
+    expect(description()).toBe('Rin notes.pdf');
+    cleanup();
+
+    open({ images });
+    expect(description()).toBe('Rin words');
+    expect(screen.getByRole('dialog').querySelector('img')?.getAttribute('src')).toBe('/a.jpg');
+});
+
+test('a withdrawn author is named as withdrawn, and a row with no author is named by its words alone', () => {
+    open({ author: null });
+    expect(description()).toBe('%Withdrawn_member% words');
+    cleanup();
+
+    open({ author: undefined });
+    expect(description()).toBe('words');
+});
+
+test('a row with neither author nor words leaves the sheet undescribed', () => {
+    open({ author: undefined, body: ' ', onDelete: () => {} });
+
+    expect(screen.getByRole('dialog').getAttribute('aria-describedby')).toBeNull();
+});
+
+test('the pressed row is marked only while its sheet is open, over a page dimmed without blur', () => {
+    const { row } = open();
+    const scrim = screen.getByRole('dialog').previousElementSibling;
+
+    expect(row.hasAttribute(SHEET_TARGET)).toBe(true);
+    expect(scrim?.className).toContain('bg-black/25');
+    expect(scrim?.className).not.toContain('backdrop-blur');
+
+    cleanup();
+    expect(row.hasAttribute(SHEET_TARGET)).toBe(false);
+});
+
+test('the pressed row\'s tint is written against the name the sheet marks it with', () => {
+    expect(PRESS_ROW.split(' ')).toContainEqual(expect.stringMatching(new RegExp(`^${SHEET_TARGET}:bg-`)));
 });
