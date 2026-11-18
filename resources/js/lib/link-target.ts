@@ -12,9 +12,12 @@ import { safeUrl } from './safe-url.ts';
  */
 export const BYTES_SEGMENTS = ['app-icon', 'banner', 'cache', 'f', 'file', 'linkCard'] as const;
 
-/** Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find out. */
+/**
+ * Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find
+ * out. Empty segments and the `/.` before them are passed over, since a front server may merge slashes.
+ */
 export function isBytesHref(path: string): boolean {
-    const segment = /^\/([^/?#]+)/.exec(path)?.[1] ?? '';
+    const segment = /^\/(?:\.?\/)*([^/?#]+)/.exec(path)?.[1] ?? '';
 
     return (BYTES_SEGMENTS as readonly string[]).includes(segment);
 }
@@ -31,7 +34,7 @@ export function inAppHref(href: string, host: string): string | null {
         return null;
     }
 
-    // A path that begins with an empty segment goes behind `/.`, as the URL Standard serializes one, since a leading `//` would be read as a host.
+    // A path that begins with an empty segment goes behind `/.`, as the URL Standard writes one without a host, since a leading `//` would be read as a host.
     const path = url.pathname.startsWith('//') ? `/.${url.pathname}` : url.pathname;
 
     return `${path}${url.search}${url.hash}`;

@@ -106,8 +106,11 @@ test('a path under a segment that serves bytes is not a page, judged by its firs
         assert.equal(isBytesHref(path), true, path);
     }
     assert.equal(isBytesHref('/file?x=1'), true);
-    // A path that begins with an empty segment (`//`, or `/.//` as inAppHref writes it) is no route of ours.
-    for (const path of ['/diary/1', '/files/1', '/member/1/file', '/', '/cache-list', '', '//file/x', '/.//file/x', 'file/x']) {
+    // A front server that merges slashes serves `//file/x` as `/file/x`.
+    assert.equal(isBytesHref('//file/x'), true);
+    assert.equal(isBytesHref('/.//file/x'), true);
+    assert.equal(isBytesHref('/.///cache/x'), true);
+    for (const path of ['/diary/1', '/files/1', '/member/1/file', '/', '/cache-list', '', '/.//', '/.//diary/1', 'file/x']) {
         assert.equal(isBytesHref(path), false, path);
     }
 });
