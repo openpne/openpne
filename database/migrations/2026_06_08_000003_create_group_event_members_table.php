@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('group_event_id')->constrained('group_events')->cascadeOnDelete();
             $table->foreignId('member_id')->constrained('members')->cascadeOnDelete();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->index(['group_event_id', 'member_id']);
         });

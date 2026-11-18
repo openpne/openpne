@@ -12,9 +12,9 @@ return new class extends Migration
             $table->id();
             $table->unsignedInteger('number')->unique();
             $table->date('issue_date')->unique();
-            $table->timestamp('window_start');
-            $table->timestamp('published_at');
-            $table->timestamps();
+            $table->dateTime('window_start');
+            $table->dateTime('published_at');
+            $table->datetimes();
 
             // Asked by time rather than by number so a repair that renumbers cannot change which
             // issue was published last.

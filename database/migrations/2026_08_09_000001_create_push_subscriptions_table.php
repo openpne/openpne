@@ -30,7 +30,7 @@ return new class extends Migration
             $table->string('public_key')->nullable();
             $table->string('auth_token')->nullable();
             $table->string('content_encoding')->nullable();
-            $table->timestamps();
+            $table->datetimes();
         });
     }
 

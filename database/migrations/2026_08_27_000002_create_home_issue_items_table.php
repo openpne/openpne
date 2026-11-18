@@ -22,7 +22,7 @@ return new class extends Migration
             $table->unsignedBigInteger('source_id');
             $table->unsignedInteger('score');
             $table->json('stats');
-            $table->timestamps();
+            $table->datetimes();
 
             // Leads with home_issue_id, so both engines take it as the prefix that backs the FK, and
             // a later drop has to drop the foreign key first (errno 1553).

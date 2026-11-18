@@ -17,7 +17,7 @@ return new class extends Migration
             $table->text('uri');
             $table->text('source_uri')->nullable();
             $table->integer('sort_order')->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->index(['type', 'sort_order']);
         });

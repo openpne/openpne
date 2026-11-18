@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('member_id')->unique()->constrained()->cascadeOnDelete();
             $table->string('new_email');
             $table->string('token')->unique();
-            $table->timestamp('created_at')->nullable();
+            $table->dateTime('created_at')->nullable();
         });
     }
 

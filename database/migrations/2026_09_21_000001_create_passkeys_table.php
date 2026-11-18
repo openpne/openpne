@@ -32,8 +32,8 @@ return new class extends Migration
             }
             $credentialId->unique();
             $table->json('credential');
-            $table->timestamp('last_used_at')->nullable();
-            $table->timestamps();
+            $table->dateTime('last_used_at')->nullable();
+            $table->datetimes();
         });
     }
 

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('name', 64);
             $table->string('source_type', 64)->nullable();
             $table->integer('sort_order')->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->index(['context', 'zone', 'sort_order']);
         });

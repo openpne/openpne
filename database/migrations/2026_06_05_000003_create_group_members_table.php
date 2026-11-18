@@ -19,7 +19,7 @@ return new class extends Migration
             // Frozen literal (not GroupRole::Member->value) so a later enum change cannot drift this
             // default.
             $table->unsignedTinyInteger('role')->default(1); // GroupRole::Member
-            $table->timestamps();
+            $table->datetimes();
 
             // OpenPNE 3 enforced one membership per (group, member) in app code; here it is a DB
             // constraint.

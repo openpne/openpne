@@ -20,7 +20,7 @@ return new class extends Migration
             $table->text('redirect_uris');
             $table->text('grant_types');
             $table->boolean('revoked');
-            $table->timestamps();
+            $table->datetimes();
         });
     }
 

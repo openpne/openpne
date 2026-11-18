@@ -30,10 +30,10 @@ return new class extends Migration
         foreach (self::BOARDS as $table => [$comments, $fk, $dead]) {
             // Every phase is guarded, so a run that failed on the second table resumes on the first.
             if (! Schema::hasColumn($table, 'bumped_at')) {
-                // timestamp, like created_at from timestamps(): the two are compared and assigned in SQL.
+                // DATETIME, like created_at from datetimes(): the two are compared and assigned in SQL.
                 Schema::table($table, function (Blueprint $t) {
-                    $t->timestamp('bumped_at')->nullable();
-                    $t->timestamp('edited_at')->nullable();
+                    $t->dateTime('bumped_at')->nullable();
+                    $t->dateTime('edited_at')->nullable();
                 });
             }
 
@@ -43,7 +43,7 @@ return new class extends Migration
             $sequence = $this->sqliteSequence($table);
             // No DEFAULT: a write path that forgets bumped_at fails instead of storing the engine's clock.
             Schema::table($table, function (Blueprint $t) {
-                $t->timestamp('bumped_at')->nullable(false)->change();
+                $t->dateTime('bumped_at')->nullable(false)->change();
             });
             $this->restoreSqliteSequence($table, $sequence);
 
@@ -93,7 +93,7 @@ return new class extends Migration
             // The old code orders by updated_at, so a comment made since the upgrade is folded back into it.
             DB::update("UPDATE {$table} SET updated_at = CASE WHEN updated_at IS NULL OR bumped_at > updated_at THEN bumped_at ELSE updated_at END");
             Schema::table($table, function (Blueprint $t) use ($dead) {
-                $t->timestamp($dead)->nullable();
+                $t->dateTime($dead)->nullable();
                 $t->index(['group_id', 'updated_at']);
             });
             Schema::table($table, function (Blueprint $t) {

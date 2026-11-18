@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::table('group_messages', function (Blueprint $table): void {
             $table->foreignId('link_card_id')->nullable()->constrained('link_cards')->nullOnDelete();
-            $table->timestamp('link_card_synced_at')->nullable();
+            $table->dateTime('link_card_synced_at')->nullable();
         });
 
         if (DB::connection()->getDriverName() === 'sqlite') {

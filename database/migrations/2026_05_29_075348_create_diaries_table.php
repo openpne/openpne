@@ -16,7 +16,7 @@ return new class extends Migration
             $table->text('title');
             $table->text('body');
             $table->unsignedTinyInteger('visibility')->default(1); // Visibility::Members
-            $table->timestamps();
+            $table->datetimes();
 
             $table->index(['member_id', 'created_at']);
         });

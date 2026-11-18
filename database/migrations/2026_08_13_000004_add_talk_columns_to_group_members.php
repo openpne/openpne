@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('group_members', function (Blueprint $table): void {
-            $table->timestamp('talk_read_at')->useCurrent();
+            $table->dateTime('talk_read_at')->useCurrent();
             $table->unsignedBigInteger('talk_read_message_id')->default(0);
             $table->boolean('is_talk_muted')->default(false);
         });

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('member_id')->nullable()->constrained('members')->nullOnDelete();
             $table->foreignId('in_reply_to_id')->nullable();
             $table->text('body');
-            $table->timestamps();
+            $table->datetimes();
 
             $table->foreign('in_reply_to_id')->references('id')->on('group_messages')->nullOnDelete();
             // No index leads with in_reply_to_id: InnoDB would adopt it as the FK's backing index

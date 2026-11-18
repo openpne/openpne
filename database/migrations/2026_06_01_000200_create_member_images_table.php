@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('member_id')->unique()->constrained('members')->cascadeOnDelete();
             // Signed INT to match files.id.
             $table->integer('file_id');
-            $table->timestamps();
+            $table->datetimes();
 
             $table->foreign('file_id')->references('id')->on('files')->cascadeOnDelete();
         });

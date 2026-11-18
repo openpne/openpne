@@ -28,7 +28,7 @@ return new class extends Migration
             $table->text('area');
             $table->dateTime('application_deadline')->nullable();
             $table->integer('capacity')->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->index(['group_id', 'updated_at']);
         });

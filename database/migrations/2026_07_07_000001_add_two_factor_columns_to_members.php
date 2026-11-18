@@ -13,7 +13,7 @@ return new class extends Migration
         Schema::table('members', function (Blueprint $table) {
             $table->text('two_factor_secret')->nullable()->after('password_scheme');
             $table->text('two_factor_recovery_codes')->nullable()->after('two_factor_secret');
-            $table->timestamp('two_factor_confirmed_at')->nullable()->after('two_factor_recovery_codes');
+            $table->dateTime('two_factor_confirmed_at')->nullable()->after('two_factor_recovery_codes');
         });
     }
 

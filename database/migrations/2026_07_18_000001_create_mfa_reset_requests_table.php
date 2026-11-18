@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('member_id')->unique()->constrained()->cascadeOnDelete();
             $table->string('token')->unique();
-            $table->timestamp('created_at')->nullable();
+            $table->dateTime('created_at')->nullable();
         });
     }
 

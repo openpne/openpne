@@ -22,7 +22,7 @@ return new class extends Migration
             if ($mysql) {
                 $emoji->collation('utf8mb4_bin');
             }
-            $table->timestamps();
+            $table->datetimes();
 
             // Its prefix is the read of every reaction on one message, and 304 bytes at utf8mb4 stays
             // inside InnoDB's key limit.

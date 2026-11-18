@@ -99,7 +99,7 @@ A partial reload that names another prop of a stream's page moves no cursor: the
 neither the rows, their scroll metadata nor a generation, and the client keeps the metadata it
 holds.
 
-A time column from `timestamps()` is nullable, and a row with no time has no place in the order:
+A time column from `datetimes()` is nullable, and a row with no time has no place in the order:
 the prev / next queries answer "no neighbours" for it rather than compare against NULL, a stream
 leaves it out, and no cursor reaches it. The lists here rely on every write path filling the column,
 which the upgrade tool does as well.

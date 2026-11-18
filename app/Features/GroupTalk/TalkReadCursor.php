@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * The cursor lives on `group_members`, so membership implies it and the message id is a copied value
  * rather than a foreign key (docs/internals/group-talk.md, "Unread"). Every comparison is the whole
- * tuple: a MySQL timestamp is second-precise, so `created_at` alone cannot separate two messages
+ * tuple: a time column is second-precise, so `created_at` alone cannot separate two messages
  * written in one second.
  */
 final class TalkReadCursor

@@ -101,7 +101,7 @@ live message of the same group — and deleting a message never touches the mess
 ## Ordering is the `(created_at, id)` tuple
 
 Never `id` alone: migrated rows are inserted in transfer order, so their ids are not monotonic in
-time. Never `created_at` alone either: a MySQL timestamp is second-precise, so it is not a total
+time. Never `created_at` alone either: a time column is second-precise, so it is not a total
 order, and a page boundary landing inside one second would drop or repeat a message.
 
 [`GroupTalkMessages`](../../app/Features/GroupTalk/Queries/GroupTalkMessages.php) pages by keyset on
@@ -197,8 +197,8 @@ history is in — a bulk initialization before any native write, not an `advance
 ([upgrade](upgrade.md#post-walk-passes)), and `openpne:verify-upgrade` re-checks it.
 
 The columns' DB defaults (`useCurrent()`, `0`) are a **backstop for paths this helper cannot reach,
-not the initialization**. `(now(), 0)` is not the same boundary as the real latest tuple: a MySQL
-timestamp is second-precise, so a message written in the same second as the join has the tuple
+not the initialization**. `(now(), 0)` is not the same boundary as the real latest tuple: a time
+column is second-precise, so a message written in the same second as the join has the tuple
 `(t, id > 0)`, which compares **greater** than `(t, 0)` and would show up unread the instant someone
 joined. Reading the actual latest tuple is what closes that second, and the discriminating test says
 so.

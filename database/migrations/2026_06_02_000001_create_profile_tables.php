@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('value_min', 32)->nullable();
             $table->string('value_max', 32)->nullable();
             $table->integer('sort_order')->nullable();
-            $table->timestamps();
+            $table->datetimes();
         });
 
         // (id, lang) composite PK, no own id/timestamps — the OpenPNE 3 I18n table shape.
@@ -43,7 +43,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('profile_id')->constrained('profiles')->cascadeOnDelete();
             $table->integer('sort_order')->nullable();
-            $table->timestamps();
+            $table->datetimes();
 
             $table->index('profile_id');
         });
