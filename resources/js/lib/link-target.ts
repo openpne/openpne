@@ -31,8 +31,10 @@ export function inAppHref(href: string, host: string): string | null {
         return null;
     }
 
-    // A second leading slash would make the path a host for the browser, so leading slashes fold into one.
-    return `${url.pathname.replace(/^\/+/, '/')}${url.search}${url.hash}`;
+    // A path that begins with an empty segment goes behind `/.`, as the URL Standard serializes one, since a leading `//` would be read as a host.
+    const path = url.pathname.startsWith('//') ? `/.${url.pathname}` : url.pathname;
+
+    return `${path}${url.search}${url.hash}`;
 }
 
 /** Whether a click on a link should be handled by the router rather than left to the browser. */

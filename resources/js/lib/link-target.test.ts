@@ -26,15 +26,15 @@ test('a port decides, as it does for a card', () => {
     assert.equal(inAppHref('http://localhost:8080/x', 'localhost:8080'), '/x');
 });
 
-test('a path that begins with a doubled slash stays a path on this host', () => {
-    for (const href of ['https://sns.example.test//evil.example/x', 'https://sns.example.test///evil.example/x', 'https://sns.example.test/\\evil.example/x']) {
-        assert.equal(inAppHref(href, 'sns.example.test'), '/evil.example/x', href);
-    }
-    assert.equal(inAppHref('https://sns.example.test//?a=1#b', 'sns.example.test'), '/?a=1#b');
+test('a path that begins with a doubled slash is kept as written, behind a dot segment', () => {
+    assert.equal(inAppHref('https://sns.example.test//evil.example/x', 'sns.example.test'), '/.//evil.example/x');
+    assert.equal(inAppHref('https://sns.example.test/\\evil.example/x', 'sns.example.test'), '/.//evil.example/x');
+    assert.equal(inAppHref('https://sns.example.test///evil.example/x', 'sns.example.test'), '/.///evil.example/x');
+    assert.equal(inAppHref('https://sns.example.test//?a=1#b', 'sns.example.test'), '/.//?a=1#b');
     assert.equal(inAppHref('https://sns.example.test/x//evil.example/y', 'sns.example.test'), '/x//evil.example/y');
 });
 
-test('whatever the spelling, the path of a link to this host lands on this host', () => {
+test('whatever the spelling, the path of a link to this host lands on exactly that url of this host', () => {
     const spellings = [
         'https://sns.example.test////////evil.example/x',
         'https://sns.example.test\\/evil.example/x',
@@ -57,8 +57,11 @@ test('whatever the spelling, the path of a link to this host lands on this host'
     for (const href of spellings) {
         const path = inAppHref(href, 'sns.example.test');
         assert.notEqual(path, null, href);
+        const written = new URL(href);
         for (const page of ['https://sns.example.test/', 'http://sns.example.test/sns/diary/1']) {
-            assert.equal(new URL(path!, page).host, 'sns.example.test', `${href} from ${page}`);
+            const landed = new URL(path!, page);
+            assert.equal(landed.host, 'sns.example.test', `${href} from ${page}`);
+            assert.equal(`${landed.pathname}${landed.search}${landed.hash}`, `${written.pathname}${written.search}${written.hash}`, `${href} from ${page}`);
         }
     }
 });
@@ -103,8 +106,8 @@ test('a path under a segment that serves bytes is not a page, judged by its firs
         assert.equal(isBytesHref(path), true, path);
     }
     assert.equal(isBytesHref('/file?x=1'), true);
-    // A doubled slash is a host to the browser, never a segment of ours.
-    for (const path of ['/diary/1', '/files/1', '/member/1/file', '/', '/cache-list', '', '//file/x', 'file/x']) {
+    // A path that begins with an empty segment (`//`, or `/.//` as inAppHref writes it) is no route of ours.
+    for (const path of ['/diary/1', '/files/1', '/member/1/file', '/', '/cache-list', '', '//file/x', '/.//file/x', 'file/x']) {
         assert.equal(isBytesHref(path), false, path);
     }
 });

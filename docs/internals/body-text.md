@@ -48,8 +48,8 @@ against `app.url`, reading the URL as a browser does (the scheme's default port 
 punycode) and refusing to call ours a URL with a backslash, at which a browser cuts the host and
 `parse_url` does not, or with userinfo, which `LinkUrl` refuses too — so a link is only ever
 un-hardened when the browser will really stay here. The client reads with the browser's own parser
-and needs no such refusal, but folds the leading slashes of the path it links to and visits into
-one, since a second would make the path a host. Any port counts, where a card ([`InternalUrl`](../../app/LinkCard/InternalUrl.php)) knows only
+and needs no such refusal; a path that begins with an empty segment is kept as written behind
+`/.`, as the URL Standard serializes one, since a leading `//` would be read as a host. Any port counts, where a card ([`InternalUrl`](../../app/LinkCard/InternalUrl.php)) knows only
 the two the fetcher dials, and the path does not decide: the same host is this site's server.
 [`link-target.ts`](../../resources/js/lib/link-target.ts) decides on the client by the page's own
 host, the one origin the router can visit. [`BodyLink`](../../resources/js/components/body-link.tsx)
