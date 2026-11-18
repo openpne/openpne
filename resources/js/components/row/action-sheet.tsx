@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type ComponentProps, type ReactNode, type RefObject } from 'react';
 import { Dialog, DialogDescription, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
@@ -20,6 +20,7 @@ export function ActionSheet({
     returnFocusTo,
     titleVisible = false,
     subject,
+    scrim,
     onOpened,
     onClosed,
     openedByPress = false,
@@ -34,6 +35,7 @@ export function ActionSheet({
     titleVisible?: boolean;
     /** What the choices act on, drawn under the grabber and read as the sheet's description. */
     subject?: ReactNode;
+    scrim?: ComponentProps<typeof SheetContent>['scrim'];
     /** Run once the sheet holds focus, for what needs its content in the document. */
     onOpened?: () => void;
     /** Run once the sheet has closed and focus is back where `returnFocusTo` points. */
@@ -81,6 +83,7 @@ export function ActionSheet({
                 tabIndex={-1}
                 side="bottom"
                 animated={animated}
+                scrim={scrim}
                 closeLabel={t('Close')}
                 aria-describedby={undefined}
                 onInteractOutside={(event) => {

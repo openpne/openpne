@@ -1,4 +1,5 @@
 import { Copy, Link, Reply, TextSelect, Trash2, Users } from 'lucide-react';
+import { useLayoutEffect } from 'react';
 import { ActionSheet, SHEET_GROUP, SHEET_ITEM } from './action-sheet';
 import type { SelectableText } from './select-text-sheet';
 import type { ReactionChip } from '@/lib/reactions/types';
@@ -79,6 +80,15 @@ export function RowSheet({ body, author, createdAt, chips, vocabulary, canReact,
     const canCopy = canCopyText(body);
     const canLink = link !== undefined && canCopyLink();
     const hasBody = body.trim() !== '';
+    // Marked under a light scrim rather than dimmed with the rest, so where the row sits also says which one the sheet acts on (docs/internals/reactions.md, "The row").
+    useLayoutEffect(() => {
+        if (returnFocusTo === null) {
+            return;
+        }
+        returnFocusTo.setAttribute('data-sheet-target', '');
+
+        return () => returnFocusTo.removeAttribute('data-sheet-target');
+    }, [returnFocusTo]);
     // One line, as a reply names what it answers: enough to tell the row from its neighbours, not to read it.
     const subject =
         author !== undefined || hasBody ? (
@@ -90,7 +100,7 @@ export function RowSheet({ body, author, createdAt, chips, vocabulary, canReact,
         ) : undefined;
 
     return (
-        <ActionSheet open openedByPress onOpenChange={(next) => !next && onClose()} title={title ?? t('Post actions')} subject={subject} returnFocusTo={{ current: returnFocusTo }}>
+        <ActionSheet open openedByPress onOpenChange={(next) => !next && onClose()} title={title ?? t('Post actions')} subject={subject} scrim="light" returnFocusTo={{ current: returnFocusTo }}>
             {canReact && (
                 // Four to a row rather than wrapping: a set meant to be scanned should not
                 // change shape with its own length.

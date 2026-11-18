@@ -82,3 +82,15 @@ test('a row with neither author nor words leaves the sheet undescribed', () => {
 
     expect(screen.getByRole('dialog').getAttribute('aria-describedby')).toBeNull();
 });
+
+test('the pressed row is marked only while its sheet is open, over a page dimmed without blur', () => {
+    const { row } = open();
+    const scrim = screen.getByRole('dialog').previousElementSibling;
+
+    expect(row.hasAttribute('data-sheet-target')).toBe(true);
+    expect(scrim?.className).toContain('bg-black/25');
+    expect(scrim?.className).not.toContain('backdrop-blur');
+
+    cleanup();
+    expect(row.hasAttribute('data-sheet-target')).toBe(false);
+});

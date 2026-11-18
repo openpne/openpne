@@ -12,8 +12,8 @@ export const REVEAL_BAR =
 /** The classes a row carries to host the bar: the bar's anchor, and a lift above its neighbours while its controls are out. */
 export const REVEAL_ROW = 'group relative hover:z-10 has-[:focus-visible]:z-10 has-[[aria-expanded=true]]:z-10 has-[[data-ack]]:z-10';
 
-/** What a press must not start: the lens and the image menu a held finger raises would land on the sheet. */
-export const PRESS_ROW = 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]';
+/** What a press must not start (the lens and the image menu a held finger raises would land on the sheet), and the tint of the row a sheet is open for. */
+export const PRESS_ROW = 'pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none] data-sheet-target:bg-accent';
 
 /** The caller decides whether there is a bar at all: an empty frame over a row with no power over itself is the caller's mistake to avoid. */
 export function RevealBar({ children, className }: { children: ReactNode; className?: string }) {
