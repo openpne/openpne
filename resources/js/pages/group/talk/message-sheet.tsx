@@ -68,7 +68,6 @@ export function TalkMessageSheet({
             onSelectText={onSelectText}
             onClose={onClose}
             title={t('Message actions')}
-            // The sheet names no message, so the action must say what it acts on.
             deleteLabel={t('Delete message')}
         />
     );

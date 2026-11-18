@@ -108,7 +108,9 @@ Every surface draws a reacted-to thing one of two ways
 The press is offered only where `(pointer: coarse)` holds
 ([`lib/use-long-press.ts`](../../resources/js/lib/use-long-press.ts)), the same query the row's
 `select-none` and `-webkit-touch-callout: none` key on: a laptop with a touch screen keeps the OS
-selection lens and the cursor's bar. A held row cannot be part-selected, so the sheet offers
+selection lens and the cursor's bar. The sheet covers the lower half of the screen, where the
+newest rows sit, so it names the row it acts on: one line under the grabber with the author and the
+start of the body, which is also the sheet's accessible description. A held row cannot be part-selected, so the sheet offers
 **Select text**: the row drawn again under that heading, its body selected as it appears, in a sheet
 of its own where the lens works. That sheet does not slide in: iOS paints a selection made during
 the slide where the content stood at that instant, and one made after it comes late. The body is

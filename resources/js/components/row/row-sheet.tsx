@@ -79,9 +79,18 @@ export function RowSheet({ body, author, createdAt, chips, vocabulary, canReact,
     const canCopy = canCopyText(body);
     const canLink = link !== undefined && canCopyLink();
     const hasBody = body.trim() !== '';
+    // One line, as a reply names what it answers: enough to tell the row from its neighbours, not to read it.
+    const subject =
+        author !== undefined || hasBody ? (
+            <p className="flex min-w-0 items-baseline gap-2 text-sm">
+                {author !== undefined && <span className="shrink-0 font-medium">{author?.name ?? t('%Withdrawn_member%')}</span>}
+                {author !== undefined && hasBody && ' '}
+                {hasBody && <span className="min-w-0 truncate text-muted-foreground">{body.trim()}</span>}
+            </p>
+        ) : undefined;
 
     return (
-        <ActionSheet open openedByPress onOpenChange={(next) => !next && onClose()} title={title ?? t('Post actions')} returnFocusTo={{ current: returnFocusTo }}>
+        <ActionSheet open openedByPress onOpenChange={(next) => !next && onClose()} title={title ?? t('Post actions')} subject={subject} returnFocusTo={{ current: returnFocusTo }}>
             {canReact && (
                 // Four to a row rather than wrapping: a set meant to be scanned should not
                 // change shape with its own length.

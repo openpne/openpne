@@ -55,3 +55,30 @@ test('select text hands the row\'s words on with who wrote them and when', () =>
     fireEvent.click(screen.getByRole('button', { name: 'Select text' }));
     expect(spies.onSelectText).toHaveBeenCalledWith({ body: 'words', author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: false }, createdAt: '2026-09-19T10:00:00+09:00' });
 });
+
+function description(): string | null {
+    const id = screen.getByRole('dialog').getAttribute('aria-describedby');
+
+    return id === null ? null : (document.getElementById(id)?.textContent ?? null);
+}
+
+test('the sheet names its row by who wrote it and how it begins, and is described by that line', () => {
+    open({ body: '  first line\nsecond line  ' });
+
+    expect(description()).toBe('Rin first line\nsecond line');
+});
+
+test('a withdrawn author is named as withdrawn, and a row with no author is named by its words alone', () => {
+    open({ author: null });
+    expect(description()).toBe('%Withdrawn_member% words');
+    cleanup();
+
+    open({ author: undefined });
+    expect(description()).toBe('words');
+});
+
+test('a row with neither author nor words leaves the sheet undescribed', () => {
+    open({ author: undefined, body: ' ', onDelete: () => {} });
+
+    expect(screen.getByRole('dialog').getAttribute('aria-describedby')).toBeNull();
+});
