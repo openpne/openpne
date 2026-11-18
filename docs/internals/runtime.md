@@ -70,8 +70,9 @@ Key invariants:
    `group_join_requests` refuse an unstamped row rather than stamping it
    themselves (the upgrade importer maps each source timestamp explicitly). On
    MySQL that refusal rests on strict mode, which the connection config sets;
-   without it an unstamped row stores a zero date. The one column still defaulting to the database
-   clock is the talk read cursor `group_members.talk_read_at`, a backstop
+   without it an unstamped row stores a zero date. Two columns still default to
+   the database clock: `failed_jobs.failed_at`, which Laravel always stamps
+   itself, and the talk read cursor `group_members.talk_read_at`, a backstop
    described in [group-talk.md](group-talk.md), "Unread".
 2. **The client formats in the site's zone, not the browser's.** Instants are
    serialized as offset-bearing ISO and the zone travels with them as the

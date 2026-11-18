@@ -30,7 +30,6 @@ return new class extends Migration
         foreach (self::BOARDS as $table => [$comments, $fk, $dead]) {
             // Every phase is guarded, so a run that failed on the second table resumes on the first.
             if (! Schema::hasColumn($table, 'bumped_at')) {
-                // DATETIME, like created_at from datetimes(): the two are compared and assigned in SQL.
                 Schema::table($table, function (Blueprint $t) {
                     $t->dateTime('bumped_at')->nullable();
                     $t->dateTime('edited_at')->nullable();

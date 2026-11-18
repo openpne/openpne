@@ -23,7 +23,7 @@ class ConvertTimestampColumnsToDatetimeTest extends TestCase
 {
     use DatabaseMigrations;
 
-    /** Puts back each shape an installed site's columns have; friendships carries what explicit_defaults_for_timestamp=OFF adds. */
+    /** The TIMESTAMP shapes the converter must handle; friendships carries the default explicit_defaults_for_timestamp=OFF adds, which it must drop. */
     private const AS_INSTALLED = [
         'diaries' => 'MODIFY created_at TIMESTAMP NULL, MODIFY updated_at TIMESTAMP NULL',
         'friendships' => 'MODIFY created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
