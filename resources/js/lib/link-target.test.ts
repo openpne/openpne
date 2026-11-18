@@ -26,6 +26,13 @@ test('a port decides, as it does for a card', () => {
     assert.equal(inAppHref('http://localhost:8080/x', 'localhost:8080'), '/x');
 });
 
+test('a path that begins with a doubled slash stays a path on this host', () => {
+    for (const href of ['https://sns.example.test//evil.example/x', 'https://sns.example.test///evil.example/x', 'https://sns.example.test/\\evil.example/x']) {
+        assert.equal(inAppHref(href, 'sns.example.test'), '/evil.example/x', href);
+    }
+    assert.equal(inAppHref('https://sns.example.test//?a=1#b', 'sns.example.test'), '/?a=1#b');
+});
+
 test('a non-http scheme or a relative reference is not one of ours', () => {
     assert.equal(inAppHref('javascript:alert(1)', 'sns.example.test'), null);
     assert.equal(inAppHref('/diary/1', 'sns.example.test'), null);

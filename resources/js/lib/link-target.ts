@@ -34,7 +34,8 @@ export function inAppHref(href: string, host: string): string | null {
         return null;
     }
 
-    return `${url.pathname}${url.search}${url.hash}`;
+    // A second leading slash would make the path a host for the browser, so leading slashes fold into one.
+    return `${url.pathname.replace(/^\/+/, '/')}${url.search}${url.hash}`;
 }
 
 /** Whether a click on a link should be handled by the router rather than left to the browser. */
