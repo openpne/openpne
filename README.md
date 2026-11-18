@@ -71,8 +71,8 @@ development line and moves with every merged change.
 
 [docs/installing.md](docs/installing.md) sets a release up on a server: PHP 8.3 or later, SQLite or
 MySQL, a web server, and a way to run queued work. Where a release has an archive, installing from
-it needs neither Composer nor Node.js on the server. A release without one is installed from its
-tag, which needs both. Moving from one release to the next is [docs/updating.md](docs/updating.md).
+it needs neither Composer nor Node.js on the server. A release without one, or a site that will
+carry changes of its own, is installed from its tag, which needs both. Moving from one release to the next is [docs/updating.md](docs/updating.md).
 
 While the version carries `-alpha`, a release may change behaviour or stored data without a
 compatibility path, and a fix is published as a new release: an earlier alpha is not patched.
