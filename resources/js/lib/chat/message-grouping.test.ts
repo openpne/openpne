@@ -54,3 +54,15 @@ test('anything drawn above a row restarts its run, and the rows after it fold be
     assert.ok(foldsInto(m2, m3, false));
     assert.ok(foldsInto(m1, m2, false));
 });
+
+test('a letter opens a turn, and a chat row after it folds below', () => {
+    const chat = { id: 1, ...at('2026-08-16T10:00:00+09:00', 7), subject: null };
+    const letter = { id: 2, ...at('2026-08-16T10:01:00+09:00', 7), subject: 'Saturday' };
+    const followUp = { id: 3, ...at('2026-08-16T10:02:00+09:00', 7), subject: null };
+
+    assert.ok(!continuesRun(chat, letter));
+    assert.ok(continuesRun(letter, followUp));
+    // The storage keeps an empty subject apart from null; the row draws neither, so neither opens a turn.
+    const blank = { ...followUp, subject: '' };
+    assert.ok(continuesRun(chat, blank));
+});

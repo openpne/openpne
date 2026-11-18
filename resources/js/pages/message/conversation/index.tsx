@@ -6,6 +6,7 @@ import { ChatScrollDay } from '@/components/chat-scroll-day';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { arrivalsAfter, type ChatSeenMark } from '@/lib/chat/arrivals';
+import { foldsInto } from '@/lib/chat/message-grouping';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useScrollDay } from '@/lib/chat/use-scroll-day';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
@@ -293,12 +294,13 @@ export default function MessageConversation() {
                     // (docs/internals/group-talk.md, "Date headings, and what stands above a row").
                     <ul className="pb-3">
                         {messages.map((message, index) => {
-                            // Nothing folds here, so it is the heading alone rather than a run to
-                            // hold open as well.
                             const previous = messages[index - 1];
                             const opensDay =
                                 previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
                             const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
+                            // Whatever stands above the row holds its run open (message-grouping):
+                            // the row says again who is speaking.
+                            const restartsHere = above.length > 0;
 
                             return (
                             <Fragment key={message.id}>
@@ -322,7 +324,8 @@ export default function MessageConversation() {
                                 <ConversationMessageRow
                                     message={message}
                                     highlighted={message.id === highlightId}
-                                    separatorAbove={above.length > 0}
+                                    grouped={foldsInto(previous, message, restartsHere)}
+                                    separatorAbove={restartsHere}
                                 />
                             </Fragment>
                             );
