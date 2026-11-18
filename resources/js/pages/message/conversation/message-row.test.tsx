@@ -60,3 +60,9 @@ test('a folded row drops the header but still speaks its author and its time', (
     expect(stamps.filter((stamp) => stamp.closest('[aria-hidden]') !== null)).toHaveLength(1);
     expect(container.querySelector('.sr-only')?.textContent).toBe('Rin, 10:00');
 });
+
+test('a folded row by an AI account speaks the AI mark the hidden header drew', () => {
+    const { container } = renderRow({ author: { id: 3, name: 'Rin', imageUrl: null, avatarColor: null, isAi: true } }, true);
+
+    expect(container.querySelector('.sr-only')?.textContent).toBe('Rin (AI), 10:00');
+});

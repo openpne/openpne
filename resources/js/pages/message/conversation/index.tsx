@@ -298,8 +298,6 @@ export default function MessageConversation() {
                             const opensDay =
                                 previous === undefined || date.siteDay(message.createdAt) !== date.siteDay(previous.createdAt);
                             const above = separatorsAbove({ opensDay, isUnreadBoundary: message.id === dividerId });
-                            // Whatever stands above the row holds its run open (message-grouping):
-                            // the row says again who is speaking.
                             const restartsHere = above.length > 0;
 
                             return (

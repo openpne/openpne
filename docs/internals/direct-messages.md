@@ -93,7 +93,7 @@ has needs an answer here.
 
 | what | how the conversation reads it |
 |---|---|
-| `subject` | shown above the body when it is non-empty. Null and the empty string alike draw nothing — the storage keeps that distinction, the screen has nothing to show for either. A message written as chat has none. A row with one opens a turn: it never folds under the same author's row before it, though chat rows after it may fold under it. |
+| `subject` | shown above the body when it is non-empty. Null and the empty string alike draw nothing — the storage keeps that distinction, the screen has nothing to show for either. A message written as chat has none. A row with one opens a turn: it never folds under the same author's row before it, though rows without one after it may fold under it. |
 | null `body` | serialized as the empty string; a subject-only message is still a message. |
 | empty `body` | what a chat send writes when the message is pictures alone. Indistinguishable from the row above on the screen, and deliberately so — both draw no paragraph. |
 | draft | never in a conversation: a draft has no receipt, so neither arm reaches it — and the scope still states `is_draft = false` as a belt against a stray receipt. It stays the drafts box's. |
@@ -291,8 +291,8 @@ who wrote to it first ([mcp.md](mcp.md#direct-messages)).
 ## Separate from group talk
 
 The two conversation surfaces share their **frontend stream** ([`lib/chat/`](../../resources/js/lib/chat/):
-the window state machine, the merge rules, the poll, and the divider and mark-read reporting drawn
-over them) and nothing else. Tables, queries and serializers
+the window state machine, the merge rules, the poll, the divider and mark-read reporting drawn
+over them, and the rule that folds a run) and nothing else. Tables, queries and serializers
 are each feature's own, and that separation is a contract rather than an accident: a private message
 between two people and a message in a room are the same shape on screen and different things in the
 system. Concretely, a direct message parses no `@mentions` and no `#hashtags` — so it creates no rows

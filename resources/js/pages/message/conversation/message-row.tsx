@@ -7,6 +7,7 @@ import { ImageGrid } from '@/components/image-grid';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { useT } from '@/lib/i18n';
+import { markedName } from '@/lib/identity-mark';
 import { cn } from '@/lib/utils';
 import type { ConversationMessage } from './types';
 
@@ -67,7 +68,7 @@ export function ConversationMessageRow({
                 <div className="min-w-0 flex-1">
                     {grouped ? (
                         <span className="sr-only">
-                            {author?.name ?? t('%Withdrawn_member%')}, <Timestamp at={message.createdAt} preset="clockTime" />
+                            {author ? markedName(author.name, author.isAi, t) : t('%Withdrawn_member%')}, <Timestamp at={message.createdAt} preset="clockTime" />
                         </span>
                     ) : (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">

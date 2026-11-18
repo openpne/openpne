@@ -6,7 +6,7 @@ export interface GroupableMessage {
      * reference above it. Talk carries it; a direct message omits it.
      */
     inReplyTo?: { deleted: boolean } | null;
-    /** A letter's subject is a heading of its own, so a row with one opens a turn. A direct message carries it; talk omits it. */
+    /** A letter's subject is a heading of its own, so a row with one opens a turn. */
     subject?: string | null;
 }
 
@@ -22,7 +22,6 @@ const WINDOW_MS = 7 * 60 * 1000;
  * nothing on the row could say otherwise.
  */
 export function continuesRun(previous: GroupableMessage | undefined, message: GroupableMessage): boolean {
-    // Either opens a turn however soon after the same author's last row; each field says why.
     if (message.inReplyTo != null || Boolean(message.subject)) {
         return false;
     }
