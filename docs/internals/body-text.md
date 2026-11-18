@@ -56,7 +56,7 @@ fetcher dials, and the path does not decide: the same host is this site's server
 host, the one origin the router can visit. [`BodyLink`](../../resources/js/components/body-link.tsx)
 is the Modern component, and `RichBody` applies the same rule on click to the bare anchors the server
 left in `bodyHtml`; a page of ours that answers without an Inertia page (the admin) is loaded
-outright rather than shown as the router's error overlay. A link under a first segment that serves
+outright rather than shown as the router's error overlay. A link whose first non-empty segment serves
 bytes (`BYTES_SEGMENTS` in `link-target.ts`, kept equal to the byte-serving routes' by
 [`BytesRouteSegmentsParityTest`](../../tests/Feature/Frontend/BytesRouteSegmentsParityTest.php)) is
 left to the browser outright, since the router would download the file to learn it is not a page.
