@@ -50,10 +50,9 @@ class GroupUpgrade extends UpgradeStep
         return ['talk_reaction_seq'];
     }
 
-    /** NULL is a group that never saved the setting, which OpenPNE 3 read as public. */
     public function audiences(): array
     {
-        return [new Audience('topic_read_access', ['public_flag' => [$this->configValueLatest('public_flag'), [null, 'public', 'auth_commu_member']]])];
+        return [new Audience('topic_read_access', ['public_flag' => [$this->configValueLatest('public_flag'), [null, '', 'public', 'auth_commu_member']]])];
     }
 
     /** The latest `community_config` value for a name (the KV table has no uniqueness), else NULL. */

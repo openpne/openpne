@@ -471,8 +471,8 @@ source values that column's mapping reads.
 
 - The source is grouped by those values and the mapped value, both read through the step's own
   `columns()` expression and the FROM and WHERE `compile()` uses (`InsertSelectCompiler::compileQuery()`),
-  so no rule is restated and a row the step leaves behind is not counted; an absent optional plugin
-  table counts as no rows, as in Check A. The target is grouped by the column, within `partitionBy`,
+  so no rule is restated and a row the step leaves behind is not counted; a source query that reads
+  an absent optional plugin table anywhere, column subqueries included, counts as no rows. The target is grouped by the column, within `partitionBy`,
   under `targetFilter()`. A value whose two counts differ fails with the table, the value and both counts.
 - Each declared source value lists the values its mapping was written for. Any other value fails, an
   `ELSE` arm's catch included (an unknown `member_config` flag lands on `Members`): nobody decided that
@@ -481,6 +481,7 @@ source values that column's mapping reads.
   `'4 '`) is reported rather than folded into the value it resembles.
 - It checks the data against the rule, not the rule against OpenPNE 3: a wrong mapping writes and
   verifies the same, so each step's own tests pin its mapping.
+- `sns_settings` declares none: its site-wide audience caps are setting values, outside this check.
 - `group_messages` declares none: the flag decides whether a community thread lands at all
   (`ActivityThread::groupRoot()`), which Check A counts and the activity preflight reports.
 

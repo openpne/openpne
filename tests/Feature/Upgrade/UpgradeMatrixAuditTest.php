@@ -52,7 +52,7 @@ class UpgradeMatrixAuditTest extends TestCase
         }
     }
 
-    public function test_every_audience_column_is_declared_for_verify(): void
+    public function test_every_column_named_as_an_audience_is_declared_for_verify(): void
     {
         foreach (StepRegistry::all() as $step) {
             $columns = $step->columns();

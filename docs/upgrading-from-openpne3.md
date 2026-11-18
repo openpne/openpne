@@ -263,10 +263,11 @@ each step's source rows, the number it recorded, and the rows it owns in the tar
 every file has its bytes at the right length and pointing at the right place, and no stored bytes
 belong to a file that is not there; that every migrated
 template activity holds the line the upgrade renders for it; that every group membership is read up to
-its group's migrated talk (a message read since counts, the untouched default does not); that for
-every column saying who may see something (a diary, a timeline post, a profile item and its field,
-a member's profile page and preferences, a group's topics, a file), each audience holds as many rows
-as the upgrade's rule gives the source; and that no OpenPNE 3 password hash is left behind. The template
+its group's migrated talk (a message read since counts, the untouched default does not); that the
+audience of each diary, timeline post, profile item and its field, member's own profile page choice
+and default preferences, group's topics and file holds as many rows as the upgrade's rule gives the
+source (the site-wide settings that cap these are not compared); and that no OpenPNE 3 password hash
+is left behind. The template
 lines are compared against a fresh render, so leave the site's terms as they were until verification
 passes (the language and address it was upgraded under are remembered); a term renamed later makes
 this check report the lines it touched.

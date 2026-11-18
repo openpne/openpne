@@ -63,6 +63,8 @@ class AudienceCheckTest extends UpgradeSqlTestCase
         $this->seedSourceCommunity(1);
         $this->groupConfig(1, 'public_flag', 'auth_commu_member');
         $this->seedSourceCommunity(2);
+        $this->groupConfig(2, 'public_flag', '');
+        $this->seedSourceCommunity(3);
         $this->seedActivity(1, 1, ['public_flag' => 2]);
         $this->seedActivity(2, 2, ['in_reply_to_activity_id' => 1, 'public_flag' => 0]);
         $this->seedActivity(3, 2, ['public_flag' => 3]);
@@ -86,7 +88,7 @@ class AudienceCheckTest extends UpgradeSqlTestCase
         $this->assertStringContainsString('PASS audience:ProfileUpgrade.is_public_web: is_public_web=0 → 0: 1, is_public_web=1 → 1: 1', $out);
         $this->assertStringContainsString('PASS audience:MemberProfileUpgrade.visibility: public_flag=NULL → NULL: 1, public_flag=4 → 0: 1', $out);
         $this->assertStringContainsString('PASS audience:FileUpgrade.explicit_visibility: admin image=0 → NULL: 1, admin image=1 → public: 1', $out);
-        $this->assertStringContainsString('PASS audience:GroupUpgrade.topic_read_access: public_flag=NULL → 1: 1, public_flag=auth_commu_member → 2: 1', $out);
+        $this->assertStringContainsString('PASS audience:GroupUpgrade.topic_read_access: public_flag=NULL → 1: 1, public_flag="" → 1: 1, public_flag=auth_commu_member → 2: 1', $out);
     }
 
     public function test_a_target_row_whose_audience_changed_fails_with_both_counts(): void
