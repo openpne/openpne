@@ -35,6 +35,11 @@ class LinkTargetTest extends TestCase
         $this->assertSame('', $target->notice());
     }
 
+    public function test_a_path_that_begins_with_a_doubled_slash_is_still_this_site(): void
+    {
+        $this->assertFalse(LinkTarget::of('https://sns.example.test//evil.example/x')->external);
+    }
+
     public function test_the_scheme_the_host_case_and_the_schemes_default_port_do_not_decide(): void
     {
         $this->assertFalse(LinkTarget::of('http://sns.example.test/x')->external);
