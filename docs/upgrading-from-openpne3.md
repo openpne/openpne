@@ -361,8 +361,9 @@ change from a problem when you go through it.
   counterpart are dropped; for example the PC / mobile split (`enable_pc`, `enable_mobile`), the
   feature-phone options (`is_check_mobile_ip`, `retrieve_uid`), the OpenID / external-connection /
   JSON API options (including the diary API limits `op_diary_plugin_diary_api_limit` and
-  `op_diary_plugin_diary_comment_api_limit`), the Google Maps options, `daily_news_day`, the
-  feature-phone mail-posting option (`op_diary_plugin_use_email_post`) and colour slots
+  `op_diary_plugin_diary_comment_api_limit`), the Google Maps options, `daily_news_day`,
+  `enable_cmd` and `op_timeline_plugin_view_photo` (see *Timeline* below), the feature-phone
+  mail-posting option (`op_diary_plugin_use_email_post`) and colour slots
   (`mobile_frontend_core_color_*`), `richtextarea_*` (the rich-text editor is frozen),
   `pc_home_information` (OpenPNE 3 itself
   rendered the information box from the gadget's own config, never from this row, which the
@@ -415,7 +416,12 @@ change from a problem when you go through it.
   live at, since those links are stored. Whether new diaries, topics and events keep announcing
   themselves follows the OpenPNE 3 settings (*Settings → Timeline settings → Automatic posts*).
   An HTML entity such as `&amp;` in a timeline post or talk message is carried as stored and shown
-  as written, not decoded.
+  as written, not decoded. A URL in a timeline post or talk message shows as a link, as in every
+  body. OpenPNE 3's timeline plugin showed a URL containing `jpg`, `jpeg`, `png` or `gif` as the
+  image itself (from plugin version 1.2.8 on, whatever `op_timeline_plugin_view_photo` said), and
+  with `enable_cmd` on, a YouTube, niconico or Google Maps URL as an embedded player or map; neither
+  is drawn here. Turning on *Settings → Link preview settings* does not bring the image back: a
+  preview is drawn only for a URL that leads to a web page.
 - **Group talk** — a community's timeline becomes that group's talk. Talk shows every message in
   the group to everyone who may open the group today, including messages by people who have since
   left it and by people who have blocked the reader (OpenPNE 3 hid both); each member starts with the
