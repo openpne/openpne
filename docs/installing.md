@@ -1,7 +1,7 @@
 # Installing on a server
 
 Sets up a site for people to use, from a release. To look at OpenPNE on your own machine first, the
-README's [Try it](../README.md#try-it) is shorter. Moving a site to a later release is
+README's [Docker Compose setup](../README.md#to-try-or-develop-docker-compose) is shorter. Moving a site to a later release is
 [updating.md](updating.md); bringing one over from OpenPNE 3 is
 [upgrading-from-openpne3.md](upgrading-from-openpne3.md), whose first stage says which steps of
 this guide it takes and which it changes.
