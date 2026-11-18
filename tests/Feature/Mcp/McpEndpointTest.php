@@ -16,6 +16,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Laravel\Mcp\Server\Middleware\ValidateOrigin;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use ReflectionProperty;
 
@@ -158,6 +159,33 @@ class McpEndpointTest extends McpTestCase
         $this->rpc($token, 'tools/list')->assertOk();
     }
 
+    public function test_a_valid_token_is_refused_from_an_origin_other_than_the_site_or_loopback(): void
+    {
+        config(['app.url' => 'https://sns.example']);
+        $token = $this->token(Member::factory()->create());
+
+        $cases = [
+            'https://sns.example' => 200,
+            'http://localhost:3000' => 200,
+            'http://127.0.0.1:6274' => 200,
+            'https://evil.example' => 403,
+            'https://sns.example.evil.example' => 403,
+            'null' => 403,
+        ];
+
+        foreach ($cases as $origin => $status) {
+            $this->postJson('/mcp', $this->envelope('tools/list'), $this->bearer($token) + ['Origin' => $origin])
+                ->assertStatus($status);
+        }
+
+        foreach (['GET', 'DELETE'] as $method) {
+            $this->json($method, '/mcp', [], $this->bearer($token) + ['Origin' => 'https://evil.example'])->assertForbidden();
+        }
+
+        $this->freshRequestState();
+        $this->postJson('/mcp', $this->envelope('tools/list'), ['Origin' => 'https://evil.example'])->assertUnauthorized();
+    }
+
     public function test_switching_the_unit_off_closes_the_endpoint_to_a_valid_token(): void
     {
         $token = $this->token(Member::factory()->create());
@@ -208,6 +236,7 @@ class McpEndpointTest extends McpTestCase
             CheckForAnyAbility::class,
             EnsureFeatureEnabled::class,
             ThrottleRequests::class,
+            ValidateOrigin::class,
         ];
 
         $router = app(Router::class);
