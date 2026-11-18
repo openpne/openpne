@@ -264,19 +264,19 @@ every file has its bytes at the right length and pointing at the right place, an
 belong to a file that is not there; that every migrated
 template activity holds the line the upgrade renders for it; that every group membership is read up to
 its group's migrated talk (a message read since counts, the untouched default does not); that the
-audience of each diary, timeline post, profile item and its field, member's own profile page choice
-and default preferences, group's topics and file holds as many rows as the upgrade's rule gives the
-source (the site-wide settings that cap these are not compared); and that no OpenPNE 3 password hash
-is left behind. The template
-lines are compared against a fresh render, so leave the site's terms as they were until verification
+audience of each diary, timeline post, profile item and its field, member's own profile page choice,
+diary default and age, group's topics and file holds as many rows as the upgrade's rule gives the
+source (the site-wide settings over these are not compared); and that no OpenPNE 3 password hash
+is left behind. The template lines are compared against a fresh render, so leave the site's terms as they were until verification
 passes (the language and address it was upgraded under are remembered); a term renamed later makes
 this check report the lines it touched.
 
 **An audience value the upgrade was not written for fails, even when it was copied.** The `audience:`
 lines name the OpenPNE 3 values found, how many rows hold each, and where they landed (`→` the value
 OpenPNE 4 stored; for a diary, post or profile item 0 is anyone, 1 members, 2 friends, 3 the author
-alone; for a group's topics 1 is anyone, 2 its members). A value outside the expected ones either stopped its step or landed where the rule's fallback
-put it, which nobody chose: set those rows to the audience you mean in OpenPNE 3, then upgrade again with `--force-restart`.
+alone; for a group's topics 1 is every signed-in member, 2 the group's members). A value outside the
+expected ones either stopped its step or landed where the rule's fallback put it, which nobody chose:
+set those rows to the audience you mean in OpenPNE 3, then upgrade again with `--force-restart`.
 
 **Row counts agree trivially when both sides are empty.** A step that migrated nothing — because a
 source table was not what you assumed, or because it matched no rows — reports the same pass as one

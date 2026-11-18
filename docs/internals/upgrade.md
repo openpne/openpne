@@ -481,7 +481,7 @@ source values that column's mapping reads.
   `'4 '`) is reported rather than folded into the value it resembles.
 - It checks the data against the rule, not the rule against OpenPNE 3: a wrong mapping writes and
   verifies the same, so each step's own tests pin its mapping.
-- `sns_settings` declares none: its site-wide audience caps are setting values, outside this check.
+- `sns_settings` declares none: its site-wide audience settings are setting values, outside this check.
 - `group_messages` declares none: the flag decides whether a community thread lands at all
   (`ActivityThread::groupRoot()`), which Check A counts and the activity preflight reports.
 
