@@ -12,10 +12,7 @@ import { safeUrl } from './safe-url.ts';
  */
 export const BYTES_SEGMENTS = ['app-icon', 'banner', 'cache', 'f', 'file', 'linkCard'] as const;
 
-/**
- * Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find
- * out. One leading slash exactly: a second one would make the path a host for the browser.
- */
+/** Whether $path, as inAppHref returns it, is served as bytes, which the router must not fetch to find out. */
 export function isBytesHref(path: string): boolean {
     const segment = /^\/([^/?#]+)/.exec(path)?.[1] ?? '';
 

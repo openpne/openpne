@@ -37,7 +37,6 @@ class LinkTargetTest extends TestCase
 
     public function test_a_path_that_begins_with_a_doubled_slash_is_still_this_site(): void
     {
-        // The href stays absolute, so the browser keeps this host and reads `//evil.example/x` as a path.
         $this->assertFalse(LinkTarget::of('https://sns.example.test//evil.example/x')->external);
     }
 
