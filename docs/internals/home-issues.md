@@ -361,7 +361,9 @@ goes back. It is always at `/home/latest`. Under a Modern surface `/` serves one
 by the site setting `modern_home` ([`ModernHome`](../../app/Support/ModernHome.php)): `issue`, the
 default, serves the front page there too, and `whats_new` serves the "What's new" digest that
 otherwise lives at `/dashboard`. The Modern nav leads with whichever page `/` does not serve, and the
-Home tab covers the one it does. `/home/issues` is the month of the latest issue,
+Home tab covers the one it does. The page `/` serves, and only that one, opens with the site notice
+the administrator writes on the Landing page settings page (`home_notice`, Markdown), above the
+masthead or the digest; the other page leaves it out so it is not shown twice. `/home/issues` is the month of the latest issue,
 `/home/{y}/{m}` any month's and `/home/{y}/{m}/{d}` one day's, all Modern-only: OpenPNE 3 had no such
 page, so they render Inertia whatever surface the reader is on, and answer 404 under
 `surface_mode=classic_only` ([feature-modules.md](feature-modules.md#classic-only)). The day is validated before it is

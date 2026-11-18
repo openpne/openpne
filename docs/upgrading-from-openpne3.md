@@ -190,6 +190,8 @@ data the upgrade does not recognise, not carried.
 | `W-ACTIVITY-TEMPLATE-RENDERED` / `W-ACTIVITY-TEMPLATE-DROPPED` / `W-ACTIVITY-TEMPLATE-UNKNOWN` | Template activities (`diary` / `community_topic` / `community_event`), with where they land. The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; one in a thread that is not migrated goes with it; a template OpenPNE 4 does not know keeps its stored text. |
 | `W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN` / `W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS` / `W-ACTIVITY-TEMPLATE-KEPT-NO-LINK` / `W-ACTIVITY-TEMPLATE-KEPT-UNFIT` | After the copy, template rows whose line could not be rendered keep their stored text, counted by reason: a template OpenPNE 4 does not know, parameters that are not what OpenPNE 3 wrote, a link that names no OpenPNE 4 page, or a link alone longer than the body allows. |
 | `W-UPLOAD-OWNERLESS` | Upload-plugin files whose member or community the upgrade does not carry. They arrive with no owner, so their `/f/show` links answer 404; delete them in the source, or afterwards with `php artisan openpne:prune-ownerless-files` (`--dry-run` first) or in the admin file list. |
+| `W-HOME-NOTICE-NOT-COPIED` | Information boxes on the home that the Modern home notice does not carry: one in the top area that the home layout hides, or one in the side, center or bottom area. They stay on the Classic home; write what Modern members should see on the Landing page settings page. |
+| `W-HOME-NOTICE-TOO-LARGE` | The home's top information boxes are longer than the Modern home notice holds, so nothing was copied; write a shorter notice on the Landing page settings page. |
 | `W-THEME-UNKNOWN-PACKAGE` / `W-THEME-MISSING-PACKAGE` | The skin OpenPNE 3 showed cannot be reproduced yet: the site wore the first package on its disk (which the run cannot see), or `Theme_used` names a package not under `public/opSkinThemePlugin`. The default skin shows until the package is copied in and chosen (see [Bringing an OpenPNE 3 theme](#bringing-an-openpne-3-theme)). |
 
 The mail-template warnings say which kind each one is, because it changes what happens after the
@@ -342,7 +344,9 @@ change from a problem when you go through it.
   after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the Modern
   surface regardless, as OpenPNE 3's phone layout was its own, which is why the cutover below starts
   with the Modern branding. There, the home is the "What's new" lists, the page nearest the OpenPNE
-  3 home (the Landing page settings page offers the daily issue instead); the joined
+  3 home (the Landing page settings page offers the daily issue instead), with the information
+  boxes OpenPNE 3 showed at the top of its home copied once into a notice above the lists — from
+  then on the two are separate, and the Modern one is edited on that same settings page; the joined
   communities' topics and events are the two tabs after *Joined* and *All* under the communities
   entry, as the recent-list gadgets' "More" was on the PC layout, and a community on the *Joined*
   list opens its page, as it did in OpenPNE 3, rather than its talk (the same settings page offers

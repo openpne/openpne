@@ -57,6 +57,8 @@ final class Warning
         ActivityTemplateTransform::W_KEPT_UNFIT => self::REVIEW,
         ClassicThemeSelection::W_UNKNOWN_PACKAGE => self::REVIEW,
         ClassicThemeSelection::W_MISSING_PACKAGE => self::REVIEW,
+        HomeNoticeStamp::W_NOT_COPIED => self::REVIEW,
+        HomeNoticeStamp::W_TOO_LARGE => self::REVIEW,
     ];
 
     public function __construct(

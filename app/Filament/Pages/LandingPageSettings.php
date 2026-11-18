@@ -10,9 +10,12 @@ use App\Support\ModernGroupList;
 use App\Support\ModernHome;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
+use App\Support\SurfaceResolver;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -26,8 +29,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pick the page `/` serves (App\Support\ModernHome) and what a joined group's row opens
- * (App\Support\ModernGroupList). `sns_settings` is authoritative; each value is stored verbatim on
+ * Pick the page `/` serves (App\Support\ModernHome), what a joined group's row opens
+ * (App\Support\ModernGroupList) and the notice the home shows on top. `sns_settings` is authoritative; each value is stored verbatim on
  * save and resolves to its registry default while no row exists.
  *
  * @property-read Schema $form
@@ -71,7 +74,7 @@ class LandingPageSettings extends Page
     public function form(Schema $schema): Schema
     {
         return $schema
-            ->components([$this->buildSection()])
+            ->components([$this->buildSection(), $this->noticeSection()])
             ->statePath('data');
     }
 
@@ -157,6 +160,28 @@ class LandingPageSettings extends Page
                         array_map(static fn (ModernGroupList $list): string => __($list->description()), ModernGroupList::cases()),
                     ))
                     ->required(),
+            ]);
+    }
+
+    private function noticeSection(): Section
+    {
+        $key = SnsSettingKey::HomeNotice;
+
+        return Section::make($key->label())
+            ->schema([
+                Textarea::make($key->value)
+                    ->label($key->label())
+                    ->rows(10)
+                    ->helperText(SurfaceResolver::classicAvailable()
+                        ? __('Markdown is available. It is shown at the top of the Modern home, which every phone visitor gets; the Classic home has its own, the Information Box gadget under Appearance (Classic) > Gadgets.')
+                        : __('Markdown is available. It is shown at the top of the home.'))
+                    ->rules([
+                        fn (): Closure => function (string $attribute, mixed $value, Closure $fail) use ($key): void {
+                            if (strlen((string) $value) > $key->maxBytes()) {
+                                $fail(__('The :label value is too large.', ['label' => $key->label()]));
+                            }
+                        },
+                    ]),
             ]);
     }
 }

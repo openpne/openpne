@@ -92,6 +92,7 @@ function arrive(props: Record<string, unknown>) {
             issue: null,
             prev: null,
             next: null,
+            notice: null,
             ...props,
         },
     };

@@ -56,6 +56,7 @@ const arrive = (props: Record<string, unknown>) => {
             myDiaries: [],
             groupActivity: [],
             timeline: [],
+            notice: null,
             ...props,
         },
     };

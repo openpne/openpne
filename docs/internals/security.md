@@ -773,12 +773,16 @@ because it is the host's decision: whoever sets it accepts that an administrator
 do anything a page script can. Nothing in the admin panel changes it.
 
 [`OperatorContent`](../../app/Support/OperatorContent.php) is the only reader of the switch and the
-only place the content turns into output; the helpers and gadget views call `render()` with both
+only place these four turn into output; the helpers and gadget views call `render()` with both
 stored forms and print what it returns. Each mode has its own storage (`pc_html_*` / `footer_*`
 against the `*_markdown` settings, `banners.html` against `banners.markdown`, the gadget's `value`
 row against `value_markdown`), and each admin form reads and writes only the storage of the mode
 in force, so switching modes loses nothing. In Markdown mode the forms show the stored HTML read
 only, as text.
+
+The Modern home notice (`home_notice`) is Markdown in both modes: it is rendered by
+`MarkdownText::renderOperator()` directly and never passes through `OperatorContent`, since Modern
+prints only sanitized HTML (`RichBody`).
 
 What Markdown mode leaves open: custom CSS, which is not restricted here and can restyle the page
 or load from another host; an image from another host, which tells that host when a page was

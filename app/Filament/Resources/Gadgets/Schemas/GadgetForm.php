@@ -10,6 +10,7 @@ use App\Models\Gadget;
 use App\Support\OperatorContent;
 use App\Support\OperatorContentConversion;
 use App\Support\OperatorLink;
+use App\Support\SurfaceResolver;
 use Closure;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Radio;
@@ -191,6 +192,13 @@ class GadgetForm
         };
 
         $component->label($field->caption[app()->getLocale()] ?? $field->caption['en'] ?? $field->name);
+
+        if (in_array($field->name, [OperatorContentConversion::GADGET_HTML, OperatorContentConversion::GADGET_MARKDOWN], true)) {
+            $base = $field->formType === 'markdown' ? __('Markdown is available.') : null;
+            $component->helperText(fn (Get $get): ?string => $get('context') === 'home' && $get('name') === 'informationBox' && SurfaceResolver::modernAvailable()
+                ? trim($base.' '.__('The Modern home shows a notice of its own, edited under Settings > Landing page settings.'))
+                : $base);
+        }
 
         if ($field->required) {
             $component->required();

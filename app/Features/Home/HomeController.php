@@ -24,6 +24,7 @@ use App\Models\TimelinePost;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
 use App\Support\Feature;
+use App\Support\MarkdownText;
 use App\Support\ModernHome;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
@@ -109,7 +110,7 @@ class HomeController extends Controller
                 $now,
             );
 
-        return Inertia::render('home/issue', $page);
+        return Inertia::render('home/issue', [...$page, 'notice' => $this->notice(ModernHome::Issue)]);
     }
 
     public function dashboard(
@@ -131,7 +132,7 @@ class HomeController extends Controller
 
         $timeline = Feature::Timeline->enabled() ? (new HomeFeed)->take($viewer, self::PREVIEW) : collect();
 
-        return Inertia::render('dashboard', HomeSerializer::dashboard(
+        return Inertia::render('dashboard', [...HomeSerializer::dashboard(
             $viewer,
             $diaryOn && $friendOn ? (new ListFriendDiaries)->take($viewer, self::PREVIEW) : collect(),
             $diaryOn ? (new ListRecentDiaries)->take($viewer, self::PREVIEW) : collect(),
@@ -147,7 +148,29 @@ class HomeController extends Controller
                 && ! ($friendOn && $viewer->friendships()->exists())
                 && ! ($groupOn && $viewer->groupMemberships()->exists()),
             $reactions($viewer, TimelinePost::class, $timeline->map(fn (TimelinePost $post): int => (int) $post->getKey())->all()),
-        ));
+        ), 'notice' => $this->notice(ModernHome::WhatsNew)]);
+    }
+
+    /**
+     * The site notice, only on the page `/` serves: the other one stays reachable from the nav and
+     * would show the same notice twice (docs/internals/home-issues.md, "Routes").
+     *
+     * @return array{body: string, bodyHtml: string}|null
+     */
+    private function notice(ModernHome $page): ?array
+    {
+        $settings = app(SnsSettingService::class);
+        if ($settings->get(SnsSettingKey::ModernHome) !== $page) {
+            return null;
+        }
+
+        $body = (string) $settings->get(SnsSettingKey::HomeNotice);
+        if (trim($body) === '') {
+            return null;
+        }
+        $html = MarkdownText::renderOperator($body)->toHtml();
+
+        return trim($html) === '' ? null : ['body' => $body, 'bodyHtml' => $html];
     }
 
     /** Rows shown on the community activity page — the dashboard digest's full "View all" target. */

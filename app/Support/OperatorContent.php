@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 /**
- * The one place administrator-written page content turns into output
+ * The one place administrator-written Classic page content turns into output
  * (docs/internals/security.md, "Administrator content").
  */
 final class OperatorContent
