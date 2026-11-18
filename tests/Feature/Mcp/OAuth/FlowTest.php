@@ -37,39 +37,30 @@ class FlowTest extends OAuthTestCase
     }
 
     /** @return array<string, array{string}> */
-    public static function loginPrompts(): array
+    public static function linkedPrompts(): array
     {
-        // The last two are `login` only after Passport trims each value by its index's digits.
+        // The index-wrapped values are `login` only after Passport trims each value by its index's digits.
         return [
-            'alone' => ['login'],
-            'beside consent' => ['consent login'],
-            'first, wrapped in its index' => ['0login'],
-            'second, wrapped in its index' => ['consent 1login1'],
+            'login' => ['prompt=login'],
+            'login beside consent' => ['prompt=consent%20login'],
+            'login wrapped in its index, first' => ['prompt=0login'],
+            'login wrapped in its index, second' => ['prompt=consent%201login1'],
+            'none' => ['prompt=none'],
+            'an array' => ['prompt%5B%5D=login'],
         ];
     }
 
-    #[DataProvider('loginPrompts')]
-    public function test_a_linked_prompt_login_does_not_end_the_session(string $prompt): void
+    #[DataProvider('linkedPrompts')]
+    public function test_a_linked_prompt_leaves_the_session_on_the_consent_screen(string $query): void
     {
         $viewer = Member::factory()->create();
         $client = $this->registerClient();
         [, $challenge] = $this->pkce();
 
-        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&prompt='.rawurlencode($prompt))
+        $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&'.$query)
             ->assertOk()
             ->assertInertia(fn ($page) => $page->component('auth/oauth-authorize'));
         $this->assertAuthenticatedAs($viewer, 'member');
-    }
-
-    public function test_prompt_none_still_reaches_passport(): void
-    {
-        $viewer = Member::factory()->create();
-        $client = $this->registerClient();
-        [, $challenge] = $this->pkce();
-
-        $response = $this->actingAs($viewer, 'member')->get($this->authorizeUrl($client['client_id'], $challenge).'&prompt=none');
-
-        $this->assertSame('consent_required', $this->redirectQuery($response)['error']);
     }
 
     public function test_the_consent_screen_withholds_creation_once_the_site_cap_is_reached(): void
