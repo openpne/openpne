@@ -31,6 +31,7 @@ test('a path that begins with a doubled slash stays a path on this host', () => 
         assert.equal(inAppHref(href, 'sns.example.test'), '/evil.example/x', href);
     }
     assert.equal(inAppHref('https://sns.example.test//?a=1#b', 'sns.example.test'), '/?a=1#b');
+    assert.equal(inAppHref('https://sns.example.test/x//evil.example/y', 'sns.example.test'), '/x//evil.example/y');
 });
 
 test('whatever the spelling, the path of a link to this host lands on this host', () => {
@@ -90,8 +91,8 @@ test('a host is read as the browser reads it: full-width letters and an IDN labe
 });
 
 test('what the server refuses to read is read here as the browser will land: on this host', () => {
-    // The client parses with the browser's own parser, so nothing can diverge from where a click
-    // goes; the server (LinkTarget) refuses these because parse_url cannot promise the same.
+    // The client parses with the browser's own parser, so the host cannot diverge from the one a click
+    // reaches; the server (LinkTarget) refuses these because parse_url cannot promise the same.
     assert.equal(inAppHref('https://sns.example.test\\evil.example/', 'sns.example.test'), '/evil.example/');
     assert.equal(inAppHref('https://user:pw@sns.example.test/x', 'sns.example.test'), '/x');
     assert.equal(inAppHref('https://evil.example\\@sns.example.test/', 'sns.example.test'), null);
