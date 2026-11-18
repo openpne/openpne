@@ -150,7 +150,6 @@ class TermSettings extends Page
     private function buildSections(): array
     {
         $sections = [];
-        // Both sections caption a term by its default in the panel's language, never by a stored value.
         $captions = TermService::defaults(app()->getLocale());
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
             $defaults = TermService::defaults($locale);

@@ -138,15 +138,17 @@ class TermSettingsTest extends TestCase
         }
     }
 
-    public function test_every_label_carries_a_name_and_its_key(): void
+    public function test_every_label_pairs_the_ja_default_with_its_key_under_a_ja_panel(): void
     {
-        $component = Livewire::test(TermSettings::class);
+        app()->setLocale('ja');
+        $captions = TermService::defaults('ja');
 
+        $component = Livewire::test(TermSettings::class);
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
             foreach (array_keys(TermService::defaults($locale)) as $name) {
                 $component->assertFormFieldExists(
                     "{$locale}__{$name}",
-                    fn (TextInput $field): bool => preg_match('/^\S.* \('.preg_quote($name, '/').'\)$/u', (string) $field->getLabel()) === 1,
+                    fn (TextInput $field): bool => $field->getLabel() === "{$captions[$name]} ({$name})",
                 );
             }
         }
