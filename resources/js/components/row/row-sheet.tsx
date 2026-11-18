@@ -93,7 +93,7 @@ export function RowSheet({ body, author, createdAt, chips, vocabulary, canReact,
     const subject =
         author !== undefined || hasBody ? (
             <p className="flex min-w-0 items-baseline gap-2 text-sm">
-                {author !== undefined && <span className="shrink-0 font-medium">{author?.name ?? t('%Withdrawn_member%')}</span>}
+                {author !== undefined && <span className="shrink-0">{author?.name ?? t('%Withdrawn_member%')}</span>}
                 {author !== undefined && hasBody && ' '}
                 {hasBody && <span className="min-w-0 truncate text-muted-foreground">{body.trim()}</span>}
             </p>
