@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Filament\Concerns\HiddenWhenModernOnly;
+use App\Filament\Concerns\PhoneSurfaceSubheading;
 use App\Services\SnsSettingService;
 use App\Support\ClassicTheme;
 use App\Support\ClassicThemes;
 use App\Support\SnsSettingKey;
-use App\Support\SurfaceResolver;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
@@ -31,6 +31,7 @@ use Illuminate\Support\Facades\DB;
 class ThemeSettings extends Page
 {
     use HiddenWhenModernOnly;
+    use PhoneSurfaceSubheading;
 
     protected static ?int $navigationSort = 0;
 
@@ -134,9 +135,7 @@ class ThemeSettings extends Page
                         static fn (ClassicTheme $theme): string => implode(' — ', array_filter([$theme->description, $theme->author], static fn (string $part): bool => $part !== '')),
                         $themes,
                     ))
-                    ->helperText(SurfaceResolver::modernAvailable()
-                        ? __('A theme restyles the Classic pages only; every phone visitor sees the Modern surface. The cerulean themes load a font from Google Fonts in every visitor\'s browser.')
-                        : __('The cerulean themes load a font from Google Fonts in every visitor\'s browser.')),
+                    ->helperText(__('The cerulean themes load a font from Google Fonts in every visitor\'s browser.')),
             ]);
     }
 }

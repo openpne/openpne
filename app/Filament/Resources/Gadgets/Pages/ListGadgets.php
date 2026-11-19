@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Gadgets\Pages;
 
+use App\Filament\Concerns\PhoneSurfaceSubheading;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Pages\ListPage;
 use App\Services\GadgetService;
@@ -11,7 +12,14 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListGadgets extends ListPage
 {
+    use PhoneSurfaceSubheading;
+
     protected static string $resource = GadgetResource::class;
+
+    protected function phoneSurfaceNote(): string
+    {
+        return __('Gadgets appear only on the Classic screens: every phone visitor gets the Modern screens. The Modern home shows its own notice and the Modern login screen its own message, edited under Settings > Landing page settings and Settings > Login page settings.');
+    }
 
     protected function getHeaderActions(): array
     {
