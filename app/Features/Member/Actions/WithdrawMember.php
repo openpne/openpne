@@ -149,7 +149,7 @@ class WithdrawMember
                 $this->sweepTimelineReactions($id);
                 $this->sweepDiaryReactions($id);
 
-                $locked->delete(); // MemberObserver defers the avatar-byte purge to after this commit
+                $locked->delete(); // MemberObserver purges the member's files after this commit
 
                 return true;
             }, attempts: 3);

@@ -338,8 +338,8 @@ change from a problem when you go through it.
   are shown as pictures.
 - **Upload-plugin files** — a file shared through opUploadFilePlugin keeps answering at the
   `/f/show/{id}.{ext}` link pasted into bodies, for any signed-in member as before (the owner's
-  blocks apply). The upload box itself is gone: a file is attached to a post instead. A link to a
-  previous host name is not rewritten.
+  blocks apply), until its owner withdraws: withdrawal now deletes it. The upload box itself is
+  gone: a file is attached to a post instead. A link to a previous host name is not rewritten.
 - **Surface** — the site looks like OpenPNE 3 (the "Classic" surface), matching what its members
   knew. Moving to the new one is a separate decision you can take whenever you like, before or long
   after the cutover: `php artisan openpne:surface-mode modern_only`. A phone browser gets the Modern

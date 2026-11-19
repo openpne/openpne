@@ -21,7 +21,11 @@ class MemberImageFactory extends Factory
     {
         return [
             'member_id' => Member::factory(),
-            'file_id' => File::factory(),
+            // Member-owned, as withdrawal finds an avatar's file by its owner.
+            'file_id' => fn (array $attributes) => File::factory()->create([
+                'related_entity_type' => 'member',
+                'related_entity_id' => $attributes['member_id'],
+            ])->getKey(),
         ];
     }
 }
