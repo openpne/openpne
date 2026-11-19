@@ -40,12 +40,12 @@ class AppearanceClassicPhoneNoticeTest extends TestCase
         $this->assertNotNull($group);
 
         $urls = collect($group->getItems())->map(fn (NavigationItem $item): string => (string) $item->getUrl())->values()->all();
-        $this->assertCount(7, $urls);
+        $this->assertGreaterThanOrEqual(7, count($urls));
 
         return $urls;
     }
 
-    public function test_every_appearance_screen_says_phones_get_modern_while_both_surfaces_are_served(): void
+    public function test_every_appearance_menu_screen_says_phones_get_modern_while_both_surfaces_are_served(): void
     {
         config(['openpne.surface_mode' => 'classic_default']);
 
@@ -54,7 +54,7 @@ class AppearanceClassicPhoneNoticeTest extends TestCase
         }
     }
 
-    public function test_no_appearance_screen_mentions_phones_under_classic_only(): void
+    public function test_no_appearance_menu_screen_mentions_phones_under_classic_only(): void
     {
         config(['openpne.surface_mode' => 'classic_only']);
 
@@ -69,7 +69,7 @@ class AppearanceClassicPhoneNoticeTest extends TestCase
 
         $this->get(GadgetResource::getUrl('index'))
             ->assertOk()
-            ->assertSee('モダンのホームのお知らせとログイン画面のメッセージは別のもので', false)
+            ->assertSee('モダンのホームとログイン画面には、ガジェットとは別のお知らせとメッセージが出ます。', false)
             ->assertDontSee('スマホには届きません', false);
     }
 

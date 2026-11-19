@@ -667,7 +667,7 @@
     "Gadget layout": "ガジェットレイアウト",
     "Gadget placement": "配置",
     "Gadgets": "ガジェット",
-    "Gadgets appear only on the Classic screens: every phone visitor gets the Modern screens. The Modern home shows its own notice and the Modern login screen its own message, edited under Settings > Landing page settings and Settings > Login page settings.": "ガジェットはクラシック画面にだけ表示されます（スマホからの閲覧は常にモダン）。モダンのホームのお知らせとログイン画面のメッセージは別のもので、「設定」＞「入口ページ設定」と「設定」＞「ログイン画面設定」で編集します。",
+    "Gadgets appear only on the Classic screens: every phone visitor gets the Modern screens. The Modern home shows its own notice and the Modern login screen its own message, edited under Settings > Landing page settings and Settings > Login page settings.": "ガジェットはクラシック画面にだけ表示されます（スマホからの閲覧は常にモダン）。モダンのホームとログイン画面には、ガジェットとは別のお知らせとメッセージが出ます。「設定」＞「入口ページ設定」と「設定」＞「ログイン画面設定」で編集します。",
     "Gateway Timeout": "ゲートウェイのタイムアウト",
     "General": "全般",
     "Generated icon": "自動生成アイコン",

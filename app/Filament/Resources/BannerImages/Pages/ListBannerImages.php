@@ -13,7 +13,7 @@ use Filament\Support\Icons\Heroicon;
 class ListBannerImages extends ListPage
 {
     use PhoneSurfaceSubheading {
-        getSubheading as phoneSurfaceSubheading;
+        getSubheading as protected phoneSurfaceSubheading;
     }
 
     protected static string $resource = BannerImageResource::class;

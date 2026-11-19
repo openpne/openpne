@@ -7,7 +7,7 @@ namespace App\Filament\Concerns;
 use App\Support\SurfaceResolver;
 
 /**
- * Subheads an Appearance (Classic) screen with the note that phones are served Modern, only where both surfaces are served (docs/internals/classic-compatibility.md, "Design-customization compatibility").
+ * See docs/internals/classic-compatibility.md, "Design-customization compatibility".
  */
 trait PhoneSurfaceSubheading
 {
