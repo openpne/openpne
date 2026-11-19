@@ -52,7 +52,6 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
 
     return (
         <section aria-labelledby={titleId}>
-            {/* Each row says what it is, and the glyph sets the rows apart from the site notice above. */}
             <h2 id={titleId} className="sr-only">
                 {t('Notices')}
             </h2>
