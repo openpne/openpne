@@ -27,7 +27,9 @@ a column takes its collation from `IdentifierCollation::for()`.
 Everything that writes or looks up these columns trims with `Str::trim`, which also removes Unicode
 spaces such as U+3000: `TrimStrings` on a request, Filament's `trim()` on the administrator login
 and form (a Livewire request skips `TrimStrings`), and the console commands, the invitation page and
-the actions that write these columns on their own. A stored value with whitespace at either end therefore matches nothing anyone can type.
+the actions that write these columns on their own. A stored value with whitespace at either end
+therefore matches nothing anyone can type. The OpenPNE 3 upgrade and `openpne:copy-database` carry
+values as they are; the upgrade warns about such a login.
 
 ## Search and name order
 

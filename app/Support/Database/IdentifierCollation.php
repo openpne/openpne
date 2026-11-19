@@ -24,7 +24,7 @@ final class IdentifierCollation
         };
     }
 
-    /** Every form trims what is typed into one of these columns, so a stored value this is true of cannot be matched. */
+    /** Everything that writes or looks up these columns trims with Str::trim, so a stored value this is true of cannot be matched. */
     public static function hasEdgeWhitespace(string $value): bool
     {
         return Str::trim($value) !== $value;
