@@ -28,6 +28,7 @@ class SearchCollationTest extends TestCase
             // The half-width voiced mark is a character of its own, so ｶﾞ is not ガ.
             'a half-width voiced kana is not its full-width one' => ['ｶﾞｸｾｲ', 'ガ', false],
             'the half-width prolonged sound mark is not the full-width one' => ['ｺｰﾋｰ', 'コーヒー', false],
+            'a half-width semi-voiced kana is not its full-width one' => ['ﾊﾟﾝ', 'パン', false],
             'an accent is told apart' => ['José', 'jose', false],
         ];
     }

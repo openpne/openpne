@@ -70,7 +70,7 @@ class SearchCollationSeamTest extends TestCase
     /** @var array<string, array<string, string>> file => the call or component => why Filament may search there by itself */
     private const FILAMENT_ALLOWED = [
         'app/Filament/Resources/Groups/Schemas/GroupForm.php' => [
-            'searchable' => 'the options are a PHP array, which Filament filters in PHP',
+            'searchable' => 'the options are a PHP array, which the browser filters',
         ],
     ];
 
