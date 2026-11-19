@@ -319,15 +319,19 @@ Authorization is part of the feature contract, not a view concern.
 **A block hides the blocker's own space from the member they blocked, not what the blocker writes in
 someone else's.** Every page about the blocker answers that member with 404
 ([`MemberPolicy::access`](../../app/Policies/MemberPolicy.php), asked by
-`Controller::memberSubject`), and the blocker's diaries and timeline posts drop out of every feed
-and 404 on their own page. What the blocker writes in a place that is not theirs alone stays
-visible: replies in another member's timeline thread (a thread is judged at its root), comments on
-another member's diary, a group's topics and events and their comments, talk messages, and a
-direct-message conversation ([group-talk.md](group-talk.md#history-carries-no-per-row-filter),
-[direct-messages.md](direct-messages.md#a-conversation-is-two-arms-over-one-table)). Files are
-judged on their own by [`FilePolicy`](../../app/Policies/FilePolicy.php), so the blocker's avatar
-and a timeline reply's picture are refused even on a row that shows. Notifications follow neither
-half: a block in either direction stops them ([timeline.md](timeline.md#notifications)).
+`Controller::memberSubject`), and the blocker's diaries and top-level timeline posts drop out of
+every feed and 404 on their own page. What the blocker writes in a place that is not theirs alone
+stays visible: replies in another member's timeline thread (a thread is judged at its root),
+comments on another member's diary, a group's topics and events and their comments, talk messages,
+and a direct-message conversation ([group-talk.md](group-talk.md#history-carries-no-per-row-filter),
+[direct-messages.md](direct-messages.md#a-conversation-is-two-arms-over-one-table)).
+[`FilePolicy`](../../app/Policies/FilePolicy.php) judges a member's own files and a timeline post's
+pictures by their author, so the blocker's avatar and reply pictures are refused even on a row that
+shows; attachments on comments, talk and direct messages follow their place and show. A notification
+about something written (a post, a comment, a reply, a mention, a talk or direct message) is not
+sent across a block in either direction ([notifications.md](notifications.md),
+[timeline.md](timeline.md#notifications)); a group's sub-admin appointment and admin transfer
+request are sent regardless.
 
 A relation lookup exposed as a feature primitive is **named by direction and
 use**, because a block is one-directional. [`BlockLookup`](../../app/Features/Block/BlockLookup.php)
