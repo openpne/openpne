@@ -108,7 +108,7 @@ class SearchCollationSeamTest extends TestCase
         }
     }
 
-    /** Filament's own search SQL lowers the term in PHP and the column in SQL, which disagree for some letters. */
+    /** Filament's own search SQL compares through the column's collation, or lowers the term in PHP and the column in SQL, which disagree for some letters. */
     public function test_no_filament_search_builds_its_own_sql(): void
     {
         $offending = [];
@@ -116,7 +116,7 @@ class SearchCollationSeamTest extends TestCase
         foreach ($this->sources() as $path => $tokens) {
             foreach (self::filamentSearches($tokens) as [$line, $name]) {
                 if (isset(self::FILAMENT_ALLOWED[$path][$name])) {
-                    $used[$path][$name] = true;
+                    $used[$path][$name] = ($used[$path][$name] ?? 0) + 1;
                 } else {
                     $offending[] = "{$path}:{$line} {$name}";
                 }
@@ -126,7 +126,7 @@ class SearchCollationSeamTest extends TestCase
         $this->assertSame([], $offending, 'search through searchable(query: CollatedSearch::on(...)), or list the search with its reason');
         foreach (self::FILAMENT_ALLOWED as $path => $names) {
             foreach (array_keys($names) as $name) {
-                $this->assertArrayHasKey($name, $used[$path] ?? [], "{$path} no longer uses {$name}; drop it from the list");
+                $this->assertSame(1, $used[$path][$name] ?? 0, "{$path}: {$name} should name one search; drop it if none is left");
             }
         }
     }

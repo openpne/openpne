@@ -18,14 +18,14 @@ collation:
 The collation is the connection's `comparison_collation`. On MySQL a search treats uppercase and
 lowercase, hiragana and katakana, and full- and half-width letters, digits and kana as one, and tells
 apart the voiced and semi-voiced marks, small kana, accents (`José` is not `jose`), emoji and
-compatibility forms (`①` is not `1`). Three half-width forms do not match their full-width ones: a
-voiced kana (`ｶﾞ`, two characters, is not `ガ`), the prolonged sound mark (`ｺｰﾋｰ` is not `コーヒー`)
-and the middle dot (`･`). SQLite's `LIKE` folds the case of ASCII letters and nothing else, and
-`NOCASE` orders the same way.
+compatibility forms (`①` is not `1`). Some half-width forms do not match their full-width ones, for
+example a voiced kana (`ｶﾞ`, two characters, is not `ガ`), the prolonged sound mark (`ｺｰﾋｰ` is not
+`コーヒー`) and the middle dot (`･`). SQLite's `LIKE` folds the case of ASCII letters and nothing
+else, and `NOCASE` orders the same way.
 
 The caller builds the pattern, so whether `%` and `_` in a term are wildcards is the screen's choice:
-the mention and recipient pickers and the admin panel escape them (`whereContains`), the member, diary
-and group searches do not.
+the mention and recipient pickers escape them, the admin panel goes through `whereContains`, which
+does, and the member, diary and group searches do not.
 
 A name order is a list a reader scans by name: the mention and recipient pickers, the muted talk
 rooms, group categories after `sort_order`, and the admin tables' sorts by a member's, a group's or an
@@ -33,12 +33,13 @@ administrator's name. Ordering through an expression is a filesort, even on an i
 
 ### Filament
 
-Filament's own search SQL lowers the column in SQL and the term in PHP, and the two disagree for some
-letters (`İstanbul`, `ΟΣ`), so a name would not find itself. The panel does not use it: each
-searchable table column passes `searchable(query: CollatedSearch::on(...))`, and each globally
-searchable resource uses `CollatedGlobalSearch`. Filament still splits the term into words, requires
-every word, and lets each word match any searchable column; only the comparison of one word with one
-column goes through `whereContains`. The key is not named `search_collation`, which Filament would
+Filament's own search SQL compares through the column's collation, and told to fold case it lowers
+the column in SQL and the term in PHP, which disagree for some letters (`İstanbul`, `ΟΣ`) so that a
+name would not find itself. The panel does not use it: each searchable table column passes
+`searchable(query: CollatedSearch::on(...))`, and each globally searchable resource uses
+`CollatedGlobalSearch`. Filament still splits the term into words, requires every word, and lets each
+word match any searchable column; only the comparison of one word with one column goes through
+`whereContains`. The key is not named `search_collation`, which Filament would
 append to SQL of its own.
 
 ### Guards

@@ -149,15 +149,25 @@ class SearchAndNameOrderTest extends TestCase
         }
     }
 
-    public function test_the_global_search_goes_through_the_helper(): void
+    public function test_every_global_search_goes_through_the_helper(): void
     {
-        DB::enableQueryLog();
-        GroupResource::getGlobalSearchResults('x');
-        $searches = array_filter(array_column(DB::getQueryLog(), 'query'), fn (string $sql): bool => stripos($sql, ' like ') !== false);
+        $resources = array_filter(
+            Filament::getPanel('admin')->getResources(),
+            fn (string $resource): bool => $resource::canGloballySearch(),
+        );
+        $this->assertNotEmpty($resources);
 
-        $this->assertNotEmpty($searches);
-        foreach ($searches as $sql) {
-            $this->assertStringContainsString('ESCAPE ?', $sql);
+        foreach ($resources as $resource) {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $resource::getGlobalSearchResults('x');
+            $searches = array_filter(array_column(DB::getQueryLog(), 'query'), fn (string $sql): bool => stripos($sql, ' like ') !== false);
+
+            $this->assertNotEmpty($searches, $resource);
+            foreach ($searches as $sql) {
+                $this->assertStringContainsString('ESCAPE ?', $sql, $resource);
+                $this->assertStringNotContainsStringIgnoringCase("escape '!'", $sql, $resource);
+            }
         }
     }
 
