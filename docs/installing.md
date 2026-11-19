@@ -32,8 +32,9 @@ A server you administer is what the steps assume. A host where you cannot is cov
   `openssl`, `pcre`, `session`, `sodium`, `tokenizer`, `xml`, `xmlreader`, `zip`, `zlib`, and
   `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes web push faster; the queue
   worker's job timeouts need `pcntl` on the command line.
-- **A database**: SQLite 3, or MySQL 8.0.17 or later. A SQLite site also needs the `sqlite3` command, which
-  [updating.md](updating.md) uses for its backup.
+- **A database**: SQLite 3, or MySQL 8.4. Any MySQL from 8.0.17 works too: that is the first with
+  the `utf8mb4_0900_bin` collation the tables use. A SQLite site also needs the `sqlite3` command,
+  which [updating.md](updating.md) uses for its backup.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
 - **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
   runs without, and offers it as one way to run the queue.
