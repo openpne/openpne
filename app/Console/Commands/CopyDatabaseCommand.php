@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Database\SQLiteSchemaBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Database\Connection;
@@ -22,6 +23,8 @@ class CopyDatabaseCommand extends Command
 
     /** A batch holds every BLOB in it in PHP memory at once, so binary tables get a much smaller one. */
     private const BINARY_BATCH_ROWS = 25;
+
+    private const DRIVERS = ['sqlite', 'mysql', 'mariadb'];
 
     protected $signature = 'openpne:copy-database
         {--from= : Source connection (default: the app\'s own)}
@@ -47,6 +50,14 @@ class CopyDatabaseCommand extends Command
         foreach ([$from, $to] as $name) {
             if (config("database.connections.{$name}") === null) {
                 $this->error("Unknown database connection [{$name}].");
+
+                return self::FAILURE;
+            }
+
+            $driver = (string) config("database.connections.{$name}.driver");
+
+            if (! in_array($driver, self::DRIVERS, true)) {
+                $this->error("[{$name}] uses the [{$driver}] driver; only SQLite, MySQL and MariaDB are supported.");
 
                 return self::FAILURE;
             }
@@ -81,11 +92,13 @@ class CopyDatabaseCommand extends Command
 
         $plans = $this->plan($from, $to, $this->tablesToCopy($from, $to));
 
-        if ($plans === null) {
+        $marks = $plans === null ? null : $this->highWaterMarks($from, array_keys($plans));
+
+        if ($plans === null || $marks === null) {
             return self::FAILURE;
         }
 
-        $this->copy($from, $to, $plans);
+        $this->copy($from, $to, $plans, $marks);
 
         return $this->verify($from, $to, array_keys($plans)) ? self::SUCCESS : self::FAILURE;
     }
@@ -287,29 +300,158 @@ class CopyDatabaseCommand extends Command
         return str_contains($column['type_name'], 'blob') || str_contains($column['type_name'], 'binary');
     }
 
-    /** @param  array<string, array{columns: list<string>, binary: array<string, true>, batch: int}>  $plans */
-    private function copy(string $from, string $to, array $plans): void
+    /**
+     * Read before any cursor opens: an unbuffered MySQL source runs no other query while one is open.
+     *
+     * @param  list<string>  $tables
+     * @return array<string, int>|null the highest id each table has handed out, deleted rows included
+     */
+    private function highWaterMarks(string $from, array $tables): ?array
+    {
+        $source = DB::connection($from);
+        $sqlite = $source->getDriverName() === 'sqlite';
+        $sequences = $sqlite ? $this->sqliteSequences($source) : [];
+        $marks = [];
+
+        foreach ($tables as $table) {
+            $counter = $sqlite ? ($sequences[$table] ?? null) : $this->mysqlAutoIncrement($source, $table);
+
+            if ($counter === null) {
+                continue;
+            }
+
+            $value = filter_var($counter, FILTER_VALIDATE_INT);
+
+            if ($value === false || $value >= PHP_INT_MAX) {
+                $this->error("{$table}'s id counter [{$counter}] does not fit a signed 64-bit integer.");
+
+                return null;
+            }
+
+            // sqlite_sequence holds the last id handed out, AUTO_INCREMENT the next one.
+            $mark = $sqlite ? $value : $value - 1;
+
+            if ($mark > 0) {
+                $marks[$table] = $mark;
+            }
+        }
+
+        return $marks;
+    }
+
+    /** @return array<string, string> */
+    private function sqliteSequences(Connection $source): array
+    {
+        $exists = $source->selectOne("select 1 from sqlite_master where type = 'table' and name = 'sqlite_sequence'", [], false);
+
+        if ($exists === null) {
+            return [];
+        }
+
+        return collect($source->select('select name, seq from sqlite_sequence', [], false))
+            ->mapWithKeys(fn (object $row) => [$row->name => (string) $row->seq])
+            ->all();
+    }
+
+    /** information_schema is not read: its AUTO_INCREMENT is a statistics cache that can be stale or NULL. */
+    private function mysqlAutoIncrement(Connection $source, string $table): ?string
+    {
+        $row = $source->selectOne('show create table '.$source->getQueryGrammar()->wrapTable($table), [], false);
+
+        return self::autoIncrementOption((string) ((array) $row)['Create Table']);
+    }
+
+    /** The table options follow the line that closes the column list, since a column's comment or default can spell the option too. */
+    public static function autoIncrementOption(string $createTable): ?string
+    {
+        if (preg_match('/^\)(.*)$/m', $createTable, $options) !== 1) {
+            return null;
+        }
+
+        $unquoted = preg_replace("/'(?:[^'\\\\]|\\\\.|'')*'/", "''", $options[1]);
+
+        return preg_match('/(?:^|\s)AUTO_INCREMENT=(\d+)(?:\s|$)/', (string) $unquoted, $match) === 1 ? $match[1] : null;
+    }
+
+    /**
+     * @param  array<string, array{columns: list<string>, binary: array<string, true>, batch: int}>  $plans
+     * @param  array<string, int>  $marks
+     */
+    private function copy(string $from, string $to, array $plans, array $marks): void
     {
         $source = DB::connection($from);
         $target = DB::connection($to);
+        $sqliteTarget = $target->getDriverName() === 'sqlite';
 
         $this->line('Copying '.count($plans).' table(s) into ['.$to.'].');
+
+        if (! $sqliteTarget) {
+            $this->raiseAutoIncrements($to, $marks);
+        }
 
         $restore = $this->streamSource($source);
 
         try {
             // The PRAGMA a SQLite target needs is a no-op inside a transaction, so constraints go down
             // first and the transaction opens within that.
-            Schema::connection($to)->withoutForeignKeyConstraints(function () use ($source, $target, $plans) {
-                $target->transaction(function () use ($source, $target, $plans) {
+            Schema::connection($to)->withoutForeignKeyConstraints(function () use ($source, $target, $plans, $marks, $sqliteTarget) {
+                $target->transaction(function () use ($source, $target, $plans, $marks, $sqliteTarget) {
                     foreach ($plans as $table => $plan) {
                         $rows = $this->copyTable($source, $target, $table, $plan);
                         $this->line(sprintf('  %-44s %10s rows', $table, number_format($rows)));
+                    }
+
+                    if ($sqliteTarget) {
+                        $this->raiseSqliteSequences($target, $marks);
                     }
                 });
             });
         } finally {
             $restore();
+        }
+    }
+
+    /**
+     * ALTER TABLE commits implicitly, so this runs before the copy's transaction, and a failed copy leaves the counters raised on tables still empty.
+     *
+     * @param  array<string, int>  $marks
+     */
+    private function raiseAutoIncrements(string $to, array $marks): void
+    {
+        $target = DB::connection($to);
+
+        foreach ($marks as $table => $mark) {
+            if (! in_array(true, array_column(Schema::connection($to)->getColumns($table), 'auto_increment'), true)) {
+                continue;
+            }
+
+            $target->statement('alter table '.$target->getQueryGrammar()->wrapTable($table).' auto_increment = '.($mark + 1));
+        }
+    }
+
+    /**
+     * The copied rows have already raised each sequence to their highest id, which a deleted row's id can exceed.
+     *
+     * @param  array<string, int>  $marks
+     */
+    private function raiseSqliteSequences(Connection $target, array $marks): void
+    {
+        foreach ($marks as $table => $mark) {
+            $sql = $target->scalar("select sql from sqlite_master where type = 'table' and name = ?", [$table]);
+
+            if (! is_string($sql) || ! SQLiteSchemaBuilder::autoIncrements($sql)) {
+                continue;
+            }
+
+            $current = $target->scalar('select seq from sqlite_sequence where name = ?', [$table]);
+
+            if ($current !== null && (int) $current >= $mark) {
+                continue;
+            }
+
+            // sqlite_sequence has no unique key on name, so no upsert.
+            $target->delete('delete from sqlite_sequence where name = ?', [$table]);
+            $target->insert('insert into sqlite_sequence (name, seq) values (?, ?)', [$table, $mark]);
         }
     }
 
@@ -322,7 +464,7 @@ class CopyDatabaseCommand extends Command
      */
     private function streamSource(Connection $source): callable
     {
-        if ($source->getDriverName() !== 'mysql') {
+        if (! in_array($source->getDriverName(), ['mysql', 'mariadb'], true)) {
             return static fn () => null;
         }
 

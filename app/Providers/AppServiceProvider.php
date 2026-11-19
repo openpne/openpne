@@ -9,6 +9,7 @@ use App\Auth\SessionGuard;
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
+use App\Database\SQLiteConnection;
 use App\Features\GroupTalk\GroupTalkNotifyDefault;
 use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
@@ -55,6 +56,7 @@ use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
@@ -86,6 +88,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Registered before any connection is made, so migrations get it too (docs/internals/runtime.md, "Row ids").
+        Connection::resolverFor('sqlite', fn ($pdo, $database, $prefix, $config) => new SQLiteConnection($pdo, $database, $prefix, $config));
+
         $this->app->singleton(TermService::class);
         // Rebinds the package singleton: app providers register after package ones.
         $this->app->singleton(InertiaResponseFactory::class, ClassicOnlyResponseFactory::class);
