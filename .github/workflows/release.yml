@@ -66,6 +66,85 @@ jobs:
     with:
       ref: ${{ needs.validate.outputs.sha }}
 
+  # ci.yml's mysql shards again on the MySQL 8.0 pinned below, since docs/installing.md supports 8.0
+  # from 8.0.17 and CI tests 8.4 only.
+  oldest-mysql:
+    name: MySQL 8.0 shard ${{ matrix.shard }}
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      # Pinned by digest from `docker buildx imagetools inspect mysql:8.0`.
+      MYSQL_IMAGE: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b # 8.0.46
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: openpne_test
+      DB_USERNAME: root
+      DB_PASSWORD: secret
+      PAO_DISABLE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - name: Pull the MySQL image
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if docker pull "$MYSQL_IMAGE"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "pull attempt $attempt failed; retrying in $((attempt * 15))s"
+              sleep $((attempt * 15))
+            fi
+          done
+          echo "::error::could not pull $MYSQL_IMAGE after 5 attempts"
+          exit 1
+      - name: Start MySQL
+        run: >-
+          docker run -d --name mysql -p 3306:3306 --tmpfs /var/lib/mysql:rw
+          -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=openpne_test
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -psecret"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+          "$MYSQL_IMAGE"
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+      - uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+      - name: Wait for MySQL
+        run: |
+          for _ in $(seq 1 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' mysql)
+            if [ "$status" = healthy ]; then
+              exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' mysql)" != true ]; then
+              echo "::error::MySQL exited during startup"
+              docker logs mysql
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::MySQL did not become healthy within 200s (last status: $status)"
+          docker logs mysql
+          exit 1
+      - run: php artisan migrate --force
+      - run: >-
+          php artisan test --parallel --functional
+          --shard-test-distribution=round-robin
+          --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          --fail-on-empty-test-suite
+
   compat:
     name: Update
     needs: validate
@@ -109,7 +188,7 @@ jobs:
     timeout-minutes: 45
     env:
       # The image ci.yml's mysql-shard job pins: bump the tag and the digest there, in
-      # release-compat.yml and here together.
+      # release-compat.yml and here together (the oldest-mysql job's 8.0 pin is not one of them).
       MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
       VERSION: ${{ inputs.version }}
       SHA: ${{ needs.validate.outputs.sha }}
@@ -218,13 +297,14 @@ jobs:
 
   draft:
     name: Draft the release
-    needs: [validate, ci, compat, audit, archive]
+    needs: [validate, ci, oldest-mysql, compat, audit, archive]
     # Spelled out because a skipped `compat` would otherwise skip this job, and so that nothing but
     # success (or the first release's skip) on every check reaches it.
     if: >-
       always()
       && needs.validate.result == 'success'
       && needs.ci.result == 'success'
+      && needs.oldest-mysql.result == 'success'
       && needs.audit.result == 'success'
       && needs.archive.result == 'success'
       && (needs.compat.result == 'success'
