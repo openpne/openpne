@@ -30,7 +30,7 @@ class NewEmailAddressTest extends TestCase
             'Japanese local part' => ['たろう@example.com'],
             'full-width letters' => ['ｕｓｅｒ@example.com'],
             'accented letter' => ['josé@example.com'],
-            // egulias takes an escaped NUL inside quotes; MySQL then compares it equal to the address without it.
+            // FILTER_VALIDATE_EMAIL takes an escaped NUL inside quotes; MySQL then compares it equal to the address without it.
             'quoted escaped NUL' => ["\"a\\\x00b\"@example.com"],
             'quoted tab' => ["\"a\tb\"@example.com"],
             'quoted space' => ['"a b"@example.com'],

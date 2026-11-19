@@ -104,6 +104,36 @@ class NewEmailAddressTest extends TestCase
         $this->assertDatabaseCount('registration_tokens', 0);
     }
 
+    public function test_a_member_invite_takes_a_punycode_domain(): void
+    {
+        Notification::fake();
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
+
+        $this->actingAs(Member::factory()->create())->post('/invite', ['email' => self::PUNYCODE])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('registration_tokens', ['email' => self::PUNYCODE]);
+    }
+
+    public function test_an_email_change_takes_a_punycode_domain(): void
+    {
+        Notification::fake();
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/email', ['current_password' => 'password', 'new_email' => self::PUNYCODE])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->getKey(), 'new_email' => self::PUNYCODE]);
+    }
+
+    public function test_the_invite_command_and_member_creation_take_a_punycode_domain(): void
+    {
+        $this->assertSame(0, Artisan::call('openpne:member:invite', ['email' => self::PUNYCODE]), Artisan::output());
+        $this->assertDatabaseHas('registration_tokens', ['email' => self::PUNYCODE]);
+
+        $member = app(CreateNewMember::class)->create(['email' => 'other@xn--n8jyh.jp', 'name' => 'Taro', 'password' => 'sufficiently-long-pw', 'password_confirmation' => 'sufficiently-long-pw']);
+        $this->assertSame('other@xn--n8jyh.jp', $member->email);
+    }
+
     #[DataProvider('nonAscii')]
     public function test_an_email_change_refuses_a_non_ascii_address(string $email): void
     {
@@ -206,7 +236,10 @@ class NewEmailAddressTest extends TestCase
         $raw = Str::random(40);
         DB::table('email_change_requests')->insert(['member_id' => $member->getKey(), 'new_email' => 'たろう@example.com', 'token' => hash('sha256', $raw), 'created_at' => now()]);
 
-        $this->actingAs($member)->post("/member/config/email/confirm/{$raw}")
+        $this->actingAs($member)->get("/member/config/email/confirm/{$raw}")
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status', __('This email-change link is no longer valid.'));
+        $this->post("/member/config/email/confirm/{$raw}")
             ->assertRedirect(route('login'))
             ->assertSessionHas('status', __('This email-change link is no longer valid.'));
 

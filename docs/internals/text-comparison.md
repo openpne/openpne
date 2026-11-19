@@ -34,8 +34,8 @@ values as they are; the upgrade warns about such a login.
 A new email address, one a person registers, is invited under or changes to, must pass
 [`NewEmailAddress`](../../app/Rules/NewEmailAddress.php): the HTML Living Standard's "valid e-mail
 address" (printable ASCII, no quoted local part, no address literal) that also passes Laravel's
-`email:filter`, which turns away what the former allows and RFC 5322 does not, such as consecutive
-dots and a domain without one. It is stored lowercased, and between such values each collation's equality is
+`email:filter`, which turns away consecutive dots and a domain without one, both of which the former
+allows. It is stored lowercased, and between such values each collation's equality is
 byte equality, so two addresses that reach different mailboxes are never taken for one; a domain
 with other characters is entered in its punycode form (`xn--`). The validators, the actions that
 write `registration_tokens` and `email_change_requests`, and a saving hook on `Member` check it, and
