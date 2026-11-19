@@ -66,8 +66,8 @@ jobs:
     with:
       ref: ${{ needs.validate.outputs.sha }}
 
-  # ci.yml's mysql shards again on the latest MySQL 8.0, since docs/installing.md supports it from
-  # 8.0.17; pull requests test 8.4 only.
+  # ci.yml's mysql shards again on the MySQL 8.0 pinned below, since docs/installing.md supports 8.0
+  # from 8.0.17 and CI tests 8.4 only.
   oldest-mysql:
     name: MySQL 8.0 shard ${{ matrix.shard }}
     needs: validate
@@ -188,7 +188,7 @@ jobs:
     timeout-minutes: 45
     env:
       # The image ci.yml's mysql-shard job pins: bump the tag and the digest there, in
-      # release-compat.yml and here together.
+      # release-compat.yml and here together (the oldest-mysql job's 8.0 pin is not one of them).
       MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
       VERSION: ${{ inputs.version }}
       SHA: ${{ needs.validate.outputs.sha }}
