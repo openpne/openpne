@@ -10,10 +10,6 @@ use App\Files\SiteIcon;
 use App\Http\Middleware\PreventRequestForgery;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
-use App\Support\Database\SearchCollation;
-use Filament\Actions\AssociateAction;
-use Filament\Actions\AttachAction;
-use Filament\Forms\Components\Select;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -23,12 +19,9 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\QueryBuilder\Constraints\RelationshipConstraint\Operators\IsRelatedToOperator;
 use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\Column;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
@@ -158,13 +151,5 @@ class AdminPanelProvider extends PanelProvider
                 ->defaultDateTimeDisplayFormat('Y-m-d H:i')
                 ->defaultTimeDisplayFormat('H:i');
         });
-
-        // A table's own searchable([...]) and MorphToSelect take no such default; the global search
-        // takes FoldsGlobalSearchCase (docs/internals/text-comparison.md, "Search and name order").
-        foreach ([Column::class, Select::class, SelectFilter::class, AttachAction::class, AssociateAction::class, IsRelatedToOperator::class] as $searching) {
-            $searching::configureUsing(fn ($component) => $component->forceSearchCaseInsensitive(
-                fn (): ?bool => SearchCollation::forcesCaseFolding(),
-            ));
-        }
     }
 }

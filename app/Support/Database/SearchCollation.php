@@ -5,7 +5,6 @@ namespace App\Support\Database;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Every member-typed search and every name order goes through here, so the comparison is chosen
@@ -75,15 +74,23 @@ final class SearchCollation
         return $query->orderByRaw("{$subject}{$collate} {$direction}", $bindings);
     }
 
-    /** Filament's own searches match through the same collation only when it lowers both sides, as whereMatches() does. */
-    public static function forcesCaseFolding(): ?bool
+    /**
+     * @template TQuery of EloquentBuilder|QueryBuilder
+     *
+     * @param  TQuery  $query
+     * @param  string  $term  what the reader typed, matched anywhere in the column with its wildcards taken literally
+     * @return TQuery
+     */
+    public static function whereContains(EloquentBuilder|QueryBuilder $query, string $column, string $term, string $boolean = 'and'): EloquentBuilder|QueryBuilder
     {
-        return self::collation(DB::connection()) !== null ? true : null;
+        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term);
+
+        return self::whereMatches($query, $column, "%{$escaped}%", '!', $boolean);
     }
 
     private static function collation(Connection $connection): ?string
     {
-        $collation = $connection->getDriverName() === 'sqlite' ? null : $connection->getConfig('search_collation');
+        $collation = $connection->getDriverName() === 'sqlite' ? null : $connection->getConfig('comparison_collation');
 
         return is_string($collation) && $collation !== '' ? $collation : null;
     }

@@ -14,13 +14,14 @@ engine — so start from that, and leave a site that works where it is.
 ## What changes about the site
 
 **Searching and sorting.** This is the engine's behaviour, not the copy's. On MySQL a search folds
-case, kana and width together but keeps the voiced mark: searching members for `タナカ` there also
-finds `たなか` and `ﾀﾅｶ`, and a search for `ハンタ` does not find `ハンダ`. SQLite's `LIKE` folds the
-case of ASCII letters and nothing else, so a search for `タナカ` finds only `タナカ`. Ordering by name
-follows: MySQL sorts names through its Japanese collation, hiragana and katakana together and kanji
-in that collation's order, while SQLite ignores the case of ASCII letters and otherwise sorts by code
-point, so the kana sort apart. Run the searches your members actually run against the copy before
-you let anyone else near it ([how each engine compares](internals/text-comparison.md)).
+case, kana and width together but keeps the voiced mark and accents: searching members for `タナカ`
+there also finds `たなか` and `ﾀﾅｶ`, while a search for `ハンタ` does not find `ハンダ`, nor `jose`
+find `José`. SQLite's `LIKE` folds the case of ASCII letters and nothing else, so a search for
+`タナカ` finds only `タナカ`. Ordering by name follows: MySQL sorts names through its Japanese
+collation, hiragana and katakana together and kanji in that collation's order, while SQLite ignores
+the case of ASCII letters and otherwise sorts by code point, so the kana sort apart. Run the searches
+your members actually run against the copy before you let anyone else near it
+([how each engine compares](internals/text-comparison.md)).
 
 **What one file costs and buys.** Sessions, the cache and the queue are all database-backed by
 default, so on SQLite they share the site's single file with its content. Under SQLite's default

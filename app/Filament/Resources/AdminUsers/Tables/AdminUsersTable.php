@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AdminUsers\Tables;
 
 use App\Filament\Resources\AdminUsers\AdminUserResource;
+use App\Filament\Support\CollatedSearch;
 use App\Models\AdminUser;
 use App\Support\Database\SearchCollation;
 use Filament\Actions\DeleteAction;
@@ -21,7 +22,7 @@ class AdminUsersTable
             ->columns([
                 TextColumn::make('username')
                     ->label(__('Username'))
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('username'))
                     ->sortable(query: fn (Builder $query, string $direction): Builder => SearchCollation::orderBy($query, 'username', $direction)),
 
                 IconColumn::make('two_factor')

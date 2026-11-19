@@ -533,7 +533,8 @@ class GroupController extends Controller
     {
         return GroupCategory::query()
             ->orderBy('sort_order')
-            ->tap(fn ($q) => SearchCollation::orderBy($q, 'name'));
+            ->tap(fn ($q) => SearchCollation::orderBy($q, 'name'))
+            ->orderBy('id');
     }
 
     /**

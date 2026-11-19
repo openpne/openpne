@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\GroupEvents;
 
-use App\Filament\Concerns\FoldsGlobalSearchCase;
+use App\Filament\Concerns\CollatedGlobalSearch;
 use App\Filament\Resources\GroupEvents\Pages\ListGroupEvents;
 use App\Filament\Resources\GroupEvents\Pages\ViewGroupEvent;
 use App\Filament\Resources\GroupEvents\RelationManagers\EventCommentsRelationManager;
@@ -16,7 +16,7 @@ use Filament\Tables\Table;
 
 class GroupEventResource extends Resource
 {
-    use FoldsGlobalSearchCase;
+    use CollatedGlobalSearch;
 
     protected static ?string $model = GroupEvent::class;
 

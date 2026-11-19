@@ -9,10 +9,12 @@ use App\Models\GroupCategory;
 use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\PinsOrderBy;
 use Tests\TestCase;
 
 class GroupManagementRoutesTest extends TestCase
 {
+    use PinsOrderBy;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -67,6 +69,20 @@ class GroupManagementRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('categories', fn ($categories): bool => collect($categories)->pluck('name')->all() === ['Beta', 'Zeta', 'Alpha'])
             );
+    }
+
+    public function test_categories_break_a_name_tie_by_id(): void
+    {
+        $admin = Member::factory()->create();
+        $group = Group::factory()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+
+        $clauses = $this->orderClausesOn('group_categories', fn () => $this->actingAs($admin)->get("/groups/edit?id={$group->getKey()}")->assertOk());
+
+        $this->assertNotEmpty($clauses);
+        foreach ($clauses as $clause) {
+            $this->assertStringEndsWith(', id asc', $clause);
+        }
     }
 
     public function test_modern_edit_returns_404_for_a_non_manager(): void

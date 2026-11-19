@@ -27,6 +27,8 @@ class SearchCollationTest extends TestCase
             'a small kana is told apart' => ['きょう', 'きよう', false],
             // The half-width voiced mark is a character of its own, so ｶﾞ is not ガ.
             'a half-width voiced kana is not its full-width one' => ['ｶﾞｸｾｲ', 'ガ', false],
+            'the half-width prolonged sound mark is not the full-width one' => ['ｺｰﾋｰ', 'コーヒー', false],
+            'an accent is told apart' => ['José', 'jose', false],
         ];
     }
 
@@ -66,9 +68,20 @@ class SearchCollationTest extends TestCase
         $this->assertSame([$percent->getKey()], $found);
     }
 
+    public function test_a_typed_term_takes_its_wildcards_literally(): void
+    {
+        $percent = Member::factory()->create(['name' => '100%_!']);
+        Member::factory()->create(['name' => '1000']);
+        Member::factory()->create(['name' => '100x_!']);
+
+        $found = SearchCollation::whereContains(Member::query(), 'name', '0%_!')->pluck('id')->all();
+
+        $this->assertSame([$percent->getKey()], $found);
+    }
+
     public function test_names_order_ignoring_ascii_case_on_both_engines(): void
     {
-        foreach (['たなか', 'Tanaka', 'abe'] as $name) {
+        foreach (['Tanaka', 'たなか', 'abe'] as $name) {
             Member::factory()->create(['name' => $name]);
         }
 
@@ -103,28 +116,6 @@ class SearchCollationTest extends TestCase
 
         $expected = DB::connection()->getDriverName() === 'mysql' ? ['亜', '阿', '愛'] : ['abe', 'Tanaka', 'たなか'];
         $this->assertSame(array_map(fn (string $name): int => $diaryIds[$name], $expected), $ordered);
-    }
-
-    public function test_filament_is_told_to_fold_case_only_where_a_search_collation_is_configured(): void
-    {
-        $default = config('database.default');
-        // Connections open lazily, so neither probe reaches a server.
-        config([
-            'database.connections.probe_mysql' => config('database.connections.mysql'),
-            'database.connections.probe_sqlite' => ['driver' => 'sqlite', 'database' => ':memory:'],
-        ]);
-
-        try {
-            config(['database.default' => 'probe_mysql']);
-            $this->assertTrue(SearchCollation::forcesCaseFolding());
-
-            config(['database.default' => 'probe_sqlite']);
-            $this->assertNull(SearchCollation::forcesCaseFolding());
-        } finally {
-            config(['database.default' => $default]);
-            DB::purge('probe_mysql');
-            DB::purge('probe_sqlite');
-        }
     }
 
     private function found(string $stored, string $term): bool

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Diaries\Tables;
 
 use App\Features\Diary\Actions\DeleteDiary;
+use App\Filament\Support\CollatedSearch;
 use App\Models\Diary;
 use App\Support\Database\SearchCollation;
 use App\Support\Visibility;
@@ -25,13 +26,13 @@ class DiariesTable
 
                 TextColumn::make('title')
                     ->label(__('Title'))
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('title'))
                     ->limit(40),
 
                 TextColumn::make('member.name')
                     ->label(__('Member'))
                     ->default('-')
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('member.name'))
                     ->sortable(query: fn (Builder $query, string $direction): Builder => SearchCollation::orderBy(
                         $query,
                         DB::table('members')->select('members.name')->whereColumn('members.id', 'diaries.member_id'),
