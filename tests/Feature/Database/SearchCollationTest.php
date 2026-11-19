@@ -99,7 +99,7 @@ class SearchCollationTest extends TestCase
             Member::factory()->create(['name' => $name]);
         }
 
-        // utf8mb4_unicode_ci alone sorts these 亜 < 愛 < 阿.
+        // Code point order is 亜 < 愛 < 阿.
         $this->assertSame(['亜', '阿', '愛'], $this->namesInOrder());
     }
 

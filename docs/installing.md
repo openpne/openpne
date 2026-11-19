@@ -32,7 +32,7 @@ A server you administer is what the steps assume. A host where you cannot is cov
   `openssl`, `pcre`, `session`, `sodium`, `tokenizer`, `xml`, `xmlreader`, `zip`, `zlib`, and
   `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes web push faster; the queue
   worker's job timeouts need `pcntl` on the command line.
-- **A database**: SQLite 3, or MySQL 8. A SQLite site also needs the `sqlite3` command, which
+- **A database**: SQLite 3, or MySQL 8.0.17 or later. A SQLite site also needs the `sqlite3` command, which
   [updating.md](updating.md) uses for its backup.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
 - **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
@@ -191,10 +191,10 @@ Instead of the section above: skip this if you chose SQLite.
 sudo apt install php-mysql
 ```
 
-In a MySQL 8 server of yours, a database made for the site (`utf8mb4`), with a user that owns it:
+In a MySQL server of yours, a database made for the site (`utf8mb4`), with a user that owns it:
 
 ```sql
-CREATE DATABASE openpne CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE openpne CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin;
 CREATE USER 'openpne'@'localhost' IDENTIFIED BY '...';
 GRANT ALL PRIVILEGES ON openpne.* TO 'openpne'@'localhost';
 ```

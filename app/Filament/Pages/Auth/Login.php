@@ -42,6 +42,7 @@ class Login extends BaseLogin
     {
         return TextInput::make('email')
             ->label(__('Username'))
+            ->trim()
             ->required()
             ->autocomplete()
             ->autofocus();

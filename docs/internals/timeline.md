@@ -387,8 +387,8 @@ under a tag must not widen who may read them, so a friends-only post reaches the
 as anywhere else.
 
 The URL carries the tag as it was typed, so the action puts it through `HashtagParser::normalize`
-before looking it up. That is not a convenience: the column is byte-equal on every engine (utf8mb4_bin
-on MySQL), so an un-normalized `#Tag` or `#ＴＡＧ` would find nothing rather than the topic it names.
+before looking it up. That is not a convenience: the column is byte-equal on every engine
+([stored text](text-comparison.md#stored-text)), so an un-normalized `#Tag` or `#ＴＡＧ` would find nothing rather than the topic it names.
 A tag nobody used renders an empty feed, not a 404 — zero results is an answer, and a tag is not an
 entity that can be missing.
 

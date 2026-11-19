@@ -50,6 +50,18 @@ class AdminUsernameLoginTest extends TestCase
         $this->assertAuthenticatedAs($admin, 'admin');
     }
 
+    public function test_the_username_is_trimmed_and_matched_without_case(): void
+    {
+        $admin = AdminUser::factory()->create(['username' => 'opene']);
+
+        Livewire::test(Login::class)
+            ->fillForm(['email' => " OpenE\t", 'password' => 'password'])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        $this->assertAuthenticatedAs($admin, 'admin');
+    }
+
     public function test_administrator_cannot_authenticate_with_a_wrong_password(): void
     {
         AdminUser::factory()->create(['username' => 'opene']);

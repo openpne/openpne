@@ -171,6 +171,9 @@ final class UpgradeRunner
         $uploadReport = ! $source->hasErrors() && $this->hasStep(FileUpgrade::class)
             ? (new UploadFileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : new PreflightReport([], []);
+        $loginReport = ! $source->hasErrors()
+            ? (new LoginWhitespacePreflight)->inspect($this->steps(), $options->sourcePrefix, $options->sourceDatabase)
+            : new PreflightReport([], []);
         // Evaluates every step's SELECT, so it needs the structural verdict the SELECTs assume.
         $zeroDateErrors = ! $source->hasErrors()
             ? (new ZeroDatePreflight($this->steps(), SourceSchema::default(), $this->compiler))->inspect($options->sourcePrefix, $options->sourceDatabase, $source->absentOptional)
@@ -182,7 +185,7 @@ final class UpgradeRunner
 
         // Before the abort, not after: these are already known, and an operator preparing a cutover
         // should see everything the source needs fixed in one run rather than one abort at a time.
-        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings, $uploadReport->warnings) as $warning) {
+        foreach (array_merge($mailReport->warnings, $activityReport->warnings, $niceReport->warnings, $uploadReport->warnings, $loginReport->warnings) as $warning) {
             $report->warning($warning);
         }
 

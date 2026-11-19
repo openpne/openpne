@@ -23,6 +23,12 @@ the case of ASCII letters and otherwise sorts by code point, so the kana sort ap
 your members actually run against the copy before you let anyone else near it
 ([how each engine compares](internals/text-comparison.md)).
 
+**Email addresses and usernames.** A member's email address and an administrator's username compare
+without case on both engines. MySQL also treats full- and half-width letters, and the case of
+accented letters, as one, where SQLite folds only the case of ASCII letters, so a copy from SQLite to
+MySQL stops on two addresses or usernames that differ only that way. Every other value compares
+exactly on both engines: two groups whose names differ only in case are two groups.
+
 **What one file costs and buys.** Sessions, the cache and the queue are all database-backed by
 default, so on SQLite they share the site's single file with its content. Under SQLite's default
 journal a write and concurrent reads coexist right up to the commit, which needs a lock no reader can

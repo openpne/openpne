@@ -14,10 +14,9 @@ and every surface has to sweep by hand (below).
 
 **One member may hold several emoji on one piece of content**: the unique key is `(reactable_type,
 reactable_id, member_id, emoji)`. Narrowing it to one emoji per member later would have to throw rows
-away, which is why the wide key is a decision rather than the shape that fell out. On MySQL `emoji`
-is `utf8mb4_bin`, since the default collation equates a code point with its VS16-qualified form
-(`U+2764` = `U+2764 U+FE0F`) and SQLite's binary TEXT does not — the two engines would otherwise
-disagree about what counts as one reaction.
+away, which is why the wide key is a decision rather than the shape that fell out. `emoji` compares
+code points on both engines ([stored text](text-comparison.md#stored-text)), so `U+2764` and
+`U+2764 U+FE0F` are two reactions on each.
 
 ## The vocabulary
 

@@ -84,9 +84,6 @@ class HashtagStorageTest extends TestCase
 
     public function test_a_tag_lookup_is_byte_equality_on_every_engine(): void
     {
-        // MySQL's default collation would additionally fold accents (cafe = café) where SQLite would
-        // not, so the tag column pins MySQL to utf8mb4_bin and the parser's NFKC + lowercase stays
-        // the whole equivalence.
         $author = Member::factory()->create();
         $this->createPost($author, 'a #cafe visit');
         $this->createPost($author, 'un #café aussi');
