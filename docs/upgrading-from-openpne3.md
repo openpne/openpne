@@ -21,7 +21,7 @@ can run at all, and one decides how to take the dump.
 
 ## Requirements
 
-- **MySQL**, for both the source and the target. The upgrade is a set-based `INSERT...SELECT` over
+- **MySQL 8.0.17 or later**, for both the source and the target. The upgrade is a set-based `INSERT...SELECT` over
   the OpenPNE 3 DDL; it does not run on SQLite. (An upgraded site is not obliged to stay on MySQL,
   but [changing engine](changing-database-engine.md) is a separate operation and no part of this
   one.)
