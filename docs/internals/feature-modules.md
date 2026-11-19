@@ -327,11 +327,11 @@ and a direct-message conversation ([group-talk.md](group-talk.md#history-carries
 [direct-messages.md](direct-messages.md#a-conversation-is-two-arms-over-one-table)).
 [`FilePolicy`](../../app/Policies/FilePolicy.php) judges a member's own files and a timeline post's
 pictures by their author, so the blocker's avatar and reply pictures are refused even on a row that
-shows; attachments on comments, talk and direct messages follow their place and show. A notification
-about something written (a post, a comment, a reply, a mention, a talk or direct message) is not
-sent across a block in either direction ([notifications.md](notifications.md),
-[timeline.md](timeline.md#notifications)); a group's sub-admin appointment and admin transfer
-request are sent regardless.
+shows; attachments on topics, events, comments, talk and direct messages follow their place and
+show. A notification about something written (a post, a comment, a reply, a mention, a talk or
+direct message) is not sent across a block in either direction
+([notifications.md](notifications.md), [timeline.md](timeline.md#notifications)); a group's
+sub-admin appointment and admin transfer request are sent regardless.
 
 A relation lookup exposed as a feature primitive is **named by direction and
 use**, because a block is one-directional. [`BlockLookup`](../../app/Features/Block/BlockLookup.php)
