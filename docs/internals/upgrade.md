@@ -169,9 +169,10 @@ more than one owning row points at, across every `FileUpgrade::ownedFileReferenc
 never made the file columns unique, and a file with two owners would be read under one owner's
 audience from the other's page, so it is an ERROR. `UploadFileOwnerPreflight` counts the upload-plugin
 files whose name names a member or community the upgrade does not carry, a WARN: they migrate
-ownerless, and the operator learns which old links will answer 404. `LoginWhitespacePreflight` counts
-the carried member emails and administrator usernames with whitespace at either end, a WARN: they
-migrate as they are and match nothing anyone can type ([identifiers](text-comparison.md#identifiers)). `TermOverridePreflight` counts the source term rows
+ownerless, and the operator learns which old links will answer 404. `LoginPreflight` counts
+the carried member emails and administrator usernames with whitespace at either end, and the member
+emails with a character outside printable ASCII inside them, each a WARN: they migrate as they are
+([identifiers](text-comparison.md#identifiers)). `TermOverridePreflight` counts the source term rows
 that fold onto one `term_overrides` (name, locale) key and a value wider than the column, both an
 ERROR for the same reason; `WithdrawnMemberTermPreflight` does the width check for the sns_config
 nickname the withdrawn-member term is copied from. `NicePreflight` counts a member's second like on one carried target as

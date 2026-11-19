@@ -172,7 +172,7 @@ final class UpgradeRunner
             ? (new UploadFileOwnerPreflight)->inspect($options->sourcePrefix, $options->sourceDatabase, array_values(array_diff($this->readSourceTables(), $source->absentOptional)))
             : new PreflightReport([], []);
         $loginReport = ! $source->hasErrors()
-            ? (new LoginWhitespacePreflight)->inspect($this->steps(), $options->sourcePrefix, $options->sourceDatabase)
+            ? (new LoginPreflight)->inspect($this->steps(), $options->sourcePrefix, $options->sourceDatabase)
             : new PreflightReport([], []);
         // Evaluates every step's SELECT, so it needs the structural verdict the SELECTs assume.
         $zeroDateErrors = ! $source->hasErrors()

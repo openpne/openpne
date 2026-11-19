@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Captcha\Captcha;
+use App\Rules\NewEmailAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -21,7 +22,7 @@ class RegisterEmailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email', 'max:255'],
+            'email' => NewEmailAddress::rules(),
         ];
     }
 

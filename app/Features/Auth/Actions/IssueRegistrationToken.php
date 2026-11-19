@@ -9,8 +9,10 @@ use App\Mail\Template\MailUrlMapper;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\RegistrationLinkNotification;
+use App\Rules\NewEmailAddress;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * A known address returns AlreadyMember without issuing or mailing, so a caller that shows the same
@@ -53,11 +55,15 @@ class IssueRegistrationToken
     }
 
     /**
-     * @param  string  $email  already trimmed and lowercased
+     * @param  string  $email  already trimmed and lowercased, and one NewEmailAddress accepts (anything else throws)
      * @return array{IssueResult, ?string} the raw token only when one was issued
      */
     private function issue(string $email, RegistrationTokenSource $source, ?Member $inviter): array
     {
+        if (! NewEmailAddress::accepts($email)) {
+            throw new InvalidArgumentException('A registration link is only issued for an address NewEmailAddress accepts.');
+        }
+
         // Case-insensitive so the no-op holds on any collation: members.email is lowercased on the
         // app's own creation paths, but an upgraded row can be verbatim mixed-case, and a
         // case-sensitive store (SQLite/PostgreSQL) would otherwise miss it and leak a token + mail.

@@ -8,6 +8,7 @@ use App\Features\Member\Actions\ConfirmEmailChange;
 use App\Http\Controllers\Controller;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
+use App\Rules\NewEmailAddress;
 use App\Support\SecurityLog;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
@@ -25,7 +26,7 @@ class EmailChangeLinkController extends Controller
     public function confirmEmailForm(Request $request, string $token): View|RedirectResponse|InertiaResponse
     {
         $pending = $this->pendingEmailChange($token);
-        if ($pending === null) {
+        if ($pending === null || ! NewEmailAddress::accepts($pending->new_email)) {
             return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
         }
 
@@ -58,7 +59,7 @@ class EmailChangeLinkController extends Controller
 
         // The address may have been claimed since the request; the unique violation at commit is the
         // final guard, and either way the dead token is burned.
-        if (Member::whereRaw('lower(email) = ?', [$pending->new_email])->exists()) {
+        if (Member::whereRaw('lower(email) = ?', [$pending->new_email])->whereKeyNot($pending->member_id)->exists()) {
             EmailChangeRequest::whereKey($pending->getKey())->delete();
 
             return redirect()->route('login')->with('status', __('That email address is no longer available.'));
@@ -76,7 +77,8 @@ class EmailChangeLinkController extends Controller
         }
 
         // A concurrent cancel (or password-change purge) voided the pending change between the lookup
-        // above and the commit — the login identifier was not touched, so surface it as a dead link.
+        // above and the commit, or its address is one NewEmailAddress refuses — the login identifier was
+        // not touched, so surface it as a dead link.
         if ($member === null) {
             return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
         }

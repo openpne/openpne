@@ -6,9 +6,11 @@ use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
+use App\Rules\NewEmailAddress;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * The confirmation goes to the proposed address and the notice to the current one; `members.email` is
@@ -20,6 +22,9 @@ class RequestEmailChange
     public function __invoke(Member $member, string $newEmail): void
     {
         $newEmail = Str::lower(Str::trim($newEmail));
+        if (! NewEmailAddress::accepts($newEmail)) {
+            throw new InvalidArgumentException('An email change is only requested for an address NewEmailAddress accepts.');
+        }
 
         // One row per member: `upsert` is atomic, so a re-request refreshes the token in place and two
         // concurrent requests cannot race the unique index.

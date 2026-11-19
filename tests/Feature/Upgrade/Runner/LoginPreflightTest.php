@@ -3,7 +3,7 @@
 namespace Tests\Feature\Upgrade\Runner;
 
 use App\Upgrade\InsertSelectCompiler;
-use App\Upgrade\Runner\LoginWhitespacePreflight;
+use App\Upgrade\Runner\LoginPreflight;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Runner\Warning;
@@ -12,7 +12,7 @@ use App\Upgrade\Steps\MemberUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 
-class LoginWhitespacePreflightTest extends UpgradeSqlTestCase
+class LoginPreflightTest extends UpgradeSqlTestCase
 {
     protected function sourceTables(): array
     {
@@ -31,12 +31,31 @@ class LoginWhitespacePreflightTest extends UpgradeSqlTestCase
         $this->seedAdmin(7, 'root');
         $this->seedAdmin(8, "staff\t");
 
-        $report = (new LoginWhitespacePreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null);
+        $report = (new LoginPreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null);
 
         $this->assertSame([], $report->errors);
         $this->assertEquals([
-            new Warning(LoginWhitespacePreflight::W_MEMBER_EMAIL, LoginWhitespacePreflight::message(LoginWhitespacePreflight::W_MEMBER_EMAIL, 2, [2, 3]), 2),
-            new Warning(LoginWhitespacePreflight::W_ADMIN_USERNAME, LoginWhitespacePreflight::message(LoginWhitespacePreflight::W_ADMIN_USERNAME, 1, [8]), 1),
+            new Warning(LoginPreflight::W_MEMBER_EMAIL, LoginPreflight::message(LoginPreflight::W_MEMBER_EMAIL, 2, [2, 3]), 2),
+            new Warning(LoginPreflight::W_ADMIN_USERNAME, LoginPreflight::message(LoginPreflight::W_ADMIN_USERNAME, 1, [8]), 1),
+        ], $report->warnings);
+    }
+
+    public function test_it_counts_the_member_emails_with_a_character_outside_printable_ascii(): void
+    {
+        $this->seedMember(1, ['pc_address' => 'たろう@example.com']);
+        $this->seedMember(2, ['pc_address' => 'ｕｓｅｒ@example.com']);
+        $this->seedMember(3, ['pc_address' => "a\x01b@example.com"]);
+        $this->seedMember(4, ['pc_address' => 'a b@example.com']);
+        $this->seedMember(5, ['pc_address' => 'taro..yamada@docomo.ne.jp']);
+        $this->seedMember(6, ['pc_address' => 'padded@example.com ']);
+        $this->seedMember(7, ['pc_address' => ' じろう@example.com']);
+        $this->seedAdmin(8, 'ルート');
+
+        $report = (new LoginPreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null);
+
+        $this->assertEquals([
+            new Warning(LoginPreflight::W_MEMBER_EMAIL, LoginPreflight::message(LoginPreflight::W_MEMBER_EMAIL, 2, [6, 7]), 2),
+            new Warning(LoginPreflight::W_MEMBER_EMAIL_NON_ASCII, LoginPreflight::message(LoginPreflight::W_MEMBER_EMAIL_NON_ASCII, 5, [1, 2, 3, 4, 7]), 5),
         ], $report->warnings);
     }
 
@@ -53,7 +72,7 @@ class LoginWhitespacePreflightTest extends UpgradeSqlTestCase
         );
 
         $this->assertTrue($ok, implode("\n", $lines));
-        $this->assertContains('WARN '.LoginWhitespacePreflight::W_MEMBER_EMAIL.': '.LoginWhitespacePreflight::message(LoginWhitespacePreflight::W_MEMBER_EMAIL, 1, [2]), $lines);
+        $this->assertContains('WARN '.LoginPreflight::W_MEMBER_EMAIL.': '.LoginPreflight::message(LoginPreflight::W_MEMBER_EMAIL, 1, [2]), $lines);
         $this->assertSame('trailing@example.com ', DB::table('members')->where('id', 2)->value('email'));
     }
 
@@ -63,7 +82,7 @@ class LoginWhitespacePreflightTest extends UpgradeSqlTestCase
         $this->seedMember(2, []);
         $this->seedAdmin(7, 'root');
 
-        $this->assertSame([], (new LoginWhitespacePreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null)->warnings);
+        $this->assertSame([], (new LoginPreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null)->warnings);
     }
 
     /** @param  array<string, string>  $config */

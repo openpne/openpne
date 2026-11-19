@@ -41,6 +41,7 @@ class WarningTest extends TestCase
             ['W-LIKE-UNKNOWN-TABLE', 'unknown'],
             ['W-UPLOAD-OWNERLESS', 'review'],
             ['W-MEMBER-EMAIL-WHITESPACE', 'review'],
+            ['W-MEMBER-EMAIL-NON-ASCII', 'review'],
             ['W-ADMIN-USERNAME-WHITESPACE', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS', 'review'],

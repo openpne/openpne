@@ -9,6 +9,7 @@ use App\Features\Auth\Actions\IssueResult;
 use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\RegistrationMode;
 use App\Features\Auth\RegistrationTokenSource;
+use App\Rules\NewEmailAddress;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -169,7 +170,7 @@ class InviteMembers extends Page
             if ($line === '') {
                 continue;
             }
-            if (Validator::make(['email' => $line], ['email' => ['email', 'max:255']])->fails()) {
+            if (Validator::make(['email' => $line], ['email' => NewEmailAddress::rules()])->fails()) {
                 $invalid[$line] = true;
 
                 continue;

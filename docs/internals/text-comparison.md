@@ -31,6 +31,23 @@ the actions that write these columns on their own. A stored value with whitespac
 therefore matches nothing anyone can type. The OpenPNE 3 upgrade and `openpne:copy-database` carry
 values as they are; the upgrade warns about such a login.
 
+A new email address, one a person registers, is invited under or changes to, must pass
+[`NewEmailAddress`](../../app/Rules/NewEmailAddress.php): the HTML Living Standard's "valid e-mail
+address" (printable ASCII, no quoted local part, no address literal) that also passes Laravel's
+`email:filter`, which turns away consecutive dots and a domain without one, both of which the former
+allows. It is stored lowercased, and between such values each collation's equality is
+byte equality, so two addresses that reach different mailboxes are never taken for one; a domain
+with other characters is entered in its punycode form (`xn--`). The validators, the actions that
+write `registration_tokens` and `email_change_requests`, and a saving hook on `Member` check it, and
+a pending row that fails it reads as expired. Sign-in and the password reset do not, so the server
+still finds an address already stored, such as an upgraded member's, though a browser's email field
+refuses a non-ASCII local part and may send a non-ASCII domain as punycode. On MySQL such an address
+still compares equal to the ASCII address it folds into (`ｕｓｅｒ@example.com` is
+`user@example.com`), which then no one can register; the upgrade warns about it
+(`W-MEMBER-EMAIL-NON-ASCII`). A password reset token is keyed by the address, so an email change
+deletes it before the address changes; one issued meanwhile for the member as read before the change
+still goes to the new address, since the queued notification reads the member again when it is sent.
+
 ## Search and name order
 
 A search a member types and a list ordered by a name go through
