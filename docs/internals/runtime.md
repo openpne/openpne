@@ -234,6 +234,25 @@ The seeders it calls are an implementation detail; a deployment runs `openpne:in
 A site being upgraded from OpenPNE 3 is not installed this way: the upgrade brings those rows from
 the source and refuses a schema that already holds them ([upgrade.md](upgrade.md#source-preflight)).
 
+## Row ids
+
+A deleted row's id is never handed to a new row: whatever still names that id (a file's owner, a URL
+in a body) would attach to the stranger. Both engines keep a high-water mark per table, SQLite's
+`sqlite_sequence` (tables are `AUTOINCREMENT`) and MySQL's `AUTO_INCREMENT`, and two places keep it
+where the engine would not:
+
+- `openpne:copy-database` carries each table's mark to the target
+  ([changing-database-engine.md](../changing-database-engine.md#copying-the-database)).
+- On SQLite, Laravel rebuilds a table to apply `change()`, an added or dropped foreign key, or a
+  primary key change, and the rebuild resets the mark to the highest id left.
+  `App\Database\SQLiteConnection` restores it after each schema Blueprint, failed ones included,
+  so an insert later in the same migration does not reuse an id. A migration that rebuilds a table
+  itself (creating a copy, dropping the original and renaming, or in raw SQL) restores the mark
+  itself, as `2026_11_19_000001_convert_text_columns_to_binary_collation` does.
+
+Nothing restores a mark lowered another way: `TRUNCATE`, an `ALTER TABLE … AUTO_INCREMENT` that
+lowers it, a dump restored without it, or a rebuild run before this existed.
+
 ## Release marker
 
 A deployment may place a `RELEASE` file at the app root, `key=value` lines, one per line; a release
