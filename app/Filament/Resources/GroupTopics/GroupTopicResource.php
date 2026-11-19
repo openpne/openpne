@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\GroupTopics;
 
+use App\Filament\Concerns\CollatedGlobalSearch;
 use App\Filament\Resources\GroupTopics\Pages\ListGroupTopics;
 use App\Filament\Resources\GroupTopics\Pages\ViewGroupTopic;
 use App\Filament\Resources\GroupTopics\RelationManagers\TopicCommentsRelationManager;
@@ -15,6 +16,8 @@ use Filament\Tables\Table;
 // No admin edit: OpenPNE 3 had none.
 class GroupTopicResource extends Resource
 {
+    use CollatedGlobalSearch;
+
     protected static ?string $model = GroupTopic::class;
 
     // The panel guard authorizes; GroupTopicPolicy is member-typed and would TypeError on an

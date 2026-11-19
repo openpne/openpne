@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Groups\Tables;
 use App\Features\Group\Actions\AddAllMembers;
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\JoinPolicy;
+use App\Filament\Support\CollatedSearch;
 use App\Models\Group;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -30,7 +31,7 @@ class GroupsTable
 
                 TextColumn::make('name')
                     ->label(__('Name'))
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('name'))
                     ->limit(40),
 
                 TextColumn::make('category.name')

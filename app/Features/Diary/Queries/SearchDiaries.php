@@ -6,6 +6,7 @@ use App\Features\Diary\DiarySearch;
 use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Database\SearchCollation;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -42,9 +43,10 @@ class SearchDiaries
     public static function applyTerms(Builder $query, string $keyword): void
     {
         foreach (self::terms($keyword) as $term) {
-            $query->where(fn ($q) => $q
-                ->where('title', 'like', '%'.$term.'%')
-                ->orWhere('body', 'like', '%'.$term.'%'));
+            $query->where(function ($q) use ($term): void {
+                SearchCollation::whereMatches($q, 'title', '%'.$term.'%');
+                SearchCollation::orWhereMatches($q, 'body', '%'.$term.'%');
+            });
         }
     }
 

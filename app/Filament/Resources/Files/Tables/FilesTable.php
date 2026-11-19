@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Files\Tables;
 
+use App\Filament\Support\CollatedSearch;
 use App\Models\File;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -31,7 +32,7 @@ class FilesTable
 
                 TextColumn::make('name')
                     ->label(__('File Name'))
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('name'))
                     ->sortable()
                     ->limit(40),
 

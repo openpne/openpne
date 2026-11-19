@@ -4,6 +4,7 @@ namespace App\Filament\Resources\DiaryComments\Tables;
 
 use App\Features\Diary\Actions\DeleteComment;
 use App\Filament\Resources\Diaries\DiaryResource;
+use App\Filament\Support\CollatedSearch;
 use App\Models\DiaryComment;
 use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
@@ -21,7 +22,7 @@ class DiaryCommentsTable
 
                 TextColumn::make('diary.title')
                     ->label(__('%Diary%'))
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('diary.title'))
                     ->limit(30)
                     // Jump to the parent diary in the diary list (search by its title).
                     ->url(fn (DiaryComment $record): string => DiaryResource::getUrl('index', ['tableSearch' => $record->diary?->title ?? ''])),
@@ -29,11 +30,11 @@ class DiaryCommentsTable
                 TextColumn::make('member.name')
                     ->label(__('Member'))
                     ->default('-') // author SET-NULL once the member withdraws
-                    ->searchable(),
+                    ->searchable(query: CollatedSearch::on('member.name')),
 
                 TextColumn::make('body')
                     ->label(__('Body'))
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('body'))
                     ->limit(60),
 
                 TextColumn::make('created_at')

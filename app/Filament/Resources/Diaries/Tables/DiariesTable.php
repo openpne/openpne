@@ -3,12 +3,16 @@
 namespace App\Filament\Resources\Diaries\Tables;
 
 use App\Features\Diary\Actions\DeleteDiary;
+use App\Filament\Support\CollatedSearch;
 use App\Models\Diary;
+use App\Support\Database\SearchCollation;
 use App\Support\Visibility;
 use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class DiariesTable
 {
@@ -22,14 +26,18 @@ class DiariesTable
 
                 TextColumn::make('title')
                     ->label(__('Title'))
-                    ->searchable()
+                    ->searchable(query: CollatedSearch::on('title'))
                     ->limit(40),
 
                 TextColumn::make('member.name')
                     ->label(__('Member'))
                     ->default('-')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: CollatedSearch::on('member.name'))
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => SearchCollation::orderBy(
+                        $query,
+                        DB::table('members')->select('members.name')->whereColumn('members.id', 'diaries.member_id'),
+                        $direction,
+                    )),
 
                 TextColumn::make('visibility')
                     ->label(__('Visibility'))

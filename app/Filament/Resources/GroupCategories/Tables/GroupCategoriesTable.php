@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\GroupCategories\Tables;
 
+use App\Filament\Support\CollatedSearch;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -20,7 +21,7 @@ class GroupCategoriesTable
 
                 TextColumn::make('name')
                     ->label(__('Name'))
-                    ->searchable(),
+                    ->searchable(query: CollatedSearch::on('name')),
 
                 IconColumn::make('is_allow_member_group')
                     ->label(__('Member-creatable'))

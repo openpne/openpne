@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Groups;
 
+use App\Filament\Concerns\CollatedGlobalSearch;
 use App\Filament\Resources\Groups\Pages\EditGroup;
 use App\Filament\Resources\Groups\Pages\ListGroups;
 use App\Filament\Resources\Groups\Schemas\GroupForm;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 // Admin edit diverges from OpenPNE 3 (which had none): it exists for fixing violating groups.
 class GroupResource extends Resource
 {
+    use CollatedGlobalSearch;
+
     protected static ?string $model = Group::class;
 
     // The panel guard authorizes; GroupPolicy is member-typed and would TypeError on an AdminUser,

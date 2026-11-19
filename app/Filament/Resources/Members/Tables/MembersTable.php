@@ -8,7 +8,9 @@ use App\Features\Member\Actions\RejectMemberLogin;
 use App\Features\Member\Actions\RequestMfaReset;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Filament\Resources\Members\MemberResource;
+use App\Filament\Support\CollatedSearch;
 use App\Models\Member;
+use App\Support\Database\SearchCollation;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -17,6 +19,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class MembersTable
 {
@@ -30,13 +33,13 @@ class MembersTable
 
                 TextColumn::make('name')
                     ->label(__('Name'))
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: CollatedSearch::on('name'))
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => SearchCollation::orderBy($query, 'name', $direction)),
 
                 TextColumn::make('email')
                     ->label(__('Email'))
                     ->default('-')
-                    ->searchable(),
+                    ->searchable(query: CollatedSearch::on('email')),
 
                 IconColumn::make('is_login_rejected')
                     ->label(__('Login rejected'))
