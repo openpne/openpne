@@ -17,8 +17,10 @@ use App\Notifications\Auth\ResetPasswordNotification;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -287,5 +289,24 @@ class NewEmailAddressTest extends TestCase
 
         $this->assertSame(0, DB::table('password_reset_tokens')->count());
         $this->assertFalse(Password::broker(config('fortify.passwords'))->tokenExists($member->fresh(), $token));
+    }
+
+    public function test_a_reset_issued_for_the_member_as_read_before_the_change_mails_the_new_address(): void
+    {
+        // The broker's steps after its lookup, on a model read before the change committed; Notification::fake would skip the queue's re-read.
+        $member = Member::factory()->create(['email' => 'old@example.com']);
+        $stale = Member::findOrFail($member->getKey());
+        $raw = $this->pendingChange($member, 'new@example.com');
+        $this->actingAs($member)->post("/member/config/email/confirm/{$raw}")->assertRedirect(route('login'));
+        $recipients = [];
+        Event::listen(NotificationSending::class, function (NotificationSending $event) use (&$recipients): void {
+            if ($event->notification instanceof ResetPasswordNotification) {
+                $recipients[] = $event->notifiable->routeNotificationFor('mail', $event->notification);
+            }
+        });
+
+        $stale->sendPasswordResetNotification(Password::broker(config('fortify.passwords'))->createToken($stale));
+
+        $this->assertSame(['new@example.com'], $recipients);
     }
 }

@@ -45,7 +45,8 @@ refuses a non-ASCII local part and may send a non-ASCII domain as punycode. On M
 still compares equal to the ASCII address it folds into (`ｕｓｅｒ@example.com` is
 `user@example.com`), which then no one can register; the upgrade warns about it
 (`W-MEMBER-EMAIL-NON-ASCII`). A password reset token is keyed by the address, so an email change
-deletes it before the address changes.
+deletes it before the address changes; one issued meanwhile for the member as read before the change
+still goes to the new address, since the queued notification reads the member again when it is sent.
 
 ## Search and name order
 

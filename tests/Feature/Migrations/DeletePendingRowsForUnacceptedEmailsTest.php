@@ -33,4 +33,16 @@ class DeletePendingRowsForUnacceptedEmailsTest extends TestCase
         $this->assertEqualsCanonicalizing(['kept@example.com', 'user@xn--n8jyh.jp'], DB::table('registration_tokens')->pluck('email')->all());
         $this->assertSame(['changed@example.com'], DB::table('email_change_requests')->pluck('new_email')->all());
     }
+
+    public function test_it_reads_past_the_first_chunk(): void
+    {
+        DB::table('registration_tokens')->insert(array_map(fn (int $i): array => [
+            'email' => $i % 2 === 0 ? "ｕｓｅｒ{$i}@example.com" : "user{$i}@example.com", 'token' => "t{$i}", 'created_at' => now(),
+        ], range(1, 1200)));
+
+        $this->migration()->up();
+
+        $this->assertSame(600, DB::table('registration_tokens')->count());
+        $this->assertSame('user1199@example.com', DB::table('registration_tokens')->orderByDesc('id')->value('email'));
+    }
 }
