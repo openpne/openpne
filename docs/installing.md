@@ -548,7 +548,7 @@ too, when it gives you:
 - a shell (SSH), to unpack the archive and run `php artisan`;
 - PHP 8.3 or later, for the web and on the command line, with the extensions
   [above](#what-the-server-needs), `intl` among them;
-- MySQL, or SQLite;
+- MySQL 8.0.17 or later, or SQLite;
 - Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
 - PHP for the web running as your own account, as the command line does. Where it runs as a user
   the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.
