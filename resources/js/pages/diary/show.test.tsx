@@ -88,6 +88,22 @@ test('the comment form submits with a comment button, not a save', () => {
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
 });
 
+test("a guest is led from the author's name to the author's entries, and to no member's page", () => {
+    renderShow(null);
+
+    expect(screen.getByRole('link', { name: 'Rin' }).getAttribute('href')).toBe('/diary/listMember/3');
+    expect(screen.queryByRole('link', { name: 'Aoi' })).toBeNull();
+    expect(screen.getByText('Aoi')).toBeTruthy();
+    expect(document.querySelector('a[href^="/member/"]')).toBeNull();
+});
+
+test("a member is led from each name to that member's page", () => {
+    renderShow({ id: 9 });
+
+    expect(screen.getByRole('link', { name: 'Rin' }).getAttribute('href')).toBe('/member/3');
+    expect(screen.getByRole('link', { name: 'Aoi' }).getAttribute('href')).toBe('/member/4');
+});
+
 test('a guest on a web-public entry reads the counts and has nothing to press', () => {
     const { container } = renderShow(null);
 

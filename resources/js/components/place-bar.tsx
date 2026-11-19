@@ -2,8 +2,8 @@ import { Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
+import { CrumbText } from '@/components/crumb-text';
 import { headingVariants } from '@/components/ui/heading';
-import { useT } from '@/lib/i18n';
 import { breadcrumbCrumb, type Chrome } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,6 @@ const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
  * under it.
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
-    const t = useT();
     const scrolled = useScrolled();
     const guest = usePage<PageProps>().props.auth.user === null;
     const crumb = breadcrumbCrumb(chrome, guest);
@@ -30,7 +29,6 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
 
     // The face stands for the member's own page, where a guest's crumb never leads.
     const scope = guest ? undefined : chrome.scope;
-    const label = typeof crumb.label === 'string' ? crumb.label : t(crumb.label.key, crumb.label.replacements);
     // Absent where the place is a section rather than an entity (a tag lens crumbs to its feed), and
     // on a form, which the registry pins to no scope.
     let face: ReactNode = null;
@@ -43,7 +41,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const body = (
         <>
             {face}
-            <span className="truncate">{label}</span>
+            <CrumbText label={crumb.label} />
         </>
     );
     // The face is drawn to the pill's edge; a bare name keeps the pill symmetrical.

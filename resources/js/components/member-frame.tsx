@@ -26,9 +26,10 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
     const t = useT();
     const { props, url } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
-    // Frame-level gate: hub actions target member-only routes, so a guest (a web-public profile is
-    // reachable signed out) sees the frame without the action.
+    // Frame-level gate: a hub's action and its other tabs lead behind the login wall, so a guest sees
+    // the hub without either (docs/internals/modern-frame.md, "Signed-out visitors").
     const action = chrome.action && props.auth.user ? chrome.action : undefined;
+    const tabs = props.auth.user ? chrome.tabs : undefined;
 
     return (
         <main
@@ -64,11 +65,11 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                     }
                 />
             )}
-            {chrome.mode !== 'embedded' && chrome.tabs && (
+            {chrome.mode !== 'embedded' && tabs && (
                 <PageTabs
                     ariaLabel={chrome.tabsLabel ? label(chrome.tabsLabel) : ''}
-                    items={chrome.tabs.map((tab) => {
-                        // Same shared counts the nav badges read; a guest has none.
+                    items={tabs.map((tab) => {
+                        // Same shared counts the nav badges read.
                         const count = tab.badge ? (props.unread?.[tab.badge.count] ?? 0) : 0;
                         return {
                             href: tab.href,

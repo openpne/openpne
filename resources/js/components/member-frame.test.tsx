@@ -62,6 +62,23 @@ test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a
     expect(hubHeadingRow(props)?.className).not.toContain('sr-only');
 });
 
+/** Past the list a guest is on, every lens and the write action lead to the login wall. */
+test('a guest gets the diary hub with its heading and without its tabs or write action', () => {
+    arrive('diary/feed', { auth: { user: null }, variant: 'recent' });
+
+    expect(screen.getByRole('heading', { name: '%Diaries%' })).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: '%Diaries%' })).toBeNull();
+    expect(document.querySelector('a[href="/diary/listMember"]')).toBeNull();
+    expect(document.querySelector('a[href="/diary/new"]')).toBeNull();
+});
+
+test("a member's diary hub keeps the lenses", () => {
+    arrive('diary/feed', { variant: 'recent' });
+
+    expect(screen.getByRole('navigation', { name: '%Diaries%' })).toBeTruthy();
+    expect(document.querySelector('a[href="/diary/listMember"]')).not.toBeNull();
+});
+
 test('the place bar is the desk answer to where the reader is: the place, as a pill with its face', () => {
     arrive('group/talk/index', { group: cyclists });
 
@@ -86,9 +103,9 @@ test("a guest's place bar leads to the author's entries, faceless", () => {
     const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
     arrive('diary/show', { auth: { user: null }, diary: { author } });
 
-    const pill = placeBar()?.querySelector('a');
-    expect(pill?.getAttribute('href')).toBe('/diary/listMember/9');
-    expect(pill?.textContent).toBe("Owner's %diary%");
+    const pill = screen.getByRole('link', { name: "Owner's %diary%" });
+    expect(placeBar()?.contains(pill)).toBe(true);
+    expect(pill.getAttribute('href')).toBe('/diary/listMember/9');
     expect(placeBar()?.querySelector('img')).toBeNull();
     expect(document.querySelector('a[href="/member/9"]')).toBeNull();
 });

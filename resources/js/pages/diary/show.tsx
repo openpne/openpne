@@ -80,7 +80,8 @@ export default function DiaryShow() {
             <Heading variant="page">{diary.title}</Heading>
 
             <Panel bodyClassName="space-y-4">
-                <PostByline author={diary.author} at={diary.createdAt} menu={<RowMenu items={isOwner ? [{ label: t('Edit'), icon: Pencil, href: `/diary/edit/${diary.id}` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteDiary() }] : []} />} />
+                {/* A guest's way to the author is the author's entries, open to them whenever this one is (docs/internals/modern-frame.md, "Signed-out visitors"). */}
+                <PostByline author={diary.author} href={auth.user ? undefined : `/diary/listMember/${diary.author.id}`} at={diary.createdAt} menu={<RowMenu items={isOwner ? [{ label: t('Edit'), icon: Pencil, href: `/diary/edit/${diary.id}` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteDiary() }] : []} />} />
 
                 <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
 
@@ -150,6 +151,7 @@ export default function DiaryShow() {
                             <DiaryCommentRow
                                 key={comment.id}
                                 comment={comment}
+                                linkAuthor={auth.user !== null}
                                 onDelete={deleteComment}
                                 reactions={rowReactions(comment.id, comment.reactions, reactionVocabulary, canReact ? commentReactions : null)}
                                 onOpenActions={(row) => {
