@@ -371,9 +371,12 @@ navigation menu, the comment reply link — never reach a phone client, which is
 whatever the member chose ([feature-modules.md](feature-modules.md#surface-selection)), as in
 OpenPNE 3, whose smartphone layout carried none of the PC skin's customization. A `classic_only`
 site is the exception: its phones get the PC layout, customization included. A migrated site's
-phone visitors therefore see its Modern-only settings, defaults included; the brand color, logo
-and login-message helper texts say so ("which every phone visitor gets"), so a `classic_default`
-operator meets it in-product on those three.
+phone visitors therefore see its Modern-only settings, defaults included; the brand color, logo,
+login-message and home-notice helper texts say so ("which every phone visitor gets"), and every
+screen the Appearance (Classic) menu opens says in its subheading that phones get Modern instead
+([`PhoneSurfaceSubheading`](../../app/Filament/Concerns/PhoneSurfaceSubheading.php); the Gadgets
+list also names where the Modern home notice and login message are edited), so a `classic_default`
+operator meets it in-product from either side.
 
 ## Compatibility levels
 

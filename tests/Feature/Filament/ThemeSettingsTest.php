@@ -40,7 +40,7 @@ class ThemeSettingsTest extends TestCase
     {
         config(['openpne.surface_mode' => 'classic_default']);
 
-        Livewire::test(ThemeSettings::class)->assertSee('スマートフォンの訪問者はモダン画面を見ます');
+        Livewire::test(ThemeSettings::class)->assertSee('スマホには届きません（スマホからの閲覧は常にモダン）');
     }
 
     public function test_the_copy_drops_the_phone_sentence_under_classic_only(): void

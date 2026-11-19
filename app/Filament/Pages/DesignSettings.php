@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Filament\Concerns\HiddenWhenModernOnly;
+use App\Filament\Concerns\PhoneSurfaceSubheading;
 use App\Services\SnsSettingService;
 use App\Support\OperatorContent;
 use App\Support\SettingGroup;
@@ -35,6 +36,7 @@ use Illuminate\Support\Facades\DB;
 class DesignSettings extends Page
 {
     use HiddenWhenModernOnly;
+    use PhoneSurfaceSubheading;
 
     protected static ?int $navigationSort = 6;
 

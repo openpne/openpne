@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Navigations\Pages;
 
+use App\Filament\Concerns\PhoneSurfaceSubheading;
 use App\Filament\Resources\Navigations\NavigationResource;
 use App\Filament\Resources\Pages\ListPage;
 use App\Services\NavigationService;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListNavigations extends ListPage
 {
+    use PhoneSurfaceSubheading;
+
     protected static string $resource = NavigationResource::class;
 
     protected function getHeaderActions(): array
