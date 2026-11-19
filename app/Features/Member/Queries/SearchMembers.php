@@ -6,6 +6,7 @@ use App\Features\Profile\AgeVisibility;
 use App\Models\Member;
 use App\Models\Profile;
 use App\Services\PresetProfileService;
+use App\Support\Database\SearchCollation;
 use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -69,7 +70,7 @@ class SearchMembers
         $query = Member::query()->with('avatar.file');
 
         if (trim($name) !== '') {
-            $query->where('name', 'like', '%'.trim($name).'%');
+            SearchCollation::whereMatches($query, 'name', '%'.trim($name).'%');
         }
 
         $birthdayName = $this->birthdayProfileName();
@@ -118,7 +119,7 @@ class SearchMembers
             case 'textarea':
                 $text = is_string($value) ? trim($value) : '';
 
-                return $text === '' ? null : fn ($q) => $q->where('member_profiles.value', 'like', '%'.$text.'%');
+                return $text === '' ? null : fn ($q) => SearchCollation::whereMatches($q, 'member_profiles.value', '%'.$text.'%');
 
             case 'select':
             case 'radio':

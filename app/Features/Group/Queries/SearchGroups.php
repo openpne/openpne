@@ -3,6 +3,7 @@
 namespace App\Features\Group\Queries;
 
 use App\Models\Group;
+use App\Support\Database\SearchCollation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -19,7 +20,7 @@ class SearchGroups
         $keyword = trim($keyword);
 
         return Group::query()
-            ->when($keyword !== '', fn ($q) => $q->where('name', 'like', '%'.$keyword.'%'))
+            ->when($keyword !== '', fn ($q) => SearchCollation::whereMatches($q, 'name', '%'.$keyword.'%'))
             ->when($categoryId !== null, fn ($q) => $q->where('group_category_id', $categoryId))
             ->with(['category', 'image'])
             ->withCount('members')

@@ -40,8 +40,10 @@ use App\Models\Group;
 use App\Models\GroupCategory;
 use App\Models\Member;
 use App\Support\ChatPreview;
+use App\Support\Database\SearchCollation;
 use App\Support\Feature;
 use App\Support\SurfaceResolver;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -513,21 +515,25 @@ class GroupController extends Controller
         return $id !== null ? Group::findOrFail($id) : null;
     }
 
-    private function selectableCategories()
+    private function selectableCategories(?int $alsoId = null)
     {
-        return GroupCategory::query()
-            ->where('is_allow_member_group', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
+        return $this->orderedCategories()
+            ->where(fn ($q) => $q->where('is_allow_member_group', true)
+                ->when($alsoId, fn ($q, int $id) => $q->orWhereKey($id)))
             ->get();
     }
 
     private function allCategories()
     {
+        return $this->orderedCategories()->get();
+    }
+
+    /** @return Builder<GroupCategory> */
+    private function orderedCategories(): Builder
+    {
         return GroupCategory::query()
             ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+            ->tap(fn ($q) => SearchCollation::orderBy($q, 'name'));
     }
 
     /**
@@ -550,14 +556,7 @@ class GroupController extends Controller
      */
     private function editableCategories(?Group $group)
     {
-        $categories = $this->selectableCategories();
-        $current = $group?->category;
-
-        if ($current !== null && ! $categories->contains(fn (GroupCategory $c): bool => $c->is($current))) {
-            $categories = $categories->push($current)->sortBy('sort_order')->sortBy('name')->values();
-        }
-
-        return $categories;
+        return $this->selectableCategories($group?->group_category_id);
     }
 
     private function stringValue(mixed $value): string

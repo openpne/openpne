@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Features\GroupTalk\Queries;
 
 use App\Models\Member;
+use App\Support\Database\SearchCollation;
 use App\Support\Feature;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +28,7 @@ class MutedTalkRooms
             ->where('group_members.is_talk_muted', true)
             // By name rather than by activity, with the id breaking ties so the order is stable
             // across engines.
-            ->orderBy('groups.name')
+            ->tap(fn ($q) => SearchCollation::orderBy($q, 'groups.name'))
             ->orderBy('groups.id')
             ->get(['groups.id', 'groups.name'])
             ->map(fn (object $row): array => ['id' => (int) $row->id, 'name' => (string) $row->name])

@@ -5,6 +5,7 @@ namespace Tests\Feature\Group\Modern;
 use App\Features\Group\Actions\JoinGroup;
 use App\Features\Group\Queries\ListPendingMembers;
 use App\Models\Group;
+use App\Models\GroupCategory;
 use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,6 +49,23 @@ class GroupManagementRoutesTest extends TestCase
                 ->component('community/edit')
                 ->where('group.id', $group->getKey())
                 ->where('canDelete', true)
+            );
+    }
+
+    public function test_modern_edit_keeps_an_admin_only_category_in_the_category_order(): void
+    {
+        $admin = Member::factory()->create();
+        GroupCategory::factory()->create(['name' => 'Alpha', 'sort_order' => 2]);
+        GroupCategory::factory()->create(['name' => 'Beta', 'sort_order' => 1]);
+        $current = GroupCategory::factory()->adminOnly()->create(['name' => 'Zeta', 'sort_order' => 1]);
+        GroupCategory::factory()->adminOnly()->create(['name' => 'Omega', 'sort_order' => 1]);
+        $group = Group::factory()->create(['group_category_id' => $current->getKey()]);
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+
+        $this->actingAs($admin)
+            ->get("/groups/edit?id={$group->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->where('categories', fn ($categories): bool => collect($categories)->pluck('name')->all() === ['Beta', 'Zeta', 'Alpha'])
             );
     }
 

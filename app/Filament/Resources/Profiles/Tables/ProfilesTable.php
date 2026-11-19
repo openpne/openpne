@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Profiles\Tables;
 
 use App\Models\Profile;
+use App\Support\Database\SearchCollation;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -35,7 +36,7 @@ class ProfilesTable
                     ->getStateUsing(fn (Profile $record): string => $record->getCaption($lang))
                     ->searchable(query: fn ($query, $search) => $query->whereHas(
                         'translations',
-                        fn ($q) => $q->where('lang', $lang)->where('caption', 'like', "%{$search}%")
+                        fn ($q) => SearchCollation::whereMatches($q->where('lang', $lang), 'caption', "%{$search}%")
                     )),
 
                 TextColumn::make('form_type')

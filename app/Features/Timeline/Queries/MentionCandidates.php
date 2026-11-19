@@ -4,6 +4,7 @@ namespace App\Features\Timeline\Queries;
 
 use App\Features\Block\BlockLookup;
 use App\Models\Member;
+use App\Support\Database\SearchCollation;
 use App\Support\Feature;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -95,9 +96,9 @@ class MentionCandidates
             ->with('avatar.file')
             ->whereKeyNot($viewer->getKey())
             ->where('members.is_login_rejected', false)
-            ->whereRaw('members.name LIKE ? ESCAPE ?', [$pattern, self::ESCAPE])
+            ->tap(fn ($q) => SearchCollation::whereMatches($q, 'members.name', $pattern, self::ESCAPE))
             ->whereRaw("{$length}(members.name) <= ?", [self::MAX_NAME])
-            ->orderBy('members.name')
+            ->tap(fn ($q) => SearchCollation::orderBy($q, 'members.name'))
             ->orderBy('members.id');
 
         BlockLookup::excludeBlockedBetween($query, $viewer, 'members.id');

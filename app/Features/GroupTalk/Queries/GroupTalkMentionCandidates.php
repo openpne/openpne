@@ -6,6 +6,7 @@ use App\Features\Block\BlockLookup;
 use App\Features\GroupTalk\TalkBody;
 use App\Models\Group;
 use App\Models\Member;
+use App\Support\Database\SearchCollation;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -39,10 +40,10 @@ class GroupTalkMentionCandidates
             ->with('avatar.file')
             ->whereKeyNot($viewer->getKey())
             ->where('members.is_login_rejected', false)
-            ->whereRaw('members.name LIKE ? ESCAPE ?', [$pattern, self::ESCAPE])
+            ->tap(fn ($q) => SearchCollation::whereMatches($q, 'members.name', $pattern, self::ESCAPE))
             ->whereRaw("{$length}(members.name) <= ?", [self::MAX_NAME])
             // The id breaks ties, so members sharing a name keep a fixed order under the limit.
-            ->orderBy('members.name')
+            ->tap(fn ($q) => SearchCollation::orderBy($q, 'members.name'))
             ->orderBy('members.id');
 
         BlockLookup::excludeBlockedBetween($query, $viewer, 'members.id');

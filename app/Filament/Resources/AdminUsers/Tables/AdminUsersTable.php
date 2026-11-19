@@ -4,11 +4,13 @@ namespace App\Filament\Resources\AdminUsers\Tables;
 
 use App\Filament\Resources\AdminUsers\AdminUserResource;
 use App\Models\AdminUser;
+use App\Support\Database\SearchCollation;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class AdminUsersTable
@@ -20,7 +22,7 @@ class AdminUsersTable
                 TextColumn::make('username')
                     ->label(__('Username'))
                     ->searchable()
-                    ->sortable(),
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => SearchCollation::orderBy($query, 'username', $direction)),
 
                 IconColumn::make('two_factor')
                     ->label(__('Two-factor authentication'))
