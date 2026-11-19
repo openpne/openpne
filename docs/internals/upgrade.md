@@ -506,10 +506,10 @@ layout renders `top` (`GadgetService::activeZones('home')`), so a box `layoutB` 
 stays off the Modern home too. The boxes with content it leaves — that hidden `top`, and the home's
 `sideMenu` / `contents` / `bottom` — are one `W-HOME-NOTICE-NOT-COPIED` warning naming each, and
 marking a zone the layout does not render; a box that converts to nothing is not counted, and the
-`sidebanner` boxes are not the home's. A notice over 65535 bytes is `W-HOME-NOTICE-TOO-LARGE` and
-not copied, unless the row already holds a notice. What the conversion drops is counted with the
-gadget's own `value_markdown` ("Operator HTML"). Once copied, the notice and the gadgets are
-separate values.
+`sidebanner` boxes are not the home's. A row that already holds a notice stands, and no size is
+reported for it; otherwise a notice over 65535 bytes is `W-HOME-NOTICE-TOO-LARGE` and not copied.
+What the conversion drops is counted with the gadget's own `value_markdown` ("Operator HTML"). Once
+copied, the notice and the gadgets are separate values.
 
 ## Operator HTML
 
