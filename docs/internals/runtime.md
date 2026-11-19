@@ -246,9 +246,10 @@ where the engine would not:
 - On SQLite, Laravel rebuilds a table to apply `change()`, an added or dropped foreign key, a
   primary key change, or (before SQLite 3.35) `dropColumn()`, and the rebuild resets the mark to
   the highest id left. `App\Database\SQLiteConnection` restores it after each schema Blueprint,
-  failed ones included, so an insert later in the same migration does not reuse an id. A migration
-  that rebuilds a table without the schema builder (creating a copy, dropping the original and
-  renaming it, in raw SQL) restores the mark itself.
+  failed ones included, so an insert later in the same migration does not reuse an id. Only a
+  rebuild inside one Blueprint is covered: a migration that rebuilds a table across several
+  (creating a copy, copying the rows, dropping the original, renaming the copy) or in raw SQL
+  restores the mark itself.
 
 Nothing restores a mark lowered another way: `TRUNCATE`, an `ALTER TABLE … AUTO_INCREMENT` that
 lowers it, a dump restored without it, an upgrade from OpenPNE 3 (it carries rows, not marks), a

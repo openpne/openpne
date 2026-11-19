@@ -119,7 +119,7 @@ $ php artisan openpne:copy-database \
 ## When it refuses
 
 Each of these means the target is not something the command can safely write into, and it stops
-before writing anything:
+before any row is written:
 
 - **The two sides are at different schema versions.** It names the migrations only one side has. Both
   databases have to describe the same schema for rows to mean the same thing in each.

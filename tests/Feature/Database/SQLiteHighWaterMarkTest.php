@@ -159,7 +159,9 @@ class SQLiteHighWaterMarkTest extends TestCase
     {
         Artisan::call('migrate', ['--database' => 'rowids', '--path' => $this->write(self::CHANGE), '--realpath' => true, '--pretend' => true]);
 
-        $this->assertStringNotContainsString('sqlite_sequence', Artisan::output());
+        $output = Artisan::output();
+        $this->assertStringContainsString('__temp__probe', $output);
+        $this->assertStringNotContainsString('sqlite_sequence', $output);
     }
 
     public function test_a_rollback_rebuild_keeps_the_mark(): void
