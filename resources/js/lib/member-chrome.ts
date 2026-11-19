@@ -350,11 +350,12 @@ const enabled = (props: Record<string, unknown>, feature: FeatureKey): boolean =
     (props as { enabledFeatures: Record<FeatureKey, boolean> }).enabledFeatures[feature];
 
 const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chrome>> = {
-    'dashboard': (props) => ({
-        mode: 'section',
-        title: WHATS_NEW,
-        action: enabled(props, 'diary') ? WRITE_DIARY : undefined,
-    }),
+    // As the home it takes the bare frame, the brand bar already naming the place, so the page
+    // carries its own visually hidden h1.
+    'dashboard': (props) => {
+        const action = enabled(props, 'diary') ? WRITE_DIARY : undefined;
+        return isHomeComponent('dashboard', homeOf(props)) ? { mode: 'embedded', action } : { mode: 'section', title: WHATS_NEW, action };
+    },
     // Deliberately not a nav section: the run of issues is the front page's history, not a place in
     // the nav.
     'home/issues': (props) => ({

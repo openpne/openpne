@@ -47,6 +47,12 @@ test('a short notice is shown whole, with no button', () => {
     expect(screen.queryByRole('button')).toBeNull();
 });
 
+test('the notice is named for assistive tech, with no heading on screen', () => {
+    renderWithProviders(<SiteNotice notice={notice('Short')} />);
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Notice from the site' }).className).toContain('sr-only');
+});
+
 test('a long notice folds, and the button opens and closes it', () => {
     height = 600;
     renderWithProviders(<SiteNotice notice={notice('Long')} />);
