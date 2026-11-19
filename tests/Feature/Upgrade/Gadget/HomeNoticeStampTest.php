@@ -143,6 +143,18 @@ class HomeNoticeStampTest extends UpgradeSqlTestCase
         $this->assertStringContainsString('WARN '.HomeNoticeStamp::W_TOO_LARGE.':', $lines);
     }
 
+    public function test_a_written_notice_stands_without_a_size_warning(): void
+    {
+        $this->box(1, 'top', 0, '<p>'.str_repeat('a', 40000).'</p>');
+        $this->box(2, 'top', 1, '<p>'.str_repeat('b', 40000).'</p>');
+        DB::table('sns_settings')->insert(['key' => 'home_notice', 'value' => 'Written here']);
+
+        $lines = implode("\n", $this->stamp());
+
+        $this->assertSame('Written here', $this->notice());
+        $this->assertStringNotContainsString('WARN', $lines);
+    }
+
     public function test_a_run_without_the_gadget_steps_leaves_the_notice_alone(): void
     {
         $this->box(1, 'top', 0, '<p>Top</p>');

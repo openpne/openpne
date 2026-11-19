@@ -27,7 +27,7 @@ final class HomeNoticeStamp
 
     public function plan(RunReport $report): void
     {
-        $report->line('PLAN would copy the home\'s top information boxes into home_notice if it is empty (the Modern home shows it on top).');
+        $report->line('PLAN would copy the home\'s top information boxes into home_notice if it is blank (the Modern home shows it on top).');
     }
 
     /** @param list<string> $targetTables this run's step target tables */
@@ -66,6 +66,12 @@ final class HomeNoticeStamp
             return;
         }
 
+        $key = SnsSettingKey::HomeNotice->value;
+        $current = DB::table('sns_settings')->where('key', $key)->value('value');
+        if ($current !== null && trim($current) !== '') {
+            return;
+        }
+
         $notice = implode("\n\n", $copied);
         if (strlen($notice) > SnsSettingKey::HomeNotice->maxBytes()) {
             $report->warning(new Warning(
@@ -76,11 +82,6 @@ final class HomeNoticeStamp
             return;
         }
 
-        $key = SnsSettingKey::HomeNotice->value;
-        $current = DB::table('sns_settings')->where('key', $key)->value('value');
-        if ($current !== null && trim($current) !== '') {
-            return;
-        }
         $written = $current === null
             ? DB::table('sns_settings')->insertOrIgnore(['key' => $key, 'value' => $notice])
             : DB::table('sns_settings')->where('key', $key)->where('value', $current)->update(['value' => $notice]);

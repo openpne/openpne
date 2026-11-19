@@ -488,7 +488,8 @@ will see, since they get the Modern surface and none of the Classic-only customi
 and HTML, gadgets, navigation, banners, theme): the brand color and logo under *Branding settings*,
 the login message under *Login page settings*, and the home notice under *Landing page settings*,
 which the upgrade copied once from the information boxes at the top of the OpenPNE 3 home (not
-needed on a `classic_only` site, where phones get the PC layout). Then migrate the data people will actually keep using:
+needed on a `classic_only` site, where phones get the PC layout). Then migrate the data people will
+actually keep using:
 
 1. Stop writes to OpenPNE 3 — maintenance mode, or however that site takes traffic. From here on,
    nothing new is being written that the dump could miss.
