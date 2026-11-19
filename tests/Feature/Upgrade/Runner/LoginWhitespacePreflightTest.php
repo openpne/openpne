@@ -1,0 +1,91 @@
+<?php
+
+namespace Tests\Feature\Upgrade\Runner;
+
+use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\Runner\LoginWhitespacePreflight;
+use App\Upgrade\Runner\RunOptions;
+use App\Upgrade\Runner\UpgradeRunner;
+use App\Upgrade\Runner\Warning;
+use App\Upgrade\Steps\AdminUserUpgrade;
+use App\Upgrade\Steps\MemberUpgrade;
+use Illuminate\Support\Facades\DB;
+use Tests\Feature\Upgrade\UpgradeSqlTestCase;
+
+class LoginWhitespacePreflightTest extends UpgradeSqlTestCase
+{
+    protected function sourceTables(): array
+    {
+        return ['member', 'member_config', 'admin_user'];
+    }
+
+    public function test_it_counts_the_logins_that_would_carry_whitespace_at_either_end(): void
+    {
+        $this->seedMember(1, ['pc_address' => 'plain@example.com']);
+        $this->seedMember(2, ['pc_address' => 'trailing@example.com ']);
+        $this->seedMember(3, ['pc_address' => '', 'mobile_address' => "\u{3000}mobile@example.com"]);
+        // The latest pc_address is what migrates, so the earlier padded one is not counted.
+        $this->seedMember(4, ['pc_address' => ' old@example.com']);
+        $this->seedMember(4, ['pc_address' => 'new@example.com']);
+        $this->seedMember(5, ['pc_address' => 'inactive@example.com '], isActive: 0);
+        $this->seedAdmin(7, 'root');
+        $this->seedAdmin(8, "staff\t");
+
+        $report = (new LoginWhitespacePreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null);
+
+        $this->assertSame([], $report->errors);
+        $this->assertEquals([
+            new Warning(LoginWhitespacePreflight::W_MEMBER_EMAIL, LoginWhitespacePreflight::message(LoginWhitespacePreflight::W_MEMBER_EMAIL, 2, [2, 3]), 2),
+            new Warning(LoginWhitespacePreflight::W_ADMIN_USERNAME, LoginWhitespacePreflight::message(LoginWhitespacePreflight::W_ADMIN_USERNAME, 1, [8]), 1),
+        ], $report->warnings);
+    }
+
+    public function test_a_run_warns_and_migrates_the_value_as_it_is(): void
+    {
+        $this->seedMember(2, ['pc_address' => 'trailing@example.com ', 'password' => md5('x')]);
+        $lines = [];
+
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade, new AdminUserUpgrade]))->run(
+            new RunOptions,
+            function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            },
+        );
+
+        $this->assertTrue($ok, implode("\n", $lines));
+        $this->assertContains('WARN '.LoginWhitespacePreflight::W_MEMBER_EMAIL.': '.LoginWhitespacePreflight::message(LoginWhitespacePreflight::W_MEMBER_EMAIL, 1, [2]), $lines);
+        $this->assertSame('trailing@example.com ', DB::table('members')->where('id', 2)->value('email'));
+    }
+
+    public function test_it_is_silent_without_padded_logins(): void
+    {
+        $this->seedMember(1, ['pc_address' => 'plain@example.com']);
+        $this->seedMember(2, []);
+        $this->seedAdmin(7, 'root');
+
+        $this->assertSame([], (new LoginWhitespacePreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null)->warnings);
+    }
+
+    /** @param  array<string, string>  $config */
+    private function seedMember(int $id, array $config, int $isActive = 1): void
+    {
+        DB::table('member')->insertOrIgnore([
+            'id' => $id, 'name' => "Member {$id}", 'is_login_rejected' => 0, 'is_active' => $isActive,
+            'created_at' => '2018-03-04 12:34:56', 'updated_at' => '2019-06-07 01:02:03',
+        ]);
+        foreach ($config as $name => $value) {
+            DB::table('member_config')->insert([
+                'member_id' => $id, 'name' => $name, 'value' => $value, 'name_value_hash' => md5($name.$value),
+                'created_at' => '2018-03-04 12:34:56', 'updated_at' => '2019-06-07 01:02:03',
+            ]);
+        }
+    }
+
+    private function seedAdmin(int $id, string $username): void
+    {
+        DB::table('admin_user')->insert([
+            'id' => $id, 'username' => $username, 'password' => md5('secret'),
+            'created_at' => '2018-01-02 03:04:05', 'updated_at' => '2018-01-02 03:04:05',
+        ]);
+    }
+}

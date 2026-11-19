@@ -6,6 +6,7 @@ use App\Console\Commands\Concerns\ResolvesAdminPassword;
 use App\Models\AdminUser;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CreateAdminUserCommand extends Command
@@ -18,7 +19,7 @@ class CreateAdminUserCommand extends Command
 
     public function handle(): int
     {
-        $username = trim((string) ($this->argument('username') ?? $this->ask('Username')));
+        $username = Str::trim((string) ($this->argument('username') ?? $this->ask('Username')));
 
         $validator = Validator::make(['username' => $username], [
             'username' => ['required', 'string', 'max:64', Rule::unique('admin_users', 'username')],

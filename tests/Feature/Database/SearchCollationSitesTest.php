@@ -23,7 +23,7 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
-/** On MySQL a plain LIKE folds the voiced mark too, so は not finding ば is what shows a search went through SearchCollation. */
+/** A plain LIKE on a binary column folds nothing, so a match across case or kana is what shows a search went through SearchCollation. */
 class SearchCollationSitesTest extends TestCase
 {
     use RefreshDatabase;

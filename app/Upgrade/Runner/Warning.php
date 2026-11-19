@@ -51,6 +51,8 @@ final class Warning
         NicePreflight::W_UNINSTALLED_TARGET => self::DROPPED,
         NicePreflight::W_UNKNOWN_TABLE => self::UNKNOWN,
         UploadFileOwnerPreflight::W_OWNERLESS => self::REVIEW,
+        LoginWhitespacePreflight::W_MEMBER_EMAIL => self::REVIEW,
+        LoginWhitespacePreflight::W_ADMIN_USERNAME => self::REVIEW,
         ActivityTemplateTransform::W_KEPT_UNKNOWN => self::REVIEW,
         ActivityTemplateTransform::W_KEPT_BAD_PARAMS => self::REVIEW,
         ActivityTemplateTransform::W_KEPT_NO_LINK => self::REVIEW,

@@ -19,7 +19,7 @@ class RequestEmailChange
 {
     public function __invoke(Member $member, string $newEmail): void
     {
-        $newEmail = Str::lower(trim($newEmail));
+        $newEmail = Str::lower(Str::trim($newEmail));
 
         // One row per member: `upsert` is atomic, so a re-request refreshes the token in place and two
         // concurrent requests cannot race the unique index.

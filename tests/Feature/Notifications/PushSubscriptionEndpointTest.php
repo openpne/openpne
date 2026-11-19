@@ -7,7 +7,6 @@ namespace Tests\Feature\Notifications;
 use App\Models\Member;
 use App\Rules\PushEndpoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Minishlink\WebPush\VAPID;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\FakesWebPushTransport;
@@ -221,16 +220,8 @@ class PushSubscriptionEndpointTest extends TestCase
             ->assertNotFound();
     }
 
-    /**
-     * Only MySQL needs forcing: utf8mb4_bin makes its default case-insensitive collation binary, and
-     * SQLite TEXT is already BINARY.
-     */
     public function test_endpoints_differing_only_in_case_are_distinct_devices(): void
     {
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Endpoint case-sensitivity is a MySQL collation concern; SQLite TEXT is already binary.');
-        }
-
         $member = Member::factory()->create();
         $lower = 'https://push.example.com/device/token';
         $upper = 'https://push.example.com/device/TOKEN';

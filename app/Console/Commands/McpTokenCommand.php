@@ -94,7 +94,7 @@ class McpTokenCommand extends Command
      */
     private function resolveMember(): ?MemberSelector
     {
-        $email = trim((string) $this->argument('email'));
+        $email = Str::trim((string) $this->argument('email'));
         $id = trim((string) $this->option('id'));
 
         if (($email !== '') === ($id !== '')) {

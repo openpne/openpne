@@ -17,6 +17,7 @@ class AdminUserForm
             ->components([
                 TextInput::make('username')
                     ->label(__('Username'))
+                    ->trim()
                     ->required()
                     ->maxLength(64)
                     ->unique(

@@ -117,6 +117,32 @@ class AdminUserResourceTest extends TestCase
             ->assertHasFormErrors(['username']);
     }
 
+    public function test_create_trims_the_username_and_refuses_one_differing_only_in_case(): void
+    {
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        AdminUser::factory()->create(['username' => 'dupe']);
+
+        Livewire::test(CreateAdminUser::class)
+            ->fillForm([
+                'username' => '  DUPE ',
+                'password' => 'strong-pass-1',
+                'password_confirmation' => 'strong-pass-1',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['username']);
+
+        Livewire::test(CreateAdminUser::class)
+            ->fillForm([
+                'username' => '  created ',
+                'password' => 'strong-pass-1',
+                'password_confirmation' => 'strong-pass-1',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertTrue(AdminUser::where('username', 'created')->exists());
+    }
+
     public function test_change_password_action_is_available_only_for_your_own_account(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me']);
@@ -220,7 +246,7 @@ class AdminUserResourceTest extends TestCase
         $this->actingAs($me, 'admin');
 
         Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
-            ->fillForm(['username' => 'me-renamed'])
+            ->fillForm(['username' => ' me-renamed '])
             ->call('save')
             ->assertHasNoFormErrors();
 

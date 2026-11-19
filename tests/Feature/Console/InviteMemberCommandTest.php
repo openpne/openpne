@@ -58,6 +58,15 @@ class InviteMemberCommandTest extends TestCase
         $this->assertDatabaseCount('registration_tokens', 0);
     }
 
+    public function test_a_unicode_space_around_the_address_is_trimmed(): void
+    {
+        Notification::fake();
+
+        $this->invite("\u{3000}Padded@Example.com\u{00A0}");
+
+        $this->assertSame('padded@example.com', RegistrationToken::sole()->email);
+    }
+
     public function test_the_link_is_the_one_a_mail_for_the_same_token_would_carry(): void
     {
         Notification::fake();

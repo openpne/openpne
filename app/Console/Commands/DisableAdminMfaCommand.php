@@ -7,6 +7,7 @@ use App\Models\AdminUser;
 use App\Support\SecurityLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * See docs/internals/security.md, "Admin two-factor authentication".
@@ -19,7 +20,7 @@ class DisableAdminMfaCommand extends Command
 
     public function handle(): int
     {
-        $username = trim((string) $this->argument('username'));
+        $username = Str::trim((string) $this->argument('username'));
 
         $admin = AdminUser::where('username', $username)->first();
         if ($admin === null) {

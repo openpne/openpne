@@ -40,6 +40,8 @@ class WarningTest extends TestCase
             ['W-LIKE-UNINSTALLED-TARGET', 'dropped'],
             ['W-LIKE-UNKNOWN-TABLE', 'unknown'],
             ['W-UPLOAD-OWNERLESS', 'review'],
+            ['W-MEMBER-EMAIL-WHITESPACE', 'review'],
+            ['W-ADMIN-USERNAME-WHITESPACE', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-NO-LINK', 'review'],

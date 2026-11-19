@@ -28,7 +28,7 @@ class IssueRegistrationToken
         ?Member $inviter = null,
         ?string $message = null,
     ): IssueResult {
-        $email = Str::lower(trim($email));
+        $email = Str::lower(Str::trim($email));
         [$result, $raw] = $this->issue($email, $source, $inviter);
 
         if ($raw !== null) {
@@ -47,7 +47,7 @@ class IssueRegistrationToken
      */
     public function unmailedLink(string $email, RegistrationTokenSource $source): IssueResult|string
     {
-        [$result, $raw] = $this->issue(Str::lower(trim($email)), $source, null);
+        [$result, $raw] = $this->issue(Str::lower(Str::trim($email)), $source, null);
 
         return $raw === null ? $result : MailUrlMapper::resolve('member/register?token='.$raw);
     }

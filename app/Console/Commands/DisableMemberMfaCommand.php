@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Support\SecurityLog;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 /**
  * See docs/internals/security.md, "Member two-factor authentication".
@@ -19,7 +20,7 @@ class DisableMemberMfaCommand extends Command
 
     public function handle(ForceDisableMemberMfa $forceDisable): int
     {
-        $email = mb_strtolower(trim((string) $this->argument('email')));
+        $email = mb_strtolower(Str::trim((string) $this->argument('email')));
 
         $member = Member::where('email', $email)->first();
         if ($member === null) {

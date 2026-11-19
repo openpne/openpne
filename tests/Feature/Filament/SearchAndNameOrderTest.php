@@ -217,7 +217,7 @@ class SearchAndNameOrderTest extends TestCase
     /**
      * Created in neither the expected order nor its reverse (the tables' default is newest first),
      * and in an order each engine's plain comparison does not give: SQLite's code points put Tanaka
-     * before abe, utf8mb4_unicode_ci puts 愛 before 阿.
+     * before abe, and MySQL's put 愛 before 阿.
      *
      * @return list<string>
      */

@@ -46,9 +46,9 @@ class RequestEmailChangeRequest extends FormRequest
                 return;
             }
 
-            $email = Str::lower(trim((string) $this->input('new_email')));
+            $email = Str::lower(Str::trim((string) $this->input('new_email')));
 
-            if ($email === Str::lower(trim((string) $member->email))) {
+            if ($email === Str::lower(Str::trim((string) $member->email))) {
                 $validator->errors()->add('new_email', __('This is already your email address.'));
 
                 return;
