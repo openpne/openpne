@@ -9,6 +9,7 @@ import { Colophon } from './colophon';
 import { UpcomingEventRow } from './event-row';
 import { IssueNav } from './issue-nav';
 import { Masthead } from './masthead';
+import { SiteNotice } from './site-notice';
 import { LeadStory, SecondStory, StoryRow } from './story';
 import { TalkBurstCard } from './talk-burst';
 import type { IssuePageProps, IssueStory } from './types';
@@ -66,7 +67,7 @@ function Stories({ stories }: { stories: IssueStory[] }) {
  */
 export default function HomeIssue() {
     const t = useT();
-    const { issue, prev, next, auth, enabledFeatures } = usePage<IssuePageProps>().props;
+    const { issue, prev, next, auth, enabledFeatures, notice } = usePage<IssuePageProps>().props;
     const date = useDateFormat();
 
     if (issue === null) {
@@ -75,6 +76,7 @@ export default function HomeIssue() {
         return (
             <>
                 <Head title={t('What happened')} />
+                <SiteNotice notice={notice} />
                 {/* Today's dateline over nothing: the site still has a front page, it just has
                     nothing on it yet. */}
                 <Masthead from={today} to={today} />
@@ -89,6 +91,7 @@ export default function HomeIssue() {
     return (
         <>
             <Head title={t('What happened')} />
+            <SiteNotice notice={notice} />
             <Masthead from={issue.days.from} to={issue.days.to} />
 
             {issue.stories && <Stories stories={issue.stories} />}

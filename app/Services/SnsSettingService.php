@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Overrides are cached in tiers (the keys below) so the per-request hot path never deserializes the
- * design blobs, the custom CSS body or the login message. Every read and every forget goes through
- * the memoized store, or a forget would leave this request answering from before it
- * (docs/internals/runtime.md, "Cache reads").
+ * design blobs, the custom CSS body, the login message or the home notice. Every read and every
+ * forget goes through the memoized store, or a forget would leave this request answering from
+ * before it (docs/internals/runtime.md, "Cache reads").
  */
 class SnsSettingService
 {
@@ -33,6 +33,9 @@ class SnsSettingService
     /** The login screen message; read only while rendering the login screen. */
     private const LOGIN_SCREEN_CACHE_KEY = 'sns_settings:login_screen';
 
+    /** The Modern home notice body; read only while rendering the Modern home. */
+    private const HOME_NOTICE_CACHE_KEY = 'sns_settings:home_notice';
+
     private const CACHE_TTL = 3600;
 
     /** Resolved value for a key: the stored override, or the key default when no row exists. */
@@ -40,6 +43,9 @@ class SnsSettingService
     {
         if ($key === SnsSettingKey::CustomCss) {
             return $key->decode($this->customCss());
+        }
+        if ($key === SnsSettingKey::HomeNotice) {
+            return $key->decode($this->homeNotice());
         }
 
         $map = match ($key->group()) {
@@ -78,6 +84,7 @@ class SnsSettingService
         Cache::memo()->forget(self::CSS_CACHE_KEY);
         Cache::memo()->forget(self::CSS_PRESENT_CACHE_KEY);
         Cache::memo()->forget(self::LOGIN_SCREEN_CACHE_KEY);
+        Cache::memo()->forget(self::HOME_NOTICE_CACHE_KEY);
     }
 
     /**
@@ -153,10 +160,27 @@ class SnsSettingService
         });
     }
 
+    private function homeNotice(): string
+    {
+        return Cache::memo()->remember(self::HOME_NOTICE_CACHE_KEY, self::CACHE_TTL, function (): string {
+            if (! Schema::hasTable('sns_settings')) {
+                return '';
+            }
+
+            return (string) DB::table('sns_settings')
+                ->where('key', SnsSettingKey::HomeNotice->value)
+                ->value('value');
+        });
+    }
+
     /** @return list<string> stored names of every key held in a tier of its own, so the core map excludes them. */
     private function isolatedKeyValues(): array
     {
-        return array_merge(self::keyValues(SettingGroup::Design), self::keyValues(SettingGroup::LoginScreen));
+        return [
+            ...self::keyValues(SettingGroup::Design),
+            ...self::keyValues(SettingGroup::LoginScreen),
+            SnsSettingKey::HomeNotice->value,
+        ];
     }
 
     /** @return list<string> design keys read at Classic render time (design minus the CSS document). */

@@ -46,6 +46,8 @@ class WarningTest extends TestCase
             ['W-ACTIVITY-TEMPLATE-KEPT-UNFIT', 'review'],
             ['W-THEME-UNKNOWN-PACKAGE', 'review'],
             ['W-THEME-MISSING-PACKAGE', 'review'],
+            ['W-HOME-NOTICE-NOT-COPIED', 'review'],
+            ['W-HOME-NOTICE-TOO-LARGE', 'review'],
         ];
     }
 

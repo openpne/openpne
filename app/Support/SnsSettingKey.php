@@ -163,6 +163,9 @@ enum SnsSettingKey: string
     /** What a row of the joined list opens under Modern (App\Support\ModernGroupList). */
     case ModernGroupList = 'modern_group_list';
 
+    /** Markdown rendered through the operator sanitizer on the Modern home, never as raw HTML whatever OPENPNE_OPERATOR_RAW_HTML says. */
+    case HomeNotice = 'home_notice';
+
     /**
      * A GroupTalkNotifyMode value: the web default of the `group_talk_new_message` kind, which a
      * member's own row overrides.
@@ -212,7 +215,7 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
-            self::ModernHome, self::ModernGroupList => SettingGroup::LandingPage,
+            self::ModernHome, self::ModernGroupList, self::HomeNotice => SettingGroup::LandingPage,
             self::GroupTalkNotifyDefault => SettingGroup::GroupTalk,
             self::GroupTopicCommentReply, self::GroupEventCommentReply => SettingGroup::GroupBoard,
             self::ImageUploadBrowserShrink => SettingGroup::Images,
@@ -286,6 +289,8 @@ enum SnsSettingKey: string
             // rewritten, by the post-walk pass (the walk copies the value as-is).
             self::UserAgreement, self::PrivacyPolicy => $this->value,
             self::ModernHome, self::ModernGroupList => null,
+            // Filled once by the upgrade from the home's top informationBox gadgets, not from sns_config.
+            self::HomeNotice => null,
             self::GroupTalkNotifyDefault => null,
             self::GroupTopicCommentReply => 'op_community_topic_plugin_community_topic_comment_reply',
             self::GroupEventCommentReply => 'op_community_topic_plugin_community_event_comment_reply',
@@ -424,6 +429,7 @@ enum SnsSettingKey: string
             // What a fresh install has always served; the upgrade stamps the other for its sites.
             self::ModernHome => ModernHome::Issue,
             self::ModernGroupList => ModernGroupList::Talk,
+            self::HomeNotice => '',
             // The quiet end: an OSS site notifies about being named and nothing else until an
             // operator asks for more.
             self::GroupTalkNotifyDefault => GroupTalkNotifyMode::Mentions->value,
@@ -439,7 +445,7 @@ enum SnsSettingKey: string
     {
         // Stored verbatim, no trim: a stylesheet's @charset is only honored at the very start, and a
         // Markdown body may open with an indented code block.
-        if (in_array($this->group(), [SettingGroup::Design, SettingGroup::LoginScreen, SettingGroup::SitePolicy], true)) {
+        if ($this === self::HomeNotice || in_array($this->group(), [SettingGroup::Design, SettingGroup::LoginScreen, SettingGroup::SitePolicy], true)) {
             return is_string($value) ? $value : (string) $value;
         }
 
@@ -599,6 +605,7 @@ enum SnsSettingKey: string
             self::ImageUploadBrowserShrink => __('Shrink pictures in the browser before upload'),
             self::ModernHome => __('Page shown as home'),
             self::ModernGroupList => __('Page a joined %community% opens'),
+            self::HomeNotice => __('Home notice'),
             self::ClassicTheme => __('Theme'),
             self::MemberCapacity => __('Member capacity'),
             self::AiAccountCapacity => __('AI account capacity'),
@@ -623,7 +630,7 @@ enum SnsSettingKey: string
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled, self::FeatureMcpEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile, self::BrandFaviconFallback,
-            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy,
+            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy, self::HomeNotice,
             self::GroupTalkNotifyDefault, self::GroupTopicCommentReply, self::GroupEventCommentReply,
             self::ImageUploadBrowserShrink, self::ClassicTheme,
             self::MemberCapacity, self::AiAccountCapacity => false,
@@ -641,13 +648,17 @@ enum SnsSettingKey: string
     }
 
     /**
-     * Maximum stored size in BYTES. The Design CSS/HTML, the login screen message and the policy
-     * bodies are multi-line free text bounded only by the `sns_settings.value` TEXT column (65535
-     * bytes, matching OpenPNE 3's sns_config.value), so they are validated by byte length, not the
-     * char-count maxLength() the short identity fields use.
+     * Maximum stored size in BYTES. The Design CSS/HTML, the login screen message, the policy
+     * bodies and the home notice are multi-line free text bounded only by the `sns_settings.value`
+     * TEXT column (65535 bytes, matching OpenPNE 3's sns_config.value), so they are validated by
+     * byte length, not the char-count maxLength() the short identity fields use.
      */
     public function maxBytes(): int
     {
+        if ($this === self::HomeNotice) {
+            return 65535;
+        }
+
         return match ($this->group()) {
             SettingGroup::Design, SettingGroup::LoginScreen, SettingGroup::SitePolicy => 65535,
             default => $this->maxLength(),

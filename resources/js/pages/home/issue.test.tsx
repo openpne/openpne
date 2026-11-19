@@ -92,6 +92,7 @@ function arrive(props: Record<string, unknown>) {
             issue: null,
             prev: null,
             next: null,
+            notice: null,
             ...props,
         },
     };
@@ -366,4 +367,15 @@ test('the pager offers only the directions there is an issue in', () => {
 
     expect(screen.queryByText('Earlier day')).toBeNull();
     expect(screen.queryByText('Later day')).toBeNull();
+});
+
+test('the site notice opens the page with an issue and without one', () => {
+    const notice = { body: 'Hello', bodyHtml: '<p>Hello</p>' };
+
+    arrive({ issue: issueOf(), notice });
+    expect(screen.getByRole('region', { name: 'Notice from the site' }).textContent).toContain('Hello');
+    cleanup();
+
+    arrive({ issue: null, notice });
+    expect(screen.getByRole('region', { name: 'Notice from the site' }).textContent).toContain('Hello');
 });

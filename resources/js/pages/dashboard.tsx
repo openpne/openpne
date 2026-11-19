@@ -6,6 +6,7 @@ import type { PageProps } from '@/types';
 import { ActivityRow, type CommunityActivityEntry } from './community/activity-row';
 import { DiaryRow } from './diary/diary-row';
 import type { DiarySummary } from './diary/types';
+import { SiteNotice, type SiteNoticeBody } from './home/site-notice';
 import { WelcomePanel } from './home/welcome';
 import { TimelineRow } from './timeline/timeline-row';
 import type { TimelinePostEntry } from './timeline/types';
@@ -26,6 +27,7 @@ interface DashboardProps extends PageProps {
     timeline: TimelinePostEntry[];
     groupActivity: CommunityActivityEntry[];
     myDiaries: DiarySummary[];
+    notice: SiteNoticeBody | null;
 }
 
 /**
@@ -112,7 +114,7 @@ function DigestSection({ title, viewAllHref, children }: { title: string; viewAl
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, newcomer, friendDiaries, diaries, commentedDiaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
+    const { auth, announcements, newcomer, friendDiaries, diaries, commentedDiaries, timeline, groupActivity, myDiaries, enabledFeatures, notice } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
@@ -125,6 +127,8 @@ export default function Dashboard() {
     return (
         <>
             <Head title={t("What's new")} />
+
+            <SiteNotice notice={notice} />
 
             <AnnouncementsPanel announcements={announcements} />
 

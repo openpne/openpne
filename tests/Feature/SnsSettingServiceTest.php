@@ -77,6 +77,22 @@ class SnsSettingServiceTest extends TestCase
         $this->assertArrayHasKey('login_message', (array) Cache::get('sns_settings:login_screen'));
     }
 
+    public function test_the_home_notice_stays_out_of_the_core_cache_and_is_dropped_with_the_rest(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'home_notice', 'value' => str_repeat('a', 1000)]);
+        $service = app(SnsSettingService::class);
+        $service->clearCache();
+
+        $this->assertSame(str_repeat('a', 1000), $service->get(SnsSettingKey::HomeNotice));
+        $service->get(SnsSettingKey::SnsName);
+        $this->assertArrayNotHasKey('home_notice', (array) Cache::get('sns_settings'));
+
+        DB::table('sns_settings')->where('key', 'home_notice')->update(['value' => 'b']);
+        $service->clearCache();
+
+        $this->assertSame('b', $service->get(SnsSettingKey::HomeNotice));
+    }
+
     public function test_from_op3_source_name_resolves_known_keys_only(): void
     {
         $this->assertSame(SnsSettingKey::SnsName, SnsSettingKey::fromOp3SourceName('sns_name'));

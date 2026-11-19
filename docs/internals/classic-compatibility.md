@@ -345,7 +345,10 @@ The login screen's slot is the message on the
 [`LoginScreenSettings`](../../app/Filament/Pages/LoginScreenSettings.php) page, which Classic
 instead carries in its login gadgets. It is Markdown rendered through the member-body sanitizer
 ([`MarkdownText`](../../app/Support/MarkdownText.php)), not an operator-HTML seam like the
-Classic slots above.
+Classic slots above. The home's slot is the notice on the
+[`LandingPageSettings`](../../app/Filament/Pages/LandingPageSettings.php) page, which Classic
+instead carries in the home's `informationBox` gadgets; it is Markdown rendered through the
+operator sanitizer, in either mode ([security.md](security.md#administrator-content)).
 Its navigation is component-driven, so the `navigations` table is Classic-only.
 The admin UI MUST label which scope a setting affects so an operator is never
 misled that a Classic-only custom CSS applies to Modern — except on a

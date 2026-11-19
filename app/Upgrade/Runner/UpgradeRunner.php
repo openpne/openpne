@@ -232,6 +232,9 @@ final class UpgradeRunner
             $report->line('PLAN would set brand_favicon_fallback=none if unset (no browser-tab icon, as in OpenPNE 3).');
             $report->line("PLAN would set modern_home=whats_new if unset (the Modern home shows the What's new lists, the page nearest the OpenPNE 3 home).");
             $report->line('PLAN would set modern_group_list=group if unset (a joined group opens its top under Modern, as an OpenPNE 3 community did, rather than its talk).');
+            if (in_array('gadget_configs', $this->targetTables(), true)) {
+                (new HomeNoticeStamp)->plan($report);
+            }
             if ($this->readsSourceTable('sns_config')) {
                 foreach ((new SnsSettingUpgrade)->op3FormDefaults() as $key => $value) {
                     $report->line("PLAN would set {$key}={$value} if unset (the OpenPNE 3 default where the site never saved the setting).");
@@ -329,6 +332,7 @@ final class UpgradeRunner
                 $this->stampFaviconFallback($report);
                 $this->stampModernHome($report);
                 $this->stampModernGroupList($report);
+                (new HomeNoticeStamp)->run($this->targetTables(), $report);
             }
             if ($walked && $this->readsSourceTable('sns_config')) {
                 $this->stampOp3FormDefaults();

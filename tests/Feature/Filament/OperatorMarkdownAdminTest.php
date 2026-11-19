@@ -179,4 +179,24 @@ class OperatorMarkdownAdminTest extends TestCase
         $this->assertDatabaseHas('gadget_configs', ['gadget_id' => $gadget->id, 'name' => 'value_markdown', 'value' => 'new']);
         $this->assertDatabaseHas('gadget_configs', ['gadget_id' => $gadget->id, 'name' => 'value', 'value' => self::SCRIPT]);
     }
+
+    public function test_only_the_home_information_box_points_at_the_modern_notice_in_either_mode(): void
+    {
+        app()->setLocale('en');
+        $pointer = 'The Modern home shows a notice of its own';
+        $home = Gadget::create(['context' => 'home', 'zone' => 'top', 'name' => 'informationBox', 'sort_order' => 0]);
+        $freeArea = Gadget::create(['context' => 'home', 'zone' => 'top', 'name' => 'freeArea', 'sort_order' => 1]);
+        $sideBanner = Gadget::create(['context' => 'sidebanner', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 0]);
+
+        foreach ([false, true] as $raw) {
+            config(['openpne.security.operator_raw_html' => $raw, 'openpne.surface_mode' => 'classic_default']);
+
+            Livewire::test(EditGadget::class, ['record' => $home->getKey()])->assertSee($pointer);
+            Livewire::test(EditGadget::class, ['record' => $freeArea->getKey()])->assertDontSee($pointer);
+            Livewire::test(EditGadget::class, ['record' => $sideBanner->getKey()])->assertDontSee($pointer);
+
+            config(['openpne.surface_mode' => 'classic_only']);
+            Livewire::test(EditGadget::class, ['record' => $home->getKey()])->assertDontSee($pointer);
+        }
+    }
 }

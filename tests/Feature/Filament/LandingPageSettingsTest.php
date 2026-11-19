@@ -62,7 +62,7 @@ class LandingPageSettingsTest extends TestCase
             ->assertHasErrors('data.'.SnsSettingKey::ModernGroupList->value);
     }
 
-    public function test_a_save_writes_the_two_settings_and_nothing_else(): void
+    public function test_a_save_writes_the_three_settings_and_nothing_else(): void
     {
         $before = DB::table('sns_settings')->pluck('key')->all();
 
@@ -70,7 +70,53 @@ class LandingPageSettingsTest extends TestCase
 
         $written = array_values(array_diff(DB::table('sns_settings')->pluck('key')->all(), $before));
         sort($written);
-        $this->assertSame([SnsSettingKey::ModernGroupList->value, SnsSettingKey::ModernHome->value], $written);
+        $this->assertSame([SnsSettingKey::HomeNotice->value, SnsSettingKey::ModernGroupList->value, SnsSettingKey::ModernHome->value], $written);
+    }
+
+    public function test_the_notice_round_trips_with_its_leading_indentation(): void
+    {
+        $body = "    indented code\n\n- item";
+
+        Livewire::test(LandingPageSettings::class)
+            ->assertSet('data.'.SnsSettingKey::HomeNotice->value, '')
+            ->set('data.'.SnsSettingKey::HomeNotice->value, $body)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame($body, DB::table('sns_settings')->where('key', SnsSettingKey::HomeNotice->value)->value('value'));
+        $this->assertSame($body, app(SnsSettingService::class)->get(SnsSettingKey::HomeNotice));
+        Livewire::test(LandingPageSettings::class)->assertSet('data.'.SnsSettingKey::HomeNotice->value, $body);
+    }
+
+    public function test_a_notice_up_to_the_column_is_saved_and_one_byte_over_is_refused(): void
+    {
+        Livewire::test(LandingPageSettings::class)
+            ->set('data.'.SnsSettingKey::HomeNotice->value, str_repeat('あ', 21845))
+            ->call('save')
+            ->assertHasNoErrors();
+        $this->assertSame(65535, strlen((string) DB::table('sns_settings')->where('key', SnsSettingKey::HomeNotice->value)->value('value')));
+        DB::table('sns_settings')->where('key', SnsSettingKey::HomeNotice->value)->delete();
+
+        Livewire::test(LandingPageSettings::class)
+            ->set('data.'.SnsSettingKey::HomeNotice->value, str_repeat('あ', 21845).'a')
+            ->call('save')
+            ->assertHasErrors('data.'.SnsSettingKey::HomeNotice->value);
+
+        $this->assertDatabaseMissing('sns_settings', ['key' => SnsSettingKey::HomeNotice->value]);
+    }
+
+    public function test_the_notice_points_at_the_classic_gadget_only_where_classic_is_served(): void
+    {
+        app()->setLocale('en');
+
+        config(['openpne.surface_mode' => 'classic_default']);
+        $this->get('/admin/landing-page-settings')->assertOk()
+            ->assertSee('the Information Box gadget under Appearance (Classic) &gt; Gadgets', false);
+
+        config(['openpne.surface_mode' => 'modern_only']);
+        $this->get('/admin/landing-page-settings')->assertOk()
+            ->assertSee('It is shown at the top of the home.')
+            ->assertDontSee('Information Box gadget');
     }
 
     public function test_the_form_offers_no_layout_to_choose(): void
@@ -88,6 +134,7 @@ class LandingPageSettingsTest extends TestCase
 
         $this->assertSame('Landing page settings', $name);
         $this->assertSame(2, substr_count((string) file_get_contents(app_path('Upgrade/Runner/UpgradeRunner.php')), "the {$name} page"));
+        $this->assertStringContainsString("the {$name} page", (string) file_get_contents(app_path('Upgrade/Runner/HomeNoticeStamp.php')));
         $this->assertStringContainsString("the {$name} page", (string) file_get_contents(base_path('docs/upgrading-from-openpne3.md')));
     }
 

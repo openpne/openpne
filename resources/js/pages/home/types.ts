@@ -5,6 +5,7 @@ import type { CommunityActivityEntry } from '../community/activity-row';
 import type { MemberRef } from '../community/types';
 import type { HomeGroup } from '@/components/sections/group-grid';
 import type { IssueMonth } from './issue-months';
+import type { SiteNoticeBody } from './site-notice';
 
 export interface IssueRef {
     /** The site's calendar day the issue covers, `Y-m-d` — a civil date, never an instant. */
@@ -102,6 +103,8 @@ export interface IssuePageProps extends PageProps {
     prev: IssueRef | null;
     /** Always null on the current issue — there is nothing after it yet. */
     next: IssueRef | null;
+    /** Null unless this page is the one `/` serves; a past day's page sends null too. */
+    notice: SiteNoticeBody | null;
 }
 
 export interface MonthRef {

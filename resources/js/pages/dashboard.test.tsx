@@ -56,6 +56,7 @@ const arrive = (props: Record<string, unknown>) => {
             myDiaries: [],
             groupActivity: [],
             timeline: [],
+            notice: null,
             ...props,
         },
     };
@@ -83,4 +84,10 @@ test('a newcomer gets the welcome panel in place of the line', () => {
 
     expect(screen.queryByText(EMPTY)).toBeNull();
     expect(screen.getByText('Search members')).toBeTruthy();
+});
+
+test('the site notice opens the page', () => {
+    arrive({ notice: { body: 'Hello', bodyHtml: '<p>Hello</p>' } });
+
+    expect(screen.getByRole('region', { name: 'Notice from the site' }).textContent).toContain('Hello');
 });
