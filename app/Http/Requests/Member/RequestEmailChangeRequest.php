@@ -5,6 +5,7 @@ namespace App\Http\Requests\Member;
 use App\Auth\Reauth\ReauthPurpose;
 use App\Auth\Reauth\RequiresReauth;
 use App\Models\Member;
+use App\Rules\NewEmailAddress;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -30,7 +31,7 @@ class RequestEmailChangeRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return ['new_email' => ['required', 'string', 'email', 'max:255']] + $this->reauthRules();
+        return ['new_email' => NewEmailAddress::rules()] + $this->reauthRules();
     }
 
     public function withValidator(Validator $validator): void
@@ -54,7 +55,7 @@ class RequestEmailChangeRequest extends FormRequest
                 return;
             }
 
-            if (Member::whereRaw('lower(email) = ?', [$email])->exists()) {
+            if (Member::whereRaw('lower(email) = ?', [$email])->whereKeyNot($member->getKey())->exists()) {
                 $validator->errors()->add('new_email', __('This email address is already in use.'));
             }
         });

@@ -491,7 +491,9 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
   administrator handed the link could register any address as a member. A member carries no mark of
   which link it used (`email_verified_at` is unused on every path), and the security log says only
   that a link was printed for an address (`registration.link_printed`, [logging.md](logging.md)),
-  not that the member registered through it.
+  not that the member registered through it. A link is issued only for an address `NewEmailAddress`
+  accepts ([identifiers](text-comparison.md#identifiers)), so the mailbox that opened it is the one
+  sign-in and the password reset then reach.
 - **What a wrong address costs.** The password reset goes to the registered address, and so do
   the two-factor reset link, and the sign-in code of a member with a passkey and no authenticator
   app. A member registered under a mailbox they cannot read cannot recover the account by mail, and

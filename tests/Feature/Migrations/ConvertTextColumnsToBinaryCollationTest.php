@@ -164,7 +164,8 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
     {
         $migration = $this->migration();
         $migration->down();
-        $member = Member::factory()->create(['email' => 'hanako@example.com ']);
+        $member = Member::factory()->create();
+        DB::table('members')->where('id', $member->getKey())->update(['email' => 'hanako@example.com ']); // as an upgrade carries it
         $admin = AdminUser::factory()->create(['username' => "\troot"]);
         DB::table('password_reset_tokens')->insert(['email' => ' saburo@example.com', 'token' => 'a', 'created_at' => now()]);
         $invited = DB::table('registration_tokens')->insertGetId(['email' => "goro@example.com\u{3000}", 'token' => 'b']);

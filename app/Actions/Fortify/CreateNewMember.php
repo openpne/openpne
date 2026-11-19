@@ -9,6 +9,7 @@ use App\Features\Profile\ProfileFieldRules;
 use App\Http\Middleware\SetLocale;
 use App\Models\Member;
 use App\Models\Profile;
+use App\Rules\NewEmailAddress;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -37,7 +38,7 @@ class CreateNewMember implements CreatesNewUsers
 
         $rules = [
             'name' => MemberNameRules::rules(),
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique(Member::class)],
+            'email' => [...NewEmailAddress::rules(), Rule::unique(Member::class)],
             'password' => $this->passwordRules(),
         ];
         foreach ($profiles as $profile) {

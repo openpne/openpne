@@ -6,6 +6,7 @@ use App\Models\Concerns\ClearsPasswordScheme;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Rules\NewEmailAddress;
 use App\Support\Autoplay;
 use App\Support\AvatarColor;
 use App\Support\ComposeEditor;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use InvalidArgumentException;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -44,6 +46,16 @@ class Member extends Authenticatable implements PasskeyUser
     // The login pipeline detects a two-factor member via class_uses_recursive, so the trait is
     // load-bearing, not decorative.
     use TwoFactorAuthenticatable;
+
+    /** A stored address is kept as it is, but a new one fails closed (docs/internals/text-comparison.md, "Identifiers"). */
+    protected static function booted(): void
+    {
+        static::saving(function (Member $member): void {
+            if ($member->isDirty('email') && $member->email !== null && ! NewEmailAddress::accepts((string) $member->email)) {
+                throw new InvalidArgumentException('members.email only takes an address NewEmailAddress accepts.');
+            }
+        });
+    }
 
     /**
      * Empty, so nothing in the framework or Fortify reads or writes a remember token

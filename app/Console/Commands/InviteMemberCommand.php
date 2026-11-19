@@ -6,6 +6,7 @@ use App\Features\Auth\Actions\IssueRegistrationToken;
 use App\Features\Auth\Actions\IssueResult;
 use App\Features\Auth\RegistrationMode;
 use App\Features\Auth\RegistrationTokenSource;
+use App\Rules\NewEmailAddress;
 use App\Support\SecurityLog;
 use Carbon\CarbonInterval;
 use Illuminate\Console\Command;
@@ -25,7 +26,7 @@ class InviteMemberCommand extends Command
     {
         $email = Str::lower(Str::trim((string) $this->argument('email')));
 
-        if (Validator::make(['email' => $email], ['email' => ['required', 'email', 'max:255']])->fails()) {
+        if (Validator::make(['email' => $email], ['email' => NewEmailAddress::rules()])->fails()) {
             $this->error("[{$email}] is not an email address.");
 
             return self::FAILURE;

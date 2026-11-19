@@ -1487,6 +1487,7 @@
     "The confirmation code is no longer valid. Please sign in again.": "確認コードが使えなくなりました。もう一度ログインしてください。",
     "The confirmation code.": "確認コード。",
     "The confirmation token (used by the app_url_for link).": "確認トークン（app_url_for リンクで使用）。",
+    "The email address may contain only ASCII letters, digits and symbols. A domain with other characters can be entered in its punycode form (xn--…).": "メールアドレスは半角の英数字と記号で入力してください。英数字以外を含むドメインは、punycode の形(xn--…)で入力できます。",
     "The email-address change has been cancelled.": "メールアドレスの変更を取り消しました。",
     "The field name cannot start with \"op_preset_\".": "項目名の先頭に「op_preset_」は使えません。",
     "The first post will appear here the next morning.": "最初の投稿は次の日の朝にここに載ります",

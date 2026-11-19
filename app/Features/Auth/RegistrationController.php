@@ -14,6 +14,7 @@ use App\Http\Requests\Auth\RegisterEmailRequest;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\MemberCapacityRequestNotification;
+use App\Rules\NewEmailAddress;
 use App\Support\SiteLocale;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
@@ -153,8 +154,9 @@ class RegistrationController extends Controller
     {
         abort_if(RegistrationMode::current() === RegistrationMode::Closed, 404);
 
+        // Expired rather than the claimed-address answer, whose "already registered" would be untrue for such a row.
         $pending = $this->pending($token);
-        if ($pending === null) {
+        if ($pending === null || ! NewEmailAddress::accepts($pending->email)) {
             return $this->expired();
         }
 

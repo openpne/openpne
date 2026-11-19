@@ -58,7 +58,7 @@ class EmailChangeLinkController extends Controller
 
         // The address may have been claimed since the request; the unique violation at commit is the
         // final guard, and either way the dead token is burned.
-        if (Member::whereRaw('lower(email) = ?', [$pending->new_email])->exists()) {
+        if (Member::whereRaw('lower(email) = ?', [$pending->new_email])->whereKeyNot($pending->member_id)->exists()) {
             EmailChangeRequest::whereKey($pending->getKey())->delete();
 
             return redirect()->route('login')->with('status', __('That email address is no longer available.'));

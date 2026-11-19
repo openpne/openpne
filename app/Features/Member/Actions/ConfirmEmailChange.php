@@ -5,8 +5,10 @@ namespace App\Features\Member\Actions;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Models\MfaResetRequest;
+use App\Rules\NewEmailAddress;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
 
 /**
  * The `members.email` unique index is the final TOCTOU guard: the write throws and the caller voids
@@ -26,7 +28,16 @@ class ConfirmEmailChange
                 return null;
             }
 
+            if (! NewEmailAddress::accepts($locked->new_email)) {
+                $locked->delete();
+
+                return null;
+            }
+
             $member = Member::whereKey($locked->member_id)->lockForUpdate()->firstOrFail();
+
+            // Keyed by the address, so it is voided before the swap (docs/internals/text-comparison.md, "Identifiers").
+            Password::broker(config('fortify.passwords'))->deleteToken($member);
 
             $member->forceFill(['email' => $locked->new_email])->save();
 
