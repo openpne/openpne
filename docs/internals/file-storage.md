@@ -94,5 +94,5 @@ case, which the OpenPNE 3 admin image manager wrote for custom HTML and CSS to r
 the upgrade marks public ([upgrade.md](upgrade.md#openpne-3-admin-images)). Deleting a member deletes
 every file the member owns once the delete commits. A file that outlives its member (the purge
 failed and was reported, the process stopped before it ran, or the member left before this version)
-keeps its owner type and is not an ownerless file; the sweep leaves it. The sweep is not scheduled: it is a decision an operator takes, typically once
-after a cutover.
+keeps its owner type and is not an ownerless file; the sweep leaves it. The sweep is not scheduled:
+it is a decision an operator takes, typically once after a cutover.

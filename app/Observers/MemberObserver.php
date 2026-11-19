@@ -18,7 +18,7 @@ class MemberObserver
      */
     public function deleted(Member $member): void
     {
-        // Queried by owner, not through member_images: no FK reaches a polymorphically owned File.
+        // Queried by owner: the cascade has already dropped the member_images row, and no other file has one.
         $ownerType = $member->getMorphClass();
         $ownerId = (int) $member->getKey();
         DB::afterCommit(fn () => $this->purgeFiles($ownerType, $ownerId));

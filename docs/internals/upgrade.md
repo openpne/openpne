@@ -393,7 +393,11 @@ where the download required a login and nothing else: a group-owned file is read
 member (the group arm), and `FilePolicy` opens a member-owned file to a guest only when it is the
 member's avatar, so an upload is readable by any signed-in member the owner does not block; the same
 holds for an OpenPNE 3 `member_image` row that was not the primary, which `MemberImageUpgrade` does not
-carry as an avatar. Deleting the member deletes such files with the rest of what the member owns, where OpenPNE 3 kept serving an upload after its owner withdrew ([file-storage.md](file-storage.md#ownerless-files)). The ownerless ones, and the remains of deleted diaries, activities and banners that arrive the same way, are what `openpne:prune-ownerless-files` collects ([file-storage.md](file-storage.md#ownerless-files)), admin images aside.
+carry as an avatar. Deleting the member deletes such files with the rest of what the member owns,
+where OpenPNE 3 kept serving an upload after its owner withdrew. The ownerless ones, and the remains
+of deleted diaries, activities and banners that arrive the same way, are what
+`openpne:prune-ownerless-files` collects ([file-storage.md](file-storage.md#ownerless-files)), admin
+images aside.
 
 ## OpenPNE 3 admin images
 
