@@ -6,8 +6,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Support\Str;
 
 /**
- * The collation of a column a person signs in or is reached by — an email, a login name — where the
- * rest of the schema compares binary (docs/internals/text-comparison.md, "Identifiers").
+ * See docs/internals/text-comparison.md, "Identifiers".
  */
 final class IdentifierCollation
 {

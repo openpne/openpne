@@ -10,9 +10,8 @@ use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Counts the members whose carried email, and the administrators whose username, has whitespace at
- * either end, which no one can type (docs/internals/text-comparison.md, "Identifiers"). A WARN, not an
- * abort: the value migrates as it is, since the fix is the operator's to choose.
+ * A WARN, not an abort: a login with whitespace at either end matches nothing anyone can type, but it
+ * migrates as it is, since the fix is the operator's to choose (docs/internals/text-comparison.md, "Identifiers").
  */
 final class LoginWhitespacePreflight
 {

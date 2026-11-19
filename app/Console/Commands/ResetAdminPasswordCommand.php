@@ -7,6 +7,7 @@ use App\Console\Commands\Concerns\ResolvesAdminPassword;
 use App\Models\AdminUser;
 use App\Support\SecurityLog;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 /**
  * The panel only lets an administrator change their own password (OpenPNE 3 parity), so a
@@ -22,7 +23,7 @@ class ResetAdminPasswordCommand extends Command
 
     public function handle(): int
     {
-        $username = trim((string) $this->argument('username'));
+        $username = Str::trim((string) $this->argument('username'));
 
         $admin = AdminUser::where('username', $username)->first();
         if ($admin === null) {

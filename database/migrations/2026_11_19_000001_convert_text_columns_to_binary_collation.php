@@ -1,11 +1,11 @@
 <?php
 
-use App\Support\Database\IdentifierCollation;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /*
  * See docs/internals/text-comparison.md, "Converting an existing site".
@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public const COLLATION = 'utf8mb4_0900_bin';
+
+    /** What IdentifierCollation named when this was released, written out (like the whitespace check) so a later change to it leaves this migration as it was. */
+    private const IDENTIFIER_COLLATION = ['mysql' => 'utf8mb4_0900_as_ci', 'sqlite' => 'NOCASE'];
 
     /** Named rather than discovered: an upgraded site keeps OpenPNE 3's tables, file_bin among them, in the same database. */
     public const TABLES = [
@@ -54,9 +57,9 @@ return new class extends Migration
         $this->refuseValuesTheIdentifierCollationCannotHold();
 
         if (DB::getDriverName() === 'mysql') {
-            $this->alterMysql(IdentifierCollation::MYSQL);
+            $this->alterMysql(self::IDENTIFIER_COLLATION['mysql']);
         } else {
-            $this->rebuildSqlite(IdentifierCollation::SQLITE);
+            $this->rebuildSqlite(self::IDENTIFIER_COLLATION['sqlite']);
         }
     }
 
@@ -85,7 +88,7 @@ return new class extends Migration
 
     private function refuseValuesTheIdentifierCollationCannotHold(): void
     {
-        $collation = IdentifierCollation::for(DB::connection());
+        $collation = self::IDENTIFIER_COLLATION[DB::getDriverName()];
         $grammar = DB::getQueryGrammar();
         $problems = [];
 
@@ -110,7 +113,7 @@ return new class extends Migration
 
             $rows = DB::table($table)->whereNotNull($column);
             $edged = ($hasId ? $rows->select(['id', $column])->lazyById(1000) : $rows->select([$column])->cursor())
-                ->filter(fn (object $row) => IdentifierCollation::hasEdgeWhitespace((string) $row->{$column}));
+                ->filter(fn (object $row) => Str::trim((string) $row->{$column}) !== (string) $row->{$column});
 
             if ($edged->isNotEmpty()) {
                 $problems[] = $hasId
@@ -187,28 +190,40 @@ return new class extends Migration
 
     /**
      * Foreign keys go off before the transaction opens, since SQLite ignores the pragma inside one and
-     * the rebuild's DROP TABLE would cascade; the rebuild drops the tables' triggers, so they are read first and put back.
+     * the rebuild's DROP TABLE would cascade. The rebuild drops the tables' triggers and resets their AUTOINCREMENT high-water mark to the highest id left, so both are read first and put back.
      */
     private function rebuildSqlite(?string $collation): void
     {
-        $triggers = DB::table('sqlite_master')
-            ->where('type', 'trigger')
-            ->whereIn('tbl_name', array_keys(self::IDENTIFIERS))
-            ->orderBy('name')
-            ->get(['name', 'sql']);
+        $tables = array_keys(self::IDENTIFIERS);
+        $triggers = DB::table('sqlite_master')->where('type', 'trigger')->whereIn('tbl_name', $tables)->orderBy('name')->get(['name', 'sql']);
+        $sequences = DB::table('sqlite_sequence')->whereIn('name', $tables)->pluck('seq', 'name');
+        $foreignKeys = (bool) DB::scalar('PRAGMA foreign_keys');
 
-        Schema::withoutForeignKeyConstraints(fn () => DB::transaction(function () use ($collation, $triggers) {
-            foreach (array_keys(self::IDENTIFIERS) as $table) {
-                Schema::table($table, function (Blueprint $blueprint) use ($table, $collation) {
-                    $this->identifier($blueprint, $table)->collation($collation)->change();
-                });
-            }
+        Schema::disableForeignKeyConstraints();
 
-            foreach ($triggers as $trigger) {
-                DB::statement('DROP TRIGGER IF EXISTS '.DB::getQueryGrammar()->wrap($trigger->name));
-                DB::unprepared($trigger->sql);
+        try {
+            DB::transaction(function () use ($tables, $collation, $triggers, $sequences) {
+                foreach ($tables as $table) {
+                    Schema::table($table, function (Blueprint $blueprint) use ($table, $collation) {
+                        $this->identifier($blueprint, $table)->collation($collation)->change();
+                    });
+                }
+
+                foreach ($triggers as $trigger) {
+                    DB::statement('DROP TRIGGER IF EXISTS '.DB::getQueryGrammar()->wrap($trigger->name));
+                    DB::unprepared($trigger->sql);
+                }
+
+                foreach ($sequences as $table => $seq) {
+                    DB::table('sqlite_sequence')->where('name', $table)->delete();
+                    DB::table('sqlite_sequence')->insert(['name' => $table, 'seq' => $seq]);
+                }
+            });
+        } finally {
+            if ($foreignKeys) {
+                Schema::enableForeignKeyConstraints();
             }
-        }));
+        }
     }
 
     /** change() writes the whole column, so each keeps the definition its create migration gave it. */

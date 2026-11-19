@@ -24,6 +24,16 @@ class CreateAdminUserCommandTest extends TestCase
         $this->assertTrue(Hash::check('strong-pass-1', $admin->password));
     }
 
+    public function test_a_unicode_space_around_the_username_is_trimmed(): void
+    {
+        $this->artisan('openpne:admin:create', ['username' => "\u{3000}root\u{00A0}"])
+            ->expectsQuestion('Password', 'strong-pass-1')
+            ->expectsQuestion('Confirm password', 'strong-pass-1')
+            ->assertSuccessful();
+
+        $this->assertSame('root', AdminUser::sole()->username);
+    }
+
     public function test_rejects_a_duplicate_username(): void
     {
         AdminUser::factory()->create(['username' => 'bob']);

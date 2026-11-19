@@ -6,7 +6,8 @@ site's members is in [Changing the database engine](../changing-database-engine.
 ## Stored text
 
 On MySQL every OpenPNE 4 table and its text columns are `utf8mb4_0900_bin` (the `mysql` connection's
-default, which needs MySQL 8.0.17), and SQLite compares `BINARY`. An `=`, an `IN`, a join, a
+default, which needs MySQL 8.0.17), apart from the identifiers below and `push_subscriptions.endpoint`,
+which is `ascii_bin`; SQLite compares `BINARY`. An `=`, an `IN`, a join, a
 `GROUP BY` and a unique index compare code points on both engines, and `utf8mb4_0900_bin` is NO PAD,
 so a trailing space is part of the value. Two group names, two profile item names or two values of a
 unique profile item that differ in case, kana or width are two values. The `mariadb` connection keeps
@@ -17,13 +18,16 @@ unique profile item that differ in case, kana or width are two values. The `mari
 Five columns hold what a person signs in with or is reached at, and compare without case through
 [`IdentifierCollation`](../../app/Support/Database/IdentifierCollation.php): `members.email`,
 `registration_tokens.email`, `password_reset_tokens.email`, `email_change_requests.new_email` and
-`admin_users.username`. MySQL uses `utf8mb4_0900_as_ci`, which also folds width but tells accents
-apart (`é` is not `e`) and is NO PAD; SQLite uses `NOCASE`, which folds ASCII letters only. A
-migration that adds such a column takes its collation from `IdentifierCollation::for()`.
+`admin_users.username`. MySQL uses `utf8mb4_0900_as_ci`, which also treats as one hiragana and
+katakana, small and full-size kana, full- and half-width forms, compatibility forms (`①` is `1`) and
+the kinds of space inside a value, tells accents and voiced marks apart (`é` is not `e`, `が` is not
+`か`) and is NO PAD; SQLite uses `NOCASE`, which folds ASCII letters only. A migration that adds such
+a column takes its collation from `IdentifierCollation::for()`.
 
-Every form trims what is typed into these columns. The administrator login and form trim through
-Filament's `trim()`, since a Livewire request skips `TrimStrings`. A stored value with whitespace at
-either end therefore matches nothing anyone can type.
+Everything that writes or looks up these columns trims with `Str::trim`, which also removes Unicode
+spaces such as U+3000: `TrimStrings` on a request, Filament's `trim()` on the administrator login
+and form (a Livewire request skips `TrimStrings`), and the console commands, the invitation page and
+the actions that write these columns on their own. A stored value with whitespace at either end therefore matches nothing anyone can type.
 
 ## Search and name order
 
@@ -78,8 +82,9 @@ name order that skips the helper is not caught; it falls back to the column's ow
 ## Converting an existing site
 
 A site made before the switch has `utf8mb4_unicode_ci` tables.
-`2026_11_19_000001_convert_text_columns_to_binary_collation` converts them, and runs on a fresh
-install too, where only the columns that name a collation of their own change.
+`2026_11_19_000001_convert_text_columns_to_binary_collation` converts them. It runs on a fresh install
+too, where it changes the identifier columns and the columns that name a collation of their own, and
+on SQLite rebuilds the five identifier tables.
 
 - **Which tables.** The OpenPNE 4 tables it names, not the database: an upgraded site keeps
   OpenPNE 3's tables beside them, and the upgrade reads those as OpenPNE 3 compared them. `file_bin`
@@ -87,7 +92,9 @@ install too, where only the columns that name a collation of their own change.
   too, so a column a later migration adds inherits `utf8mb4_0900_bin`.
 - **When.** On MySQL only while the connection's collation is `utf8mb4_0900_bin`. A site that sets
   `DB_COLLATION` to anything else keeps its tables, and unsetting it later converts nothing, since the
-  migration has already run. MariaDB is never converted.
+  migration has already run. Such a site is outside what later migrations assume: one that adds an
+  identifier column names `utf8mb4_0900_as_ci` through `IdentifierCollation::for()` whatever the
+  tables hold. MariaDB is never converted.
 - **What stops it.** Before changing anything it refuses when a unique identifier column holds two
   values `IdentifierCollation` treats as one, or a value with whitespace at either end. The message
   names the column and the row ids, never the values. `email_change_requests.new_email` is not
@@ -95,8 +102,8 @@ install too, where only the columns that name a collation of their own change.
 - **How.** MySQL gets one `ALTER TABLE` per table that copies each column's type, nullability and
   default, built for every table before the first runs. MySQL does not roll DDL back, so a failure
   midway leaves some tables converted, and running it again converts the rest. SQLite rebuilds the
-  five identifier tables in one transaction, with foreign keys off before it opens, and puts their
-  triggers back.
+  five identifier tables in one transaction, with foreign keys off before it opens, and puts back
+  their triggers and their AUTOINCREMENT high-water marks, so a deleted id is not handed out again.
 - **Back.** `down()` returns the identifier columns to the table's collation. The tables stay
   binary: `utf8mb4_unicode_ci` would merge names that are now distinct.
 

@@ -23,7 +23,7 @@ class InviteMemberCommand extends Command
 
     public function handle(IssueRegistrationToken $issue): int
     {
-        $email = Str::lower(trim((string) $this->argument('email')));
+        $email = Str::lower(Str::trim((string) $this->argument('email')));
 
         if (Validator::make(['email' => $email], ['email' => ['required', 'email', 'max:255']])->fails()) {
             $this->error("[{$email}] is not an email address.");

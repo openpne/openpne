@@ -25,7 +25,7 @@ final class MemberSelector
 
     public static function foundByEmail(Member $member, string $email): self
     {
-        return new self($member, Str::lower(trim($email)));
+        return new self($member, Str::lower(Str::trim($email)));
     }
 
     /** Only the key is taken: every value judged is re-read under the lock. */

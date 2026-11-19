@@ -165,7 +165,7 @@ class InviteMembers extends Page
         $invalid = [];
 
         foreach (preg_split('/\r\n|\r|\n/', $input) ?: [] as $line) {
-            $line = trim($line);
+            $line = Str::trim($line);
             if ($line === '') {
                 continue;
             }

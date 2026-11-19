@@ -12,6 +12,7 @@ use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -64,6 +65,18 @@ class InviteMembersTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseCount('registration_tokens', 1);
+    }
+
+    public function test_a_unicode_space_around_a_pasted_address_is_trimmed(): void
+    {
+        Notification::fake();
+
+        Livewire::test(InviteMembers::class)
+            ->fillForm(['emails' => "pasted@example.com\u{3000}\n\u{00A0}nbsp@example.com"])
+            ->call('send')
+            ->assertHasNoErrors();
+
+        $this->assertSame(['nbsp@example.com', 'pasted@example.com'], DB::table('registration_tokens')->orderBy('email')->pluck('email')->all());
     }
 
     public function test_the_page_is_available_in_admin_only_mode_but_not_when_closed(): void

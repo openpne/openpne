@@ -29,6 +29,8 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
 {
     use DatabaseMigrations;
 
+    private const MIGRATION = '2026_11_19_000001_convert_text_columns_to_binary_collation.php';
+
     private const IDENTIFIERS = [
         'members' => 'email',
         'registration_tokens' => 'email',
@@ -95,6 +97,41 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $this->assertSame(1, (int) DB::scalar('PRAGMA foreign_keys'));
     }
 
+    public function test_the_sqlite_rebuild_keeps_the_ids_already_handed_out(): void
+    {
+        $this->onlyOn('sqlite');
+        Member::factory()->create();
+        DB::table('members')->where('id', Member::factory()->create()->getKey())->delete();
+        DB::table('admin_users')->where('id', AdminUser::factory()->create()->getKey())->delete();
+        $sequences = $this->sequences();
+        $this->assertGreaterThan(DB::table('members')->max('id'), $sequences['members']);
+        $this->assertTrue(DB::table('admin_users')->doesntExist() && $sequences['admin_users'] > 0);
+        $migration = $this->migration();
+
+        $migration->down();
+        $this->assertSame($sequences, $this->sequences());
+
+        $migration->up();
+        $this->assertSame($sequences, $this->sequences());
+    }
+
+    public function test_the_sqlite_rebuild_leaves_foreign_keys_off_when_it_found_them_off(): void
+    {
+        $this->onlyOn('sqlite');
+        $migration = $this->migration();
+        DB::statement('PRAGMA foreign_keys = OFF');
+
+        try {
+            $migration->down();
+            $this->assertSame(0, (int) DB::scalar('PRAGMA foreign_keys'));
+
+            $migration->up();
+            $this->assertSame(0, (int) DB::scalar('PRAGMA foreign_keys'));
+        } finally {
+            DB::statement('PRAGMA foreign_keys = ON');
+        }
+    }
+
     public function test_values_the_identifier_collation_would_merge_stop_it_before_anything_changes(): void
     {
         $migration = $this->migration();
@@ -107,6 +144,8 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
             ['email' => 'jiro@example.com', 'token' => 'a', 'created_at' => now()],
             ['email' => 'Jiro@example.com', 'token' => 'b', 'created_at' => now()],
         ]);
+        $invited = DB::table('registration_tokens')->insertGetId(['email' => 'shiro@example.com', 'token' => 'c']);
+        $reinvited = DB::table('registration_tokens')->insertGetId(['email' => 'Shiro@example.com', 'token' => 'd']);
         $this->requestEmailChange('pending@example.com', 'PENDING@example.com');
 
         $message = $this->refusal($migration);
@@ -114,6 +153,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $this->assertStringContainsString("members.email holds values the new comparison treats as one (ids {$one->getKey()}, {$other->getKey()})", $message);
         $this->assertStringContainsString("admin_users.username holds values the new comparison treats as one (ids {$admin->getKey()}, {$otherAdmin->getKey()})", $message);
         $this->assertStringContainsString('password_reset_tokens.email holds values the new comparison treats as one (2 rows;', $message);
+        $this->assertStringContainsString("registration_tokens.email holds values the new comparison treats as one (ids {$invited}, {$reinvited})", $message);
         $this->assertStringNotContainsString('email_change_requests', $message);
         $this->assertStringNotContainsString('example.com', $message);
         $this->assertStringNotContainsString('root', strtolower(str_replace('admin_users', '', $message)));
@@ -127,6 +167,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $member = Member::factory()->create(['email' => 'hanako@example.com ']);
         $admin = AdminUser::factory()->create(['username' => "\troot"]);
         DB::table('password_reset_tokens')->insert(['email' => ' saburo@example.com', 'token' => 'a', 'created_at' => now()]);
+        $invited = DB::table('registration_tokens')->insertGetId(['email' => "goro@example.com\u{3000}", 'token' => 'b']);
         Member::factory()->create(['email' => 'plain@example.com']);
 
         $message = $this->refusal($migration);
@@ -134,15 +175,17 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $this->assertStringContainsString("members.email holds values with whitespace at either end, which no one can type (ids {$member->getKey()})", $message);
         $this->assertStringContainsString("admin_users.username holds values with whitespace at either end, which no one can type (ids {$admin->getKey()})", $message);
         $this->assertStringContainsString('password_reset_tokens.email holds values with whitespace at either end, which no one can type (1 rows;', $message);
+        $this->assertStringContainsString("registration_tokens.email holds values with whitespace at either end, which no one can type (ids {$invited})", $message);
         $this->assertStringNotContainsString('example.com', $message);
         $this->assertIdentifierCollations($this->binary());
     }
 
-    public function test_two_members_asking_for_the_same_address_do_not_stop_it(): void
+    public function test_pending_changes_to_one_address_and_accounts_without_an_email_do_not_stop_it(): void
     {
         $migration = $this->migration();
         $migration->down();
         $this->requestEmailChange('pending@example.com', 'PENDING@example.com');
+        Member::factory()->count(2)->aiAccount(Member::factory()->create())->create();
 
         $migration->up();
 
@@ -154,7 +197,10 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
     {
         $this->onlyOn('mysql');
         $this->useCollation('utf8mb4_unicode_ci');
-        $this->artisan('migrate:fresh');
+        $this->artisan('migrate:fresh', ['--realpath' => true, '--path' => array_values(array_filter(
+            glob(database_path('migrations/*.php')),
+            fn (string $file) => basename($file) <= self::MIGRATION,
+        ))]);
 
         try {
             foreach (self::OP3_TABLES as $table => $create) {
@@ -187,6 +233,8 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
                     'push_subscriptions.endpoint' => 'ascii_bin', 'registration_tokens.email' => 'utf8mb4_0900_as_ci'],
                 $this->mysqlColumnsNotIn($tables, 'utf8mb4_0900_bin'),
             );
+
+            $this->artisan('migrate');
             $this->assertSame([], collect(DB::select(
                 'SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_COLLATION <> ?',
                 ['utf8mb4_0900_bin'],
@@ -203,7 +251,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
 
     private function migration(): Migration
     {
-        return require database_path('migrations/2026_11_19_000001_convert_text_columns_to_binary_collation.php');
+        return require database_path('migrations/'.self::MIGRATION);
     }
 
     private function onlyOn(string $driver): void
@@ -277,6 +325,13 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
     private function counts(array $tables): array
     {
         return array_combine($tables, array_map(fn (string $table) => DB::table($table)->count(), $tables));
+    }
+
+    /** @return array<string, int> */
+    private function sequences(): array
+    {
+        return DB::table('sqlite_sequence')->whereIn('name', array_keys(self::IDENTIFIERS))->orderBy('name')
+            ->pluck('seq', 'name')->map(fn ($seq) => (int) $seq)->all();
     }
 
     /** @return array<string, string> */
