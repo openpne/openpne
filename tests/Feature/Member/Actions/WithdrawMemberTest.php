@@ -225,6 +225,11 @@ class WithdrawMemberTest extends TestCase
     {
         $member = Member::factory()->create();
         $file = $this->fileOwnedBy('member', (int) $member->getKey());
+        // The bytes live in rows the rollback restores, so only a delete reaching the model shows an early purge.
+        $purged = 0;
+        File::deleting(function () use (&$purged): void {
+            $purged++;
+        });
         // Runs after MemberObserver::deleting has registered the deferred purge, which the rollback must discard.
         Member::deleting(function (): void {
             throw new RuntimeException('boom');
@@ -239,6 +244,7 @@ class WithdrawMemberTest extends TestCase
 
         $this->assertModelExists($member);
         $this->assertModelExists($file);
+        $this->assertSame(0, $purged);
     }
 
     /** A reply goes with the member row's cascade, which reaches no reaction — the sweep is the action's. */

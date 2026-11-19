@@ -21,7 +21,11 @@ class MemberImageFactory extends Factory
     {
         return [
             'member_id' => Member::factory(),
-            'file_id' => File::factory(),
+            // Member-owned like every avatar SetAvatar and the upgrade write, which withdrawal deletes by owner.
+            'file_id' => fn (array $attributes) => File::factory()->create([
+                'related_entity_type' => 'member',
+                'related_entity_id' => $attributes['member_id'],
+            ])->getKey(),
         ];
     }
 }
