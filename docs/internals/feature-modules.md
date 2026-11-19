@@ -209,7 +209,7 @@ frame draws from it — the phone header, the bottom tabs, the drawer, the desk-
 is [modern-frame.md](modern-frame.md). The heading row's action button is desktop-only: on
 mobile the registry's `action` is the extended FAB
 ([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
-bottom bar. That mobile chrome recedes as a signed-in member reads: scrolling down
+bottom bar, and an `embedded` page, having no heading row, has only the FAB. That mobile chrome recedes as a signed-in member reads: scrolling down
 slides both bars away and collapses the FAB (one shell-level listener,
 [`useScrollDirection`](../../resources/js/lib/use-scroll-direction.ts)), and one
 scroll up brings all of it back. Only the reader's own scrolling counts — a scroll

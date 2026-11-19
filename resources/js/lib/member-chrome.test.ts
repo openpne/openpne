@@ -218,6 +218,15 @@ test("What's new is a hub headed by the words its own nav entry carries", () => 
     assert.equal(dashboard.action?.href, '/diary/new');
 });
 
+test("as the home, What's new takes the bare frame and keeps its action", () => {
+    const home = chrome('dashboard', { modernHome: 'whats_new' });
+
+    assert.equal(home.mode, 'embedded');
+    assert.equal(home.title, undefined);
+    assert.equal(home.action?.href, '/diary/new');
+    assert.equal(chrome('dashboard', { modernHome: 'issue' }).mode, 'section');
+});
+
 test('the dashboard action goes with the diary unit', () => {
     assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
 });

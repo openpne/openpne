@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import Dashboard from './dashboard';
@@ -90,4 +90,24 @@ test('the site notice opens the page', () => {
     arrive({ notice: { body: 'Hello', bodyHtml: '<p>Hello</p>' } });
 
     expect(screen.getByRole('region', { name: 'Notice from the site' }).textContent).toContain('Hello');
+});
+
+test('as the home the page carries its own h1, out of sight', () => {
+    arrive({ modernHome: 'whats_new' });
+
+    expect(screen.getByRole('heading', { level: 1, name: "What's new" }).className).toContain('sr-only');
+});
+
+test('reached from the nav, the page leaves the h1 to the frame', () => {
+    arrive({ modernHome: 'issue' });
+
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+});
+
+test('the needs-action rows are named for assistive tech, with no heading on screen', () => {
+    arrive({ announcements: { friendRequests: 1, unreadMessages: 0, groupApprovals: [], adminTransfers: [] } });
+
+    const rows = screen.getByRole('region', { name: 'Notices' });
+    expect(within(rows).getByRole('heading', { level: 2, name: 'Notices' }).className).toContain('sr-only');
+    expect(within(rows).getByRole('link').getAttribute('href')).toBe('/friend/requests');
 });

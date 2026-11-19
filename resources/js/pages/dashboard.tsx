@@ -1,7 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import type { ReactNode } from 'react';
+import { Mail, UserPlus, Users } from 'lucide-react';
+import { type ReactNode, useId } from 'react';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { isHomeComponent } from '@/lib/member-chrome';
 import type { PageProps } from '@/types';
 import { ActivityRow, type CommunityActivityEntry } from './community/activity-row';
 import { DiaryRow } from './diary/diary-row';
@@ -36,6 +38,7 @@ interface DashboardProps extends PageProps {
  */
 function AnnouncementsPanel({ announcements }: { announcements: Announcements }) {
     const t = useT();
+    const titleId = useId();
     const features = usePage<PageProps>().props.enabledFeatures;
     // Each notice links into the unit it belongs to (the server already reports it as nothing).
     const friendRequests = features.friend ? announcements.friendRequests : 0;
@@ -48,50 +51,59 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
     }
 
     return (
-        <Panel flush title={t('Notices')}>
-            <List>
-                {adminTransfers.map((transfer) => (
-                    <ListRow key={transfer.groupId} rowLink chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">
-                            <Link href={`/groups/${transfer.groupId}`} className={stretchedLink}>
-                                {t('The administrator of :name asks you to take over the administration.', { name: transfer.groupName })}
-                            </Link>
-                        </span>
-                    </ListRow>
-                ))}
-                {groupApprovals.map((approval) => (
-                    <ListRow key={approval.groupId} rowLink chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">
-                            <Link href={`/groups/${approval.groupId}/members/pending`} className={stretchedLink}>
-                                {approval.count === 1
-                                    ? t('1 join request for :community', { community: approval.groupName })
-                                    : t(':count join requests for :community', { count: approval.count, community: approval.groupName })}
-                            </Link>
-                        </span>
-                    </ListRow>
-                ))}
-                {friendRequests > 0 && (
-                    <ListRow rowLink chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">
-                            <Link href="/friend/requests" className={stretchedLink}>
-                                {friendRequests === 1 ? t('1 pending %friend% request') : t(':count pending %friend% requests', { count: friendRequests })}
-                            </Link>
-                        </span>
-                    </ListRow>
-                )}
-                {unreadMessages > 0 && (
-                    <ListRow rowLink chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">
-                            <Link href="/messages" className={stretchedLink}>
-                                {unreadMessages === 1
-                                    ? t('1 conversation with new messages')
-                                    : t(':count conversations with new messages', { count: unreadMessages })}
-                            </Link>
-                        </span>
-                    </ListRow>
-                )}
-            </List>
-        </Panel>
+        <section aria-labelledby={titleId}>
+            <h2 id={titleId} className="sr-only">
+                {t('Notices')}
+            </h2>
+            <Panel flush>
+                <List>
+                    {adminTransfers.map((transfer) => (
+                        <ListRow key={transfer.groupId} rowLink chevron>
+                            <Users className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                            <span className="min-w-0 flex-1 text-sm text-foreground">
+                                <Link href={`/groups/${transfer.groupId}`} className={stretchedLink}>
+                                    {t('The administrator of :name asks you to take over the administration.', { name: transfer.groupName })}
+                                </Link>
+                            </span>
+                        </ListRow>
+                    ))}
+                    {groupApprovals.map((approval) => (
+                        <ListRow key={approval.groupId} rowLink chevron>
+                            <Users className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                            <span className="min-w-0 flex-1 text-sm text-foreground">
+                                <Link href={`/groups/${approval.groupId}/members/pending`} className={stretchedLink}>
+                                    {approval.count === 1
+                                        ? t('1 join request for :community', { community: approval.groupName })
+                                        : t(':count join requests for :community', { count: approval.count, community: approval.groupName })}
+                                </Link>
+                            </span>
+                        </ListRow>
+                    ))}
+                    {friendRequests > 0 && (
+                        <ListRow rowLink chevron>
+                            <UserPlus className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                            <span className="min-w-0 flex-1 text-sm text-foreground">
+                                <Link href="/friend/requests" className={stretchedLink}>
+                                    {friendRequests === 1 ? t('1 pending %friend% request') : t(':count pending %friend% requests', { count: friendRequests })}
+                                </Link>
+                            </span>
+                        </ListRow>
+                    )}
+                    {unreadMessages > 0 && (
+                        <ListRow rowLink chevron>
+                            <Mail className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                            <span className="min-w-0 flex-1 text-sm text-foreground">
+                                <Link href="/messages" className={stretchedLink}>
+                                    {unreadMessages === 1
+                                        ? t('1 conversation with new messages')
+                                        : t(':count conversations with new messages', { count: unreadMessages })}
+                                </Link>
+                            </span>
+                        </ListRow>
+                    )}
+                </List>
+            </Panel>
+        </section>
     );
 }
 
@@ -114,7 +126,8 @@ function DigestSection({ title, viewAllHref, children }: { title: string; viewAl
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, newcomer, friendDiaries, diaries, commentedDiaries, timeline, groupActivity, myDiaries, enabledFeatures, notice } = usePage<DashboardProps>().props;
+    const { auth, announcements, newcomer, friendDiaries, diaries, commentedDiaries, timeline, groupActivity, myDiaries, enabledFeatures, notice, modernHome } =
+        usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
@@ -127,6 +140,7 @@ export default function Dashboard() {
     return (
         <>
             <Head title={t("What's new")} />
+            {isHomeComponent('dashboard', modernHome) && <h1 className="sr-only">{t("What's new")}</h1>}
 
             <SiteNotice notice={notice} />
 

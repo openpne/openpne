@@ -48,7 +48,11 @@ export function SiteNotice({ notice }: { notice: SiteNoticeBody | null }) {
 
     return (
         <section aria-labelledby={titleId}>
-            <Panel title={<span id={titleId}>{t('Notice from the site')}</span>}>
+            {/* The administrator's text heads itself, as OpenPNE 3's informationBox did. */}
+            <h2 id={titleId} className="sr-only">
+                {t('Notice from the site')}
+            </h2>
+            <Panel>
                 <div
                     id={bodyId}
                     className={cn('relative', folded && 'max-h-[192px] overflow-hidden')}
