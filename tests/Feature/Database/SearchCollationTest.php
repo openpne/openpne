@@ -29,6 +29,7 @@ class SearchCollationTest extends TestCase
             'a half-width voiced kana is not its full-width one' => ['ｶﾞｸｾｲ', 'ガ', false],
             'the half-width prolonged sound mark is not the full-width one' => ['ｺｰﾋｰ', 'コーヒー', false],
             'a half-width semi-voiced kana is not its full-width one' => ['ﾊﾟﾝ', 'パン', false],
+            'the half-width middle dot is not the full-width one' => ['ｱ･ｲ', 'ア・イ', false],
             'an accent is told apart' => ['José', 'jose', false],
         ];
     }

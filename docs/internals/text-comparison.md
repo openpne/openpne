@@ -19,9 +19,9 @@ The collation is the connection's `comparison_collation`. On MySQL a search trea
 lowercase, hiragana and katakana, and full- and half-width letters, digits and kana as one, and tells
 apart the voiced and semi-voiced marks, small kana, accents (`José` is not `jose`), emoji and
 compatibility forms (`①` is not `1`). Some half-width forms do not match their full-width ones, for
-example a voiced or semi-voiced kana (`ｶﾞ` and `ﾊﾟ`, two characters each, are not `ガ` and `パ`), the
-prolonged sound mark (`ｺｰﾋｰ` is not `コーヒー`) and the middle dot (`･`). SQLite's `LIKE` folds the case of ASCII letters and nothing
-else, and `NOCASE` orders the same way.
+example a voiced or semi-voiced kana (`ｶﾞ` and `ﾊﾟ`, two characters each, are not `ガ` and `パ`),
+the prolonged sound mark (`ｺｰﾋｰ` is not `コーヒー`) and the middle dot (`ｱ･ｲ` is not `ア・イ`).
+SQLite's `LIKE` folds the case of ASCII letters and nothing else, and `NOCASE` orders the same way.
 
 The caller builds the pattern, so whether `%` and `_` in a term are wildcards is the screen's choice:
 the mention and recipient pickers escape them, the admin panel goes through `whereContains`, which

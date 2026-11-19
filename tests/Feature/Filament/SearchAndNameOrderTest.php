@@ -153,7 +153,7 @@ class SearchAndNameOrderTest extends TestCase
     {
         $resources = array_filter(
             Filament::getPanel('admin')->getResources(),
-            fn (string $resource): bool => $resource::canGloballySearch(),
+            fn (string $resource): bool => $resource::getGloballySearchableAttributes() !== [],
         );
         $this->assertNotEmpty($resources);
 
