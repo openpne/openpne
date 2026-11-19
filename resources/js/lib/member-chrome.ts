@@ -36,6 +36,8 @@ export interface ChromeTab {
     label: ChromeLabel;
     active: boolean;
     badge?: CountBadge;
+    /** A guest's frame keeps only the tabs marked so, since every other one leads to the login wall. */
+    openToGuest?: true;
 }
 
 export interface ChromeAction {
@@ -258,7 +260,7 @@ const diaryFeedTab = (variant: string): 'all' | 'friends' | null => (variant ===
 
 // The friend tab is a lens the friend unit owns, so it goes with the unit while the diary hub stays.
 const diaryTabs = (active: 'all' | 'friends' | 'mine' | null, friend: boolean): ChromeTab[] => [
-    { href: '/diary/list', label: t('All'), active: active === 'all' },
+    { href: '/diary/list', label: t('All'), active: active === 'all', openToGuest: true },
     ...(friend ? [{ href: '/diary/listFriend', label: FRIENDS, active: active === 'friends' }] : []),
     { href: '/diary/listMember', label: t('My %diaries%'), active: active === 'mine' },
 ];

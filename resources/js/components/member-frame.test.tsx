@@ -62,6 +62,30 @@ test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a
     expect(hubHeadingRow(props)?.className).not.toContain('sr-only');
 });
 
+test.each([
+    ['the list', 'recent'],
+    ['search results', 'search'],
+])("a guest's diary hub on %s keeps only the tab back to the list, and no write action", (_where, variant) => {
+    arrive('diary/feed', { auth: { user: null }, variant });
+
+    const tabs = screen.getByRole('navigation', { name: '%Diaries%' });
+    expect([...tabs.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/diary/list']);
+    expect(document.querySelector('a[href="/diary/new"]')).toBeNull();
+});
+
+test("a member's diary hub keeps every lens", () => {
+    arrive('diary/feed', { variant: 'recent' });
+
+    const tabs = screen.getByRole('navigation', { name: '%Diaries%' });
+    expect([...tabs.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/diary/list', '/diary/listFriend', '/diary/listMember']);
+});
+
+test('a hub with no tab open to a guest draws no tab row for one', () => {
+    arrive('community/search', { auth: { user: null } });
+
+    expect(screen.queryByRole('navigation')).toBeNull();
+});
+
 test('the place bar is the desk answer to where the reader is: the place, as a pill with its face', () => {
     arrive('group/talk/index', { group: cyclists });
 
@@ -86,9 +110,9 @@ test("a guest's place bar leads to the author's entries, faceless", () => {
     const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
     arrive('diary/show', { auth: { user: null }, diary: { author } });
 
-    const pill = placeBar()?.querySelector('a');
-    expect(pill?.getAttribute('href')).toBe('/diary/listMember/9');
-    expect(pill?.textContent).toBe("Owner's %diary%");
+    const pill = screen.getByRole('link', { name: "Owner's %diary%" });
+    expect(placeBar()?.contains(pill)).toBe(true);
+    expect(pill.getAttribute('href')).toBe('/diary/listMember/9');
     expect(placeBar()?.querySelector('img')).toBeNull();
     expect(document.querySelector('a[href="/member/9"]')).toBeNull();
 });

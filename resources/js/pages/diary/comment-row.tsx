@@ -20,11 +20,14 @@ import type { DiaryComment } from './types';
 /** A row of its own rather than markup inside the page, so a test can render it. */
 export function DiaryCommentRow({
     comment,
+    linkAuthor = true,
     onDelete,
     reactions,
     onOpenActions,
 }: {
     comment: DiaryComment;
+    /** False for a guest, whom a commenter's profile may send to the login wall. */
+    linkAuthor?: boolean;
     onDelete: (id: number) => void;
     reactions: RowReactions;
     onOpenActions?: (row: HTMLElement) => void;
@@ -54,10 +57,12 @@ export function DiaryCommentRow({
             )}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} isAi={comment.author?.isAi ?? false} size="md" decorative />
-                {comment.author ? (
+                {comment.author && linkAuthor ? (
                     <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
                         {comment.author.name}
                     </Link>
+                ) : comment.author ? (
+                    <span className="truncate text-foreground">{comment.author.name}</span>
                 ) : (
                     <span className="truncate">{t('%Withdrawn_member%')}</span>
                 )}

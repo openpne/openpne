@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { type CSSProperties, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
+import { CrumbText } from '@/components/crumb-text';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { headingVariants } from '@/components/ui/heading';
@@ -126,7 +127,6 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const t = useT();
     const { component, props } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
-    const text = (l: ChromeLabel | string) => (typeof l === 'string' ? l : label(l));
     // A hub names itself; everything else names the place it is in, except the three pages that ARE
     // a place, which share one header of mark and site name.
     const brand = isHomeComponent(String(component), props.modernHome) || isPlaceTop(String(component));
@@ -168,11 +168,11 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                     // Pressable, so it is painted as pressable: the pill is the affordance a bare
                     // trailing › was not.
                     <Link href={crumb.href} className="flex min-h-11 min-w-0 items-center rounded-full bg-accent px-3">
-                        <span className={cn(headingVariants({ variant: 'bar' }), 'truncate')}>{text(crumb.label)}</span>
+                        <CrumbText label={crumb.label} className={headingVariants({ variant: 'bar' })} />
                     </Link>
                 ) : (
                     // A form's crumb goes nowhere, so it must not look as though it does.
-                    <span className="min-w-0 truncate text-sm text-muted-foreground">{text(crumb.label)}</span>
+                    <CrumbText label={crumb.label} className="text-sm text-muted-foreground" />
                 ))}
             {guest ? <GuestEntry className="ml-auto" /> : <NavDrawer />}
         </TopBar>

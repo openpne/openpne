@@ -53,6 +53,13 @@ test('a guest on a web-public entry sees the counts and nothing to press', () =>
     expect(screen.queryAllByRole('button')).toHaveLength(0);
 });
 
+test('a row not linking its author names them as text', () => {
+    renderWithProviders(<DiaryCommentRow comment={comment} linkAuthor={false} onDelete={vi.fn()} reactions={{ chips: [], vocabulary: ['\u{1F44D}'] }} />);
+
+    expect(screen.getByText('Rin').closest('a')).toBeNull();
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+});
+
 test('only a deletable comment offers the delete control, as an icon in the bar rather than a link in the flow', () => {
     renderWithProviders(<DiaryCommentRow comment={{ ...comment, deletable: true }} onDelete={vi.fn()} reactions={{ chips: [], vocabulary: ['\u{1F44D}'], onToggle: vi.fn() }} />);
 

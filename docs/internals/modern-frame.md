@@ -86,10 +86,15 @@ A guest gets the same frame with the member-only parts left out:
 
 - No bottom tabs and no menu. The way in to `/login` stands where the menu does: at the end of
   the phone header, and in the sidebar at desk width.
+- A hub keeps its heading and drops its write action and every tab a guest cannot open. The
+  diary hub keeps All, the way back from a search.
 - The crumb never takes the place tier, whose target is a member's page that may sit behind the
   login wall. It is the trail's last item, and it is a link only where that target is open to a
   guest (an entry's crumb to its author's entries, which lists the web-public ones); anywhere
-  else it is text. The place bar draws no face for a guest.
+  else it is text. The place bar draws no face for a guest. Out of room, the crumb cuts the
+  name rather than the words around it, which say where it leads.
+- No link points at a member's page. An entry's byline leads to the author's entries, as its
+  crumb does, and a commenter's name is text.
 - A web-public profile is the member page with the heading and the profile fields alone
   ([member-profile.md](member-profile.md), "Key invariants").
 
