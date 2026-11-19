@@ -233,14 +233,13 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
                     'push_subscriptions.endpoint' => 'ascii_bin', 'registration_tokens.email' => 'utf8mb4_0900_as_ci'],
                 $this->mysqlColumnsNotIn($tables, 'utf8mb4_0900_bin'),
             );
+            $this->assertSame(0, $this->altersRunBy(fn () => $this->migration()->up()), 'a second run converts nothing');
 
             $this->artisan('migrate');
             $this->assertSame([], collect(DB::select(
                 'SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_COLLATION <> ?',
                 ['utf8mb4_0900_bin'],
             ))->pluck('TABLE_COLLATION', 'TABLE_NAME')->except(['file_bin', ...array_keys(self::OP3_TABLES)])->all());
-
-            $this->assertSame(0, $this->altersRunBy(fn () => $this->migration()->up()), 'a second run converts nothing');
         } finally {
             foreach (array_keys(self::OP3_TABLES) as $table) {
                 DB::statement("DROP TABLE IF EXISTS {$table}");

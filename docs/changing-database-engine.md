@@ -24,10 +24,10 @@ your members actually run against the copy before you let anyone else near it
 ([how each engine compares](internals/text-comparison.md)).
 
 **Email addresses and usernames.** A member's email address and an administrator's username compare
-without case on both engines. MySQL also treats as one what differs in width, in hiragana and
-katakana, in small and full-size kana, in compatibility forms (`①` and `1`) or in the case of an
-accented letter, where SQLite folds only the case of ASCII letters: a copy from SQLite to MySQL
-stops on two addresses or usernames that differ only that way. Every other value compares
+without case on both engines. MySQL also treats as one what differs in the case of any letter, not
+only ASCII, in width, in hiragana and katakana, in small and full-size kana, in compatibility forms
+(`①` and `1`) or in the kind of space inside the value, where SQLite folds only the case of ASCII
+letters: a copy from SQLite to MySQL stops on two addresses or usernames that differ only that way. Every other value compares
 exactly on both engines: two groups whose names differ only in case are two groups.
 
 **What one file costs and buys.** Sessions, the cache and the queue are all database-backed by
