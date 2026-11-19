@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Database\SQLiteSchemaBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Database\Connection;
@@ -438,7 +439,7 @@ class CopyDatabaseCommand extends Command
         foreach ($marks as $table => $mark) {
             $sql = $target->scalar("select sql from sqlite_master where type = 'table' and name = ?", [$table]);
 
-            if (! is_string($sql) || stripos($sql, 'autoincrement') === false) {
+            if (! is_string($sql) || ! SQLiteSchemaBuilder::autoIncrements($sql)) {
                 continue;
             }
 

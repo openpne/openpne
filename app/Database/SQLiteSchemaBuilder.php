@@ -19,68 +19,85 @@ class SQLiteSchemaBuilder extends SQLiteBuilder
             return;
         }
 
-        $table = $blueprint->getTable();
-        $before = $this->highWaterMark($table);
+        // Resolved as the grammar resolves it, so a schema-qualified or prefixed table is the one read here.
+        [$schema, $table] = $this->parseSchemaAndTable($blueprint->getTable(), withDefaultSchema: true);
+        $table = $this->connection->getTablePrefix().$table;
+        $before = $this->highWaterMark($schema, $table);
 
         try {
             parent::build($blueprint);
         } finally {
             if ($before !== null) {
-                $this->restore($this->currentName($blueprint, $table), $before);
+                $this->restore($schema, $this->currentName($blueprint, $schema, $table), $before);
             }
         }
     }
 
-    /** A failure can stop the Blueprint before or at its rename, leaving the table under its old name. */
-    private function currentName(Blueprint $blueprint, string $table): string
+    /** True when the CREATE TABLE statement has the keyword itself, not a string, identifier or comment spelling it. */
+    public static function autoIncrements(string $createTable): bool
     {
-        if ($this->tableSql($table) !== null) {
+        $code = preg_replace('/\'(?:[^\']|\'\')*\'|"(?:[^"]|"")*"|`(?:[^`]|``)*`|\[[^\]]*\]|--[^\n]*|\/\*.*?(?:\*\/|$)/s', ' ', $createTable);
+
+        return preg_match('/\bautoincrement\b/i', (string) $code) === 1;
+    }
+
+    /** A failure can stop the Blueprint before its first rename, and a later rename always fails, as Laravel compiles each one from the original name. */
+    private function currentName(Blueprint $blueprint, string $schema, string $table): string
+    {
+        if ($this->storedTable($schema, $table) !== null) {
             return $table;
         }
 
         foreach ($blueprint->getCommands() as $command) {
             if ($command->name === 'rename') {
-                $table = $command->to;
+                return $this->connection->getTablePrefix().$command->to;
             }
         }
 
         return $table;
     }
 
-    private function tableSql(string $table): ?string
+    /** @return array{string, string}|null the name as stored, which can differ in case from the one asked for, and the CREATE statement */
+    private function storedTable(string $schema, string $name): ?array
     {
-        $sql = $this->connection->scalar("select sql from sqlite_master where type = 'table' and name = ?", [$table]);
+        $row = $this->connection->selectOne(
+            "select name, sql from {$this->grammar->wrap($schema)}.sqlite_master where type = 'table' and name = ? collate nocase",
+            [$name],
+        );
 
-        return is_string($sql) ? $sql : null;
+        return $row === null ? null : [(string) $row->name, (string) $row->sql];
     }
 
-    private function restore(string $table, int $before): void
+    private function restore(string $schema, string $name, int $before): void
     {
-        $sql = $this->tableSql($table);
+        $table = $this->storedTable($schema, $name);
 
         // A table that no longer numbers its rows must not gain a sqlite_sequence row.
-        if ($sql === null || stripos($sql, 'autoincrement') === false) {
+        if ($table === null || ! self::autoIncrements($table[1])) {
             return;
         }
 
-        $now = $this->highWaterMark($table);
+        $now = $this->highWaterMark($schema, $table[0]);
         if ($now !== null && $now >= $before) {
             return;
         }
 
+        $sequence = $this->grammar->wrap($schema).'.sqlite_sequence';
+
         // sqlite_sequence has no unique key on name, so no upsert.
-        $this->connection->delete('delete from sqlite_sequence where name = ?', [$table]);
-        $this->connection->insert('insert into sqlite_sequence (name, seq) values (?, ?)', [$table, $before]);
+        $this->connection->delete("delete from {$sequence} where name = ? collate nocase", [$table[0]]);
+        $this->connection->insert("insert into {$sequence} (name, seq) values (?, ?)", [$table[0], $before]);
     }
 
-    private function highWaterMark(string $table): ?int
+    private function highWaterMark(string $schema, string $table): ?int
     {
-        $exists = $this->connection->scalar("select count(*) from sqlite_master where type = 'table' and name = 'sqlite_sequence'");
-        if (! $exists) {
+        $schema = $this->grammar->wrap($schema);
+
+        if (! $this->connection->scalar("select count(*) from {$schema}.sqlite_master where type = 'table' and name = 'sqlite_sequence'")) {
             return null;
         }
 
-        $seq = $this->connection->scalar('select seq from sqlite_sequence where name = ?', [$table]);
+        $seq = $this->connection->scalar("select max(seq) from {$schema}.sqlite_sequence where name = ? collate nocase", [$table]);
 
         return $seq === null ? null : (int) $seq;
     }
