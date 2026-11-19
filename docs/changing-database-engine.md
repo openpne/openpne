@@ -130,6 +130,10 @@ before writing anything:
   nobody else has a copy of, and what only the target defines would end up in the result holding
   something the source never had. Reconcile the two on a copy of the source, or extend the schema on
   both sides.
+- **A connection uses a driver other than SQLite, MySQL or MariaDB.** It is refused before the
+  target is touched.
+- **A table's id counter does not fit a signed 64-bit integer.** This is checked after the target's
+  schema is created and before any row is written, so running it again needs no cleanup.
 
 Extra *tables on the source* are the one exception — after an OpenPNE 3 upgrade the OpenPNE 3 tables
 are still there, and they are no part of the OpenPNE 4 schema. The command names each one it leaves

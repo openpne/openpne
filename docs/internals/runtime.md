@@ -243,15 +243,17 @@ where the engine would not:
 
 - `openpne:copy-database` carries each table's mark to the target
   ([changing-database-engine.md](../changing-database-engine.md#copying-the-database)).
-- On SQLite, Laravel rebuilds a table to apply `change()`, an added or dropped foreign key, or a
-  primary key change, and the rebuild resets the mark to the highest id left.
-  `App\Database\SQLiteConnection` restores it after each schema Blueprint, failed ones included,
-  so an insert later in the same migration does not reuse an id. A migration that rebuilds a table
-  itself (creating a copy, dropping the original and renaming, or in raw SQL) restores the mark
-  itself, as `2026_11_19_000001_convert_text_columns_to_binary_collation` does.
+- On SQLite, Laravel rebuilds a table to apply `change()`, an added or dropped foreign key, a
+  primary key change, or (before SQLite 3.35) `dropColumn()`, and the rebuild resets the mark to
+  the highest id left. `App\Database\SQLiteConnection` restores it after each schema Blueprint,
+  failed ones included, so an insert later in the same migration does not reuse an id. A migration
+  that rebuilds a table without the schema builder (creating a copy, dropping the original and
+  renaming it, in raw SQL) restores the mark itself.
 
 Nothing restores a mark lowered another way: `TRUNCATE`, an `ALTER TABLE … AUTO_INCREMENT` that
-lowers it, a dump restored without it, or a rebuild run before this existed.
+lowers it, a dump restored without it, an upgrade from OpenPNE 3 (it carries rows, not marks), a
+rebuild run before this existed, or a row another process inserts between a rebuild and the
+restore, which is one reason an update runs in maintenance mode ([updating.md](../updating.md)).
 
 ## Release marker
 

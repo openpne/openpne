@@ -25,6 +25,7 @@ class CopyDatabaseAutoIncrementOptionTest extends TestCase
         return [
             'the option, not a comment or default spelling it' => ["CREATE TABLE `tricky` (\n".self::TRICKY_COLUMNS."\n".$options, '42'],
             'ANSI_QUOTES' => ["CREATE TABLE \"tricky\" (\n".str_replace('`', '"', self::TRICKY_COLUMNS)."\n".$options, '42'],
+            'no id handed out yet, the table comment spelling the option' => ["CREATE TABLE `fresh` (\n  `id` bigint unsigned NOT NULL AUTO_INCREMENT,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='see AUTO_INCREMENT=7 here, it\\'s ''quoted'''", null],
             'no id handed out yet' => ["CREATE TABLE `fresh` (\n  `id` bigint unsigned NOT NULL AUTO_INCREMENT,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci", null],
             'no counter' => ["CREATE TABLE `plain` (\n  `code` varchar(10) NOT NULL,\n  PRIMARY KEY (`code`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci", null],
         ];

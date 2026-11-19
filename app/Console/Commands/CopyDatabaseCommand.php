@@ -367,7 +367,9 @@ class CopyDatabaseCommand extends Command
             return null;
         }
 
-        return preg_match('/(?:^|\s)AUTO_INCREMENT=(\d+)(?:\s|$)/', $options[1], $match) === 1 ? $match[1] : null;
+        $unquoted = preg_replace("/'(?:[^'\\\\]|\\\\.|'')*'/", "''", $options[1]);
+
+        return preg_match('/(?:^|\s)AUTO_INCREMENT=(\d+)(?:\s|$)/', (string) $unquoted, $match) === 1 ? $match[1] : null;
     }
 
     /**

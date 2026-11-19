@@ -13,6 +13,12 @@ class SQLiteSchemaBuilder extends SQLiteBuilder
      */
     protected function build(Blueprint $blueprint)
     {
+        if ($this->connection->pretending()) {
+            parent::build($blueprint);
+
+            return;
+        }
+
         $table = $blueprint->getTable();
         $before = $this->highWaterMark($table);
 
@@ -20,13 +26,18 @@ class SQLiteSchemaBuilder extends SQLiteBuilder
             parent::build($blueprint);
         } finally {
             if ($before !== null) {
-                $this->restore($this->finalName($blueprint, $table), $before);
+                $this->restore($this->currentName($blueprint, $table), $before);
             }
         }
     }
 
-    private function finalName(Blueprint $blueprint, string $table): string
+    /** A failure can stop the Blueprint before or at its rename, leaving the table under its old name. */
+    private function currentName(Blueprint $blueprint, string $table): string
     {
+        if ($this->tableSql($table) !== null) {
+            return $table;
+        }
+
         foreach ($blueprint->getCommands() as $command) {
             if ($command->name === 'rename') {
                 $table = $command->to;
@@ -36,12 +47,19 @@ class SQLiteSchemaBuilder extends SQLiteBuilder
         return $table;
     }
 
-    private function restore(string $table, int $before): void
+    private function tableSql(string $table): ?string
     {
         $sql = $this->connection->scalar("select sql from sqlite_master where type = 'table' and name = ?", [$table]);
 
+        return is_string($sql) ? $sql : null;
+    }
+
+    private function restore(string $table, int $before): void
+    {
+        $sql = $this->tableSql($table);
+
         // A table that no longer numbers its rows must not gain a sqlite_sequence row.
-        if (! is_string($sql) || stripos($sql, 'autoincrement') === false) {
+        if ($sql === null || stripos($sql, 'autoincrement') === false) {
             return;
         }
 

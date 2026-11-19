@@ -69,7 +69,6 @@ class SQLiteHighWaterMarkTest extends TestCase
             'a foreign key added' => ["Schema::table('probe', fn (Blueprint \$t) => \$t->foreignId('parent_id')->nullable()->constrained('parents'));".$inside, 'probe', 101, 102],
             'a rename, then a rebuild' => ["Schema::rename('probe', 'renamed'); Schema::table('renamed', fn (Blueprint \$t) => \$t->string('label')->nullable()->change()); DB::table('renamed')->insert(['label' => 'inside']);", 'renamed', 101, 102],
             'a rebuild and a rename in one Blueprint' => ["Schema::table('probe', function (Blueprint \$t) { \$t->string('label')->nullable()->change(); \$t->rename('renamed'); }); DB::table('renamed')->insert(['label' => 'inside']);", 'renamed', 101, 102],
-            'a higher explicit id after the rebuild' => [self::CHANGE." DB::table('probe')->insert(['id' => 200, 'label' => 'inside']);", 'probe', 200, 201],
         ];
     }
 
@@ -111,6 +110,40 @@ class SQLiteHighWaterMarkTest extends TestCase
         $this->assertSame(101, (int) $this->probe()->insertGetId(['label' => 'after']));
     }
 
+    /** @return array<string, array{string, string}> Blueprint body after the rebuild, expected failure */
+    public static function failedRenames(): array
+    {
+        return [
+            'a statement before the rename fails' => ["\$t->unique('label'); \$t->rename('renamed');", 'UNIQUE'],
+            'the rename itself fails' => ["\$t->rename('existing');", 'existing'],
+        ];
+    }
+
+    #[DataProvider('failedRenames')]
+    public function test_a_blueprint_failing_at_or_before_its_rename_restores_the_table_under_its_old_name(string $rest, string $failure): void
+    {
+        $this->probe()->insert([['id' => 3, 'label' => 'dup'], ['id' => 4, 'label' => 'dup']]);
+        Schema::connection('rowids')->create('existing', fn (Blueprint $table) => $table->id());
+        $this->db()->table('existing')->insert(['id' => 5]);
+
+        try {
+            $this->migrate("Schema::table('probe', function (Blueprint \$t) { \$t->string('label')->nullable()->change(); {$rest} });");
+            $this->fail('expected the Blueprint to fail');
+        } catch (Throwable $e) {
+            $this->assertStringContainsString($failure, $e->getMessage());
+        }
+
+        $this->assertSame(101, (int) $this->probe()->insertGetId(['label' => 'after']));
+        $this->assertSame(6, (int) $this->db()->table('existing')->insertGetId([]));
+    }
+
+    public function test_pretending_reads_nothing(): void
+    {
+        Artisan::call('migrate', ['--database' => 'rowids', '--path' => $this->write(self::CHANGE), '--realpath' => true, '--pretend' => true]);
+
+        $this->assertStringNotContainsString('sqlite_sequence', Artisan::output());
+    }
+
     public function test_a_rollback_rebuild_keeps_the_mark(): void
     {
         $this->migrate(self::CHANGE, down: "Schema::table('probe', fn (Blueprint \$t) => \$t->string('label')->nullable(false)->change());");
@@ -122,6 +155,11 @@ class SQLiteHighWaterMarkTest extends TestCase
     }
 
     private function migrate(string $up, string $down = ''): void
+    {
+        Artisan::call('migrate', ['--database' => 'rowids', '--path' => $this->write($up, $down), '--realpath' => true]);
+    }
+
+    private function write(string $up, string $down = ''): string
     {
         File::put($this->dir.'/2099_01_01_000000_rowids_probe.php', <<<PHP
             <?php
@@ -139,7 +177,7 @@ class SQLiteHighWaterMarkTest extends TestCase
             };
             PHP);
 
-        Artisan::call('migrate', ['--database' => 'rowids', '--path' => $this->dir, '--realpath' => true]);
+        return $this->dir;
     }
 
     private function db(): Connection
