@@ -62,21 +62,28 @@ test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a
     expect(hubHeadingRow(props)?.className).not.toContain('sr-only');
 });
 
-/** Past the list a guest is on, every lens and the write action lead to the login wall. */
-test('a guest gets the diary hub with its heading and without its tabs or write action', () => {
-    arrive('diary/feed', { auth: { user: null }, variant: 'recent' });
+test.each([
+    ['the list', 'recent'],
+    ['search results', 'search'],
+])("a guest's diary hub on %s keeps only the tab back to the list, and no write action", (_where, variant) => {
+    arrive('diary/feed', { auth: { user: null }, variant });
 
-    expect(screen.getByRole('heading', { name: '%Diaries%' })).toBeTruthy();
-    expect(screen.queryByRole('navigation', { name: '%Diaries%' })).toBeNull();
-    expect(document.querySelector('a[href="/diary/listMember"]')).toBeNull();
+    const tabs = screen.getByRole('navigation', { name: '%Diaries%' });
+    expect([...tabs.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/diary/list']);
     expect(document.querySelector('a[href="/diary/new"]')).toBeNull();
 });
 
-test("a member's diary hub keeps the lenses", () => {
+test("a member's diary hub keeps every lens", () => {
     arrive('diary/feed', { variant: 'recent' });
 
-    expect(screen.getByRole('navigation', { name: '%Diaries%' })).toBeTruthy();
-    expect(document.querySelector('a[href="/diary/listMember"]')).not.toBeNull();
+    const tabs = screen.getByRole('navigation', { name: '%Diaries%' });
+    expect([...tabs.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/diary/list', '/diary/listFriend', '/diary/listMember']);
+});
+
+test('a hub with no tab open to a guest draws no tab row for one', () => {
+    arrive('community/search', { auth: { user: null } });
+
+    expect(screen.queryByRole('navigation')).toBeNull();
 });
 
 test('the place bar is the desk answer to where the reader is: the place, as a pill with its face', () => {

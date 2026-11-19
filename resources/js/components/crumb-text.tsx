@@ -18,9 +18,9 @@ export function CrumbText({ label, className }: { label: ChromeLabel | string; c
 
     return (
         <span className={cn('flex min-w-0', className)}>
-            <span className="sr-only">{whole}</span>
+            <span className="sr-only">{parts.join(String(name))}</span>
             {/* Flex items are blocks, which a screen reader may read as separate words. */}
-            <span aria-hidden className="flex min-w-0">
+            <span aria-hidden className="flex min-w-0 overflow-hidden">
                 {parts[0] !== '' && <span className="shrink-0 whitespace-pre">{parts[0]}</span>}
                 <span className="truncate">{String(name)}</span>
                 {parts[1] !== '' && <span className="shrink-0 whitespace-pre">{parts[1]}</span>}

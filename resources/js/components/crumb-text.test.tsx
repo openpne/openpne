@@ -20,6 +20,14 @@ test('out of room, the name is what gives way and the words after it stay whole'
     expect(screen.getByText("A very long member name's %diary%").className).toBe('sr-only');
 });
 
+test('the phrase read aloud is the one on screen, whatever the name holds', () => {
+    const { container } = render(<CrumbText label={{ key: ":name's %diary%", replacements: { name: 'Rin $& :NAME %Diary%' } }} />);
+
+    const shown = Array.from(container.querySelectorAll('[aria-hidden] > span')).map((part) => part.textContent).join('');
+    expect(shown).toBe("Rin $& :NAME %Diary%'s %diary%");
+    expect(container.querySelector('.sr-only')?.textContent).toBe(shown);
+});
+
 test('words before the name stay whole too, whatever order a translation puts them in', () => {
     const { container } = render(<CrumbText label={{ key: '%Diary% of :name', replacements: { name: 'Rin' } }} />);
 
