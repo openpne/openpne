@@ -94,7 +94,10 @@ same `DB_DATABASE` otherwise, and one of them would open the other's. `--from` a
 are the same for the source, which defaults to the connection the site itself uses.
 
 The command creates the schema, copies every table, and reports failure unless the row counts match
-on both sides afterwards. Nothing is written to the source. Then point the site at what it produced:
+on both sides afterwards. Each table's id counter comes along, so the target never hands out the id
+of a row the source deleted ([Row ids](internals/runtime.md#row-ids)); a copy into MySQL that fails
+leaves the counters raised on empty tables, and running it again is fine. It copies between SQLite,
+MySQL and MariaDB only. Nothing is written to the source. Then point the site at what it produced:
 
 ```dotenv
 DB_CONNECTION=sqlite
