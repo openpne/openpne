@@ -8,7 +8,10 @@ use App\Features\Group\Actions\AcceptAdminTransfer;
 use App\Features\Group\Actions\JoinGroup;
 use App\Features\Group\Actions\RequestAdminTransfer;
 use App\Features\Group\GroupRole;
+use App\Features\Member\Actions\SetAvatar;
 use App\Features\Member\Actions\WithdrawMember;
+use App\Features\Member\Events\MemberWithdrawn;
+use App\Files\MemberFilePurgeException;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DiaryImage;
@@ -21,7 +24,12 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
@@ -120,6 +128,117 @@ class WithdrawMemberTest extends TestCase
 
         $this->assertModelMissing($diaryFile);
         $this->assertModelMissing($postFile);
+    }
+
+    private function fileOwnedBy(string $type, int $id, string $name = ''): File
+    {
+        return File::factory()->create([
+            'related_entity_type' => $type,
+            'related_entity_id' => $id,
+            'name' => $name !== '' ? $name : Str::random(40),
+        ]);
+    }
+
+    public function test_deletes_every_file_the_member_owns_not_only_the_avatar(): void
+    {
+        $member = Member::factory()->create();
+        $id = (int) $member->getKey();
+        app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 10, 10));
+        $avatar = $member->fresh()->avatar->file;
+        // The shapes an upgrade leaves: a second profile photo, and an upload-plugin file named after its owner.
+        $photo = $this->fileOwnedBy('member', $id);
+        $upload = $this->fileOwnedBy('member', $id, "/m{$id}/1700000000report.pdf");
+        $bystanders = $this->fileOwnedBy('member', (int) Member::factory()->create()->getKey());
+        // Owner ids are per type, so this file shares the member's number without being theirs.
+        $sameNumber = $this->fileOwnedBy('diary', $id);
+
+        $this->withdraw($member);
+
+        $this->assertModelMissing($avatar);
+        $this->assertSame(0, DB::table('file_bin')->where('file_id', $avatar->getKey())->count());
+        $this->assertModelMissing($photo);
+        $this->assertModelMissing($upload);
+        $this->assertModelExists($bystanders);
+        $this->assertModelExists($sameNumber);
+    }
+
+    public function test_deletes_the_files_of_the_members_ai_accounts(): void
+    {
+        $owner = Member::factory()->create();
+        $account = Member::factory()->aiAccount($owner)->create();
+        $file = $this->fileOwnedBy('member', (int) $account->getKey());
+
+        $this->withdraw($owner);
+
+        $this->assertModelMissing($account);
+        $this->assertModelMissing($file);
+    }
+
+    public function test_deletes_past_the_first_page_of_files(): void
+    {
+        // More rows than one lazyById page, so an offset-paged read that deletes as it goes would skip some.
+        $member = Member::factory()->create();
+        $now = now();
+        DB::table('files')->insert(array_map(fn (int $i): array => [
+            'name' => "bulk-{$i}",
+            'type' => 'image/png',
+            'byte_size' => 0,
+            'related_entity_type' => 'member',
+            'related_entity_id' => $member->getKey(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], range(1, 250)));
+
+        $this->withdraw($member);
+
+        $this->assertSame(0, File::query()->where('related_entity_type', 'member')->where('related_entity_id', $member->getKey())->count());
+    }
+
+    public function test_a_file_that_fails_to_delete_is_reported_and_the_rest_of_the_withdrawal_completes(): void
+    {
+        Exceptions::fake();
+        Event::fake([MemberWithdrawn::class]);
+        $member = Member::factory()->create();
+        $id = (int) $member->getKey();
+        $failing = $this->fileOwnedBy('member', $id);
+        $others = [$this->fileOwnedBy('member', $id), $this->fileOwnedBy('member', $id)];
+        File::deleting(function (File $file) use ($failing): void {
+            if ($file->is($failing)) {
+                throw new RuntimeException('disk refused');
+            }
+        });
+
+        $this->captureSecurityLog();
+        $this->withdraw($member);
+
+        $this->assertModelMissing($member);
+        $this->assertModelExists($failing);
+        foreach ($others as $file) {
+            $this->assertModelMissing($file);
+        }
+        Exceptions::assertReported(fn (MemberFilePurgeException $e): bool => str_contains($e->getMessage(), "File [{$failing->getKey()}] of deleted member [{$id}]"));
+        $this->assertOneSecurityEvent('member.withdrawn');
+        Event::assertDispatched(MemberWithdrawn::class);
+    }
+
+    public function test_a_rolled_back_member_delete_keeps_every_member_file(): void
+    {
+        $member = Member::factory()->create();
+        $file = $this->fileOwnedBy('member', (int) $member->getKey());
+        // Runs after MemberObserver::deleting has registered the deferred purge, which the rollback must discard.
+        Member::deleting(function (): void {
+            throw new RuntimeException('boom');
+        });
+
+        try {
+            DB::transaction(fn () => $member->delete());
+            $this->fail('expected the delete to throw');
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertModelExists($member);
+        $this->assertModelExists($file);
     }
 
     /** A reply goes with the member row's cascade, which reaches no reaction — the sweep is the action's. */
@@ -380,7 +499,7 @@ class WithdrawMemberTest extends TestCase
         try {
             $this->withdraw($primary);
             $this->fail('Expected the primary member to be un-withdrawable.');
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             // expected
         }
 
