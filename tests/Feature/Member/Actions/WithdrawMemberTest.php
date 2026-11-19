@@ -23,6 +23,8 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -221,6 +223,47 @@ class WithdrawMemberTest extends TestCase
         Event::assertDispatched(MemberWithdrawn::class);
     }
 
+    public function test_a_failing_query_for_the_files_is_reported_and_the_rest_of_the_withdrawal_completes(): void
+    {
+        Exceptions::fake();
+        Event::fake([MemberWithdrawn::class]);
+        $member = Member::factory()->create();
+        $id = (int) $member->getKey();
+        $file = $this->fileOwnedBy('member', $id);
+        DB::listen(function (QueryExecuted $query): void {
+            if (str_starts_with(strtolower($query->sql), 'select') && str_contains($query->sql, 'related_entity_type')) {
+                throw new RuntimeException('connection lost');
+            }
+        });
+
+        $this->captureSecurityLog();
+        $this->withdraw($member);
+
+        $this->assertModelMissing($member);
+        $this->assertModelExists($file);
+        Exceptions::assertReported(fn (MemberFilePurgeException $e): bool => str_contains($e->getMessage(), "Files of deleted member [{$id}]"));
+        $this->assertOneSecurityEvent('member.withdrawn');
+        Event::assertDispatched(MemberWithdrawn::class);
+    }
+
+    public function test_a_member_delete_the_database_refuses_keeps_every_member_file(): void
+    {
+        // Outside a transaction an after-commit callback runs at once, so a purge registered before the DELETE would already have run.
+        $owner = Member::factory()->create();
+        Member::factory()->aiAccount($owner)->create();
+        $file = $this->fileOwnedBy('member', (int) $owner->getKey());
+
+        try {
+            $owner->delete();
+            $this->fail('expected the AI account to hold the owner row');
+        } catch (QueryException) {
+            // expected
+        }
+
+        $this->assertModelExists($owner);
+        $this->assertModelExists($file);
+    }
+
     public function test_a_rolled_back_member_delete_keeps_every_member_file(): void
     {
         $member = Member::factory()->create();
@@ -230,8 +273,8 @@ class WithdrawMemberTest extends TestCase
         File::deleting(function () use (&$purged): void {
             $purged++;
         });
-        // Runs after MemberObserver::deleting has registered the deferred purge, which the rollback must discard.
-        Member::deleting(function (): void {
+        // Runs after MemberObserver::deleted has registered the deferred purge, which the rollback must discard.
+        Member::deleted(function (): void {
             throw new RuntimeException('boom');
         });
 

@@ -92,7 +92,7 @@ prints the row count and the byte total first. Two kinds are never touched: an o
 `public` (an operator asset: branding, custom-HTML images) and a file named `admin_*` in any letter
 case, which the OpenPNE 3 admin image manager wrote for custom HTML and CSS to reference by URL and
 the upgrade marks public ([upgrade.md](upgrade.md#openpne-3-admin-images)). Deleting a member deletes
-every file the member owns once the delete commits, so a member's file outlives them only when that
-purge fails, which is reported. Such a file keeps its owner type and is not an ownerless file; the
-sweep leaves it. The sweep is not scheduled: it is a decision an operator takes, typically once
+every file the member owns once the delete commits. A file that outlives its member (the purge
+failed and was reported, the process stopped before it ran, or the member left before this version)
+keeps its owner type and is not an ownerless file; the sweep leaves it. The sweep is not scheduled: it is a decision an operator takes, typically once
 after a cutover.
