@@ -8,6 +8,7 @@ use App\Models\Member;
 use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -66,15 +67,36 @@ class CopyDatabaseTest extends TestCase
 
         // Rows arrive with their source ids, so the target's auto-increment has to resume above them
         // rather than from wherever an empty table would have started.
-        $next = DB::connection('copy_target')->table('members')->insertGetId([
-            'name' => 'after the copy',
-            'email' => 'after-the-copy@example.test',
-            'password' => 'x',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->assertGreaterThan($member->id, $this->insertMember('copy_target'));
+    }
 
-        $this->assertGreaterThan($member->id, $next);
+    /** @return array<string, array{bool}> */
+    public static function deletions(): array
+    {
+        return ['the latest row deleted' => [false], 'every row deleted' => [true]];
+    }
+
+    #[DataProvider('deletions')]
+    public function test_the_target_does_not_hand_out_a_deleted_rows_id(bool $everyRow): void
+    {
+        $kept = Member::factory()->create();
+        $deleted = Member::factory()->create();
+        DB::table('members')->whereIn('id', $everyRow ? [$kept->id, $deleted->id] : [$deleted->id])->delete();
+
+        $this->temporaryConnection('copy_target');
+
+        $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])->assertSuccessful();
+
+        $this->assertGreaterThan($deleted->id, $this->insertMember('copy_target'));
+    }
+
+    public function test_it_refuses_a_driver_other_than_sqlite_mysql_and_mariadb_before_touching_it(): void
+    {
+        config(['database.connections.copy_target' => ['driver' => 'pgsql', 'host' => '203.0.113.1', 'database' => 'openpne']]);
+
+        $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
+            ->expectsOutputToContain('only SQLite, MySQL and MariaDB')
+            ->assertFailed();
     }
 
     public function test_it_refuses_a_target_that_already_holds_rows(): void
@@ -164,6 +186,17 @@ class CopyDatabaseTest extends TestCase
         }
 
         return $database;
+    }
+
+    private function insertMember(string $connection): int
+    {
+        return (int) DB::connection($connection)->table('members')->insertGetId([
+            'name' => 'after the copy',
+            'email' => 'after-the-copy@example.test',
+            'password' => 'x',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     /** The scratch file is removed in tearDown. */

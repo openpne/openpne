@@ -88,7 +88,7 @@ class SQLiteHighWaterMarkTest extends TestCase
 
     public function test_a_rebuild_of_an_emptied_table_keeps_its_mark(): void
     {
-        // The rebuild copies no row, so it leaves no sqlite_sequence row at all to compare.
+        // The rebuild copies no row, so the copy's mark starts at 0 rather than at a surviving id.
         $this->probe()->delete();
 
         $this->migrate(self::CHANGE);
