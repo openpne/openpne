@@ -374,8 +374,8 @@ own. The gate of each room's picture, asked once for a room shown and so at most
 reads nothing the page does not already hold: the message and its room are noted for it
 ([`FileOwners`](../../app/Files/FileOwners.php)) before it is asked. A room's picture, its speaker and every
 face are read after the gate, for the items shown and no others; a story's pictures are never read.
-Here as on a day's page, a face or a group's image is signed from the row in hand, its owner noted
-for the gate as a room's picture is. The grid of months is one read of every issue's
+A face or a group's image is signed from the row in hand, its owner noted for the gate as a room's
+picture is. The grid of months is one read of every issue's
 date, a row per published day.
 
 ## Routes
