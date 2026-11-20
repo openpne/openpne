@@ -28,7 +28,8 @@ document covers the delivery model around it.
    ([ordering.md](ordering.md#keyset-and-offset)). Reading what a row points at marks it read too:
    the feed is an inbox, so a row is spent by the thing it announces.
    [`NotificationTarget`](../../app/Features/Notifications/NotificationTarget.php) is the per-kind
-   table of what that is, and
+   table of what that is, which the row's mark names too
+   ([modern-frame.md](modern-frame.md), "Content kinds"), and
    [`ConsumeNotificationRows`](../../app/Features/Notifications/ConsumeNotificationRows.php) the
    rule; on a chat surface the read is the read cursor rather than the page view, since opening a
    conversation is not reading what sits above where the reader stopped. A landing page is a GET, so
