@@ -281,25 +281,24 @@ further. The payload is still one ranked list in one shape — the placement is 
 **The page opens on a band**: the days' name as the `h1`, the neighbouring days either side of it,
 and, on the newest issue, when the next one comes (06:00) where the step forward would be. The band
 calls a day "yesterday" by the site's calendar, not by the 06:00 day: before 06:00 the latest issue
-is two calendar days back. Below the stories come talk, upcoming events, newcomers and new groups,
-each a panel named by its title. The foot repeats the steps either side, links the month in the
+is two calendar days back. Below the stories come the talk rooms, a card each, then upcoming events,
+newcomers and new groups, each a panel named by its title. The foot repeats the steps either side, links the month in the
 calendar, and ends in the colophon; there is no line calling an issue stale.
 
 **Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))
 and named by its headline, so nothing inside it may be a link of its own: a byline names rather than
-navigates. A post has no title, so its opening line is the headline and the dek is what is left after
-it — and a post that opens on a blank line is headlined by its words instead, because a link named by
-nothing cannot be announced.
+navigates, and a talk card is named by its room and prints its mentions as text. A post has no
+title, so its opening line is the headline and the dek is what is left after it — and a post that
+opens on a blank line is headlined by its words instead, because a link named by nothing cannot be
+announced.
 
 **A burst is resolved live, and only its window is remembered.** The count is the stretch's current
 count and the way in is `?m=` on the first message still there. What is printed is the **last six
-messages of the window**, oldest first, each drawn as the room draws it — author, time, body with
-its mentions, and the pictures the reader may have, gated per file the same way a glimpse is
+messages of the window**, oldest first, each drawn as the room draws it — author, time, body and the
+pictures the reader may have, gated per file the same way a glimpse is
 ([`TalkSampleDigest`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)). The tail and not
 the head: the first issue ever reaches back a week, and a week-old opening describes a room that has
 since moved on. There is no separate row of faces and no picture grid — an excerpt carries both.
-The room's name heads the excerpt and is not a link: the one way in is its foot, which counts what
-the excerpt left out.
 
 Every optional section key is absent rather than empty, so nothing on the page has to decide what
 `[]` means, and an issue of eight stories that lost seven is simply an issue of one.

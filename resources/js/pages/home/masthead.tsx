@@ -36,7 +36,7 @@ function Phrase({ days }: { days: { from: string; to: string } | null }) {
 }
 
 /**
- * The sides keep their words on one line and the middle takes what width is left, so a long middle
+ * The sides break only between words and the middle takes what width is left, so a long middle
  * wraps rather than pushing a side off the screen. Equal growth from a zero basis keeps it centred while there is room.
  */
 export function Band({ start, end, children }: { start: ReactNode; end: ReactNode; children: ReactNode }) {
@@ -72,19 +72,19 @@ export function Masthead({ days, prev, next }: { days: { from: string; to: strin
         <Band
             start={
                 prev && (
-                    <BandLink href={prev.href} side="prev">
-                        {t('Earlier day')}
+                    <BandLink href={prev.href} side="prev" label={t('Earlier day')}>
+                        {t('Show the earlier day')}
                     </BandLink>
                 )
             }
             end={
                 next ? (
-                    <BandLink href={next.href} side="next">
-                        {t('Later day')}
+                    <BandLink href={next.href} side="next" label={t('Later day')}>
+                        {t('Show the later day')}
                     </BandLink>
                 ) : (
                     // The hour is HomeIssueDay::HOUR's; the two change together.
-                    <span className="whitespace-nowrap text-xs text-muted-foreground">{t('Next update at 06:00')}</span>
+                    <span className="text-right text-xs break-keep text-muted-foreground">{t('Next update at 06:00')}</span>
                 )
             }
         >

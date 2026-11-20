@@ -247,7 +247,7 @@ const newcomer: PersonTile = { id: 31, name: 'Aki', imageUrl: null, avatarColor:
 const newGroup: HomeGroup = { id: 41, name: 'Film club', imageUrl: null, href: '/groups/41' };
 const upcoming: UpcomingEvent = { ...brief('event', 51), openDate: '2026-09-01' };
 
-test('the sections are panels named in the order the page reads', () => {
+test('the sections are named in the order the page reads, a talk room by its own name', () => {
     arrive({
         issue: issueOf({
             stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })],
@@ -261,14 +261,15 @@ test('the sections are panels named in the order the page reads', () => {
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
         'Morning walk',
         'Second story',
-        'From %community% talk',
+        'Room 61',
+        'Room 62',
         'Upcoming events',
         'New members',
         'New %communities%',
     ]);
 });
 
-test('a talk burst is its room by name, the end of the conversation, and the way to the rest', () => {
+test('a talk burst is a card that is one link into its room, over the end of the conversation', () => {
     const { container } = arrive({
         issue: issueOf({
             stories: undefined,
@@ -288,9 +289,9 @@ test('a talk burst is its room by name, the end of the conversation, and the way
         }),
     });
 
-    // The room heads its excerpt and is not itself a way in: the foot is.
-    const room = screen.getByRole('heading', { level: 3, name: 'Room 61' });
-    expect(room.querySelector('a')).toBeNull();
+    const room = screen.getByRole('heading', { level: 2, name: 'Room 61' });
+    // A mention is text: the card around it is the link.
+    expect(linksIn(room.parentElement?.parentElement as HTMLElement)).toEqual(['Room 61 -> /groups/61/talk']);
     expect(screen.getByText('7 messages')).toBeTruthy();
 
     // Six turns, read as a conversation: each one's words, under the name that said them.
@@ -300,23 +301,12 @@ test('a talk burst is its room by name, the end of the conversation, and the way
     expect(screen.getAllByText('Rin')).toHaveLength(5);
     // The message stays and the person is gone.
     expect(screen.getByText('%Withdrawn_member%')).toBeTruthy();
-    // A mention in a message is the link it is everywhere else.
-    expect(screen.getByRole('link', { name: '@rin' }).getAttribute('href')).toBe('/member/3');
 
     // What was posted rides with the turn it was posted in, at the size a strip draws.
     const glimpse = container.querySelector('img[srcset]');
     expect(glimpse?.getAttribute('srcset')).toBe('/f/9/w640 640w');
     expect(glimpse?.getAttribute('sizes')).toBe('6rem');
 
-    // Seven said and six shown: the one left is counted on the way in.
-    expect(screen.getByRole('link', { name: '1 more · Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
-});
-
-test('the way into a room counts what the excerpt left out, and only when it left something', () => {
-    arrive({ issue: issueOf({ talkBursts: [{ ...burst(61), count: 9 }, { ...burst(62), count: 5 }] }) });
-
-    expect(screen.getByRole('link', { name: '4 more · Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
-    expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/62/talk');
 });
 
 test('an upcoming event is a row: its day, its title, and where it is held', () => {
@@ -348,12 +338,12 @@ test('newcomers and new groups are names to follow, an AI account named as one',
 test('a section the issue does not have is absent, not empty', () => {
     // Nothing counts to zero and says so: an issue with one story has no talk, no newcomers and no
     // events, and the page says nothing at all about them.
-    arrive({ issue: issueOf() });
+    const { container } = arrive({ issue: issueOf() });
 
     expect(screen.queryByText('New members')).toBeNull();
     expect(screen.queryByText('New %communities%')).toBeNull();
     expect(screen.queryByText('Upcoming events')).toBeNull();
-    expect(screen.queryByText('From %community% talk')).toBeNull();
+    expect(container.querySelector('a[href$="/talk"]')).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
 });
 
@@ -363,7 +353,7 @@ test('an issue whose stories have all gone is still the day around them', () => 
         issue: issueOf({ stories: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
     });
 
-    expect(screen.getByRole('heading', { level: 3, name: 'Room 61' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Room 61' })).toBeTruthy();
     expect(screen.getByText('New members')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Aki' }).getAttribute('href')).toBe('/member/31');
 

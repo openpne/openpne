@@ -10,7 +10,7 @@ import { IssueNav } from './issue-nav';
 import { Masthead } from './masthead';
 import { SiteNotice } from './site-notice';
 import { LeadStory, SecondStory, StoryRow } from './story';
-import { TalkBurstRoom } from './talk-burst';
+import { TalkBurstCard } from './talk-burst';
 import type { IssuePageProps, IssueStory } from './types';
 import { WelcomePanel } from './welcome';
 
@@ -88,15 +88,7 @@ export default function HomeIssue() {
 
             {issue.stories && <Stories stories={issue.stories} />}
 
-            {issue.talkBursts && (
-                <Panel flush title={t('From %community% talk')}>
-                    <List>
-                        {issue.talkBursts.map((burst) => (
-                            <TalkBurstRoom key={burst.group.id} burst={burst} />
-                        ))}
-                    </List>
-                </Panel>
-            )}
+            {issue.talkBursts?.map((burst) => <TalkBurstCard key={burst.group.id} burst={burst} />)}
 
             {issue.upcomingEvents && (
                 <Panel flush title={t('Upcoming events')}>

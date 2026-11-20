@@ -1,9 +1,11 @@
 import { Link } from '@inertiajs/react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
+import { Card } from '@/components/card';
 import { CommunityImage } from '@/components/community-image';
-import { EntityText } from '@/components/entity-text';
 import { Timestamp } from '@/components/timestamp';
+import { Heading } from '@/components/ui/heading';
+import { stretchedLink } from '@/components/ui/surface';
 import { messagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { PictureStrip } from './picture-strip';
@@ -35,11 +37,7 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
                     <AiChip isAi={author?.isAi ?? false} />
                     <Timestamp at={message.createdAt} preset="listStamp" />
                 </div>
-                {message.body.trim() !== '' && (
-                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm">
-                        <EntityText text={message.body} mentions={message.mentions} />
-                    </p>
-                )}
+                {message.body.trim() !== '' && <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm">{message.body}</p>}
                 <PictureStrip images={message.images} className="mt-1" />
             </div>
         </li>
@@ -47,33 +45,32 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
 }
 
 /**
- * The room's name heads it but is not a link, so the one way in is the line at its foot, which names
- * what is left unread when the excerpt is not all of it.
+ * Not the catch-up card it reads like: that one requires the two actions that spend a backlog, and
+ * this has none to spend. The card is one link (docs/internals/home-issues.md, "Rendering"), so the
+ * mentions in its messages are text.
  */
-export function TalkBurstRoom({ burst }: { burst: TalkBurst }) {
+export function TalkBurstCard({ burst }: { burst: TalkBurst }) {
     const t = useT();
-    const rest = burst.count - burst.messages.length;
 
     return (
-        <li className="space-y-3 px-4 pt-4 pb-1.5 sm:px-5">
+        <Card className="relative px-4 py-4 sm:px-5">
             <div className="flex min-w-0 items-center gap-2">
                 <CommunityImage name={burst.group.name} src={burst.group.imageUrl} className="size-10" textClassName="text-sm" decorative />
-                {/* A heading styled as the row's content line (docs/internals/typography.md, "Heading roles"). */}
-                <h3 className="min-w-0 flex-1 truncate text-base text-foreground">{burst.group.name}</h3>
+                <Heading as="h2" variant="section" className="min-w-0 flex-1 truncate">
+                    <Link href={burst.href} className={stretchedLink}>
+                        {burst.group.name}
+                    </Link>
+                </Heading>
                 <span className="shrink-0 text-xs text-muted-foreground">{messagesPhrase(t, burst.count)}</span>
             </div>
 
             {burst.messages.length > 0 && (
-                <ul className="space-y-3">
+                <ul className="mt-4 space-y-3">
                     {burst.messages.map((message) => (
                         <ExcerptMessage key={message.id} message={message} />
                     ))}
                 </ul>
             )}
-
-            <Link href={burst.href} className="inline-flex min-h-11 items-center text-sm text-link hover:underline">
-                {rest === 1 ? t('1 more · Open talk') : rest > 1 ? t(':count more · Open talk', { count: rest }) : t('Open talk')}
-            </Link>
-        </li>
+        </Card>
     );
 }
