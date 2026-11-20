@@ -30,8 +30,9 @@ A server you administer is what the steps assume. A host where you cannot is cov
 - **PHP 8.3 or later**, for the web server and on the command line, with the extensions `ctype`,
   `curl`, `dom`, `exif`, `fileinfo`, `filter`, `gd`, `hash`, `iconv`, `intl`, `libxml`, `mbstring`,
   `openssl`, `pcre`, `session`, `sodium`, `tokenizer`, `xml`, `xmlreader`, `zip`, `zlib`, and
-  `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes web push faster; the queue
-  worker's job timeouts need `pcntl` on the command line.
+  `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes
+  [push notifications](#8-push-notifications-optional) faster; the queue worker's job timeouts need
+  `pcntl` on the command line.
 - **A database**: SQLite 3, or MySQL 8.4. Any MySQL from 8.0.17 works too: that is the first with
   the `utf8mb4_0900_bin` collation the tables use. A SQLite site also needs the `sqlite3` command,
   which [updating.md](updating.md) uses for its backup.
@@ -508,7 +509,51 @@ MAIL_FROM_NAME="${APP_NAME}"
 
 Mail leaves through the queue, so nothing is sent until the queue of step 6 is in place.
 
-## 8. The first member
+## 8. Push notifications (optional)
+
+A site without this step has no push notifications: nothing about them is shown to members, and
+nothing is sent. With it, members can have their notifications delivered to a phone or a desktop
+browser as well. It is set by whoever runs the server, in the `.env` of step 2: the admin panel has
+no setting for it, and members only choose which of their devices receive it.
+
+Generate the site's keys:
+
+```bash
+php artisan webpush:vapid --show
+```
+
+Copy the two values it prints into `.env`, under these names:
+
+```ini
+OPENPNE_VAPID_PUBLIC_KEY=...
+OPENPNE_VAPID_PRIVATE_KEY=...
+```
+
+The command without `--show` writes them into `.env` under names without `OPENPNE_`, which the site
+does not read. With both lines set, restart the queue worker if you run one, and run
+`php artisan optimize` again if the site has run it ([After the install](#after-the-install)).
+
+The keys are the site's identity to the push services that browsers use. They are kept in `.env`,
+which the backups of [After the install](#after-the-install) include; do not generate them again. A
+device subscribed under the old keys receives nothing sent with new ones until its member
+unsubscribes it and subscribes it again. `OPENPNE_VAPID_SUBJECT`, the contact a push service is
+given for the site, is `APP_URL` unless you set it; a `mailto:` address does as well.
+
+A push is sent for each notification that reaches a member's notifications page, and goes out with
+it through the queue of step 6, whichever of its three ways the site uses. With no worker, it is sent
+in the process of the request that caused it, after the response, and counts toward that request's
+`max_execution_time` ([runtime.md](internals/runtime.md#queue)). The server sends it straight to the
+push service of the member's browser, over HTTPS on port 443: the proxy variables of the environment
+(`HTTPS_PROXY` and the like) are not used, so the server has to reach the push services without one.
+
+Members then turn push notifications on themselves, one device at a time: from the notifications
+page, or with "Subscribe this device" under "Push notifications" in their notification settings. On
+an iPhone or an iPad, the site has to be added to the Home Screen first and opened from there. These
+screens are Modern's: on a site set to `classic_only` (`php artisan openpne:surface-mode`) no one
+can subscribe a device. Where members choose their look, one who uses Classic subscribes from
+Modern, and the device receives pushes whichever look they use afterwards.
+
+## 9. The first member
 
 Sign in to the admin panel at `https://sns.example.com/admin` with the administrator from step 3.
 

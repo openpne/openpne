@@ -72,8 +72,9 @@ dependencies and generating `APP_KEY`; on the host, run `php artisan migrate`. S
 
 On a server set up by [installing.md](installing.md), that makes its step 3
 `php artisan key:generate` and `php artisan migrate --force` (and `passport:keys`, if wanted), and
-leaves out its step 8: the members arrive with the data as well. Its steps 4 to 7 (the web server, HTTPS, background work,
-mail) are as written there, and have to be in place before the site is opened to members.
+leaves out its step 9: the members arrive with the data as well. Its steps 4 to 7 (the web server, HTTPS, background work,
+mail) are as written there, and have to be in place before the site is opened to members; so is its
+optional step 8, push notifications, if you take it.
 
 Compose ships no database of its own, so with Docker `DB_HOST` has to name a MySQL server the
 *container* can reach: `127.0.0.1` there means the container itself, not your machine.
