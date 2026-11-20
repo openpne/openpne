@@ -511,10 +511,10 @@ Mail leaves through the queue, so nothing is sent until the queue of step 6 is i
 
 ## 8. Push notifications (optional)
 
-A site without this step has no push notifications: nothing about them is shown to members, and
+A site without this step has no push notifications: members are offered no push settings, and
 nothing is sent. With it, members can have their notifications delivered to a phone or a desktop
-browser as well. It is set by whoever runs the server, in the `.env` of step 2: the admin panel has
-no setting for it, and members only choose which of their devices receive it.
+browser as well. It is switched on by whoever runs the server, in the `.env` of step 2: the admin
+panel has no setting for it, and members make their own choices once it is on (below).
 
 Generate the site's keys:
 
@@ -529,9 +529,8 @@ OPENPNE_VAPID_PUBLIC_KEY=...
 OPENPNE_VAPID_PRIVATE_KEY=...
 ```
 
-The command without `--show` writes them into `.env` under names without `OPENPNE_`, which the site
-does not read. With both lines set, restart the queue worker if you run one, and run
-`php artisan optimize` again if the site has run it ([After the install](#after-the-install)).
+The command without `--show` does not set these names. With both lines set, do what
+[After the install](#after-the-install) says to do after editing `.env`.
 
 The keys are the site's identity to the push services that browsers use. They are kept in `.env`,
 which the backups of [After the install](#after-the-install) include; do not generate them again. A
@@ -547,7 +546,9 @@ push service of the member's browser, over HTTPS on port 443: the proxy variable
 (`HTTPS_PROXY` and the like) are not used, so the server has to reach the push services without one.
 
 Members then turn push notifications on themselves, one device at a time: from the notifications
-page, or with "Subscribe this device" under "Push notifications" in their notification settings. On
+page, or with "Subscribe this device" under "Push notifications" in their notification settings.
+"Send push notifications to my devices", beside it, pauses pushes to all of a member's devices, and
+which kinds of notification are pushed follows the member's "In-app notifications" settings. On
 an iPhone or an iPad, the site has to be added to the Home Screen first and opened from there. These
 screens are Modern's: on a site set to `classic_only` (`php artisan openpne:surface-mode`) no one
 can subscribe a device. Where members choose their look, one who uses Classic subscribes from
