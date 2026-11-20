@@ -2,6 +2,7 @@
 
 namespace App\Features\GroupTalk;
 
+use App\Features\Group\GroupPlace;
 use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
 use App\Features\GroupTalk\Actions\DeleteGroupMessage;
@@ -126,6 +127,7 @@ class GroupTalkController extends Controller
             'reactionsVersion' => $reactionsVersion,
             // The set travels with the page so that nothing in the bundle holds a copy of it.
             'reactionVocabulary' => ReactionVocabulary::all(),
+            'openSections' => GroupPlace::openSections($group, $viewer),
         ];
 
         // Absent rather than null below the threshold, where no digest query runs at all.

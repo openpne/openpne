@@ -157,6 +157,8 @@ class GroupPageTest extends TestCase
                 // The hero paints a wide cover, so it takes the two rungs the header's srcset needs.
                 ->where('group.avatarUrl', $file->thumbnailUrl(640, 640, square: true))
                 ->where('group.avatarUrlLarge', $file->thumbnailUrl(1200, 1200, square: true))
+                // The place bar's face, the same file the screens inside the group draw.
+                ->where('group.imageUrl', $file->thumbnailUrl(180, 180, square: true))
                 ->where('group.avatarColor', null)
                 ->where('group.isAi', false)
                 ->where('viewerRole', 'member')
@@ -177,6 +179,7 @@ class GroupPageTest extends TestCase
                 ->where('talkPreview', null)
                 ->where('talkUnread', 0)
                 ->has('recentPhotos')
+                ->where('openSections', ['talk' => true, 'topic' => true, 'event' => true])
             );
     }
 
@@ -311,6 +314,7 @@ class GroupPageTest extends TestCase
                 ->where('recentEvents', null)
                 ->where('canViewTalk', false)
                 ->where('recentPhotos', [])
+                ->where('openSections', ['talk' => false, 'topic' => false, 'event' => false])
             );
         $read = [
             ...$this->queriesWith('comments_count'),
@@ -471,6 +475,7 @@ class GroupPageTest extends TestCase
         $this->actingAs($author)->get("/groups/{$group->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('recentTopics', null)
+                ->where('openSections', ['talk' => true, 'topic' => false, 'event' => true])
                 ->has('recentPhotos', 1)
                 ->where('recentPhotos.0.source', 'talk')
                 ->where('recentPhotos.0.href', "/groups/{$group->getKey()}/talk?m={$message->getKey()}")

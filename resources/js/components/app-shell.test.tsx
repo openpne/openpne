@@ -108,11 +108,13 @@ test('the shell paints the one ground, the color line and the offsets that clear
 
 test.each([
     ['group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['group/show', '/groups/7', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['member/show', '/member/9', null],
     // A form's crumb is plain text with no scope, and the editor's toolbar stands below its bar.
     ['diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
     ['dashboard', '/dashboard', null],
 ] as const)('%s publishes the place bar height only where the bar stands', (component, url, expected) => {
-    const chrome = arrive(component, url, { group: cyclists });
+    const chrome = arrive(component, url, { group: cyclists, profile: { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false } });
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
     const shell = container.firstElementChild as HTMLElement;
@@ -184,6 +186,20 @@ test('an accessory tap inside the composer is not leaving it', () => {
 
     fireEvent.focusOut(field, { relatedTarget: null });
 
+    expect(bar()?.className).not.toContain('translate-y-full');
+});
+
+test("pressing the room's name while writing leaves the composer, so the bar comes back", () => {
+    room();
+    const field = screen.getByLabelText('Message');
+    fireEvent.focusIn(field);
+    expect(bar()?.className).toContain('translate-y-full');
+
+    const name = document.querySelector<HTMLElement>('header [data-place-trigger="phone"]')!;
+    fireEvent.focusOut(field, { relatedTarget: name });
+    fireEvent.click(name);
+
+    expect(name.getAttribute('aria-expanded')).toBe('true');
     expect(bar()?.className).not.toContain('translate-y-full');
 });
 

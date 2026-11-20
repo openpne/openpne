@@ -21,7 +21,7 @@ vi.mock('@inertiajs/react', () => ({
             {children}
         </a>
     ),
-    router: { visit: () => {} },
+    router: { visit: () => {}, on: () => () => {} },
 }));
 
 afterEach(cleanup);
@@ -147,7 +147,7 @@ test('a hub is the mark and the section it stands on', () => {
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
 });
 
-test('a deep page carries the place it is inside, as something to press', () => {
+test("a deep page inside a group names the group, as the way to the group's sections", () => {
     const chrome = arrive('group/topic/show', '/topics/3', {
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
@@ -155,23 +155,36 @@ test('a deep page carries the place it is inside, as something to press', () => 
     renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
-    expect(screen.getByRole('link', { name: 'Cyclists' }).getAttribute('href')).toBe('/groups/7');
+    expect(screen.getByRole('button', { name: 'Cyclists' }).getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
+    // Nothing sits between the mark and the name: the trail's › went with the pill.
+    expect(document.querySelector('header')?.textContent).not.toContain('›');
     // No back control: swipe, the browser and the mark are the ways out.
     expect(screen.queryByRole('link', { name: 'Back' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });
 
-test('a place top speaks the home grammar — no crumb over its own hero', () => {
-    // The three-page symmetry extends to the header: home, a member's page and a group's share one
-    // bar, and the place's hero names it directly below where a pill would have repeated it.
+test("a group's top takes the same header as every screen inside it, rather than the site name", () => {
     const chrome = arrive('group/show', '/groups/7', {
-        group: { id: 7, name: 'Cyclists', imageUrl: null },
+        group: { id: 7, name: 'Cyclists', imageUrl: null, avatarUrl: null },
     });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
+    expect(screen.getByRole('button', { name: 'Cyclists' })).toBeTruthy();
+    expect(screen.queryByText('Test SNS')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
+});
+
+test("a member's page keeps the home grammar — no crumb over its own hero", () => {
+    const chrome = arrive('member/show', '/member/9', { profile: { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false } });
+
+    renderWithProviders(<TopNav chrome={chrome} />);
+
     expect(screen.getByText('Test SNS')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Owner' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull();
     // The brand link reads by the visible site name, not a doubled "Home" label.
     expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
 });

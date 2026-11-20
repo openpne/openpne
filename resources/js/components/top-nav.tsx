@@ -6,11 +6,12 @@ import { BrandName } from '@/components/brand-name';
 import { CrumbText } from '@/components/crumb-text';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
+import { PlaceSwitch } from '@/components/place-switch';
 import { headingVariants } from '@/components/ui/heading';
 import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
-import { breadcrumbCrumb, type Chrome, type ChromeLabel, isHomeComponent, isIssueDay, isPlaceTop } from '@/lib/member-chrome';
+import { breadcrumbCrumb, type Chrome, type ChromeLabel, headerOf } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
@@ -122,17 +123,44 @@ function GuestEntry({ className }: { className?: string }) {
     );
 }
 
+function MarkHome() {
+    const t = useT();
+
+    return (
+        // BrandMark is aria-hidden in both its arms, so without this the link has no name at all.
+        <Tip label={t('Home')}>
+            <Link href="/" {...pressPrefetch('/')} className="flex min-h-12 shrink-0 items-center gap-2 justify-self-start">
+                <BrandMark size="sm" />
+            </Link>
+        </Tip>
+    );
+}
+
 /** The site mark, then where the reader is (docs/internals/modern-frame.md, "The phone header"). */
 function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
     const { component, props } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
-    // A hub names itself; everything else names the place it is in, except the pages that ARE a place
-    // or a day of できごと, which share one header of mark and site name.
-    const brand =
-        isHomeComponent(String(component), props.modernHome) || isIssueDay(String(component)) || isPlaceTop(String(component));
-    const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
     const guest = props.auth.user === null;
+    const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
+    const end = guest ? <GuestEntry className="ml-auto" /> : <NavDrawer />;
+
+    if (header.type === 'place') {
+        return (
+            <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
+                {/* Equal outer columns hold the name at the middle of the screen, whatever the two ends weigh. */}
+                <div className="grid min-w-0 flex-1 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2">
+                    <MarkHome />
+                    <PlaceSwitch scope={header.scope} variant="phone" />
+                    <div className="flex justify-end">{end}</div>
+                </div>
+            </TopBar>
+        );
+    }
+
+    const brand = header.type === 'brand';
+    // A hub names itself; everything else names where it is.
+    const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
     const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome, guest);
 
     return (
@@ -145,12 +173,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                     <BrandName className="truncate" />
                 </Link>
             ) : (
-                // BrandMark is aria-hidden in both its arms, so without this the link has no name at all.
-                <Tip label={t('Home')}>
-                    <Link href="/" {...pressPrefetch('/')} className="flex min-h-12 shrink-0 items-center gap-2">
-                        <BrandMark size="sm" />
-                    </Link>
-                </Tip>
+                <MarkHome />
             )}
             {(hubTitle || crumb) && (
                 <span aria-hidden className="shrink-0 text-muted-foreground">
@@ -175,7 +198,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                     // A form's crumb goes nowhere, so it must not look as though it does.
                     <CrumbText label={crumb.label} className="text-sm text-muted-foreground" />
                 ))}
-            {guest ? <GuestEntry className="ml-auto" /> : <NavDrawer />}
+            {end}
         </TopBar>
     );
 }

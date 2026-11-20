@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { House, Pencil, Plus, Rss, Search, Settings, UserPlus } from 'lucide-react';
 import { CONTENT_KINDS } from './content-kinds.ts';
+import type { GroupOpenSections, GroupSection } from './place-sections.ts';
 import type { FeatureKey, ModernHomeId, UnreadCounts } from '@/types';
 
 /**
@@ -47,8 +48,9 @@ export interface ChromeAction {
     icon: Icon;
 }
 
+/** `section` is the one of the place's sections the screen stands in (lib/place-sections.ts). */
 export type ChromeScope =
-    | { kind: 'group'; id: number; name: string; imageUrl: string | null }
+    | { kind: 'group'; id: number; name: string; imageUrl: string | null; section: GroupSection; open: GroupOpenSections }
     | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null; isAi: boolean };
 
 export interface Chrome {
@@ -301,12 +303,14 @@ const communityContext = (group: CommunityRef): Chrome['context'] => [
     { href: `/groups/${group.id}`, label: group.name },
 ];
 
-const communityScope = (group: CommunityRef): ChromeScope => ({
-    kind: 'group',
-    id: group.id,
-    name: group.name,
-    imageUrl: group.imageUrl,
-});
+const CLOSED_BOARDS: GroupOpenSections = { talk: false, topic: false, event: false };
+
+/** A page that does not say which boards are open offers none of them. */
+const groupScope = (props: Record<string, unknown>, section: GroupSection): ChromeScope => {
+    const { group, openSections } = props as { group: CommunityRef; openSections?: GroupOpenSections };
+
+    return { kind: 'group', id: group.id, name: group.name, imageUrl: group.imageUrl, section, open: openSections ?? CLOSED_BOARDS };
+};
 
 const topicBoardContext = (group: CommunityRef): Chrome['context'] => [
     ...communityContext(group)!,
@@ -442,8 +446,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         return {
             mode: 'contextual',
             title: t('%Topics%'),
-            context: communityContext(group),
-            scope: communityScope(group),
+            scope: groupScope(props, 'topic'),
             action: canPost
                 ? { href: `/groups/${group.id}/topics/new`, label: t('Create a %topic%'), icon: Plus }
                 : undefined,
@@ -454,33 +457,16 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         return {
             mode: 'contextual',
             title: t('Events'),
-            context: communityContext(group),
-            scope: communityScope(group),
+            scope: groupScope(props, 'event'),
             action: canPost
                 ? { href: `/groups/${group.id}/events/new`, label: t('Create an event'), icon: Plus }
                 : undefined,
         };
     },
     // The conversation is the page, so no action button: its composer is always on screen.
-    'group/talk/index': (props) => {
-        const { group } = props as unknown as { group: CommunityRef };
-
-        return {
-            mode: 'contextual',
-            title: t('Talk'),
-            context: communityContext(group),
-            scope: communityScope(group),
-            conversation: true,
-        };
-    },
-    'group/topic/show': (props) => {
-        const { group } = props as unknown as { group: CommunityRef };
-        return { context: topicBoardContext(group), scope: communityScope(group) };
-    },
-    'group/event/show': (props) => {
-        const { group } = props as unknown as { group: CommunityRef };
-        return { context: eventBoardContext(group), scope: communityScope(group) };
-    },
+    'group/talk/index': (props) => ({ mode: 'contextual', title: t('Talk'), scope: groupScope(props, 'talk'), conversation: true }),
+    'group/topic/show': (props) => ({ scope: groupScope(props, 'topic') }),
+    'group/event/show': (props) => ({ scope: groupScope(props, 'event') }),
     'group/topic/edit': (props) => {
         const { group, topic } = props as unknown as { group: CommunityRef; topic: { id: number; name: string } | null };
         return {
@@ -501,48 +487,18 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                 : eventBoardContext(group),
         };
     },
-    'community/pending': (props) => {
-        const { group } = props as unknown as { group: CommunityRef };
-        return {
-            mode: 'contextual',
-            title: t('Pending members'),
-            context: communityContext(group),
-            scope: communityScope(group),
-        };
-    },
+    'community/pending': (props) => ({ mode: 'contextual', title: t('Pending members'), scope: groupScope(props, 'members') }),
     'community/edit': (props) => {
         const { group } = props as unknown as { group: CommunityRef | null };
         return group
             ? { form: true, context: communityContext(group) }
             : { form: true, context: [{ href: '/groups', label: COMMUNITIES }] };
     },
-    'community/members': (props) => {
-        const { group } = props as unknown as { group: CommunityRef };
-        return {
-            mode: 'contextual',
-            title: t('Members'),
-            context: communityContext(group),
-            scope: communityScope(group),
-        };
-    },
-    'community/manage': (props) => {
-        const { group } = props as unknown as { group: CommunityRef };
-        return {
-            mode: 'contextual',
-            title: t('Management member'),
-            context: communityContext(group),
-            scope: communityScope(group),
-        };
-    },
-    'group/event/members': (props) => {
-        const { group, event } = props as unknown as { group: CommunityRef; event: { id: number; name: string } };
-        return {
-            mode: 'contextual',
-            title: t('Count of Member'),
-            context: [...eventBoardContext(group)!, { href: `/events/${event.id}`, label: event.name }],
-            scope: communityScope(group),
-        };
-    },
+    'community/members': (props) => ({ mode: 'contextual', title: t('Members'), scope: groupScope(props, 'members') }),
+    'community/manage': (props) => ({ mode: 'contextual', title: t('Management member'), scope: groupScope(props, 'members') }),
+    // Its event is a link at the head of the page, the one level above it that is no section.
+    'group/event/members': (props) => ({ mode: 'contextual', title: t('Count of Member'), scope: groupScope(props, 'event') }),
+    'group/show': (props) => ({ scope: groupScope(props, 'top') }),
     'timeline/index': (props) => ({ mode: 'section', title: ACTIVITY, ...postActivityAction(props) }),
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
@@ -641,7 +597,6 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'community/search',
     'group/topic/recent',
     'group/event/recent',
-    'group/show',
     'timeline/index',
     'message/conversations/index',
     'member/search',
@@ -676,12 +631,10 @@ interface PlaceRef {
     name: string;
 }
 
-const groupPlace = (group: PlaceRef): Place => ({ label: group.name, href: `/groups/${group.id}` });
-
 const memberPlace = (member: PlaceRef): Place => ({ label: member.name, href: `/member/${member.id}` });
 
 /** The pages that ARE a place, whose own hero names it directly below the header. */
-const PLACE_TOPS = ['group/show', 'member/show'] as const;
+const PLACE_TOPS = ['member/show'] as const;
 
 export interface BreadcrumbCrumb {
     label: ChromeLabel | string;
@@ -720,13 +673,40 @@ export function breadcrumbCrumb(chrome: Chrome, guest = false): BreadcrumbCrumb 
 
     if (chrome.form !== true) {
         const { scope } = chrome;
-        const place = scope?.kind === 'group' ? groupPlace(scope) : scope?.kind === 'member' ? memberPlace(scope) : null;
-        if (place) {
-            return { ...place, link: true };
+        if (scope?.kind === 'member') {
+            return { ...memberPlace(scope), link: true };
         }
     }
 
     const last = chrome.context?.[chrome.context.length - 1];
 
     return last ? { label: last.label, href: last.href, link: chrome.form !== true } : null;
+}
+
+/** `trail` draws the hub title or the crumb (docs/internals/modern-frame.md, "The phone header"). */
+export type Header = { type: 'brand' } | { type: 'place'; scope: ChromeScope } | { type: 'trail' };
+
+export interface HeaderPage {
+    component: string;
+    home: ModernHomeId;
+    guest: boolean;
+}
+
+export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage): Header {
+    if (isHomeComponent(component, home) || isIssueDay(component) || isPlaceTop(component)) {
+        return { type: 'brand' };
+    }
+
+    if (chrome.scope?.kind === 'group' && chrome.form !== true && !guest) {
+        return { type: 'place', scope: chrome.scope };
+    }
+
+    return { type: 'trail' };
+}
+
+/** The shell publishes `--modern-place-bar` on exactly the screens PlaceBar draws on. */
+export function hasPlaceBar(chrome: Chrome, page: HeaderPage): boolean {
+    const header = headerOf(chrome, page);
+
+    return header.type === 'place' || (header.type === 'trail' && breadcrumbCrumb(chrome, page.guest) !== null);
 }

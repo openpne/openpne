@@ -8,7 +8,7 @@ import { LeftNav } from '@/components/left-nav';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
 import { carriesFiles, carriesPick, takesText } from '@/lib/file-drop';
-import { breadcrumbCrumb, type Chrome, chromeRecedes, hasBottomNav } from '@/lib/member-chrome';
+import { type Chrome, chromeRecedes, hasBottomNav, hasPlaceBar } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -18,7 +18,7 @@ import type { PageProps } from '@/types';
  * (docs/internals/feature-modules.md, "Surface responsibilities").
  */
 export function AppShell({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
-    const { props, url } = usePage<PageProps>();
+    const { component, props, url } = usePage<PageProps>();
     // The bottom bar is member nav, so the space it reserves goes with it: a guest gets no bar, and
     // reserves only the home-indicator strip the page would otherwise scroll its last row under.
     const member = props.auth.user !== null;
@@ -75,8 +75,10 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         ? '[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]'
         : '[--modern-bottom-offset:env(safe-area-inset-bottom)]';
     // The height place-bar.tsx gives its bar, hairline included, and only where it renders one: a
-    // screen with no crumb has nothing for a sticky child to stand below.
-    const placeBarOffset = breadcrumbCrumb(chrome, !member) !== null ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]' : undefined;
+    // screen with no bar has nothing for a sticky child to stand below.
+    const placeBarOffset = hasPlaceBar(chrome, { component: String(component), home: props.modernHome, guest: !member })
+        ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]'
+        : undefined;
 
     return (
         <ComposeSheetProvider exit={exit} onComposerEngaged={setComposerEngaged}>

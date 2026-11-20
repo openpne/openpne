@@ -21,7 +21,6 @@ use App\Features\Group\Serializers\GroupPageSerializer;
 use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
-use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\GroupTalk\Queries\LatestGroupMessage;
 use App\Features\GroupTalk\Queries\UnreadTalkCounts;
@@ -73,22 +72,20 @@ class GroupController extends Controller
         $sidebarMembers = $found->members()
             ->with(['member' => fn ($members) => $countFriends ? $members->with('avatar.file')->withCount('friendships') : $members->with('avatar.file')])
             ->orderByDesc('role')->orderBy('id')->limit(9)->get();
-        // Events share the topic read gate, so one check covers both boards.
-        $canViewBoard = GroupTopicAccess::canViewBoard($found, $viewer);
-        // A switched-off unit hides its box through the same null both surfaces already hide on,
-        // and its query never runs.
-        $showTopics = $canViewBoard && Feature::GroupTopic->enabled();
-        $showEvents = $canViewBoard && Feature::GroupEvent->enabled();
+        // A board the viewer may not open, or whose unit is off, hides its box through the same null
+        // both surfaces already hide on, and its query never runs.
+        $openSections = GroupPlace::openSections($found, $viewer);
+        $showTopics = $openSections['topic'];
+        $showEvents = $openSections['event'];
         // Read here rather than in a branch: Classic and Modern show these same rows, and neither may
         // ask for them a second time.
         $topics = $showTopics ? $recentTopics($found) : null;
         $canPostTopic = GroupTopicAccess::canPostTopic($found, $viewer);
         $events = $showEvents ? $recentEvents($found) : null;
         $canPostEvent = GroupEventAccess::canPostEvent($found, $viewer);
-        // Talk asks its own two questions rather than borrowing the board's null seam: it reads the
-        // same access column but is a separate unit, so a site running talk with the board switched
+        // Talk is a separate unit from the boards, so a site running talk with the boards switched
         // off must still get its entrance.
-        $canViewTalk = Feature::GroupTalk->enabled() && GroupTalkAccess::canView($found, $viewer);
+        $canViewTalk = $openSections['talk'];
         // Never read the conversation before the gate says the viewer may: the preview carries a
         // member's words, so the access question comes first and the query does not run otherwise.
         $talkPreview = $canViewTalk ? $latestMessage($found) : null;
@@ -122,7 +119,7 @@ class GroupController extends Controller
                     'canViewTalk' => $canViewTalk,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
+            SurfaceResolver::MODERN => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount, $openSections) {
                 $canManage = $role?->canManage() ?? false;
                 $canJoin = $role === null && ! $isPending;
                 $canLeave = $role !== null && $role !== GroupRole::Admin;
@@ -151,6 +148,7 @@ class GroupController extends Controller
                     talkPreview: $preview,
                     talkUnread: $talkUnreadCount,
                     about: GroupSerializer::about($found, $staff),
+                    openSections: $openSections,
                 ));
             },
         ]);
@@ -253,6 +251,7 @@ class GroupController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('community/members', [
                 'group' => GroupSerializer::summary($group),
                 'members' => GroupSerializer::memberPaginator($members),
+                'openSections' => GroupPlace::openSections($group, $this->viewer()),
             ]),
         ]);
     }
@@ -454,6 +453,7 @@ class GroupController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('community/pending', [
                 'group' => GroupSerializer::summary($group),
                 'applicants' => GroupSerializer::applicantPaginator($applicants),
+                'openSections' => GroupPlace::openSections($group, $this->viewer()),
             ]),
         ]);
     }

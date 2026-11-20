@@ -18,11 +18,12 @@ the row.
 
 | Screen | The header reads |
 |---|---|
-| Home, a member's page, a group's page | `[mark]` + the site name. These pages ARE a place: a member's and a group's name themselves in their own hero directly below |
+| Home, a member's page | `[mark]` + the site name. A member's page IS a place, and names itself in its own hero directly below |
 | A day of できごと, latest or past | `[mark]` + the site name. Its band names the day and steps to the days either side, and its foot leads to the month, so a crumb above it would be a third way to the same places |
 | A hub | `[mark] › section`. The bar's copy of the title is hidden from assistive technology; the page's own h1 stays on screen and is its one announcement |
 | A month of できごと | `[mark] › できごと`, as a hub reads, with no crumb: its band steps to the months either side and each day leads to its own page. The page opens on that band, so its h1 is kept for assistive technology and not drawn (`Chrome.deskHeading`) |
-| A screen inside a place | `[mark] › place`, the place a pill that leads to its top |
+| A screen inside a group, its top included | `[mark]`, then the group's name in the middle of the row, which opens the group's sections ("Place sections") |
+| A screen inside a member's place | `[mark] › place`, the place a pill that leads to its top |
 | A screen inside no place, with a trail | `[mark] › trail`, the trail's last item a pill that leads to it |
 | A form | `[mark] › trail`, as static text |
 | A screen inside nothing, with no trail | `[mark]` alone |
@@ -38,6 +39,28 @@ Two decisions here are deliberate rather than pending:
 - **A compose sheet keeps its own header.** A sheet is a mode rather than a screen class: its
   header is the ✕ that leaves it plus the page's own actions, and it draws no bottom tabs
   ([feature-modules.md](feature-modules.md), "Surface responsibilities").
+
+## Place sections
+
+A place's sections are listed in [`lib/place-sections.ts`](../../resources/js/lib/place-sections.ts),
+and the registry entry of every screen inside a place names the place and the section it stands
+in; the page itself declares nothing. Pressing the place's name opens its sections as tiles, the
+current one marked: `aria-current="page"` on the section's own list, `"true"` on a screen deeper
+inside it. The panel is modal: pressing outside it only closes it, and while it is open Tab stays
+inside and the page does not scroll.
+
+- **One panel, two triggers.** The phone header's name and the desk place bar's are both mounted
+  at every width, so each holds its own open state. What differs by width is the trigger and
+  where the panel hangs — across the header's full width on a phone, a card under the name at
+  desk width — never what it lists or how it closes. A panel open while the width crosses `lg`
+  closes, and focus moves to the trigger now on screen.
+- **Which of a group's boards to list is the server's.** Talk, topics and events appear only where
+  the viewer may open them with their unit on (`GroupPlace::openSections`, the same answer the
+  group page's own boxes take); the top and the members list always appear. A screen whose
+  props say nothing lists no board.
+- **A screen with no section of its own** marks the nearest: the pending and management lists
+  mark Members, an event's participants mark Events. The participants page leads to its event
+  from the head of its body, the one level above it that the tiles do not offer.
 
 ## The bottom tabs
 
@@ -76,8 +99,9 @@ off the phone's screen is drawn here.
 
 On a screen deep enough to be inside somewhere, a sticky place bar
 ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
-column: the phone header's crumb in the same pill, carrying the place's face. Home, a hub, a
-member's or a group's own page and anything the sidebar's own active row already names draw none. The bar is one height on every
+column: the phone header's crumb in the same pill, carrying the place's face. Inside a group, its
+top included, the bar is the group's face and name, which open its sections. Home, a hub, a
+member's own page and anything the sidebar's own active row already names draw none. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
 banner and day indicator, and the editor's toolbar. A screen with no place bar leaves the
@@ -87,7 +111,7 @@ variable unset.
 
 The nav sections, a group page's section headings, a member page's group and people headings
 and its diary cards, the mark over a story in できごと, the rows of its month page and the
-notifications take a kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts),
+notifications and a place's section tiles take a kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts),
 and the mark its word as well; a new kind, or a new list that mixes kinds, takes them from there
 too. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)), in a dense row as on a
 card, always prints the kind's word beside the glyph, which is decorative; it is phrasing text and

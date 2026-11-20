@@ -18,6 +18,7 @@ vi.mock('@inertiajs/react', () => ({
             {children}
         </a>
     ),
+    router: { on: () => () => {} },
 }));
 
 afterEach(cleanup);
@@ -92,14 +93,24 @@ test('a hub with no tab open to a guest draws no tab row for one', () => {
     expect(screen.queryByRole('navigation')).toBeNull();
 });
 
-test('the place bar is the desk answer to where the reader is: the place, as a pill with its face', () => {
+test("the place bar is the desk answer to where the reader is: the group's face and name, which open its sections", () => {
     arrive('group/talk/index', { group: cyclists });
 
-    const pill = placeBar()?.querySelector('a');
-    expect(pill?.getAttribute('href')).toBe('/groups/7');
-    expect(pill?.textContent).toBe('Cyclists');
+    const name = screen.getByRole('button', { name: 'Cyclists' });
+    expect(placeBar()?.contains(name)).toBe(true);
+    expect(name.getAttribute('aria-expanded')).toBe('false');
     // The face the phone header cannot carry: there the brand mark is the bar's one image.
-    expect(pill?.querySelector('img')?.getAttribute('src')).toBe('/img/cyclists.png');
+    expect(name.querySelector('img')?.getAttribute('src')).toBe('/img/cyclists.png');
+    expect(placeBar()?.querySelector('a')).toBeNull();
+});
+
+test("a group's top stands the same place bar as the screens inside it", () => {
+    arrive('group/show', { group: { ...cyclists, avatarUrl: '/img/cyclists-640.png' } });
+
+    const name = screen.getByRole('button', { name: 'Cyclists' });
+    expect(placeBar()?.contains(name)).toBe(true);
+    // The inner screens' face, not the hero's larger one, so moving between them redraws nothing.
+    expect(name.querySelector('img')?.getAttribute('src')).toBe('/img/cyclists.png');
 });
 
 test('a form says where it is without offering a way out of it', () => {

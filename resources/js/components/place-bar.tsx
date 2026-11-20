@@ -1,10 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { Avatar } from '@/components/avatar';
-import { CommunityImage } from '@/components/community-image';
 import { CrumbText } from '@/components/crumb-text';
+import { PlaceFace, PlaceSwitch } from '@/components/place-switch';
 import { headingVariants } from '@/components/ui/heading';
-import { breadcrumbCrumb, type Chrome } from '@/lib/member-chrome';
+import { breadcrumbCrumb, type Chrome, headerOf } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -19,10 +18,19 @@ const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
  * under it.
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
-    const scrolled = useScrolled();
-    const guest = usePage<PageProps>().props.auth.user === null;
-    const crumb = breadcrumbCrumb(chrome, guest);
+    const { component, props } = usePage<PageProps>();
+    const guest = props.auth.user === null;
+    const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
 
+    if (header.type === 'place') {
+        return (
+            <Bar>
+                <PlaceSwitch scope={header.scope} variant="desk" />
+            </Bar>
+        );
+    }
+
+    const crumb = header.type === 'trail' ? breadcrumbCrumb(chrome, guest) : null;
     if (!crumb) {
         return null;
     }
@@ -31,13 +39,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     const scope = guest ? undefined : chrome.scope;
     // Absent where the place is a section rather than an entity (a tag lens crumbs to its feed), and
     // on a form, which the registry pins to no scope.
-    let face: ReactNode = null;
-    if (scope?.kind === 'group') {
-        face = <CommunityImage name={scope.name} src={scope.imageUrl} className="size-6" textClassName="text-3xs" decorative />;
-    } else if (scope?.kind === 'member') {
-        face = <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} isAi={scope.isAi} size="xs" decorative />;
-    }
-
+    const face = scope ? <PlaceFace scope={scope} /> : null;
     const body = (
         <>
             {face}
@@ -46,6 +48,26 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     );
     // The face is drawn to the pill's edge; a bare name keeps the pill symmetrical.
     const padding = face ? 'pr-3 pl-1' : 'px-3';
+
+    return (
+        <Bar>
+            {crumb.link ? (
+                // The phone pill's fill, unchanged: the same element means the same thing at both
+                // widths, and it is the affordance the bare trail failed to be.
+                <Link href={crumb.href} className={cn(PILL, padding, headingVariants({ variant: 'bar' }), 'bg-accent')}>
+                    {body}
+                </Link>
+            ) : (
+                // A form's crumb goes nowhere, so it is painted as text — in the ground color, which
+                // shows as nothing until the form scrolls under it.
+                <span className={cn(PILL, padding, 'bg-background text-sm text-muted-foreground')}>{body}</span>
+            )}
+        </Bar>
+    );
+}
+
+function Bar({ children }: { children: ReactNode }) {
+    const scrolled = useScrolled();
 
     return (
         // The width cancels the frame's padding rather than taking the content column's: at the
@@ -58,17 +80,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
                 scrolled ? 'border-border' : 'border-transparent',
             )}
         >
-            {crumb.link ? (
-                // The phone pill's fill, unchanged: the same element means the same thing at both
-                // widths, and it is the affordance the bare trail failed to be.
-                <Link href={crumb.href} className={cn(PILL, padding, headingVariants({ variant: 'bar' }), 'bg-accent')}>
-                    {body}
-                </Link>
-            ) : (
-                // A form's crumb goes nowhere, so it is painted as text — in the ground color, which
-                // shows as nothing until the form scrolls under it.
-                <span className={cn(PILL, padding, 'bg-background text-sm text-muted-foreground')}>{body}</span>
-            )}
+            {children}
         </div>
     );
 }
