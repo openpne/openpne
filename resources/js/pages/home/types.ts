@@ -143,7 +143,7 @@ export type DayItem = DayStory | DayTalk;
 
 /** Read live, of what the reader may still see (docs/internals/home-issues.md, "The month page"). */
 export interface DaySummary extends IssueRef {
-    /** As the issue's own, but from a room's last message alone, so a stretch of days can be narrower. */
+    /** As the issue's own, but from a room's last message and the first three names alone, so a stretch can be narrower. */
     bornDays: { from: string; to: string };
     /** Up to three; empty when nothing the day featured is left for this reader. */
     items: DayItem[];

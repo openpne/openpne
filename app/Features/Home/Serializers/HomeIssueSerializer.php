@@ -17,6 +17,7 @@ use App\Features\Home\Data\TalkStretch;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Files\FileOwners;
 use App\Files\PostAttachments;
 use App\Models\Diary;
 use App\Models\Group;
@@ -477,6 +478,11 @@ final class HomeIssueSerializer
      */
     private static function scope(Group $group): array
     {
+        // The row in hand is the one FilePolicy would otherwise read again to sign the image's URL.
+        if ($group->image !== null) {
+            app(FileOwners::class)->note($group);
+        }
+
         return [
             'id' => (int) $group->getKey(),
             'name' => $group->name,

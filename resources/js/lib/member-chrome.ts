@@ -362,7 +362,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const action = enabled(props, 'diary') ? WRITE_DIARY : undefined;
         return isHomeComponent('dashboard', homeOf(props)) ? { mode: 'embedded', action } : { mode: 'section', title: WHATS_NEW, action };
     },
-    // Titled as a hub though no nav section is its own: the run of issues is the front page's history.
     'home/issues': () => ({ mode: 'section', title: HAPPENINGS, deskHeading: true }),
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({

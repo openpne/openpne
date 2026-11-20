@@ -77,6 +77,27 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $this->assertSame($half, $full, 'a read grew with the days of the month');
     }
 
+    /** Signed as a site serves them by default, where a URL's signature asks the gate about its file's owner. */
+    public function test_signing_the_faces_and_images_of_a_month_costs_the_same_however_many_issues_it_holds(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->fill(new HomeIssueMonth(2026, 6), days: 15, talking: 10, pictured: 5);
+        $this->fill(new HomeIssueMonth(2026, 7), days: 31, talking: 10, pictured: 5);
+
+        config(['openpne.images.fast_path' => true]);
+        $this->actingAs($viewer);
+        request()->setLaravelSession($this->app['session.store']);
+        $this->warm($viewer);
+
+        [$half] = $this->measure($viewer, new HomeIssueMonth(2026, 6));
+        [$full, $fullDays] = $this->measure($viewer, new HomeIssueMonth(2026, 7));
+
+        $this->assertMatchesRegularExpression('/[?&]s=[A-Za-z0-9_-]{22}/', (string) $fullDays[0]['newGroups'][0]['imageUrl']);
+        $this->assertMatchesRegularExpression('/[?&]s=[A-Za-z0-9_-]{22}/', (string) $fullDays[0]['newcomers'][0]['imageUrl']);
+        $this->assertSame($half, $full, 'a signature read its owner again for each day of the month');
+    }
+
     public function test_a_room_costs_one_read_an_issue_and_a_picture_its_gate(): void
     {
         $viewer = Member::factory()->create();
@@ -136,6 +157,8 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
      */
     private function measure(Member $viewer, HomeIssueMonth $month): array
     {
+        // One request each, so no owner the gate found for one month is still in hand for the next.
+        $this->app->forgetScopedInstances();
         DB::flushQueryLog();
         DB::enableQueryLog();
 
@@ -232,13 +255,18 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
     {
         static $made = 0;
 
-        return Group::query()->create([
+        $file = File::factory()->create();
+        $group = Group::query()->create([
             'name' => 'Group '.++$made,
             'register_policy' => JoinPolicy::Open,
             'topic_read_access' => TopicReadAccess::Everyone,
             'topic_post_authority' => TopicPostAuthority::Members,
-            'file_id' => File::factory()->create()->getKey(),
+            'file_id' => $file->getKey(),
         ]);
+        // As a group's own image is stored, so the gate has an owner to ask about.
+        $file->update(['related_entity_type' => 'group', 'related_entity_id' => $group->getKey()]);
+
+        return $group;
     }
 
     private function stories(HomeIssue $issue): void

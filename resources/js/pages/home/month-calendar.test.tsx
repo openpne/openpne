@@ -226,6 +226,13 @@ test('an issue covering a stretch of days stands on the day it is dated', () => 
     expect(screen.getAllByRole('link')).toHaveLength(1);
 });
 
+test('a cell whose block names only earlier days still says its own', () => {
+    // Everything this reader is shown was born on the 25th, two days before the issue's date.
+    renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27', { bornDays: { from: '2026-08-25', to: '2026-08-25' } })]} />);
+
+    expect(within(cell(27)).getByRole('link', { name: 'Aug 25 to 27, Morning walk' })).toBeTruthy();
+});
+
 test('today is marked on the site\'s calendar, whether or not it has an issue', () => {
     // 00:30 on the 28th in Tokyo, which is still the 27th in UTC.
     vi.useFakeTimers({ now: new Date('2026-08-27T15:30:00Z') });

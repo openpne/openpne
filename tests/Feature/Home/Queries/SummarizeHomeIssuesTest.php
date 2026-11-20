@@ -397,6 +397,24 @@ class SummarizeHomeIssuesTest extends TestCase
         $this->assertSame(1, $summary->more());
     }
 
+    /** A newcomer who is also a room's last speaker is one row read twice, as two instances. */
+    public function test_a_row_named_twice_is_drawn_with_its_face_both_times(): void
+    {
+        $room = Group::factory()->create(['file_id' => File::factory()]);
+        $said = $this->say($room, $this->now()->subHours(2));
+        MemberImage::factory()->create(['member_id' => $said->member_id]);
+        $this->feature(HomeIssueSection::Talk, $room, stats: $this->stretch($this->now()));
+        $this->feature(HomeIssueSection::Newcomers, $said->author, rank: 1);
+        $this->feature(HomeIssueSection::NewGroups, $room, rank: 1);
+
+        $summary = $this->summary();
+
+        $this->assertTrue($summary->bursts[0]->last->author->relationLoaded('avatar'));
+        $this->assertTrue($summary->newcomers[0]->relationLoaded('avatar'));
+        $this->assertTrue($summary->bursts[0]->group->relationLoaded('image'));
+        $this->assertTrue($summary->newGroups[0]->relationLoaded('image'));
+    }
+
     public function test_nothing_is_loaded_a_row_at_a_time(): void
     {
         $this->everyDropAndWhatIsLeft();

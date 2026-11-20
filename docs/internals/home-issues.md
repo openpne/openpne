@@ -311,10 +311,10 @@ Every optional section key is absent rather than empty, so nothing on the page h
 ## The month page
 
 `/home/{y}/{m}` draws one month of issues, newest first: each day as its date and the first few
-things that happened on it, every one a link to the thing itself. A day is headed by the days what it
-shows was born on, as an issue's band is ("A day runs 06:00 → 06:00"), but read from what the month
-reads: a room by its last message alone, so a stretch can be named narrower than on the day's own
-page.
+things that happened on it, every one a link to the thing itself. A day is headed by the days the rows it reads
+were born on, those behind "more" included, as an issue's band is ("A day runs 06:00 → 06:00"); a
+room is read by its last message alone and the names by their first three rows, so a stretch can be
+named narrower than on the day's own page.
 
 **A day has an issue when an issue is dated that day, and only then.** An issue belongs to the month
 of its `issue_date`, whatever its window reaches back over — the rule `/home/{y}/{m}/{d}` already
@@ -363,8 +363,9 @@ further down, and a day without one is its date alone. A cell prints what the bl
 each and at most three — a story by its headline, a room by its group's name, then names while
 there is room — with the count of what the block does not list beside the date. A line is cut where
 the cell ends and never wrapped. The link's name holds every word the cell prints and says the rest:
-the days as the block names them, a room's name with what was last said in it, what a name is a name
-of, and that the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
+the days from the first its block names to the cell's own, which is the block's naming unless
+everything it reads was born before the issue's date, a room's name with what was last said in it,
+what a name is a name of, and that the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
 
 **The cost does not grow with the ledger.** One read per source table, one per relation the gate
 asks about, and the units asked once per gate rather than per row. One read does grow, with the
@@ -372,7 +373,9 @@ month and not with its rows: one per issue that holds talk, since each issue has
 own. The gate of each room's picture, asked once for a room shown and so at most three times a day,
 reads nothing the page does not already hold: the message and its room are noted for it
 ([`FileOwners`](../../app/Files/FileOwners.php)) before it is asked. A room's picture, its speaker and every
-face are read after the gate, for the items shown and no others; a story's pictures are never read. The grid of months is one read of every issue's
+face are read after the gate, for the items shown and no others; a story's pictures are never read.
+A face or a group's image is signed from the row in hand, its owner noted for the gate as a room's
+picture is. The grid of months is one read of every issue's
 date, a row per published day.
 
 ## Routes

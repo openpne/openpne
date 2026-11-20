@@ -39,14 +39,14 @@ export function MonthBand({ month, prev, next, months }: Props) {
             <Band
                 start={
                     prev && (
-                        <BandLink href={prev.href} side="prev">
+                        <BandLink href={prev.href} side="prev" label={`${t('Earlier month')} ${named(prev)}`}>
                             {named(prev)}
                         </BandLink>
                     )
                 }
                 end={
                     next && (
-                        <BandLink href={next.href} side="next">
+                        <BandLink href={next.href} side="next" label={`${t('Later month')} ${named(next)}`}>
                             {named(next)}
                         </BandLink>
                     )

@@ -143,7 +143,8 @@ function Day({ number, weekday, issue, today }: { number: number; weekday: numbe
 
     const shown = chips(t, issue);
     const name = [
-        daysCovered(t, date, issue),
+        // To the cell's own day, which the block's stretch can stop short of (docs/internals/home-issues.md, "The month page").
+        daysCovered(t, date, { from: issue.bornDays.from, to: issue.date }),
         today && t('Today'),
         ...shown.map((chip) => chip.name),
         issue.more > 0 && morePhrase(t, issue.more),

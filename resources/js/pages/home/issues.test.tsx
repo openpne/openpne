@@ -279,8 +279,9 @@ test('the pager offers only the months there is one to go to', () => {
     arrive({ prev: month(2026, 6), next: month(2026, 9) });
 
     expect(screen.getByRole('heading', { level: 2, name: 'August 2026' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Earlier month Jun' }).getAttribute('href')).toBe('/home/2026/06');
-    expect(screen.getByRole('link', { name: 'Later month Sep' }).getAttribute('href')).toBe('/home/2026/09');
+    // The band's step and the foot's, named alike.
+    expect(screen.getAllByRole('link', { name: 'Earlier month Jun' }).map((link) => link.getAttribute('href'))).toEqual(['/home/2026/06', '/home/2026/06']);
+    expect(screen.getAllByRole('link', { name: 'Later month Sep' }).map((link) => link.getAttribute('href'))).toEqual(['/home/2026/09', '/home/2026/09']);
 
     cleanup();
 

@@ -182,7 +182,8 @@ final class SummarizeHomeIssues
 
         EloquentCollection::make($said->all())->load('author');
         $faces = [...$said->map(fn (GroupMessage $message): ?Member => $message->author)->filter()->all(), ...$named->flatMap(fn (HomeIssueSummary $summary): array => $summary->newcomers)->all()];
-        EloquentCollection::make($faces)->unique()->load('avatar.file');
+        // Not deduplicated: a newcomer who spoke last is one row read twice, and each instance is drawn.
+        EloquentCollection::make($faces)->load('avatar.file');
 
         $pictures = $this->talk->firstPictures($viewer, $said);
 

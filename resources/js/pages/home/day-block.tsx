@@ -24,10 +24,7 @@ export function dayAnchor(date: string): string {
     return `day-${date}`;
 }
 
-/** One wording for the block, the calendar's link and the day's own band, so a day is heard as the same in all three. */
-export function daysCovered(t: Translate, date: DateFormat, day: DaySummary): string {
-    const { from, to } = day.bornDays;
-
+export function daysCovered(t: Translate, date: DateFormat, { from, to }: { from: string; to: string }): string {
     return from === to ? date.civilMonthDay(from, true) : t(':from to :to', date.civilDaySpan(from, to));
 }
 
@@ -131,7 +128,7 @@ export function DayBlock({ day }: { day: DaySummary }) {
         <li id={dayAnchor(day.date)} className={cn('scroll-mt-16 border-t border-foreground', day.more > 0 ? 'pb-1.5' : 'pb-5')}>
             <Heading as="h3" variant="group" face="serif">
                 <Link href={day.href} className="flex min-h-12 items-center justify-between gap-2">
-                    {single ? <time dateTime={day.bornDays.from}>{daysCovered(t, date, day)}</time> : daysCovered(t, date, day)}
+                    {single ? <time dateTime={day.bornDays.from}>{daysCovered(t, date, day.bornDays)}</time> : daysCovered(t, date, day.bornDays)}
                     <ChevronRight className="size-4.5 shrink-0" aria-hidden />
                 </Link>
             </Heading>

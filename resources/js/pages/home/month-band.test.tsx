@@ -81,13 +81,17 @@ test('a site with one month to its name has nothing to open', () => {
 test('the months either side are named without the year they share with this one', () => {
     panel({ prev: month(2026, 6), next: month(2026, 9) });
 
-    expect(screen.getByRole('link', { name: 'Jun' }).getAttribute('href')).toBe('/home/2026/06');
-    expect(screen.getByRole('link', { name: 'Sep' }).getAttribute('href')).toBe('/home/2026/09');
+    const earlier = screen.getByRole('link', { name: 'Earlier month Jun' });
+
+    expect(earlier.getAttribute('href')).toBe('/home/2026/06');
+    // The direction is drawn as an arrow, so only the month is printed.
+    expect(earlier.textContent).toBe('Jun');
+    expect(screen.getByRole('link', { name: 'Later month Sep' }).getAttribute('href')).toBe('/home/2026/09');
 });
 
 test('a month of another year says which year', () => {
     panel({ month: month(2026, 1), prev: month(2025, 12), next: month(2026, 2) });
 
-    expect(screen.getByRole('link', { name: 'December 2025' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Feb' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Earlier month December 2025' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Later month Feb' })).toBeTruthy();
 });

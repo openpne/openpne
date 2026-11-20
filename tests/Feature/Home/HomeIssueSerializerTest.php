@@ -846,6 +846,20 @@ class HomeIssueSerializerTest extends TestCase
         $this->assertSame(['from' => '2026-08-23', 'to' => '2026-08-25'], $this->page()['issue']['bornDays']);
     }
 
+    /** Four stories, so the one born earliest is behind "more" and still widens the stretch. */
+    public function test_a_day_of_stories_is_dated_by_every_one_its_gate_lets_through(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        foreach (['2026-08-26 12:00:00', '2026-08-27 12:00:00', '2026-08-27 13:00:00', '2026-08-22 12:00:00'] as $rank => $at) {
+            $this->feature(HomeIssueSection::Stories, Diary::factory()->create(['created_at' => $at]), rank: $rank + 1);
+        }
+
+        [$day] = $this->month()['days'];
+
+        $this->assertSame(1, $day['more']);
+        $this->assertSame(['from' => '2026-08-22', 'to' => '2026-08-27'], $day['bornDays']);
+    }
+
     public function test_a_day_of_names_alone_is_dated_by_them(): void
     {
         $this->issue->update(['window_start' => $this->now()->subDays(7)]);
