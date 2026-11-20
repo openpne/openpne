@@ -14,7 +14,7 @@ export interface CommunityActivityEntry {
     bumpedAt: string;
 }
 
-/** The group, not a member, is the byline subject: bumped_at is the last commenter's instant when
+/** The group, not a member, is the row's subject: bumped_at is the last commenter's instant when
  *  there is a comment, so an author byline would misattribute the row. */
 export function ActivityRow({ entry, marked = false }: { entry: CommunityActivityEntry; marked?: boolean }) {
     const t = useT();

@@ -91,9 +91,9 @@ and the mark its word as well; a new kind, or a new list that mixes kinds, takes
 too. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)), in a dense row as on a
 card, always prints the kind's word beside the glyph, which is decorative. A glyph that does not
 name a kind, such as a member count or a button's camera, is not read from the table.
-The rows of `/groups/recent`, a list of topics and events, open on the mark, which names the
-row's group in place of the byline; the dashboard's digest of the same activity and a list of one
-kind carry none.
+The rows of `/groups/recent`, a list of topics and events, open on the mark, which takes the row's
+group name from the byline; the dashboard's digest of the same activity and a list of one kind
+carry none.
 
 ## Signed-out visitors
 

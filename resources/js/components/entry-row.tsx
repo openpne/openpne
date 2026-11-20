@@ -38,7 +38,7 @@ type EntryCommunity = {
     imageUrl: string | null; // null → CommunityImage renders the neutral initial badge
 };
 
-/** The byline subject — exactly one of a member author (circular Avatar; null renders the
+/** The row's subject — exactly one of a member author (circular Avatar; null renders the
  *  withdrawn-member fallback) or the group itself (square CommunityImage) for rows where
  *  the group, not a member, is the subject (cross-community activity digests, where
  *  bumped_at is the last commenter's instant when there is a comment, and an author byline would misattribute). */
@@ -48,7 +48,7 @@ type EntrySubject =
 
 type EntryRowProps = EntrySubject & {
     href: string;
-    /** Given to every row of a list or to none, so the content line keeps one height; a group subject is then named in the mark, not the byline. */
+    /** Given to every row of a list or to none, so the content line keeps one distance from the row top. */
     kind?: ContentKind;
     /**
      * The line that identifies the entry: a title where there is one, the body itself where there
