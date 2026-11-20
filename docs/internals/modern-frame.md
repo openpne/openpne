@@ -90,7 +90,8 @@ and its diary cards, the mark over a story in できごと, the rows of its mont
 notifications take a kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts),
 and the mark its word as well; a new kind, or a new list that mixes kinds, takes them from there
 too. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)), in a dense row as on a
-card, always prints the kind's word beside the glyph, which is decorative. A glyph that does not
+card, always prints the kind's word beside the glyph, which is decorative; it is phrasing text and
+never a link, so it can sit inside a row that is one link or one button. A glyph that does not
 name a kind, such as a member count or a button's camera, is not read from the table.
 
 ## Signed-out visitors
