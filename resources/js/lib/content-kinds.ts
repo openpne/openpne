@@ -18,7 +18,7 @@ export type ContentKind =
 
 export interface ContentKindEntry {
     icon: LucideIcon;
-    /** An i18n key for one item of the kind, translated by the consumer. */
+    /** An i18n key naming the kind, translated by the consumer. */
     label: string;
 }
 

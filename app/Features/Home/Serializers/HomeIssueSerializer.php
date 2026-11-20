@@ -372,7 +372,7 @@ final class HomeIssueSerializer
     }
 
     /**
-     * The fields every story has, whatever it is. `kind` is what the byline is written in, not a
+     * The fields every story has, whatever it is. `kind` names the story in its mark, not a
      * shape switch: one shape, and what a kind does not have is null rather than a key the page has
      * to ask about — a diary has no group the way a story with no photograph has no picture.
      */

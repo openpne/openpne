@@ -85,12 +85,12 @@ variable unset.
 
 ## Content kinds
 
-A kind of content wears one glyph everywhere it is named: a nav section, a group page's section
-heading, the mark over a story in できごと. The glyph and the word for one item of the kind are
-read from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts), never imported from
-`lucide-react` at the screen, and a new kind or a new list that mixes kinds takes its glyph from
-there. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)) always prints the
-kind's word beside the glyph, which is decorative.
+The nav sections, a group page's section headings and the mark over a story in できごと take a
+kind's glyph and word from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts), and a new
+kind, or a new list that mixes kinds, takes them from there as well. The mark
+([`KindMark`](../../resources/js/components/kind-mark.tsx)) always prints the kind's word beside the
+glyph, which is decorative. A glyph that does not name a kind, such as a member count or a button's
+camera, is not read from the table.
 
 ## Signed-out visitors
 

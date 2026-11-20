@@ -87,7 +87,7 @@ function Byline({ story }: { story: IssueStory }) {
 }
 
 function StoryKind({ story }: { story: IssueStory }) {
-    return <KindMark kind={story.kind} place={story.group?.name} />;
+    return <KindMark kind={story.kind} group={story.group?.name} />;
 }
 
 /**
