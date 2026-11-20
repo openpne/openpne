@@ -18,7 +18,7 @@ interface FeedActor {
 export interface FeedItem {
     id: string;
     kind: string;
-    /** Null on a row that points at nothing the site knows. */
+    /** Null on an unknown kind or a row missing its id; a target removed since keeps its mark. */
     contentKind: ContentKind | null;
     reason: string | null;
     /** Already translated: the sentence is resolved server-side so both surfaces share one source. */

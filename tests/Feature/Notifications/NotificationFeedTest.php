@@ -84,6 +84,15 @@ class NotificationFeedTest extends TestCase
         $this->assertSame(array_map(fn (array $case): ?string => $case[1], $expected), array_column($rows, 'contentKind', 'kind'));
     }
 
+    public function test_a_known_kind_without_its_id_names_no_kind(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->seedRow($viewer, 'diary_posted', ['author_id' => 1]);
+
+        $this->actingOnModern($viewer)->get('/notifications')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.data.0.contentKind', null));
+    }
+
     public function test_two_pages_of_one_second_split_at_the_uuid_with_no_row_repeated_or_lost(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();

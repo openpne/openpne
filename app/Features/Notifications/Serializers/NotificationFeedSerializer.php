@@ -169,7 +169,6 @@ class NotificationFeedSerializer
         ];
     }
 
-    /** The kind of what the row names, as the row's mark shows it (docs/internals/modern-frame.md, "Content kinds"). */
     private static function contentKindOf(DatabaseNotification $row): ?string
     {
         return match (NotificationTarget::of($row)?->type) {
