@@ -83,6 +83,15 @@ sticks below the bar adds to its own offset (`top-below-place-*`): a conversatio
 banner and day indicator, and the editor's toolbar. A screen with no place bar leaves the
 variable unset.
 
+## Content kinds
+
+A kind of content wears one glyph everywhere it is named: a nav section, a group page's section
+heading, the mark over a story in できごと. The glyph and the word for one item of the kind are
+read from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts), never imported from
+`lucide-react` at the screen, and a new kind or a new list that mixes kinds takes its glyph from
+there. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)) always prints the
+kind's word beside the glyph, which is decorative.
+
 ## Signed-out visitors
 
 A guest gets the same frame with the member-only parts left out:

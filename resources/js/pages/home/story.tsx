@@ -3,6 +3,7 @@ import { MessageCircle } from 'lucide-react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
+import { KindMark } from '@/components/kind-mark';
 import { CountBadge } from '@/components/entry-row';
 import type { GridImage } from '@/components/image-grid';
 import { Timestamp } from '@/components/timestamp';
@@ -69,12 +70,6 @@ function Byline({ story }: { story: IssueStory }) {
             />
             <span className="min-w-0 truncate text-foreground">{name}</span>
             <AiChip isAi={author?.isAi ?? false} />
-            {story.group && (
-                <span className="flex min-w-0 items-center gap-x-1.5">
-                    <Dot />
-                    <span className="min-w-0 truncate">{story.group.name}</span>
-                </span>
-            )}
             <span className="flex items-center gap-x-1.5 whitespace-nowrap">
                 <Dot />
                 <Timestamp at={story.createdAt} preset="listStamp" />
@@ -91,6 +86,10 @@ function Byline({ story }: { story: IssueStory }) {
     );
 }
 
+function StoryKind({ story }: { story: IssueStory }) {
+    return <KindMark kind={story.kind} place={story.group?.name} />;
+}
+
 /**
  * The card is the link (docs/internals/home-issues.md, "Rendering"), which is why the byline's names
  * are text.
@@ -100,6 +99,7 @@ export function LeadStory({ story }: { story: IssueStory }) {
         <Card className="relative">
             {story.image && <StoryPicture image={story.image} shape="aspect-video w-full" sizes={LEAD_SIZES} />}
             <div className={INSET}>
+                <StoryKind story={story} />
                 <Heading as="h2" variant="display" className="line-clamp-3">
                     <Link href={story.href} className={stretchedLink}>
                         {story.headline}
@@ -120,6 +120,7 @@ export function SecondStory({ story, alone }: { story: IssueStory; alone: boolea
         <Card className="relative flex flex-col">
             {story.image && <StoryPicture image={story.image} shape="aspect-[4/3] w-full" sizes={alone ? LEAD_SIZES : SECOND_SIZES} />}
             <div className={cn(INSET, 'flex flex-1 flex-col')}>
+                <StoryKind story={story} />
                 <Heading as="h2" variant="group" className="line-clamp-2 break-words">
                     <Link href={story.href} className={stretchedLink}>
                         {story.headline}
@@ -144,6 +145,7 @@ export function StoryRow({ story }: { story: IssueStory }) {
     return (
         <ListRow rowLink className="items-start">
             <div className="min-w-0 flex-1 space-y-0.5">
+                <StoryKind story={story} />
                 <p className="line-clamp-2 text-base text-foreground">
                     <Link href={story.href} className={stretchedLink}>
                         {story.headline}

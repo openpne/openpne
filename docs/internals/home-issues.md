@@ -277,6 +277,8 @@ What ranks a story is the **room it gets**, not how much of it is printed: rank 
 width over a 16:9 picture, ranks 2 and 3 are a pair of cards at 4:3, and the rest are rows with the
 picture as a square beside the words. A story with no picture keeps its rank and reads a line
 further. The payload is still one ranked list in one shape — the placement is the page's decision.
+Every story and talk card opens on its kind's mark ([modern-frame.md](modern-frame.md), "Content
+kinds"), which carries a board entry's group as well, so the byline is the author and the time.
 
 **The page opens on a band**: the days' name as the `h1`, the neighbouring days either side of it,
 and, on the newest issue, when the next one comes (06:00) where the step forward would be. The band

@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Activity, CalendarDays, MessageSquareText, MessagesSquare, Plus, UserCircle2, Users } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useConfirm } from '@/components/confirm-dialog';
 import { CountPill } from '@/components/count-pill';
 import { CivilDate, Timestamp } from '@/components/timestamp';
@@ -7,6 +7,7 @@ import { BoardStamp, EventBoardStamp } from '@/pages/community/board-stamp';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { membersPhrase, unreadMessagesPhrase } from '@/lib/count-phrase';
+import { CONTENT_KINDS } from '@/lib/content-kinds';
 import { useT } from '@/lib/i18n';
 import type { PersonTile, PageProps } from '@/types';
 import { GroupAbout } from '../community/group-about';
@@ -149,7 +150,7 @@ export default function GroupShow() {
                             {talkUnread > 0 && <span className="sr-only"> {unreadMessagesPhrase(t, talkUnread)}</span>}
                         </>
                     }
-                    icon={MessagesSquare}
+                    icon={CONTENT_KINDS.talk.icon}
                     right={<CountPill count={talkUnread} />}
                 >
                     <Link
@@ -176,12 +177,12 @@ export default function GroupShow() {
             )}
 
             {recentTopics !== null && (
-                <HomeSection title={t('Recent %topics%')} icon={MessageSquareText} viewAll={{ label: t('View all'), href: `/groups/${group.id}/topics` }}>
+                <HomeSection title={t('Recent %topics%')} icon={CONTENT_KINDS.topic.icon} viewAll={{ label: t('View all'), href: `/groups/${group.id}/topics` }}>
                     {recentTopics.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
                     ) : (
                         <BoardCards
-                            icon={MessageSquareText}
+                            icon={CONTENT_KINDS.topic.icon}
                             rows={recentTopics.map((topic) => ({
                                 id: topic.id,
                                 href: `/topics/${topic.id}`,
@@ -203,12 +204,12 @@ export default function GroupShow() {
             )}
 
             {recentEvents !== null && (
-                <HomeSection title={t('Recent events')} icon={CalendarDays} viewAll={{ label: t('View all'), href: `/groups/${group.id}/events` }}>
+                <HomeSection title={t('Recent events')} icon={CONTENT_KINDS.event.icon} viewAll={{ label: t('View all'), href: `/groups/${group.id}/events` }}>
                     {recentEvents.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
                     ) : (
                         <BoardCards
-                            icon={CalendarDays}
+                            icon={CONTENT_KINDS.event.icon}
                             rows={recentEvents.map((event) => ({
                                 id: event.id,
                                 href: `/events/${event.id}`,
@@ -236,7 +237,7 @@ export default function GroupShow() {
             )}
 
             {members.length > 0 && (
-                <HomeSection title={t('Members')} icon={UserCircle2} viewAll={{ label: t('View all'), href: memberListHref }}>
+                <HomeSection title={t('Members')} icon={CONTENT_KINDS.member.icon} viewAll={{ label: t('View all'), href: memberListHref }}>
                     <PeopleGrid people={members} />
                 </HomeSection>
             )}
@@ -248,7 +249,7 @@ export default function GroupShow() {
             {/* Sideways rather than deeper: a group's category is public to anyone who may open this
                 page, so the groups filed under it are a way on from here. */}
             {categoryGroups.length > 0 && (
-                <HomeSection title={t('%Communities% in the same category')} icon={Users}>
+                <HomeSection title={t('%Communities% in the same category')} icon={CONTENT_KINDS.group.icon}>
                     <GroupGrid
                         groups={categoryGroups.map((related) => ({
                             ...related,
@@ -259,7 +260,7 @@ export default function GroupShow() {
             )}
 
             {recentPhotos.length > 0 && (
-                <HomeSection title={t('Recent photos')} icon={Activity}>
+                <HomeSection title={t('Recent photos')} icon={CONTENT_KINDS.photo.icon}>
                     <PhotoGrid photos={recentPhotos} />
                 </HomeSection>
             )}
