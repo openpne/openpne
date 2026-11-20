@@ -99,14 +99,14 @@ test('the band steps to the days either side, and says when the next one comes w
 
     expect(screen.getByRole('link', { name: '前の日' }).getAttribute('href')).toBe('/home/2026/08/26');
     expect(screen.getByRole('link', { name: '次の日' }).getAttribute('href')).toBe('/home/2026/08/28');
-    expect(screen.queryByText('次の更新は朝6時')).toBeNull();
+    expect(screen.queryByText('次は朝6時')).toBeNull();
 
     cleanup();
 
     renderWithProviders(<Masthead days={day('2026-08-27')} prev={null} next={null} />);
 
     expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.getByText('次の更新は朝6時')).toBeTruthy();
+    expect(screen.getByText('次は朝6時')).toBeTruthy();
 });
 
 test('a site with no issue yet names the page alone', () => {
