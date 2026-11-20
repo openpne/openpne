@@ -68,7 +68,7 @@ test('an event row left open into the new year takes the old year on', () => {
             />
         </ul>,
     );
-    const date = () => screen.getByRole('link', { name: /Last walk/ }).querySelector('time')?.textContent;
+    const date = () => screen.getByRole('link', { name: /Last walk/ }).closest('li')?.querySelector('time')?.textContent;
     expect(date()).toBe('Thu, Dec 31');
 
     midnight();

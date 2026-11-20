@@ -11,7 +11,7 @@ export function Colophon({ window }: { window: { from: string; to: string } }) {
     const { absolute } = useDateFormat();
 
     return (
-        <footer className="mt-1 text-center text-2xs leading-relaxed text-muted-foreground">
+        <footer className="space-y-1 text-xs text-muted-foreground">
             <p>{t('Posts from :from to :to', { from: absolute(window.from), to: absolute(window.to) })}</p>
             <p>{t('Posts deleted or made private since are not shown here.')}</p>
         </footer>

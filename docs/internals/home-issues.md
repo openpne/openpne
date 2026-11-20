@@ -274,20 +274,16 @@ the reader has not been shown and has no body here to be shown in. The dek is th
 plain text, cut server-side to a display width of 180 — a URL in it reads as the text it is.
 
 What ranks a story is the **room it gets**, not how much of it is printed: rank 1 leads across the
-width over a 16:9 picture, ranks 2 and 3 stand abreast in two columns at every width with a rule
-between them (a lone rank 2 takes the width, its picture beside the words), and the rest are rows
-with the picture as a square beside the words. A story with no picture keeps its rank and reads a
-line further. Headlines are set in Mincho ([typography.md](typography.md#mincho)); a row's is its
-content line and takes the regular weight. The payload is still one ranked list in one shape — the
-placement is the page's decision.
+width over a 16:9 picture, ranks 2 and 3 are a pair of cards at 4:3, and the rest are rows with the
+picture as a square beside the words. A story with no picture keeps its rank and reads a line
+further. The payload is still one ranked list in one shape — the placement is the page's decision.
 
-**The page is laid out as a printed one**, on the page's own ground rather than in cards: a double
-rule, then the **band** — the days' name as the `h1`, the neighbouring days either side of it, and,
-on the newest issue, when the next one comes (06:00) where the step forward would be. The band calls
-a day "yesterday" by the site's calendar, not by the 06:00 day: before 06:00 the latest issue is two
-calendar days back. Below the stories, sections are named between rules, in the order talk, upcoming
-events, newcomers, new groups. The foot repeats the steps either side, links the month in the calendar, and
-ends in the colophon; there is no line calling an issue stale.
+**The page opens on a band**: the days' name as the `h1`, the neighbouring days either side of it,
+and, on the newest issue, when the next one comes (06:00) where the step forward would be. The band
+calls a day "yesterday" by the site's calendar, not by the 06:00 day: before 06:00 the latest issue
+is two calendar days back. Below the stories come talk, upcoming events, newcomers and new groups,
+each a panel named by its title. The foot repeats the steps either side, links the month in the
+calendar, and ends in the colophon; there is no line calling an issue stale.
 
 **Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))
 and named by its headline, so nothing inside it may be a link of its own: a byline names rather than
@@ -335,9 +331,9 @@ date alone, and the grid of months counts issues, not what is left of them
 holds none is drawn there and is not a link.
 
 **The page opens on a band, as a day's page does.** Its sides step to the months either side, the
-nearest that hold an issue; its middle, the month's name, opens the grid of months under it, closed
-until asked for, each month there counting the days it holds. The calendar of the month's days comes
-next, and the foot repeats the band's steps under the last day.
+nearest that hold an issue; its middle, the month's name, opens the grid of months, closed until
+asked for, each month there counting the days it holds. The grid opens in one panel with the
+calendar of the month's days under it, and the foot repeats the band's steps under the last day.
 
 **A day shows three items and says how many more there are.** The lead story, the busiest room, the
 second story; a kind that has run out gives its place to the other, so a day with talk in it always

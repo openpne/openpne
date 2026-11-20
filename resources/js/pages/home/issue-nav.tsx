@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
@@ -13,11 +13,11 @@ export function PagerStep({ href, caption, side, children }: { href: string; cap
     const Chevron = side === 'prev' ? ChevronLeft : ChevronRight;
 
     return (
-        <Link href={href} className={cn('group flex min-h-14 items-center gap-1 text-foreground', side === 'next' && 'flex-row-reverse text-right')}>
-            <Chevron className="size-4.5 shrink-0" aria-hidden />
+        <Link href={href} className={cn('group flex min-h-11 items-center gap-1.5', side === 'next' && 'flex-row-reverse text-right')}>
+            <Chevron className="size-4 shrink-0 text-link" aria-hidden />
             <span className="flex flex-col">
-                <span className="text-2xs text-muted-foreground">{caption}</span>
-                <span className="whitespace-nowrap text-sm group-hover:underline">{children}</span>
+                <span className="text-xs text-muted-foreground">{caption}</span>
+                <span className="whitespace-nowrap text-sm text-link group-hover:underline">{children}</span>
             </span>
         </Link>
     );
@@ -41,13 +41,9 @@ export function IssueNav({ prev, next, monthHref }: { prev: IssueRef | null; nex
     const t = useT();
 
     return (
-        <nav className="flex items-center gap-2" aria-label={t('Day navigation')}>
+        <nav className="flex items-center gap-3" aria-label={t('Day navigation')}>
             <div className="flex flex-1 justify-start">{prev && <Step issue={prev} caption={t('Earlier day')} side="prev" />}</div>
-            <Link
-                href={monthHref}
-                className="flex min-h-14 shrink-0 items-center gap-1 px-1.5 text-sm text-foreground underline underline-offset-4"
-            >
-                <CalendarDays className="size-4" aria-hidden />
+            <Link href={monthHref} className="flex min-h-11 shrink-0 items-center text-sm text-link hover:underline">
                 {t('View in calendar')}
             </Link>
             <div className="flex flex-1 justify-end">{next && <Step issue={next} caption={t('Later day')} side="next" />}</div>

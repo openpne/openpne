@@ -12,12 +12,16 @@ import { useDateFormat } from '@/lib/use-date-format';
 import { useSiteDay } from '@/lib/use-site-day';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
-import { Dot, StoryPicture } from './story';
+import { StoryPicture } from './story';
 import type { DayStory, DaySummary, DayTalk } from './types';
 
 type Translate = ReturnType<typeof useT>;
 
 type DateFormat = ReturnType<typeof useDateFormat>;
+
+const ROW = 'relative -mx-2 flex items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/40 active:bg-muted/60';
+
+const INLINE_LINK = 'inline-flex min-h-6 items-center hover:underline';
 
 /** Where a day's block stands in the page, which is where the calendar sends its reader. */
 export function dayAnchor(date: string): string {
@@ -38,18 +42,24 @@ export function said(t: Translate, talk: DayTalk): string {
     return `${markedName(talk.speaker?.name ?? t('%Withdrawn_member%'), talk.speaker?.isAi ?? false, t)}: ${talk.line}`;
 }
 
+function Dot() {
+    return <span aria-hidden>·</span>;
+}
+
 function Story({ item }: { item: DayStory }) {
     const t = useT();
 
     return (
-        <li className="relative">
-            <p className="font-serif text-lg leading-snug break-words text-foreground">
-                <Link href={item.href} className={stretchedLink}>
-                    {item.headline}
-                </Link>
-            </p>
-            {/* Zero is left out rather than printed: the line says what happened, not what did not. */}
-            {item.responses > 0 && <p className="mt-0.5 text-xs text-muted-foreground">{responsesPhrase(t, item.responses)}</p>}
+        <li className={ROW}>
+            <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="line-clamp-2 text-base break-words text-foreground">
+                    <Link href={item.href} className={stretchedLink}>
+                        {item.headline}
+                    </Link>
+                </p>
+                {/* Zero is left out rather than printed: the line says what happened, not what did not. */}
+                {item.responses > 0 && <p className="text-xs text-muted-foreground">{responsesPhrase(t, item.responses)}</p>}
+            </div>
         </li>
     );
 }
@@ -60,7 +70,7 @@ function Talk({ item }: { item: DayTalk }) {
     const name = speaker?.name ?? t('%Withdrawn_member%');
 
     return (
-        <li className="relative flex items-start gap-2.5">
+        <li className={ROW}>
             <Avatar
                 id={speaker?.id ?? 0}
                 name={name}
@@ -70,9 +80,9 @@ function Talk({ item }: { item: DayTalk }) {
                 size="xs"
                 decorative
             />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 space-y-0.5">
                 {/* Named in full: the line is cut where the row ends. */}
-                <Link href={item.href} aria-label={said(t, item)} className={cn(stretchedLink, 'flex min-w-0 items-baseline gap-2')}>
+                <Link href={item.href} aria-label={said(t, item)} className={cn(stretchedLink, 'flex min-w-0 items-baseline gap-2 text-foreground')}>
                     {item.line !== '' && <span className="shrink-0 text-xs">{markedName(name, speaker?.isAi ?? false, t)}</span>}
                     <span className="min-w-0 truncate text-sm">{item.line === '' ? item.group.name : item.line}</span>
                 </Link>
@@ -86,7 +96,7 @@ function Talk({ item }: { item: DayTalk }) {
                     <span className="shrink-0">{messagesPhrase(t, item.count)}</span>
                 </p>
             </div>
-            {item.image && <StoryPicture image={item.image} shape="size-12 shrink-0" sizes="3rem" />}
+            {item.image && <StoryPicture image={item.image} shape="size-12 shrink-0 rounded-lg" sizes="3rem" />}
         </li>
     );
 }
@@ -97,21 +107,20 @@ function Names({ label, children }: { label: string; children: ReactNode[] }) {
     }
 
     return (
-        <div className="flex items-start gap-2">
-            <span className="w-20 shrink-0 text-2xs leading-6 text-muted-foreground">{label}</span>
-            <ul className="flex min-w-0 flex-wrap gap-x-4 gap-y-1">{children}</ul>
-        </div>
+        // Set apart by space, not by a mark: a name may carry a mark of its own.
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <span>{label}</span>
+            {children}
+        </p>
     );
 }
 
 function NameLink({ href, face, children }: { href: string; face: ReactNode; children: string }) {
     return (
-        <li>
-            <Link href={href} className="flex min-h-6 items-center gap-1.5 text-sm text-foreground hover:underline">
-                {face}
-                {children}
-            </Link>
-        </li>
+        <Link href={href} className={cn(INLINE_LINK, 'gap-1.5 text-foreground')}>
+            {face}
+            {children}
+        </Link>
     );
 }
 
@@ -125,19 +134,19 @@ export function DayBlock({ day }: { day: DaySummary }) {
     const single = day.bornDays.from === day.bornDays.to;
 
     return (
-        <li id={dayAnchor(day.date)} className={cn('scroll-mt-16 border-t border-foreground', day.more > 0 ? 'pb-1.5' : 'pb-5')}>
-            <Heading as="h3" variant="group" face="serif">
-                <Link href={day.href} className="flex min-h-12 items-center justify-between gap-2">
+        <li id={dayAnchor(day.date)} className="scroll-mt-16 space-y-1 px-4 py-4 sm:px-5">
+            <Heading as="h3" variant="minor">
+                <Link href={day.href} className={cn(INLINE_LINK, 'gap-1')}>
                     {single ? <time dateTime={day.bornDays.from}>{daysCovered(t, date, day.bornDays)}</time> : daysCovered(t, date, day.bornDays)}
-                    <ChevronRight className="size-4.5 shrink-0" aria-hidden />
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 </Link>
             </Heading>
-            <div className="flex flex-col gap-3.5">
-                {day.items.length > 0 && (
-                    <ul className="flex flex-col gap-3.5">
-                        {day.items.map((item) => (item.kind === 'story' ? <Story key={item.href} item={item} /> : <Talk key={item.href} item={item} />))}
-                    </ul>
-                )}
+            {day.items.length > 0 && (
+                <ul>
+                    {day.items.map((item) => (item.kind === 'story' ? <Story key={item.href} item={item} /> : <Talk key={item.href} item={item} />))}
+                </ul>
+            )}
+            <div className="space-y-1">
                 <Names label={t('New members')}>
                     {day.newcomers.map((person) => (
                         <NameLink
@@ -160,13 +169,14 @@ export function DayBlock({ day }: { day: DaySummary }) {
                         </NameLink>
                     ))}
                 </Names>
-                {day.more > 0 && (
-                    <Link href={day.href} className="-mt-1.5 flex min-h-11 items-center gap-0.5 self-start text-sm text-foreground hover:underline">
-                        {morePhrase(t, day.more)}
-                        <ChevronRight className="size-4" aria-hidden />
-                    </Link>
-                )}
             </div>
+            {day.more > 0 && (
+                <p className="text-sm">
+                    <Link href={day.href} className={cn(INLINE_LINK, 'text-link')}>
+                        {morePhrase(t, day.more)}
+                    </Link>
+                </p>
+            )}
         </li>
     );
 }

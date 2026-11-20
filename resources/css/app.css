@@ -12,9 +12,6 @@
 @theme inline {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-    /* The device's own Mincho, never a web font; generic `serif` is the only path to one on Android
-       (docs/internals/typography.md, "Mincho"). */
-    --font-serif: 'Hiragino Mincho ProN', 'Yu Mincho', YuMincho, 'Noto Serif CJK JP', 'Noto Serif JP', serif;
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -67,9 +64,6 @@
     /* Two steps under text-xs; neither sets a line-height, so a site keeps the one it inherits. */
     --text-2xs: 0.6875rem;
     --text-3xs: 0.625rem;
-    /* The lead headline of できごと, between text-2xl and text-3xl (docs/internals/typography.md, "Heading roles"). */
-    --text-headline: 1.75rem;
-    --text-headline--line-height: 1.35;
     /* Mode-aware elevation via the var() indirection (values live in :root / .dark). */
     --shadow-card: var(--card-shadow);
     --shadow-elevated: var(--elevated-shadow);

@@ -36,14 +36,3 @@ test('every radius token and edge utility app.css declares merges against its bu
         assert.equal(cn(`${edge}-offset-4`, `${edge}-4`), `${edge}-4`, edge);
     }
 });
-
-test('every text size app.css declares is a size beside a color, not a second color', () => {
-    const css = readFileSync(new URL('../../css/app.css', import.meta.url), 'utf8');
-    const sizes = [...css.matchAll(/^\s*--text-([a-z0-9]+):/gm)].map((m) => m[1] ?? '');
-    assert.ok(sizes.includes('headline'), sizes.join(', '));
-
-    for (const name of sizes) {
-        assert.equal(cn(`text-${name}`, 'text-foreground'), `text-${name} text-foreground`, name);
-        assert.equal(cn(`text-${name}`, 'text-base'), 'text-base', name);
-    }
-});

@@ -1,14 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { ChevronRight } from 'lucide-react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { EntityText } from '@/components/entity-text';
 import { Timestamp } from '@/components/timestamp';
-import { Heading } from '@/components/ui/heading';
 import { messagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import { PictureStrip } from './picture-strip';
 import type { TalkBurst, TalkExcerptMessage } from './types';
 
@@ -22,7 +19,7 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
     const name = author?.name ?? t('%Withdrawn_member%');
 
     return (
-        <li className="flex min-w-0 gap-2.5">
+        <li className="flex min-w-0 gap-2">
             <Avatar
                 id={author?.id ?? 0}
                 name={name}
@@ -39,11 +36,11 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
                     <Timestamp at={message.createdAt} preset="listStamp" />
                 </div>
                 {message.body.trim() !== '' && (
-                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm">
                         <EntityText text={message.body} mentions={message.mentions} />
                     </p>
                 )}
-                <PictureStrip images={message.images} className="mt-1.5" />
+                <PictureStrip images={message.images} className="mt-1" />
             </div>
         </li>
     );
@@ -53,17 +50,16 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
  * The room's name heads it but is not a link, so the one way in is the line at its foot, which names
  * what is left unread when the excerpt is not all of it.
  */
-export function TalkBurstSection({ burst, first }: { burst: TalkBurst; first: boolean }) {
+export function TalkBurstRoom({ burst }: { burst: TalkBurst }) {
     const t = useT();
     const rest = burst.count - burst.messages.length;
 
     return (
-        <section className={cn('flex flex-col gap-2.5', !first && 'border-t border-border pt-5')}>
-            <div className="flex min-w-0 items-center gap-2.5">
-                <CommunityImage name={burst.group.name} src={burst.group.imageUrl} className="size-7" textClassName="text-xs" decorative />
-                <Heading as="h3" variant="group" face="serif" className="min-w-0 flex-1 truncate">
-                    {burst.group.name}
-                </Heading>
+        <li className="space-y-3 px-4 pt-4 pb-1.5 sm:px-5">
+            <div className="flex min-w-0 items-center gap-2">
+                <CommunityImage name={burst.group.name} src={burst.group.imageUrl} className="size-10" textClassName="text-sm" decorative />
+                {/* A heading styled as the row's content line (docs/internals/typography.md, "Heading roles"). */}
+                <h3 className="min-w-0 flex-1 truncate text-base text-foreground">{burst.group.name}</h3>
                 <span className="shrink-0 text-xs text-muted-foreground">{messagesPhrase(t, burst.count)}</span>
             </div>
 
@@ -75,10 +71,9 @@ export function TalkBurstSection({ burst, first }: { burst: TalkBurst; first: bo
                 </ul>
             )}
 
-            <Link href={burst.href} className="flex min-h-11 items-center gap-0.5 self-start text-sm text-foreground hover:underline">
+            <Link href={burst.href} className="inline-flex min-h-11 items-center text-sm text-link hover:underline">
                 {rest === 1 ? t('1 more · Open talk') : rest > 1 ? t(':count more · Open talk', { count: rest }) : t('Open talk')}
-                <ChevronRight className="size-4" aria-hidden />
             </Link>
-        </section>
+        </li>
     );
 }

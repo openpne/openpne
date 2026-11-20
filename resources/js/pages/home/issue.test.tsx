@@ -109,29 +109,29 @@ function arrive(props: Record<string, unknown>) {
     return renderWithProviders(<HomeIssue />);
 }
 
-test('the lead is one block: a picture over a Mincho headline, and nothing else in it to click', () => {
+test('the lead is one block: a hero over the headline, and nothing else in it to click', () => {
     const { container } = arrive({ issue: issueOf() });
 
-    const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
-    const block = headline.parentElement as HTMLElement;
-    const hero = block.querySelector('img[srcset]');
+    const card = container.querySelector('.rounded-card') as HTMLElement;
+    const hero = card.querySelector('img[srcset]');
 
     expect(hero?.getAttribute('srcset')).toBe('/f/1/w640 640w');
     expect(hero?.getAttribute('sizes')).toBe('min(42rem, 100vw)');
     expect(hero?.getAttribute('alt')).toBe('');
-    expect(headline.className).toContain('text-headline');
-    expect(headline.className).toContain('font-serif');
 
-    // One link in the whole block, named by the headline and stretched over the block that positions it.
-    expect(linksIn(block)).toEqual(['Morning walk -> /diary/11']);
+    const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
+    expect(headline.className).toContain('text-2xl');
+
+    // One link in the whole card, named by the headline and stretched over the block that positions it.
+    expect(linksIn(card)).toEqual(['Morning walk -> /diary/11']);
     expect(within(headline).getByRole('link', { name: 'Morning walk' }).className).toContain('after:absolute');
-    expect(block.className).toContain('relative');
+    expect(card.className).toContain('relative');
 
     // What the story says, not the story: no body, no card under it, and nothing offering to continue.
     expect(screen.getByText('Down to the river and back.')).toBeTruthy();
     expect(container.querySelector('.rich-body')).toBeNull();
-    expect(container.querySelector('.rounded-card')).toBeNull();
     expect(container.querySelector('a[href^="http"]')).toBeNull();
+    expect(screen.queryByText('Continue reading')).toBeNull();
 });
 
 test('a lead with no picture keeps its rank and reads a line longer', () => {
@@ -139,12 +139,12 @@ test('a lead with no picture keeps its rank and reads a line longer', () => {
 
     // No hero-shaped gap where there is no photograph: the lead's weight is its placement and size.
     expect(container.querySelector('img[srcset]')).toBeNull();
-    expect(screen.getByRole('heading', { level: 2, name: 'Morning walk' }).className).toContain('text-headline');
+    expect(screen.getByRole('heading', { level: 2, name: 'Morning walk' }).className).toContain('text-2xl');
     expect(screen.getByText('Down to the river and back.').className).toContain('line-clamp-4');
 });
 
-test('the two after the lead stand abreast at every width, a rank down, a rule between them', () => {
-    arrive({
+test('the two after the lead are cards side by side, a rank down', () => {
+    const { container } = arrive({
         issue: issueOf({
             stories: [
                 story(),
@@ -156,37 +156,32 @@ test('the two after the lead stand abreast at every width, a rank down, a rule b
 
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['Morning walk', 'Second story', 'Third story']);
-    expect(headings.map((heading) => heading.className.includes('font-serif'))).toEqual([true, true, true]);
-    expect(headings.map((heading) => heading.className.includes('text-base'))).toEqual([false, true, true]);
+    expect(headings.map((heading) => heading.className.includes('text-2xl'))).toEqual([true, false, false]);
+    expect(headings.map((heading) => heading.className.includes('text-lg'))).toEqual([false, true, true]);
 
-    const pair = headings[1]?.parentElement?.parentElement as HTMLElement;
-    // Not `sm:grid-cols-2`: a phone keeps the pair too.
-    expect(pair.className.split(' ')).toContain('grid-cols-2');
-    expect(pair.children).toHaveLength(2);
-    expect(pair.children[1]?.className).toContain('border-l');
-    // Each column is one link, and it is its headline's.
-    expect(Array.from(pair.children).map((column) => linksIn(column))).toEqual([
+    const grid = container.querySelector('.sm\\:grid-cols-2') as HTMLElement;
+    expect(grid.children).toHaveLength(2);
+    // Each card is one link, and it is its headline's.
+    expect(Array.from(grid.children).map((card) => linksIn(card))).toEqual([
         ['Second story -> /topics/12'],
         ['Third story -> /events/13'],
     ]);
 
-    // A board entry's byline names the group it was posted in — as text, since the column is the link.
-    expect(within(pair).getAllByText('Book club')).toHaveLength(2);
-    expect(pair.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('min(21rem, 50vw)');
+    // A board entry's byline names the group it was posted in — as text, since the card is the link.
+    expect(within(grid).getAllByText('Book club')).toHaveLength(2);
+    expect(grid.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('(min-width: 40rem) 21rem, 100vw');
 });
 
-test('a lone second takes the width, its picture beside the words', () => {
+test('a lone second takes the width rather than half of it', () => {
     const { container } = arrive({
         issue: issueOf({ stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })] }),
     });
 
-    expect(container.querySelector('.grid-cols-2')).toBeNull();
-    const headline = screen.getByRole('heading', { level: 2, name: 'Second story' });
-    expect(headline.className).toContain('text-lg');
-    expect(headline.parentElement?.parentElement?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('7rem');
+    expect(container.querySelector('.sm\\:grid-cols-2')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Second story' })).toBeTruthy();
 });
 
-test('rank four and below are rows, their headlines Mincho at the regular weight', () => {
+test('rank four and below are rows, with the picture beside the words where there is one', () => {
     const { container } = arrive({
         issue: issueOf({
             stories: [
@@ -199,25 +194,22 @@ test('rank four and below are rows, their headlines Mincho at the regular weight
         }),
     });
 
-    const rows = Array.from(container.querySelectorAll('li'));
-    expect(rows).toHaveLength(2);
+    const [withPicture, withNone] = Array.from(container.querySelectorAll('li'));
+    const rows = [withPicture, withNone];
+    expect(container.querySelectorAll('li')).toHaveLength(2);
 
-    // A row's headline is its content line, not a heading rank: only the lead and the pair are.
+    // A row's headline is its content line, not a heading rank: only the lead and the two cards are.
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
         'Morning walk',
         'Second',
         'Third',
     ]);
-    const fourth = screen.getByText('Fourth').parentElement as HTMLElement;
-    // A paragraph outside the heading recipe, so it takes no weight of its own.
-    expect(fourth.tagName).toBe('P');
-    expect(fourth.className).toContain('font-serif');
 
-    expect(rows[0]?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('5rem');
-    expect(rows[1]?.querySelector('img')).toBeNull();
+    expect(withPicture?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('6rem');
+    expect(withNone?.querySelector('img')).toBeNull();
 
     // One link per row, so anywhere in it opens the story.
-    expect(rows.map((row) => linksIn(row))).toEqual([['Fourth -> /diary/14'], ['Fifth -> /timeline/15']]);
+    expect(rows.map((row) => linksIn(row as Element))).toEqual([['Fourth -> /diary/14'], ['Fifth -> /timeline/15']]);
     expect(screen.getByText('What the fourth says.').className).toContain('line-clamp-1');
 });
 
@@ -253,7 +245,7 @@ const newcomer: PersonTile = { id: 31, name: 'Aki', imageUrl: null, avatarColor:
 const newGroup: HomeGroup = { id: 41, name: 'Film club', imageUrl: null, href: '/groups/41' };
 const upcoming: UpcomingEvent = { ...brief('event', 51), openDate: '2026-09-01' };
 
-test('the sections are named between rules, in the order the page reads', () => {
+test('the sections are panels named in the order the page reads', () => {
     arrive({
         issue: issueOf({
             stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })],
@@ -264,11 +256,14 @@ test('the sections are named between rules, in the order the page reads', () => 
         }),
     });
 
-    const labels = screen
-        .getAllByRole('heading', { level: 2 })
-        .filter((heading) => heading.className.includes('tracking-widest'))
-        .map((heading) => heading.textContent);
-    expect(labels).toEqual(['From %community% talk', 'Upcoming events', 'New members', 'New %communities%']);
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+        'Morning walk',
+        'Second story',
+        'From %community% talk',
+        'Upcoming events',
+        'New members',
+        'New %communities%',
+    ]);
 });
 
 test('a talk burst is its room by name, the end of the conversation, and the way to the rest', () => {
@@ -293,7 +288,6 @@ test('a talk burst is its room by name, the end of the conversation, and the way
 
     // The room heads its excerpt and is not itself a way in: the foot is.
     const room = screen.getByRole('heading', { level: 3, name: 'Room 61' });
-    expect(room.className).toContain('font-serif');
     expect(room.querySelector('a')).toBeNull();
     expect(screen.getByText('7 messages')).toBeTruthy();
 
@@ -326,11 +320,13 @@ test('the way into a room counts what the excerpt left out, and only when it lef
 test('an upcoming event is a row: its day, its title, and where it is held', () => {
     arrive({ issue: issueOf({ upcomingEvents: [upcoming] }) });
 
-    const row = screen.getByRole('link', { name: /event 51/ });
-    expect(row.getAttribute('href')).toBe('/events/51');
+    const link = screen.getByRole('link', { name: 'event 51' });
+    expect(link.getAttribute('href')).toBe('/events/51');
+    const row = link.closest('li') as HTMLElement;
     expect(row.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-01');
     expect(row.querySelector('time')?.textContent).toBe('Tue, Sep 1');
-    expect(row.textContent).toContain('Book club · 4 participants');
+    expect(within(row).getByText('Book club')).toBeTruthy();
+    expect(within(row).getByText('4 participants')).toBeTruthy();
 });
 
 test('newcomers and new groups are names to follow, an AI account named as one', () => {
@@ -344,9 +340,7 @@ test('newcomers and new groups are names to follow, an AI account named as one',
     expect(screen.getByRole('link', { name: 'Aki' }).getAttribute('href')).toBe('/member/31');
     // The corner mark on the face is aria-hidden, so the name carries the fact.
     expect(screen.getByRole('link', { name: 'Bot (AI)' }).getAttribute('href')).toBe('/member/32');
-    const club = screen.getByRole('link', { name: 'Film club' });
-    expect(club.getAttribute('href')).toBe('/groups/41');
-    expect(within(club).getByText('Film club').className).toContain('font-serif');
+    expect(screen.getByRole('link', { name: 'Film club' }).getAttribute('href')).toBe('/groups/41');
 });
 
 test('a section the issue does not have is absent, not empty', () => {
@@ -408,8 +402,8 @@ test('the colophon states the stretch the issue was drawn from and what it canno
     // "next update" took that over.
     const { container } = arrive({ issue: issueOf({ isCurrent: false }) });
 
-    // Not by role: a footer inside an article is no contentinfo landmark in a browser.
-    const colophon = container.querySelector('article > footer') as HTMLElement;
+    // Not by role: the frame puts the page in <main>, where a footer is no contentinfo landmark.
+    const colophon = container.querySelector('footer') as HTMLElement;
     // A day here runs 06:00 to 06:00, so the page states the two instants the band's day means.
     expect(Array.from(colophon.querySelectorAll('p')).map((line) => line.textContent)).toEqual([
         'Posts from August 27, 2026 at 06:00 to August 28, 2026 at 06:00',

@@ -9,16 +9,6 @@ import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { IssueRef } from './types';
 
-/** Decorative: the headings on either side of it say where one part of the page ends. */
-export function DoubleRule({ heavyFirst }: { heavyFirst: boolean }) {
-    return (
-        <div aria-hidden className="flex flex-col gap-0.5">
-            <div className={cn('bg-foreground', heavyFirst ? 'h-1' : 'h-px')} />
-            <div className={cn('bg-foreground', heavyFirst ? 'h-px' : 'h-1')} />
-        </div>
-    );
-}
-
 function Phrase({ days }: { days: { from: string; to: string } | null }) {
     const t = useT();
     const { timezone } = usePage<PageProps>().props;
@@ -51,13 +41,10 @@ function Phrase({ days }: { days: { from: string; to: string } | null }) {
  */
 export function Band({ start, end, children }: { start: ReactNode; end: ReactNode; children: ReactNode }) {
     return (
-        <div>
-            <DoubleRule heavyFirst />
-            <div className="flex min-h-12 items-center gap-2 border-b border-foreground">
-                <div className="flex flex-1 justify-start">{start}</div>
-                <div className="min-w-0 text-balance text-center">{children}</div>
-                <div className="flex flex-1 justify-end">{end}</div>
-            </div>
+        <div className="flex min-h-12 items-center gap-2 border-b border-border">
+            <div className="flex flex-1 justify-start">{start}</div>
+            <div className="min-w-0 text-balance text-center">{children}</div>
+            <div className="flex flex-1 justify-end">{end}</div>
         </div>
     );
 }
@@ -68,7 +55,7 @@ export function BandLink({ href, side, label, children }: { href: string; side: 
         <Link
             href={href}
             aria-label={label}
-            className={cn('flex min-h-11 items-center gap-0.5 whitespace-nowrap text-xs text-foreground hover:underline', side === 'prev' ? '-ml-1' : '-mr-1')}
+            className={cn('flex min-h-11 items-center gap-0.5 whitespace-nowrap text-sm text-link hover:underline', side === 'prev' ? '-ml-1' : '-mr-1')}
         >
             {side === 'prev' && <ChevronLeft className="size-4" aria-hidden />}
             {children}
@@ -97,7 +84,7 @@ export function Masthead({ days, prev, next }: { days: { from: string; to: strin
                     </BandLink>
                 ) : (
                     // The hour is HomeIssueDay::HOUR's; the two change together.
-                    <span className="whitespace-nowrap text-2xs text-muted-foreground">{t('Next update at 06:00')}</span>
+                    <span className="whitespace-nowrap text-xs text-muted-foreground">{t('Next update at 06:00')}</span>
                 )
             }
         >
