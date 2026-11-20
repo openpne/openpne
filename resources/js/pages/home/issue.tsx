@@ -1,7 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import { GroupGrid } from '@/components/sections/group-grid';
 import { PeopleGrid } from '@/components/sections/people-grid';
@@ -42,7 +41,7 @@ function Stories({ stories }: { stories: IssueStory[] }) {
             {seconds.length > 0 && (
                 <div className={cn('grid gap-4', seconds.length > 1 && 'sm:grid-cols-2')}>
                     {seconds.map((story) => (
-                        <SecondStory key={storyKey(story)} story={story} />
+                        <SecondStory key={storyKey(story)} story={story} alone={seconds.length === 1} />
                     ))}
                 </div>
             )}
@@ -68,22 +67,15 @@ function Stories({ stories }: { stories: IssueStory[] }) {
 export default function HomeIssue() {
     const t = useT();
     const { issue, prev, next, auth, enabledFeatures, notice } = usePage<IssuePageProps>().props;
-    const date = useDateFormat();
 
     if (issue === null) {
-        const today = date.siteDay(new Date().toISOString()) ?? '';
-
         return (
             <>
                 <Head title={t('What happened')} />
                 <SiteNotice notice={notice} />
-                {/* Today's dateline over nothing: the site still has a front page, it just has
-                    nothing on it yet. */}
-                <Masthead from={today} to={today} />
+                <Masthead days={null} prev={null} next={null} />
                 {auth.user && <WelcomePanel name={auth.user.name} enabledFeatures={enabledFeatures} />}
                 <p className="text-sm text-muted-foreground">{t('The first post will appear here the next morning.')}</p>
-                {/* Nothing has been put together, so there is no instant to stamp it with. */}
-                <Colophon window={null} stale={false} />
             </>
         );
     }
@@ -92,11 +84,21 @@ export default function HomeIssue() {
         <>
             <Head title={t('What happened')} />
             <SiteNotice notice={notice} />
-            <Masthead from={issue.days.from} to={issue.days.to} />
+            <Masthead days={issue.bornDays} prev={prev} next={next} />
 
             {issue.stories && <Stories stories={issue.stories} />}
 
             {issue.talkBursts?.map((burst) => <TalkBurstCard key={burst.group.id} burst={burst} />)}
+
+            {issue.upcomingEvents && (
+                <Panel flush title={t('Upcoming events')}>
+                    <List>
+                        {issue.upcomingEvents.map((event) => (
+                            <UpcomingEventRow key={event.id} event={event} />
+                        ))}
+                    </List>
+                </Panel>
+            )}
 
             {issue.newcomers && (
                 <Panel title={t('New members')}>
@@ -110,19 +112,8 @@ export default function HomeIssue() {
                 </Panel>
             )}
 
-            {issue.upcomingEvents && (
-                <Panel flush title={t('Upcoming events')}>
-                    <List>
-                        {issue.upcomingEvents.map((event) => (
-                            <UpcomingEventRow key={event.id} event={event} />
-                        ))}
-                    </List>
-                </Panel>
-            )}
-
             <IssueNav prev={prev} next={next} monthHref={issue.monthHref} />
-            {/* Only the freshest page can be "nothing new yet": an archived day has a day after it. */}
-            <Colophon window={issue.window} stale={next === null && !issue.isCurrent} />
+            <Colophon window={issue.window} />
         </>
     );
 }

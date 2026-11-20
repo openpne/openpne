@@ -6,6 +6,7 @@ import {
     chromeRecedes,
     hasBottomNav,
     isHomeComponent,
+    isIssueDay,
     isPlaceTop,
     isSectionActive,
     NAV_SECTIONS,
@@ -134,10 +135,8 @@ test('a site whose home is the digest keeps the issue in the nav and the digest 
     assert.ok(!isHomeComponent('home/archive', 'whats_new'));
 });
 
-test('the crumbs above the issue list and the group digest follow the home setting', () => {
+test('the crumb above the group digest follows the home setting', () => {
     const crumb = (component: string, modernHome?: string) => resolveChrome(component, { enabledFeatures: allOn, modernHome }).context?.[0]?.href;
-    assert.equal(crumb('home/issues'), '/');
-    assert.equal(crumb('home/issues', 'whats_new'), '/home/latest');
     assert.equal(crumb('community/recent'), '/dashboard');
     assert.equal(crumb('community/recent', 'whats_new'), '/');
 });
@@ -232,7 +231,7 @@ test('the dashboard action goes with the diary unit', () => {
 });
 
 test('home takes the mobile brand bar', () => {
-    // A dated issue is somewhere below the run of them, and What's new is a hub.
+    // What's new is a hub; a dated issue takes the same bar, but through isIssueDay.
     assert.ok(isHomeComponent('home/issue', 'issue'));
     assert.ok(!isHomeComponent('home/archive', 'issue'));
     assert.ok(!isHomeComponent('dashboard', 'issue'));
@@ -247,33 +246,31 @@ test('the current issue takes the bare frame: its masthead is the page', () => {
     assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issue'));
 });
 
-test('a dated issue crumbs back to the run of them, still without a chrome heading', () => {
-    const archive = resolveChrome('home/archive', {});
-
-    assert.equal(archive.mode, 'embedded');
-    assert.deepEqual(
-        (archive.context ?? []).map((item) => item.href),
-        ['/home/issues'],
-    );
+test('a past day takes the bare frame and the brand bar, as the latest does', () => {
+    // Its band steps to the days either side and its foot to the month, so a crumb above it would be a
+    // third way to the same places.
+    assert.deepEqual(resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } }), {
+        mode: 'embedded',
+        width: 'standard',
+        gap: '4',
+    });
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/archive'));
+    assert.ok(isIssueDay('home/archive'));
+    assert.ok(isIssueDay('home/issue'));
+    assert.ok(!isIssueDay('home/issues'));
 });
 
-test('a dated issue crumbs back to the month it is listed in', () => {
-    const archive = resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } });
+test('a month of issues is titled as a hub, its h1 seen at desk width alone', () => {
+    for (const modernHome of ['issue', 'whats_new']) {
+        const month = resolveChrome('home/issues', { enabledFeatures: allOn, modernHome });
 
-    assert.deepEqual(
-        (archive.context ?? []).map((item) => item.href),
-        ['/home/2026/08'],
-    );
-});
-
-test('the run of issues is titled by the same words the crumb into it uses', () => {
-    const list = resolveChrome('home/issues', {});
-    const crumb = resolveChrome('home/archive', {}).context?.[0];
-
-    assert.equal(list.mode, 'contextual');
-    assert.deepEqual(list.title, crumb?.label);
-    // Its own one parent is the front page, named by the same word the Home tab wears.
-    assert.deepEqual(list.context, [{ href: '/', label: { key: 'Home', replacements: undefined } }]);
+        assert.equal(month.mode, 'section');
+        assert.deepEqual(month.title, { key: 'What happened', replacements: undefined });
+        assert.equal(month.deskHeading, true);
+        // Its band steps to the months either side and its days lead to their own pages, so it has no crumb.
+        assert.equal(month.context, undefined);
+    }
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issues'));
 });
 
 test('a community-scoped page is scoped to the group', () => {

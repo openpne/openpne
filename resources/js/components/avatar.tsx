@@ -64,8 +64,8 @@ export function Avatar({ id, name, src, color, isAi, size = 'md', decorative = f
     }
 
     return (
-        // inline-flex + shrink-0 so the wrapper stands where the bare face used to in a flex row.
-        <span className="relative inline-flex shrink-0">
+        // inline-flex + shrink-0 so the wrapper stands where the bare face used to in a flex row; a decorative one takes no pointer, so it never covers a stretched link beneath it.
+        <span className={decorative ? 'pointer-events-none relative inline-flex shrink-0' : 'relative inline-flex shrink-0'}>
             {face}
             <AiCornerMark isAi={isAi} size={size} />
         </span>

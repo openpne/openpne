@@ -2,7 +2,9 @@ import { Head, usePage } from '@inertiajs/react';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { DayBlock } from './day-block';
-import { MonthPanel } from './month-panel';
+import { MonthCalendar } from './month-calendar';
+import { MonthPager } from './month-nav';
+import { MonthBand } from './month-band';
 import type { IssuesPageProps } from './types';
 
 /** One month of days, newest first (docs/internals/home-issues.md, "The month page"). */
@@ -13,7 +15,7 @@ export default function HomeIssues() {
     if (month === null) {
         return (
             <>
-                <Head title={t('Past happenings')} />
+                <Head title={t('What happened')} />
                 <Panel>
                     <p className="text-sm text-muted-foreground">{t('Nothing yet.')}</p>
                 </Panel>
@@ -23,8 +25,12 @@ export default function HomeIssues() {
 
     return (
         <>
-            <Head title={t('Past happenings')} />
-            <MonthPanel month={month} prev={prev} next={next} days={days} months={months} />
+            <Head title={t('What happened')} />
+            <MonthBand month={month} prev={prev} next={next} months={months}>
+                <div className="-mx-3 sm:-mx-4">
+                    <MonthCalendar month={month} days={days} />
+                </div>
+            </MonthBand>
 
             {days.length === 0 ? (
                 <Panel>
@@ -39,6 +45,8 @@ export default function HomeIssues() {
                     </List>
                 </Panel>
             )}
+
+            <MonthPager month={month} prev={prev} next={next} />
         </>
     );
 }

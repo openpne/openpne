@@ -70,24 +70,22 @@ function Byline({ story }: { story: IssueStory }) {
             <span className="min-w-0 truncate text-foreground">{name}</span>
             <AiChip isAi={author?.isAi ?? false} />
             {story.group && (
-                <>
+                <span className="flex min-w-0 items-center gap-x-1.5">
                     <Dot />
                     <span className="min-w-0 truncate">{story.group.name}</span>
-                </>
+                </span>
             )}
-            <Dot />
-            <Timestamp at={story.createdAt} preset="listStamp" />
+            <span className="flex items-center gap-x-1.5 whitespace-nowrap">
+                <Dot />
+                <Timestamp at={story.createdAt} preset="listStamp" />
+            </span>
+            {/* The icon separates the count, so a narrow column that wraps it leaves no dot behind. */}
             {story.commentCount > 0 && (
-                <>
-                    <Dot />
-                    <CountBadge
-                        icon={MessageCircle}
-                        count={story.commentCount}
-                        srLabel={
-                            story.kind === 'timeline' ? repliesPhrase(t, story.commentCount) : commentsPhrase(t, story.commentCount)
-                        }
-                    />
-                </>
+                <CountBadge
+                    icon={MessageCircle}
+                    count={story.commentCount}
+                    srLabel={story.kind === 'timeline' ? repliesPhrase(t, story.commentCount) : commentsPhrase(t, story.commentCount)}
+                />
             )}
         </div>
     );
@@ -114,12 +112,13 @@ export function LeadStory({ story }: { story: IssueStory }) {
     );
 }
 
-export function SecondStory({ story }: { story: IssueStory }) {
+/** `alone` when it is the only second, which takes the width the pair would share. */
+export function SecondStory({ story, alone }: { story: IssueStory; alone: boolean }) {
     return (
         // A column, so two cards standing abreast keep their bylines on one line however their
         // headlines wrap: the byline is pushed to the foot of the card, not left where the text ends.
         <Card className="relative flex flex-col">
-            {story.image && <StoryPicture image={story.image} shape="aspect-[4/3] w-full" sizes={SECOND_SIZES} />}
+            {story.image && <StoryPicture image={story.image} shape="aspect-[4/3] w-full" sizes={alone ? LEAD_SIZES : SECOND_SIZES} />}
             <div className={cn(INSET, 'flex flex-1 flex-col')}>
                 <Heading as="h2" variant="group" className="line-clamp-2 break-words">
                     <Link href={story.href} className={stretchedLink}>

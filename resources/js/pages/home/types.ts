@@ -69,7 +69,7 @@ export interface TalkBurst {
 }
 
 export interface UpcomingEvent extends CommunityActivityEntry {
-    /** `Y-m-d` civil date, no instant — format with <CivilDate>, never as an instant. */
+    /** `Y-m-d` civil date, no instant — format as a civil date, never as an instant. */
     openDate: string;
 }
 
@@ -80,11 +80,13 @@ export interface UpcomingEvent extends CommunityActivityEntry {
 export interface Issue extends IssueRef {
     /** The month page the issue is listed on. */
     monthHref: string;
-    /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
-    days: { from: string; to: string };
-    /** The instants those days were drawn from, `(from, to]`. What the colophon states. */
+    /** The days what this reader is shown was born on, `Y-m-d` each — narrower than the window when
+     *  days in it were quiet, and never outside it. What the band names. */
+    bornDays: { from: string; to: string };
+    /** The instants the issue was drawn from, `(from, to]`. What the colophon states. */
     window: { from: string; to: string };
-    /** Whether the page is showing the freshest issue there could be; a stale one says so below. */
+    /** Whether the page is showing the freshest issue there could be, by the 06:00 day rather than
+     *  the calendar's. */
     isCurrent: boolean;
     /** Ranks 1–8, in order: the lead, then the seconds, then the rest. Absent once every story the
      *  issue featured has been taken down or narrowed — the rest of the issue still stands, so it is
@@ -120,7 +122,6 @@ export interface DayStory {
     headline: string;
     /** Comments, or replies on a post. */
     responses: number;
-    image: GridImage | null;
 }
 
 /** A room of the day, drawn by what was last said in it over the issue's stretch. */
@@ -130,7 +131,7 @@ export interface DayTalk {
     href: string;
     group: BoardScope;
     /** Null for a withdrawn member, drawn with the established label. */
-    speaker: { name: string; isAi: boolean } | null;
+    speaker: MemberRef | null;
     /** Empty when the message had no words and no picture the reader may have. */
     line: string;
     count: number;
@@ -140,22 +141,16 @@ export interface DayTalk {
 
 export type DayItem = DayStory | DayTalk;
 
-export interface DayName {
-    id: number;
-    name: string;
-    href: string;
-    isAi?: boolean;
-}
-
 /** Read live, of what the reader may still see (docs/internals/home-issues.md, "The month page"). */
 export interface DaySummary extends IssueRef {
-    days: { from: string; to: string };
+    /** As the issue's own, but from a room's last message and the first three names alone, so a stretch can be narrower. */
+    bornDays: { from: string; to: string };
     /** Up to three; empty when nothing the day featured is left for this reader. */
     items: DayItem[];
     /** The stories and rooms that are left and not shown. */
     more: number;
-    newcomers: DayName[];
-    newGroups: DayName[];
+    newcomers: PersonTile[];
+    newGroups: HomeGroup[];
 }
 
 export interface IssuesPageProps extends PageProps {

@@ -1,9 +1,12 @@
+import { usePage } from '@inertiajs/react';
 import { monthWeeks } from '@/lib/date';
 import { morePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { markedName } from '@/lib/identity-mark';
 import { useDateFormat } from '@/lib/use-date-format';
+import { useSiteDay } from '@/lib/use-site-day';
 import { cn } from '@/lib/utils';
+import type { PageProps } from '@/types';
 import { dayAnchor, daysCovered, said } from './day-block';
 import type { DaySummary, MonthRef } from './types';
 
@@ -44,7 +47,7 @@ export function chips(t: Translate, day: DaySummary): Chip[] {
         return { tone: 'talk', text: item.group.name, name: line === item.group.name ? line : `${item.group.name}, ${line}` };
     });
 
-    const named = (label: string, names: DaySummary['newcomers']): Chip[] =>
+    const named = (label: string, names: { name: string; isAi?: boolean }[]): Chip[] =>
         names.map((name): Chip => {
             const text = markedName(name.name, name.isAi ?? false, t);
 
@@ -60,6 +63,9 @@ export function chips(t: Translate, day: DaySummary): Chip[] {
  */
 export function MonthCalendar({ month, days }: { month: MonthRef; days: DaySummary[] }) {
     const date = useDateFormat();
+    const { timezone } = usePage<PageProps>().props;
+    // Read for the re-render alone: today's ring and every link's year move at midnight.
+    useSiteDay(timezone);
 
     // By `date` alone: an issue stands on the day it is dated, whatever its window reaches back over.
     const issues = new Map(days.map((day) => [Number(day.date.slice(8, 10)), day]));
@@ -125,7 +131,7 @@ function Top({ number, weekday, today, more }: { number: number; weekday: number
 
 function Day({ number, weekday, issue, today }: { number: number; weekday: number; issue: DaySummary | undefined; today: boolean }) {
     const t = useT();
-    const { civilDate } = useDateFormat();
+    const date = useDateFormat();
 
     if (issue === undefined) {
         return (
@@ -137,7 +143,8 @@ function Day({ number, weekday, issue, today }: { number: number; weekday: numbe
 
     const shown = chips(t, issue);
     const name = [
-        daysCovered(t, civilDate, issue),
+        // To the cell's own day, which the block's stretch can stop short of (docs/internals/home-issues.md, "The month page").
+        daysCovered(t, date, { from: issue.bornDays.from, to: issue.date }),
         today && t('Today'),
         ...shown.map((chip) => chip.name),
         issue.more > 0 && morePhrase(t, issue.more),

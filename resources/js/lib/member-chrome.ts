@@ -61,6 +61,8 @@ export interface Chrome {
     tabsLabel?: ChromeLabel;
     /** Rendered only for a signed-in member. */
     action?: ChromeAction;
+    /** The page opens on a band of its own, so below desk width its h1 is heard and not seen. */
+    deskHeading?: boolean;
     width: 'standard' | 'narrow';
     gap: '4' | '6' | '8';
     foreground?: boolean;
@@ -117,9 +119,6 @@ const MESSAGES = t('Messages');
 const NOTIFICATIONS = t('Notifications');
 const MEMBER_SEARCH = t('Search members');
 const SETTINGS = t('Settings');
-// The list screen's title and the crumb every dated issue takes back to it have to be the same
-// words.
-const PAST_HAPPENINGS = t('Past happenings');
 const HAPPENINGS = t('What happened');
 
 export type PolicyKind = 'terms' | 'privacy';
@@ -221,11 +220,16 @@ const HOME_SECTION: NavSection = { href: '/', match: ['/', '/home/'], icon: Hous
 const homeSection = (home: ModernHomeId): NavSection => (home === 'whats_new' ? { ...HOME_SECTION, match: ['/', '/dashboard'] } : HOME_SECTION);
 
 /**
- * A dated issue is deliberately not one: it has a parent, the run it belongs to. The latest issue
- * stays one where `/` serves the other page: its masthead is its heading and nothing stands above it.
+ * The page `/` serves, plus the latest issue where `/` serves the other one. A dated issue is not one,
+ * though its bar carries the brand too ({@link isIssueDay}).
  */
 export function isHomeComponent(component: string, home: ModernHomeId): boolean {
     return component === 'home/issue' || (home === 'whats_new' && component === 'dashboard');
+}
+
+/** A day of できごと, latest or past: its band names the day and steps to the next, so nothing stands above it. */
+export function isIssueDay(component: string): boolean {
+    return component === 'home/issue' || component === 'home/archive';
 }
 
 /**
@@ -358,23 +362,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const action = enabled(props, 'diary') ? WRITE_DIARY : undefined;
         return isHomeComponent('dashboard', homeOf(props)) ? { mode: 'embedded', action } : { mode: 'section', title: WHATS_NEW, action };
     },
-    // Deliberately not a nav section: the run of issues is the front page's history, not a place in
-    // the nav.
-    'home/issues': (props) => ({
-        mode: 'contextual',
-        title: PAST_HAPPENINGS,
-        context: [homeOf(props) === 'whats_new' ? { href: HAPPENINGS_SECTION.href, label: HAPPENINGS } : { href: '/', label: HOME_SECTION.label }],
-    }),
-    // Embedded on purpose: the issue's own masthead is the page's h1, and a chrome title over it
-    // would name the screen twice.
-    'home/archive': (props) => ({
-        context: [
-            {
-                href: (props as { issue?: { monthHref?: string } }).issue?.monthHref ?? '/home/issues',
-                label: PAST_HAPPENINGS,
-            },
-        ],
-    }),
+    'home/issues': () => ({ mode: 'section', title: HAPPENINGS, deskHeading: true }),
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
         mode: 'section',
@@ -644,8 +632,10 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'dashboard',
-    // The current issue is the front page itself: there is nothing above it to go back to.
+    // A day or a month of できごと is reached from its neighbours through its own band and foot.
     'home/issue',
+    'home/archive',
+    'home/issues',
     'diary/feed',
     'community/search',
     'group/topic/recent',

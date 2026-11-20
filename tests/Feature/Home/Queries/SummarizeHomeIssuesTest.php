@@ -28,6 +28,7 @@ use App\Models\GroupTopicComment;
 use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
@@ -352,7 +353,8 @@ class SummarizeHomeIssuesTest extends TestCase
         $this->assertSame([$first->getKey()], $asked->all());
     }
 
-    public function test_pictures_are_read_for_the_stories_shown_and_no_more(): void
+    /** The month draws a story as its headline alone, so a story with pictures has none of them read. */
+    public function test_no_story_has_its_pictures_read(): void
     {
         $stories = Diary::factory()->count(4)->create();
         foreach ($stories as $rank => $story) {
@@ -363,7 +365,7 @@ class SummarizeHomeIssuesTest extends TestCase
         $read = $this->summary()->stories;
 
         $this->assertSame(
-            [true, true, true, false],
+            [false, false, false, false],
             array_map(fn (Model $story): bool => $story->relationLoaded('images'), $read),
         );
     }
@@ -395,6 +397,24 @@ class SummarizeHomeIssuesTest extends TestCase
         $this->assertSame(1, $summary->more());
     }
 
+    /** A newcomer who is also a room's last speaker is one row read twice, as two instances. */
+    public function test_a_row_named_twice_is_drawn_with_its_face_both_times(): void
+    {
+        $room = Group::factory()->create(['file_id' => File::factory()]);
+        $said = $this->say($room, $this->now()->subHours(2));
+        MemberImage::factory()->create(['member_id' => $said->member_id]);
+        $this->feature(HomeIssueSection::Talk, $room, stats: $this->stretch($this->now()));
+        $this->feature(HomeIssueSection::Newcomers, $said->author, rank: 1);
+        $this->feature(HomeIssueSection::NewGroups, $room, rank: 1);
+
+        $summary = $this->summary();
+
+        $this->assertTrue($summary->bursts[0]->last->author->relationLoaded('avatar'));
+        $this->assertTrue($summary->newcomers[0]->relationLoaded('avatar'));
+        $this->assertTrue($summary->bursts[0]->group->relationLoaded('image'));
+        $this->assertTrue($summary->newGroups[0]->relationLoaded('image'));
+    }
+
     public function test_nothing_is_loaded_a_row_at_a_time(): void
     {
         $this->everyDropAndWhatIsLeft();
@@ -404,6 +424,10 @@ class SummarizeHomeIssuesTest extends TestCase
         $pictured = Group::factory()->create(['file_id' => File::factory()]);
         $this->attach($this->say($pictured, $this->now()->subDay()->subHours(2)));
         $this->feature(HomeIssueSection::Talk, $pictured, stats: $this->stretch($this->now()->subDay()), issue: $rooms);
+
+        // Faces on everyone and a picture on every room, so a relation left to load itself is reached.
+        Member::query()->each(fn (Member $member) => MemberImage::factory()->create(['member_id' => $member->getKey()]));
+        Group::query()->whereNull('file_id')->each(fn (Group $group) => $group->update(['file_id' => File::factory()->create()->getKey()]));
 
         $issues = collect([$this->issue, $rooms]);
 
@@ -430,10 +454,14 @@ class SummarizeHomeIssuesTest extends TestCase
             Model::preventLazyLoading(false);
         }
 
-        // Both days were drawn, the room's picture and its group's image among what was.
+        // Both days were drawn, the room's picture, its group's image and every face among what was.
         $this->assertSame(['story', 'talk', 'story'], array_column($days[0]['items'], 'kind'));
+        $this->assertNotNull($days[0]['items'][1]['speaker']['imageUrl']);
+        $this->assertNotNull($days[0]['newcomers'][0]['imageUrl']);
+        $this->assertNotNull($days[0]['newGroups'][0]['imageUrl']);
         $this->assertNotNull($days[1]['items'][0]['image']);
         $this->assertNotNull($days[1]['items'][0]['group']['imageUrl']);
+        $this->assertNotNull($days[1]['items'][0]['speaker']['imageUrl']);
     }
 
     // --- helpers ---

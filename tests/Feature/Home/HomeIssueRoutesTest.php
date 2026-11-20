@@ -246,7 +246,7 @@ class HomeIssueRoutesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->count('days', 1)
-                ->where('days.0.days', ['from' => '2026-07-28', 'to' => '2026-08-03']));
+                ->where('days.0.bornDays', ['from' => '2026-07-28', 'to' => '2026-08-03']));
 
         $this->actingAs($member)->get('/home/2026/07')->assertNotFound();
     }

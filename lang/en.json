@@ -1,7 +1,12 @@
 {
     "(and :count more errors)": "(and :count more error)|(and :count more errors)|(and :count more errors)",
+    "1 day's worth": "1 day",
+    ":count days' worth": ":count days",
+    "Next update at 06:00": "Next: 06:00",
     "Read (adjective)": "Read",
     "Show next": "Next",
     "Show previous": "Previous",
+    "Show the earlier day": "Earlier",
+    "Show the later day": "Later",
     "Showing :first - :last of :total": ":first - :last of :total"
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Home;
 
 use App\Features\GroupTalk\Queries\TalkSampleDigest;
+use App\Features\Home\Data\HomeIssueDay;
 use App\Features\Home\Data\HomeIssueMonth;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Home\Queries\ShowHomeIssue;
@@ -24,6 +25,7 @@ use App\Models\GroupTopicComment;
 use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Support\BodyFormat;
 use Carbon\CarbonImmutable;
@@ -32,6 +34,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /** Its subject is the shape: how much survived decides which keys are there. */
@@ -208,8 +211,8 @@ class HomeIssueSerializerTest extends TestCase
     // --- which days it is about ---
 
     /**
-     * A day of happenings runs 06:00 to 06:00, so the page names days and the stretch they were
-     * drawn from separately: the URL day is the last of them.
+     * A day of happenings runs 06:00 to 06:00, so the band names days and the colophon the stretch
+     * they were drawn from: the URL day is the last of them.
      */
     public function test_an_issue_names_the_days_it_covers_and_the_stretch_behind_them(): void
     {
@@ -218,7 +221,7 @@ class HomeIssueSerializerTest extends TestCase
         $issue = $this->page()['issue'];
 
         $this->assertSame('2026-08-27', $issue['date']);
-        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $issue['days']);
+        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $issue['bornDays']);
         $this->assertSame(
             [$this->now()->subDay()->toIso8601String(), $this->now()->toIso8601String()],
             [$issue['window']['from'], $issue['window']['to']],
@@ -233,19 +236,110 @@ class HomeIssueSerializerTest extends TestCase
 
         $issue = $this->page()['issue'];
 
-        $this->assertSame($issue['date'], $issue['days']['to']);
+        $this->assertSame(
+            HomeIssueDay::of(CarbonImmutable::parse($issue['window']['to'])->subSecond())->format('Y-m-d'),
+            $issue['date'],
+        );
     }
 
-    /** A longer stretch is a range of days, and still dated by the last of them. */
-    public function test_a_stretch_of_several_days_reports_all_of_them(): void
+    /** A week behind one issue that only its last day filled is an issue about that day. */
+    public function test_quiet_days_in_a_long_stretch_do_not_widen_the_band(): void
     {
         $this->issue->update(['window_start' => $this->now()->subDays(7)]);
         $this->feature(HomeIssueSection::Stories, Diary::factory()->create());
 
         $issue = $this->page()['issue'];
 
-        $this->assertSame(['from' => '2026-08-21', 'to' => '2026-08-27'], $issue['days']);
+        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $issue['bornDays']);
         $this->assertSame('2026-08-27', $issue['date']);
+    }
+
+    /** Every section with a birth counts, and a talk burst by the messages it shows. */
+    public function test_the_band_spans_the_births_of_everything_shown(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create(['created_at' => '2026-08-25 12:00:00']));
+        $this->feature(HomeIssueSection::Newcomers, Member::factory()->create(['created_at' => '2026-08-26 12:00:00']));
+        $this->feature(HomeIssueSection::NewGroups, Group::factory()->create(['created_at' => '2026-08-26 13:00:00']));
+
+        $this->featureTalkSaidAt('2026-08-23 09:00:00');
+
+        $this->assertSame(['from' => '2026-08-23', 'to' => '2026-08-26'], $this->page()['issue']['bornDays']);
+    }
+
+    /** @return array<string, array{HomeIssueSection}> */
+    public static function sectionsWithABirth(): array
+    {
+        return [
+            'stories' => [HomeIssueSection::Stories],
+            'newcomers' => [HomeIssueSection::Newcomers],
+            'new groups' => [HomeIssueSection::NewGroups],
+            'talk' => [HomeIssueSection::Talk],
+        ];
+    }
+
+    /** Alone in the issue, so a section whose births went unread would fall back to the window's days. */
+    #[DataProvider('sectionsWithABirth')]
+    public function test_each_section_dates_the_band_on_its_own(HomeIssueSection $section): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $born = ['created_at' => '2026-08-24 12:00:00'];
+        match ($section) {
+            HomeIssueSection::Stories => $this->feature($section, Diary::factory()->create($born)),
+            HomeIssueSection::Newcomers => $this->feature($section, Member::factory()->create($born)),
+            HomeIssueSection::NewGroups => $this->feature($section, Group::factory()->create($born)),
+            HomeIssueSection::Talk => $this->featureTalkSaidAt($born['created_at']),
+        };
+
+        $this->assertSame(['from' => '2026-08-24', 'to' => '2026-08-24'], $this->page()['issue']['bornDays']);
+    }
+
+    /** A block rather than a deletion, so the story is loaded and only the per-reader gate drops it. */
+    public function test_a_story_the_reader_cannot_see_does_not_widen_the_band(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create(), rank: 1);
+        $withheld = Diary::factory()->create(['created_at' => '2026-08-22 12:00:00']);
+        $this->feature(HomeIssueSection::Stories, $withheld, rank: 2);
+        $withheld->member->blocksMade()->attach($this->viewer, ['created_at' => now()]);
+
+        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
+
+        $this->viewer = Member::factory()->create();
+        $this->assertSame(['from' => '2026-08-22', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
+    }
+
+    /**
+     * The window is `(start, end]`, so a row born exactly on 06:00 closes the day before it — on
+     * both ends of the stretch.
+     */
+    public function test_a_row_born_on_the_06_00_boundary_belongs_to_the_day_it_closes(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(2)]);
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create(['created_at' => '2026-08-27 06:00:00']), rank: 1);
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create(['created_at' => self::NOW]), rank: 2);
+
+        $this->assertSame(['from' => '2026-08-26', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
+    }
+
+    /** The band never names a day outside the issue's own, whatever the ledger points at — on either side. */
+    public function test_a_birth_outside_the_window_is_held_to_its_days(): void
+    {
+        $this->feature(HomeIssueSection::Stories, Diary::factory()->create(['created_at' => '2026-08-01 12:00:00']));
+        $this->featureTalkSaidAt('2026-08-28 09:00:00', until: $this->now()->addDay());
+
+        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
+    }
+
+    /** Nothing left to date the band by leaves it naming the window's own days. */
+    public function test_with_nothing_surviving_the_band_falls_back_to_the_window(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $gone = Diary::factory()->create();
+        $this->feature(HomeIssueSection::Stories, $gone);
+        $gone->delete();
+
+        $this->assertSame(['from' => '2026-08-21', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
     }
 
     // --- what a story carries that its record does not ---
@@ -543,24 +637,23 @@ class HomeIssueSerializerTest extends TestCase
         $day = $this->month()['days'][0];
 
         $this->assertSame(
-            ['date', 'number', 'href', 'days', 'items', 'more', 'newcomers', 'newGroups'],
+            ['date', 'number', 'href', 'bornDays', 'items', 'more', 'newcomers', 'newGroups'],
             array_keys($day),
         );
         $this->assertSame('2026-08-27', $day['date']);
         $this->assertSame('/home/2026/08/27', $day['href']);
-        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $day['days']);
+        $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $day['bornDays']);
         $this->assertSame(0, $day['more']);
         $this->assertSame([], $day['newcomers']);
         $this->assertSame([], $day['newGroups']);
 
         [$item] = $day['items'];
 
-        $this->assertSame(['kind', 'href', 'headline', 'responses', 'image'], array_keys($item));
+        $this->assertSame(['kind', 'href', 'headline', 'responses'], array_keys($item));
         $this->assertSame('story', $item['kind']);
         $this->assertSame("/diary/{$diary->getKey()}", $item['href']);
         $this->assertSame('Morning walk', $item['headline']);
         $this->assertSame(2, $item['responses']);
-        $this->assertSame($this->page()['issue']['stories'][0]['image'], $item['image']);
     }
 
     public function test_each_kind_of_story_is_opened_where_it_is_read(): void
@@ -599,7 +692,13 @@ class HomeIssueSerializerTest extends TestCase
                 'kind' => 'talk',
                 'href' => "/groups/{$group->getKey()}/talk?m={$last->getKey()}",
                 'group' => ['id' => $group->getKey(), 'name' => $group->name, 'imageUrl' => null],
-                'speaker' => ['name' => $speaker->name, 'isAi' => false],
+                'speaker' => [
+                    'id' => $speaker->getKey(),
+                    'name' => $speaker->name,
+                    'imageUrl' => null,
+                    'avatarColor' => $speaker->avatar_color?->hex(),
+                    'isAi' => false,
+                ],
                 'line' => 'said last over two lines',
                 'count' => 2,
                 'image' => null,
@@ -678,21 +777,34 @@ class HomeIssueSerializerTest extends TestCase
         $this->assertSame(2, $day['more']);
     }
 
-    public function test_the_names_of_a_day_are_names_and_where_they_lead(): void
+    public function test_the_names_of_a_day_are_faces_names_and_where_they_lead(): void
     {
         $newcomer = Member::factory()->create();
-        $newGroup = Group::factory()->create();
+        MemberImage::factory()->create(['member_id' => $newcomer->getKey()]);
+        $newGroup = Group::factory()->create(['file_id' => File::factory()]);
         $this->feature(HomeIssueSection::Newcomers, $newcomer);
         $this->feature(HomeIssueSection::NewGroups, $newGroup);
 
         $day = $this->month()['days'][0];
 
         $this->assertSame(
-            [['id' => $newcomer->getKey(), 'name' => $newcomer->name, 'isAi' => false, 'href' => "/member/{$newcomer->getKey()}"]],
+            [[
+                'id' => $newcomer->getKey(),
+                'name' => $newcomer->name,
+                'imageUrl' => $newcomer->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true),
+                'avatarColor' => $newcomer->avatar_color?->hex(),
+                'isAi' => false,
+                'href' => "/member/{$newcomer->getKey()}",
+            ]],
             $day['newcomers'],
         );
         $this->assertSame(
-            [['id' => $newGroup->getKey(), 'name' => $newGroup->name, 'href' => "/groups/{$newGroup->getKey()}"]],
+            [[
+                'id' => $newGroup->getKey(),
+                'name' => $newGroup->name,
+                'imageUrl' => $newGroup->load('image')->image->thumbnailUrl(120, 120, square: true),
+                'href' => "/groups/{$newGroup->getKey()}",
+            ]],
             $day['newGroups'],
         );
         // Names are not what a day counts as more.
@@ -702,6 +814,7 @@ class HomeIssueSerializerTest extends TestCase
 
     public function test_a_day_with_nothing_left_is_its_date_alone(): void
     {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
         $diary = Diary::factory()->create();
         $this->feature(HomeIssueSection::Stories, $diary);
         $diary->delete();
@@ -709,10 +822,51 @@ class HomeIssueSerializerTest extends TestCase
         $day = $this->month()['days'][0];
 
         $this->assertSame('2026-08-27', $day['date']);
+        $this->assertSame(['from' => '2026-08-21', 'to' => '2026-08-27'], $day['bornDays']);
         $this->assertSame([], $day['items']);
         $this->assertSame(0, $day['more']);
         $this->assertSame([], $day['newcomers']);
         $this->assertSame([], $day['newGroups']);
+    }
+
+    /** The page reads a room's every shown message and the month its last, so the month can name fewer days. */
+    public function test_a_room_dates_a_day_of_the_month_by_its_last_message(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $room = Group::factory()->create(['created_at' => '2026-01-01 00:00:00']);
+        foreach (['2026-08-23 09:00:00', '2026-08-25 09:00:00'] as $at) {
+            GroupMessage::factory()->create(['group_id' => $room->getKey(), 'created_at' => $at, 'updated_at' => $at]);
+        }
+        $this->feature(HomeIssueSection::Talk, $room, stats: [
+            'since' => $this->now()->subDays(7)->toIso8601String(),
+            'until' => $this->now()->toIso8601String(),
+        ]);
+
+        $this->assertSame(['from' => '2026-08-25', 'to' => '2026-08-25'], $this->month()['days'][0]['bornDays']);
+        $this->assertSame(['from' => '2026-08-23', 'to' => '2026-08-25'], $this->page()['issue']['bornDays']);
+    }
+
+    /** Four stories, so the one born earliest is behind "more" and still widens the stretch. */
+    public function test_a_day_of_stories_is_dated_by_every_one_its_gate_lets_through(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        foreach (['2026-08-26 12:00:00', '2026-08-27 12:00:00', '2026-08-27 13:00:00', '2026-08-22 12:00:00'] as $rank => $at) {
+            $this->feature(HomeIssueSection::Stories, Diary::factory()->create(['created_at' => $at]), rank: $rank + 1);
+        }
+
+        [$day] = $this->month()['days'];
+
+        $this->assertSame(1, $day['more']);
+        $this->assertSame(['from' => '2026-08-22', 'to' => '2026-08-27'], $day['bornDays']);
+    }
+
+    public function test_a_day_of_names_alone_is_dated_by_them(): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $this->feature(HomeIssueSection::Newcomers, Member::factory()->create(['created_at' => '2026-08-24 12:00:00']));
+        $this->feature(HomeIssueSection::NewGroups, Group::factory()->create(['created_at' => '2026-08-25 12:00:00']));
+
+        $this->assertSame(['from' => '2026-08-24', 'to' => '2026-08-25'], $this->month()['days'][0]['bornDays']);
     }
 
     // --- the shell's props ---
@@ -789,6 +943,18 @@ class HomeIssueSerializerTest extends TestCase
         ]);
 
         return $file;
+    }
+
+    /** A room older than any window, so only the message it shows can date the burst. */
+    private function featureTalkSaidAt(string $at, ?CarbonImmutable $until = null): HomeIssueItem
+    {
+        $room = Group::factory()->create(['created_at' => '2026-01-01 00:00:00']);
+        GroupMessage::factory()->create(['group_id' => $room->getKey(), 'created_at' => $at, 'updated_at' => $at]);
+
+        return $this->feature(HomeIssueSection::Talk, $room, stats: [
+            'since' => $this->now()->subDays(7)->toIso8601String(),
+            'until' => ($until ?? $this->now())->toIso8601String(),
+        ]);
     }
 
     private function page(?HomeIssue $previous = null, ?HomeIssue $next = null): array

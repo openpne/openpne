@@ -6,6 +6,8 @@ const UTC = 'UTC';
 const CIVIL_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const YEAR_MONTH_DAY = { year: 'numeric', month: 'long', day: 'numeric' } as const;
 const MONTH_DAY = { month: 'long', day: 'numeric' } as const;
+const SHORT_MONTH_DAY = { month: 'short', day: 'numeric' } as const;
+const SHORT_YEAR_MONTH_DAY = { year: 'numeric', month: 'short', day: 'numeric' } as const;
 const HOUR_MINUTE = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' } as const;
 
 export interface DateFormatContext {
@@ -39,7 +41,15 @@ export function formatListStamp(iso: string, context: DateFormatContext, now: Da
  * A function rather than the same comparison written out in each formatter, so the rule cannot be
  * changed in one and left behind in the other (docs/internals/datetime.md, "Rules").
  */
-function dayShape(then: { year: number }, today: { year: number }): Intl.DateTimeFormatOptions {
+function dayShape(
+    then: { year: number },
+    today: { year: number },
+    month: 'long' | 'short' = 'long',
+): Intl.DateTimeFormatOptions {
+    if (month === 'short') {
+        return then.year === today.year ? SHORT_MONTH_DAY : SHORT_YEAR_MONTH_DAY;
+    }
+
     return then.year === today.year ? MONTH_DAY : YEAR_MONTH_DAY;
 }
 
@@ -76,6 +86,58 @@ export function formatCivilDate(value: string, { locale }: DateFormatContext, we
         ...(weekday ? { weekday: 'short' as const } : {}),
         timeZone: UTC,
     });
+}
+
+/**
+ * A civil date in the short month a heading line has room for, its year dropped by the same rule as a
+ * list stamp's (docs/internals/datetime.md, "Rules").
+ */
+export function formatCivilMonthDay(
+    value: string,
+    context: DateFormatContext,
+    weekday = false,
+    now: Date = new Date(),
+): string {
+    const date = civilToUtcInstant(value);
+
+    return render(date, value, context.locale, {
+        ...dayShape({ year: date.getUTCFullYear() }, siteDayParts(now, context.timeZone), 'short'),
+        ...(weekday ? { weekday: 'short' as const } : {}),
+        timeZone: UTC,
+    });
+}
+
+/**
+ * The two ends of a run of civil days, the second cut to its day number when both fall in one month
+ * of the site's current year. Composed rather than `Intl#formatRange`, which writes Japanese ranges as
+ * `11/12～11/18`.
+ */
+export function formatCivilDaySpan(
+    from: string,
+    to: string,
+    context: DateFormatContext,
+    now: Date = new Date(),
+): { from: string; to: string } {
+    const start = civilToUtcInstant(from);
+    const end = civilToUtcInstant(to);
+    const sameMonthThisYear =
+        dayShape({ year: start.getUTCFullYear() }, siteDayParts(now, context.timeZone), 'short') === SHORT_MONTH_DAY &&
+        start.getUTCFullYear() === end.getUTCFullYear() &&
+        start.getUTCMonth() === end.getUTCMonth();
+
+    return {
+        from: formatCivilMonthDay(from, context, false, now),
+        to: sameMonthThisYear
+            ? render(end, to, context.locale, { day: 'numeric', timeZone: UTC })
+            : formatCivilMonthDay(to, context, false, now),
+    };
+}
+
+/** How many of the site's days before today a civil date is; null when the value is not a date. */
+export function civilDaysAgo(value: string, timeZone: string, now: Date = new Date()): number | null {
+    const date = civilToUtcInstant(value);
+
+    return Number.isNaN(date.getTime()) ? null : siteDayNumber(now, timeZone) - date.getTime() / 86_400_000;
 }
 
 export function formatExact(iso: string, { locale, timeZone }: DateFormatContext): string {

@@ -55,6 +55,7 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
+                    className={chrome.deskHeading ? 'max-lg:sr-only' : undefined}
                     action={
                         action && (
                             <ActionLink href={action.href}>

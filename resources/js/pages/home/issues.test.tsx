@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import HomeIssues from './issues';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
@@ -20,7 +20,16 @@ vi.mock('@inertiajs/react', () => ({
     Head: () => null,
 }));
 
-afterEach(cleanup);
+beforeEach(() => {
+    // The 28th in Tokyo, so August's dates drop the year the reader is in.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-28T03:00:00Z'));
+});
+
+afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+});
 
 const month = (year: number, number: number): MonthRef => ({
     year,
@@ -44,7 +53,6 @@ const story = (id: number, headline: string, rest: Partial<DayStory> = {}): DayS
     href: `/diary/${id}`,
     headline,
     responses: 0,
-    image: null,
     ...rest,
 });
 
@@ -52,7 +60,7 @@ const talk = (rest: Partial<DayTalk> = {}): DayTalk => ({
     kind: 'talk',
     href: '/groups/3/talk?m=40',
     group: { id: 3, name: 'Hikers', imageUrl: null },
-    speaker: { name: 'Hanako', isAi: false },
+    speaker: { id: 5, name: 'Hanako', imageUrl: null, avatarColor: null, isAi: false },
     line: 'Photos are up',
     count: 23,
     image: null,
@@ -63,7 +71,7 @@ const day = (date: string, rest: Partial<DaySummary> = {}, from = date): DaySumm
     date,
     number: 1,
     href: `/home/${date.replaceAll('-', '/')}`,
-    days: { from, to: date },
+    bornDays: { from, to: date },
     items: [],
     more: 0,
     newcomers: [],
@@ -92,18 +100,27 @@ function block(index: number): HTMLElement {
     return found;
 }
 
+/** What a link says aloud: its label, or its text less the faces drawn beside the words. */
+function spoken(link: HTMLElement): string {
+    const copy = link.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('[aria-hidden="true"], [aria-hidden=""]').forEach((hidden) => hidden.remove());
+
+    return link.getAttribute('aria-label') ?? copy.textContent ?? '';
+}
+
 const links = (within_: HTMLElement): (string | null)[][] =>
     within(within_)
         .getAllByRole('link')
-        .map((link) => [link.textContent, link.getAttribute('href')]);
+        .map((link) => [spoken(link), link.getAttribute('href')]);
 
 test('a day is headed by its date, which opens the day', () => {
     arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }), day('2026-08-26', { items: [story(2, 'Evening run')] })] });
 
-    const heading = within(block(0)).getByRole('heading', { level: 3, name: 'Thu, August 27, 2026' });
+    const heading = within(block(0)).getByRole('heading', { level: 3, name: 'Thu, Aug 27' });
 
     expect(within(heading).getByRole('link').getAttribute('href')).toBe('/home/2026/08/27');
-    expect(within(block(1)).getByRole('heading', { level: 3, name: 'Wed, August 26, 2026' })).toBeTruthy();
+    expect(heading.querySelector('time')?.getAttribute('dateTime')).toBe('2026-08-27');
+    expect(within(block(1)).getByRole('heading', { level: 3, name: 'Wed, Aug 26' })).toBeTruthy();
 });
 
 test('each item opens itself, in the order the day gives them', () => {
@@ -112,7 +129,7 @@ test('each item opens itself, in the order the day gives them', () => {
     });
 
     expect(links(block(0))).toEqual([
-        ['Thu, August 27, 2026', '/home/2026/08/27'],
+        ['Thu, Aug 27', '/home/2026/08/27'],
         ['Morning walk', '/diary/1'],
         ['Hanako: Photos are up', '/groups/3/talk?m=40'],
         ['Evening run', '/diary/2'],
@@ -146,7 +163,7 @@ test('a speaker is named as what they are', () => {
         days: [
             day('2026-08-27', {
                 items: [
-                    talk({ href: '/groups/3/talk?m=1', speaker: { name: 'Robo', isAi: true } }),
+                    talk({ href: '/groups/3/talk?m=1', speaker: { id: 6, name: 'Robo', imageUrl: null, avatarColor: null, isAi: true } }),
                     talk({ href: '/groups/3/talk?m=2', speaker: null }),
                 ],
             }),
@@ -168,18 +185,22 @@ test('a message with nothing to show of it is called by its room', () => {
     expect(within(item as HTMLElement).getByText('1 message')).toBeTruthy();
 });
 
-test('a picture is drawn for the item that has one', () => {
-    arrive({
-        days: [day('2026-08-27', { items: [story(1, 'Morning walk', { image: picture }), talk({ image: picture }), story(2, 'Evening run')] })],
-    });
+test('a room draws the picture it ended on', () => {
+    arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk'), talk({ image: picture }), talk({ href: '/groups/3/talk?m=41' })] })] });
 
     const items = within(block(0)).getAllByRole('listitem');
 
-    expect(items.map((item) => item.querySelector('img')?.getAttribute('src') ?? null)).toEqual([
-        '/cache/img/9-320.png',
-        '/cache/img/9-320.png',
-        null,
-    ]);
+    expect(items.map((item) => item.querySelector('img')?.getAttribute('src') ?? null)).toEqual([null, '/cache/img/9-320.png', null]);
+});
+
+test('a room is drawn with the face of who spoke last', () => {
+    arrive({ days: [day('2026-08-27', { items: [talk({ speaker: { id: 5, name: 'Hanako', imageUrl: '/cache/img/face.png', avatarColor: null, isAi: false } })] })] });
+
+    const [item] = within(block(0)).getAllByRole('listitem');
+
+    expect(item?.querySelector('img')?.getAttribute('src')).toBe('/cache/img/face.png');
+    // The face is beside the name, so it is not said a second time.
+    expect(within(item as HTMLElement).getByRole('link').getAttribute('aria-label')).toBe('Hanako: Photos are up');
 });
 
 test('the names of a day lead to who and what they name', () => {
@@ -187,10 +208,10 @@ test('the names of a day lead to who and what they name', () => {
         days: [
             day('2026-08-27', {
                 newcomers: [
-                    { id: 7, name: 'Hanako', isAi: false, href: '/member/7' },
-                    { id: 8, name: 'Robo', isAi: true, href: '/member/8' },
+                    { id: 7, name: 'Hanako', imageUrl: '/cache/img/face.png', avatarColor: null, isAi: false, href: '/member/7' },
+                    { id: 8, name: 'Robo', imageUrl: null, avatarColor: null, isAi: true, href: '/member/8' },
                 ],
-                newGroups: [{ id: 3, name: 'Hikers', href: '/groups/3' }],
+                newGroups: [{ id: 3, name: 'Hikers', imageUrl: null, href: '/groups/3' }],
             }),
         ],
     });
@@ -202,6 +223,7 @@ test('the names of a day lead to who and what they name', () => {
         ['Robo (AI)', '/member/8'],
         ['Hikers', '/groups/3'],
     ]);
+    expect(within(block(0)).getByRole('link', { name: 'Hanako' }).querySelector('img')?.getAttribute('src')).toBe('/cache/img/face.png');
 });
 
 test('what is not shown is counted, and opens the day', () => {
@@ -240,13 +262,16 @@ test('a day on the calendar leads to its block in the page', () => {
 test('a stretch of days is named as one', () => {
     arrive({ days: [day('2026-08-27', { items: [story(1, 'Morning walk')] }, '2026-08-21')] });
 
-    expect(within(block(0)).getByRole('heading', { level: 3, name: 'August 21, 2026 to August 27, 2026' })).toBeTruthy();
+    const heading = within(block(0)).getByRole('heading', { level: 3, name: 'Aug 21 to 27' });
+
+    // HTML has no machine-readable range, and stamping it with either end would name a day it is not about.
+    expect(heading.querySelector('time')).toBeNull();
 });
 
 test('a day with nothing left is its date alone', () => {
     arrive({ days: [day('2026-08-27')] });
 
-    expect(links(block(0))).toEqual([['Thu, August 27, 2026', '/home/2026/08/27']]);
+    expect(links(block(0))).toEqual([['Thu, Aug 27', '/home/2026/08/27']]);
     expect(block(0).querySelector('p, ul, img')).toBeNull();
 });
 
@@ -254,8 +279,9 @@ test('the pager offers only the months there is one to go to', () => {
     arrive({ prev: month(2026, 6), next: month(2026, 9) });
 
     expect(screen.getByRole('heading', { level: 2, name: 'August 2026' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Earlier month Jun' }).getAttribute('href')).toBe('/home/2026/06');
-    expect(screen.getByRole('link', { name: 'Later month Sep' }).getAttribute('href')).toBe('/home/2026/09');
+    // The band's step and the foot's, named alike.
+    expect(screen.getAllByRole('link', { name: 'Earlier month Jun' }).map((link) => link.getAttribute('href'))).toEqual(['/home/2026/06', '/home/2026/06']);
+    expect(screen.getAllByRole('link', { name: 'Later month Sep' }).map((link) => link.getAttribute('href'))).toEqual(['/home/2026/09', '/home/2026/09']);
 
     cleanup();
 
@@ -270,7 +296,8 @@ test('a month with no day in it says so instead of drawing an empty list', () =>
 
     // The calendar is still drawn: an empty month is a month, with no day to follow.
     expect(screen.getByRole('table', { name: 'August 2026' })).toBeTruthy();
-    expect(screen.queryAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/home/2026/06', '/home/2026/09']);
+    // The band's ways first, the foot's after the calendar.
+    expect(screen.queryAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/home/2026/06', '/home/2026/09', '/home/2026/06', '/home/2026/09']);
     expect(screen.getByText('Nothing happened this month.')).toBeTruthy();
     expect(screen.queryByRole('list')).toBeNull();
 });
@@ -299,7 +326,7 @@ test('the ways to another month and another day come before the days themselves'
 
     const jump = screen.getByRole('link', { name: 'September 2026, 22 days of happenings' });
     const calendar = screen.getByRole('table', { name: 'August 2026' });
-    const days = screen.getByRole('heading', { level: 3, name: 'Thu, August 27, 2026' });
+    const days = screen.getByRole('heading', { level: 3, name: 'Thu, Aug 27' });
 
     expect(following(jump, calendar)).toBe(true);
     expect(following(calendar, days)).toBe(true);

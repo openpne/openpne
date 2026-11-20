@@ -10,7 +10,7 @@ import { headingVariants } from '@/components/ui/heading';
 import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
-import { breadcrumbCrumb, type Chrome, type ChromeLabel, isHomeComponent, isPlaceTop } from '@/lib/member-chrome';
+import { breadcrumbCrumb, type Chrome, type ChromeLabel, isHomeComponent, isIssueDay, isPlaceTop } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
@@ -127,9 +127,10 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const t = useT();
     const { component, props } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
-    // A hub names itself; everything else names the place it is in, except the three pages that ARE
-    // a place, which share one header of mark and site name.
-    const brand = isHomeComponent(String(component), props.modernHome) || isPlaceTop(String(component));
+    // A hub names itself; everything else names the place it is in, except the pages that ARE a place
+    // or a day of できごと, which share one header of mark and site name.
+    const brand =
+        isHomeComponent(String(component), props.modernHome) || isIssueDay(String(component)) || isPlaceTop(String(component));
     const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
     const guest = props.auth.user === null;
     const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome, guest);

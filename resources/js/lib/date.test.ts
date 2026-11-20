@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    civilDaysAgo,
     type DateFormatContext,
     formatAbsolute,
     formatCivilDate,
+    formatCivilDaySpan,
     formatCivilMonth,
+    formatCivilMonthDay,
     formatCivilMonthShort,
     formatClockTime,
     formatDayLabel,
@@ -144,6 +147,42 @@ test('a civil date is the stored day in every timezone, with the weekday only wh
     }
 
     assert.equal(formatCivilDate('2026-08-10', tokyo, true), '2026年8月10日(月)');
+});
+
+test('a heading\'s civil date drops the year the reader is in and shortens the month', () => {
+    const now = new Date('2026-11-20T03:00:00Z');
+    const english: DateFormatContext = { locale: 'en-US', timeZone: 'Asia/Tokyo' };
+
+    assert.equal(formatCivilMonthDay('2026-11-17', tokyo, true, now), '11月17日(火)');
+    assert.equal(formatCivilMonthDay('2026-11-17', english, true, now), 'Tue, Nov 17');
+    assert.equal(formatCivilMonthDay('2025-11-17', english, false, now), 'Nov 17, 2025');
+    // The year is the site's, not the viewer's: 15:00Z on 31 December is already the new year in Tokyo.
+    assert.equal(formatCivilMonthDay('2026-12-31', tokyo, false, new Date('2026-12-31T15:00:00Z')), '2026年12月31日');
+});
+
+test('a run of days names the second end only by what it does not share with the first', () => {
+    const now = new Date('2026-11-20T03:00:00Z');
+    const english: DateFormatContext = { locale: 'en-US', timeZone: 'Asia/Tokyo' };
+
+    assert.deepEqual(formatCivilDaySpan('2026-11-12', '2026-11-18', tokyo, now), { from: '11月12日', to: '18日' });
+    assert.deepEqual(formatCivilDaySpan('2026-11-12', '2026-11-18', english, now), { from: 'Nov 12', to: '18' });
+    assert.deepEqual(formatCivilDaySpan('2026-10-30', '2026-11-18', tokyo, now), { from: '10月30日', to: '11月18日' });
+    // Across a year end, and wholly in a past year, each end carries the year it needs.
+    assert.deepEqual(formatCivilDaySpan('2025-12-30', '2026-01-02', tokyo, now), { from: '2025年12月30日', to: '1月2日' });
+    assert.deepEqual(formatCivilDaySpan('2025-11-12', '2025-11-18', tokyo, now), {
+        from: '2025年11月12日',
+        to: '2025年11月18日',
+    });
+});
+
+test('how many days ago a civil date was is counted on the site\'s calendar', () => {
+    // 15:30Z is already the 21st in Tokyo and still the 20th in New York.
+    const now = new Date('2026-11-20T15:30:00Z');
+
+    assert.equal(civilDaysAgo('2026-11-20', 'Asia/Tokyo', now), 1);
+    assert.equal(civilDaysAgo('2026-11-20', 'America/New_York', now), 0);
+    assert.equal(civilDaysAgo('2026-10-31', 'Asia/Tokyo', now), 21);
+    assert.equal(civilDaysAgo('not-a-date', 'Asia/Tokyo', now), null);
 });
 
 test('the exact value names the second and the zone it was read in', () => {

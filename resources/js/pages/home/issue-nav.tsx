@@ -1,46 +1,52 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { CivilDate } from '@/components/timestamp';
+import type { ReactNode } from 'react';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
+import { useSiteDay } from '@/lib/use-site-day';
+import { cn } from '@/lib/utils';
+import type { PageProps } from '@/types';
 import type { IssueRef } from './types';
 
-/** Today has nothing after it, so its right half is empty rather than disabled. */
+/** A neighbour at the foot of the page: what it is above, its name below. */
+export function PagerStep({ href, caption, side, children }: { href: string; caption: string; side: 'prev' | 'next'; children: ReactNode }) {
+    const Chevron = side === 'prev' ? ChevronLeft : ChevronRight;
+
+    return (
+        <Link href={href} className={cn('group flex min-h-11 min-w-0 items-center gap-1.5', side === 'next' && 'flex-row-reverse text-right')}>
+            <Chevron className="size-4 shrink-0 text-link" aria-hidden />
+            <span className="flex min-w-0 flex-col">
+                <span className="text-xs text-muted-foreground">{caption}</span>
+                <span className="text-sm text-link group-hover:underline">{children}</span>
+            </span>
+        </Link>
+    );
+}
+
+function Step({ issue, caption, side }: { issue: IssueRef; caption: string; side: 'prev' | 'next' }) {
+    const { civilMonthDay } = useDateFormat();
+    const { timezone } = usePage<PageProps>().props;
+    // Read for the re-render alone: the date drops its year by the site's year, which turns over at the site's midnight.
+    useSiteDay(timezone);
+
+    return (
+        <PagerStep href={issue.href} caption={caption} side={side}>
+            <time dateTime={issue.date}>{civilMonthDay(issue.date, true)}</time>
+        </PagerStep>
+    );
+}
+
+/** Today has nothing after it, so its right third is empty rather than disabled. */
 export function IssueNav({ prev, next, monthHref }: { prev: IssueRef | null; next: IssueRef | null; monthHref: string }) {
     const t = useT();
 
     return (
-        <nav className="flex items-center justify-between gap-3" aria-label={t('Day navigation')}>
-            {prev ? (
-                <Link href={prev.href} className="group flex min-h-11 min-w-0 flex-1 items-center gap-1.5">
-                    <ChevronLeft className="size-4 shrink-0 text-link" aria-hidden />
-                    <span className="min-w-0">
-                        <span className="block text-xs text-muted-foreground">{t('Earlier day')}</span>
-                        <span className="block text-sm text-link group-hover:underline">
-                            <CivilDate value={prev.date} />
-                        </span>
-                    </span>
-                </Link>
-            ) : (
-                <span className="flex-1" />
-            )}
-
+        <nav className="flex items-center gap-3" aria-label={t('Day navigation')}>
+            <div className="flex min-w-0 flex-1 justify-start">{prev && <Step issue={prev} caption={t('Earlier day')} side="prev" />}</div>
             <Link href={monthHref} className="flex min-h-11 shrink-0 items-center text-sm text-link hover:underline">
-                {t('Past happenings')}
+                {t('View in calendar')}
             </Link>
-
-            {next ? (
-                <Link href={next.href} className="group flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
-                    <span className="min-w-0">
-                        <span className="block text-xs text-muted-foreground">{t('Later day')}</span>
-                        <span className="block text-sm text-link group-hover:underline">
-                            <CivilDate value={next.date} />
-                        </span>
-                    </span>
-                    <ChevronRight className="size-4 shrink-0 text-link" aria-hidden />
-                </Link>
-            ) : (
-                <span className="flex-1" />
-            )}
+            <div className="flex min-w-0 flex-1 justify-end">{next && <Step issue={next} caption={t('Later day')} side="next" />}</div>
         </nav>
     );
 }

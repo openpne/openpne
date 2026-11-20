@@ -48,7 +48,7 @@ a missed migration.
 | `bar` | 16px | the phone header's hub title and place pill, and the place bar's (chrome, outside the content ranks) |
 
 Two axes cross the ranks: `tone="destructive"` colors a danger page's title and group, and
-`divided` underlines a heading that opens a block — a settings section, the home masthead.
+`divided` underlines a heading that opens a block — a settings section.
 
 Six content ranks rather than three, because that is what the screens use: the notification settings
 page runs page title over section over nested heading, and collapsing the middle rank would leave two

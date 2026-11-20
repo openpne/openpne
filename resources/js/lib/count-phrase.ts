@@ -46,6 +46,10 @@ export function happeningDaysPhrase(t: Translate, count: number): string {
     return count === 1 ? t('1 day of happenings') : t(':count days of happenings', { count });
 }
 
+export function daysWorthPhrase(t: Translate, count: number): string {
+    return count === 1 ? t("1 day's worth") : t(":count days' worth", { count });
+}
+
 export function responsesPhrase(t: Translate, count: number): string {
     return count === 1 ? t('1 response') : t(':count responses', { count });
 }

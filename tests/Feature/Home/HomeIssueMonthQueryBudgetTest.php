@@ -28,10 +28,12 @@ use App\Models\GroupTopicImage;
 use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -48,14 +50,28 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
     /** The files of the pictures asked about, read once for the month; the gate itself reads nothing the page does not hold. */
     private const PICTURES = 1;
 
+    private string $storage;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // A signature writes the fast path's settings under storage, which is the checkout's own unless moved.
+        $this->storage = sys_get_temp_dir().'/openpne-month-budget-'.bin2hex(random_bytes(6));
+        mkdir($this->storage.'/framework', 0777, true);
+        $this->app->useStoragePath($this->storage);
 
         // The store a site runs on by default, where a settings read is a query and is counted.
         config(['cache.default' => 'database']);
 
         Carbon::setTestNow('2026-09-01 06:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        (new Filesystem)->deleteDirectory($this->storage);
+
+        parent::tearDown();
     }
 
     public function test_a_month_costs_the_same_however_many_issues_it_holds(): void
@@ -74,6 +90,27 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $this->assertFilled($fullDays, days: 31, talking: 10, pictured: 5);
 
         $this->assertSame($half, $full, 'a read grew with the days of the month');
+    }
+
+    /** Signed as a site serves them by default, where a URL's signature asks the gate about its file's owner. */
+    public function test_signing_the_faces_and_images_of_a_month_costs_the_same_however_many_issues_it_holds(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->fill(new HomeIssueMonth(2026, 6), days: 15, talking: 10, pictured: 5);
+        $this->fill(new HomeIssueMonth(2026, 7), days: 31, talking: 10, pictured: 5);
+
+        config(['openpne.images.fast_path' => true]);
+        $this->actingAs($viewer);
+        request()->setLaravelSession($this->app['session.store']);
+        $this->warm($viewer);
+
+        [$half] = $this->measure($viewer, new HomeIssueMonth(2026, 6));
+        [$full, $fullDays] = $this->measure($viewer, new HomeIssueMonth(2026, 7));
+
+        $this->assertMatchesRegularExpression('/[?&]s=[A-Za-z0-9_-]{22}/', (string) $fullDays[0]['newGroups'][0]['imageUrl']);
+        $this->assertMatchesRegularExpression('/[?&]s=[A-Za-z0-9_-]{22}/', (string) $fullDays[0]['newcomers'][0]['imageUrl']);
+        $this->assertSame($half, $full, 'a signature read its owner again for each day of the month');
     }
 
     public function test_a_room_costs_one_read_an_issue_and_a_picture_its_gate(): void
@@ -135,6 +172,8 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
      */
     private function measure(Member $viewer, HomeIssueMonth $month): array
     {
+        // One request each, so no owner the gate found for one month is still in hand for the next.
+        $this->app->forgetScopedInstances();
         DB::flushQueryLog();
         DB::enableQueryLog();
 
@@ -172,12 +211,13 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $this->assertCount($talking, $rooms);
         $this->assertCount($stories ?? $days * 3 - $talking, $told);
         $this->assertCount($pictured, array_filter($rooms, fn (array $room): bool => $room['image'] !== null));
-        $this->assertSame([], array_filter($told, fn (array $story): bool => $story['image'] === null));
         $this->assertSame([], array_filter($rooms, fn (array $room): bool => $room['group']['imageUrl'] === null));
+        $this->assertSame([], array_filter($rooms, fn (array $room): bool => $room['speaker']['imageUrl'] === null));
 
         foreach ($shown as $day) {
             $this->assertCount(3, $day['newcomers']);
             $this->assertCount(2, $day['newGroups']);
+            $this->assertNotContains(null, array_column([...$day['newcomers'], ...$day['newGroups']], 'imageUrl'));
         }
     }
 
@@ -213,6 +253,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
             }
 
             foreach (Member::factory()->count(3)->create() as $rank => $newcomer) {
+                MemberImage::factory()->create(['member_id' => $newcomer->getKey()]);
                 $this->feature($issue, HomeIssueSection::Newcomers, $newcomer, $rank + 1);
             }
 
@@ -229,13 +270,18 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
     {
         static $made = 0;
 
-        return Group::query()->create([
+        $file = File::factory()->create();
+        $group = Group::query()->create([
             'name' => 'Group '.++$made,
             'register_policy' => JoinPolicy::Open,
             'topic_read_access' => TopicReadAccess::Everyone,
             'topic_post_authority' => TopicPostAuthority::Members,
-            'file_id' => File::factory()->create()->getKey(),
+            'file_id' => $file->getKey(),
         ]);
+        // As a group's own image is stored, so the gate has an owner to ask about.
+        $file->update(['related_entity_type' => 'group', 'related_entity_id' => $group->getKey()]);
+
+        return $group;
     }
 
     private function stories(HomeIssue $issue): void
@@ -269,6 +315,8 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
                 'created_at' => $until->subHours(3),
                 'updated_at' => $until->subHours(3),
             ]);
+
+            MemberImage::factory()->create(['member_id' => $said->last()->member_id]);
 
             foreach ($attachments === 0 ? [] : range(1, $attachments) as $number) {
                 $this->attach($said->last(), $number);

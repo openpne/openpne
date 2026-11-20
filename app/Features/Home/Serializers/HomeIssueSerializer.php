@@ -17,6 +17,7 @@ use App\Features\Home\Data\TalkStretch;
 use App\Features\Home\HomeIssueSection;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Files\FileOwners;
 use App\Files\PostAttachments;
 use App\Models\Diary;
 use App\Models\Group;
@@ -113,18 +114,15 @@ final class HomeIssueSerializer
     {
         return [
             ...self::linkTo($issue),
-            'days' => self::daysOf(self::windowOf($issue)),
+            'bornDays' => self::bornDaysOf(self::summaryBornOf($summary), self::windowOf($issue)),
             'items' => array_map(self::item(...), $summary->items()),
             'more' => $summary->more(),
             'newcomers' => array_map(fn (Member $member): array => [
-                'id' => (int) $member->getKey(),
-                'name' => $member->name,
-                'isAi' => $member->isAiAccount(),
+                ...MemberRefSerializer::ref($member),
                 'href' => "/member/{$member->getKey()}",
             ], $summary->newcomers),
             'newGroups' => array_map(fn (Group $group): array => [
-                'id' => (int) $group->getKey(),
-                'name' => $group->name,
+                ...self::scope($group),
                 'href' => "/groups/{$group->getKey()}",
             ], $summary->newGroups),
         ];
@@ -139,7 +137,7 @@ final class HomeIssueSerializer
                 'kind' => 'talk',
                 'href' => "/groups/{$item->group->getKey()}/talk?m={$item->last->getKey()}",
                 'group' => self::scope($item->group),
-                'speaker' => $author === null ? null : ['name' => $author->name, 'isAi' => $author->isAiAccount()],
+                'speaker' => $author === null ? null : MemberRefSerializer::ref($author),
                 // The picture that came through the gate, never the row's own word that it has one.
                 'line' => ChatPreview::lineOrImages([(string) $item->last->body], $item->picture !== null),
                 'count' => $item->count,
@@ -152,7 +150,6 @@ final class HomeIssueSerializer
             'href' => self::hrefOf($item),
             'headline' => self::headline($item),
             'responses' => self::countOf($item, $item instanceof TimelinePost ? 'replies' : 'comments'),
-            'image' => self::pictureOf($item),
         ];
     }
 
@@ -202,6 +199,82 @@ final class HomeIssueSerializer
         ];
     }
 
+    /**
+     * The days what this reader is shown was born on, so a gap of quiet days does not widen the band
+     * and a row the gate withheld does not either; the window's days when nothing survived
+     * (docs/internals/home-issues.md, "A day runs 06:00 → 06:00").
+     *
+     * @param  list<CarbonImmutable>  $born
+     * @return array{from: string, to: string}
+     */
+    private static function bornDaysOf(array $born, HomeIssueWindow $window): array
+    {
+        if ($born === []) {
+            return self::daysOf($window);
+        }
+
+        $first = $window->firstDay()->format('Y-m-d');
+        $last = $window->lastDay()->format('Y-m-d');
+        // One second back, as the window's own last day is read: a row on the closing boundary
+        // belongs to the issue that closed on it.
+        $days = array_map(
+            fn (CarbonImmutable $instant): string => min(max(HomeIssueDay::of($instant->subSecond())->format('Y-m-d'), $first), $last),
+            $born,
+        );
+
+        return ['from' => min($days), 'to' => max($days)];
+    }
+
+    /** @return list<CarbonImmutable> */
+    private static function bornOf(HydratedIssue $hydrated): array
+    {
+        $zone = (string) config('app.timezone');
+        $born = [];
+
+        foreach ([HomeIssueSection::Stories, HomeIssueSection::Newcomers, HomeIssueSection::NewGroups] as $section) {
+            foreach ($hydrated->items($section) as $item) {
+                if ($item->source->created_at !== null) {
+                    $born[] = CarbonImmutable::instance($item->source->created_at);
+                }
+            }
+        }
+
+        foreach ($hydrated->items(HomeIssueSection::Talk) as $item) {
+            foreach ($item->extra['messages'] as $message) {
+                // Back into the site's zone: a parsed offset is a fixed one, and its midnight drifts
+                // from the site's across a DST change.
+                $born[] = CarbonImmutable::parse($message['createdAt'])->setTimezone($zone);
+            }
+        }
+
+        return $born;
+    }
+
+    /**
+     * A month reads an issue shallower than its page does, a room by its last message alone, so a
+     * stretch of days can be named narrower here than on the day's own page.
+     *
+     * @return list<CarbonImmutable>
+     */
+    private static function summaryBornOf(HomeIssueSummary $summary): array
+    {
+        $born = [];
+
+        foreach ([...$summary->stories, ...$summary->newcomers, ...$summary->newGroups] as $source) {
+            if ($source->created_at !== null) {
+                $born[] = CarbonImmutable::instance($source->created_at);
+            }
+        }
+
+        foreach ($summary->bursts as $stretch) {
+            if ($stretch->last->created_at !== null) {
+                $born[] = CarbonImmutable::instance($stretch->last->created_at);
+            }
+        }
+
+        return $born;
+    }
+
     private static function issue(HomeIssue $issue, HydratedIssue $hydrated, CarbonImmutable $now): array
     {
         $window = self::windowOf($issue);
@@ -209,8 +282,8 @@ final class HomeIssueSerializer
         return [
             ...self::linkTo($issue),
             'monthHref' => HomeIssueMonth::of(CarbonImmutable::parse($issue->issue_date))->href(),
-            // The masthead names the days and the colophon the instants they were drawn from.
-            'days' => self::daysOf($window),
+            // The band names the days what is shown was born on; the colophon the window's instants.
+            'bornDays' => self::bornDaysOf(self::bornOf($hydrated), $window),
             'window' => [
                 'from' => $window->start->toIso8601String(),
                 'to' => $window->end->toIso8601String(),
@@ -405,6 +478,11 @@ final class HomeIssueSerializer
      */
     private static function scope(Group $group): array
     {
+        // The row in hand is the one FilePolicy would otherwise read again to sign the image's URL.
+        if ($group->image !== null) {
+            app(FileOwners::class)->note($group);
+        }
+
         return [
             'id' => (int) $group->getKey(),
             'name' => $group->name,

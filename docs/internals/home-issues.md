@@ -64,10 +64,9 @@ next one, so what a reader is handed at 06:00 is everything since 06:00 the morn
 the instant, less the publishing hour, to its own midnight — and a window `(start, end]` covers the
 days `of(start)` … `of(end − 1s)`.
 
-**`issue_date` is the last day the window covers**, which is what the page is titled and addressed
-by. The scheduled 06:00 run on the 28th covers `(27th 06:00, 28th 06:00]` and is therefore **the
+**`issue_date` is the last day the window covers**, which is what the page is addressed by. The scheduled 06:00 run on the 28th covers `(27th 06:00, 28th 06:00]` and is therefore **the
 27th's issue**; the first issue ever spans seven days and takes the last of them. Dating either by
-the day the run happened would headline yesterday evening's posts with today's date, which is the
+the day the run happened would address yesterday evening's posts by today's date, which is the
 one thing a dateline may not do.
 
 **A window closes on a boundary, never on the clock.** The scheduled run lands a second or two past
@@ -81,12 +80,16 @@ ran; what has happened since waits for the next issue.
 Idempotency is unchanged and still reads "one issue per `issue_date`": the publisher looks for that
 day before planning, and the unique settles a race.
 
-The page reads the same rule twice more. Its masthead names the days the window covers — one day
-usually, a range when it reached further back — and its colophon states the two instants behind
-them, because a reader seeing last evening under yesterday's date needs to see where the day was
-cut. And "current" means the issue is the last one that could have come out (`HomeIssueDay::latest`),
-not that it is dated today: no fresh issue ever is, and comparing against the calendar would have
-every front page announce itself as stale.
+The page reads the same rule twice more. Its band names the days **what this reader is shown was
+born on** — one day usually, a range when the stories, talk, newcomers and groups it shows span
+more. Days in the window that nothing came from do not widen it, nor does a row the gate withheld
+from this reader, so two readers of one issue can see different ranges; a row born exactly on 06:00
+belongs to the day it closes, as the window's own last day does, and no day outside the window is
+ever named. With nothing left to show, the band names the window's days. The colophon states the two
+instants the window ran between, because a reader seeing last evening under yesterday's date needs
+to see where the day was cut. `isCurrent` means the issue is the last one that could have come out
+(`HomeIssueDay::latest`), not that it is dated today; the page does not read it, and names a day
+"yesterday" by the site's calendar instead ("Rendering").
 
 ## The window, and 休刊
 
@@ -275,16 +278,24 @@ width over a 16:9 picture, ranks 2 and 3 are a pair of cards at 4:3, and the res
 picture as a square beside the words. A story with no picture keeps its rank and reads a line
 further. The payload is still one ranked list in one shape — the placement is the page's decision.
 
+**The page opens on a band**: the days' name as the `h1`, the neighbouring days either side of it,
+and, on the newest issue, when the next one comes (06:00) where the step forward would be. The band
+calls a day "yesterday" by the site's calendar, not by the 06:00 day: before 06:00 the latest issue
+is two calendar days back. Below the stories come the talk rooms, a card each, then upcoming events,
+newcomers and new groups, each a panel named by its title. The foot repeats the steps either side, links the month in the
+calendar, and ends in the colophon; there is no line calling an issue stale.
+
 **Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))
 and named by its headline, so nothing inside it may be a link of its own: a byline names rather than
-navigates. A post has no title, so its opening line is the headline and the dek is what is left after
-it — and a post that opens on a blank line is headlined by its words instead, because a link named by
-nothing cannot be announced.
+navigates, and a talk card is named by its room and prints its mentions as text. A post has no
+title, so its opening line is the headline and the dek is what is left after it — and a post that
+opens on a blank line is headlined by its words instead, because a link named by nothing cannot be
+announced.
 
 **A burst is resolved live, and only its window is remembered.** The count is the stretch's current
 count and the way in is `?m=` on the first message still there. What is printed is the **last six
-messages of the window**, oldest first, each drawn as the room draws it — author, time, body with
-its mentions, and the pictures the reader may have, gated per file the same way a glimpse is
+messages of the window**, oldest first, each drawn as the room draws it — author, time, body and the
+pictures the reader may have, gated per file the same way a glimpse is
 ([`TalkSampleDigest`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)). The tail and not
 the head: the first issue ever reaches back a week, and a week-old opening describes a room that has
 since moved on. There is no separate row of faces and no picture grid — an excerpt carries both.
@@ -295,7 +306,10 @@ Every optional section key is absent rather than empty, so nothing on the page h
 ## The month page
 
 `/home/{y}/{m}` draws one month of issues, newest first: each day as its date and the first few
-things that happened on it, every one a link to the thing itself.
+things that happened on it, every one a link to the thing itself. A day is headed by the days the rows it reads
+were born on, those behind "more" included, as an issue's band is ("A day runs 06:00 → 06:00"); a
+room is read by its last message alone and the names by their first three rows, so a stretch can be
+named narrower than on the day's own page.
 
 **A day has an issue when an issue is dated that day, and only then.** An issue belongs to the month
 of its `issue_date`, whatever its window reaches back over — the rule `/home/{y}/{m}/{d}` already
@@ -303,8 +317,8 @@ answers by. A window grows for two reasons, and only the first leaves the days i
 on which nothing happened published no issue, while the first issue ever, and one that follows a
 stopped scheduler, carry what happened on the days before under the last day's date.
 
-**What a day says about its sources is read live and through their gates.** Headlines, pictures,
-what was last said in a room and every count come from
+**What a day says about its sources is read live and through their gates.** Headlines, faces, a
+room's picture, what was last said in it and every count come from
 [`SummarizeHomeIssues`](../../app/Features/Home/Queries/SummarizeHomeIssues.php), which asks
 [`HomeItemGate::admits()`](../../app/Features/Home/HomeItemGate.php) — the rule the issue page
 asks — so a month never shows what the day's own page would drop. Frozen `score` and `stats` are
@@ -315,22 +329,24 @@ date alone, and the grid of months counts issues, not what is left of them
 ([`ListHomeIssueMonths`](../../app/Features/Home/Queries/ListHomeIssueMonths.php)). A month that
 holds none is drawn there and is not a link.
 
-**Every way to another day or month is in one panel above the days.** The month's name opens the
-grid of months under it, closed until asked for; the months either side are the nearest that hold an
-issue; the calendar below them is the month's days.
+**The page opens on a band, as a day's page does.** Its sides step to the months either side, the
+nearest that hold an issue; its middle, the month's name, opens the grid of months, closed until
+asked for, each month there counting the days it holds. The grid opens in one panel with the
+calendar of the month's days under it, and the foot repeats the band's steps under the last day.
 
 **A day shows three items and says how many more there are.** The lead story, the busiest room, the
 second story; a kind that has run out gives its place to the other, so a day with talk in it always
-shows some. "More" counts the stories and rooms that survive and are not shown, and nothing else.
+shows some. A story is its headline and how much was said under it, with no picture. "More" counts
+the stories and rooms that survive and are not shown, and nothing else.
 
 | Read from the ledger | How deep | Shown as |
 |---|---|---|
 | stories, talk | every rank | up to three items, and the count of the rest |
-| newcomers, new groups | the first three rows | the names of those that pass the gate, which may be fewer than three |
+| newcomers, new groups | the first three rows | the faces and names of those that pass the gate, which may be fewer than three |
 | upcoming events | not read | — |
 
-**A room is drawn by what was last said in it**: who spoke, the line, how many messages the stretch
-holds ([`TalkSampleDigest::stretchesOf`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)),
+**A room is drawn by what was last said in it**: who spoke and their face, the line, how many
+messages the stretch holds ([`TalkSampleDigest::stretchesOf`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)),
 and the first picture of that message. One picture is read and one is asked of the per-file gate,
 however many the message carries: a refused first picture shows none, where the issue page would
 show the next. Whether the message has a picture is what that gate answered, never that a row for
@@ -342,16 +358,19 @@ further down, and a day without one is its date alone. A cell prints what the bl
 each and at most three — a story by its headline, a room by its group's name, then names while
 there is room — with the count of what the block does not list beside the date. A line is cut where
 the cell ends and never wrapped. The link's name holds every word the cell prints and says the rest:
-the date in full, a room's name with what was last said in it, what a name is a name of, and that
-the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
+the days from the first its block names to the cell's own, which is the block's naming unless
+everything it reads was born before the issue's date, a room's name with what was last said in it,
+what a name is a name of, and that the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
 
 **The cost does not grow with the ledger.** One read per source table, one per relation the gate
 asks about, and the units asked once per gate rather than per row. One read does grow, with the
 month and not with its rows: one per issue that holds talk, since each issue has a window of its
 own. The gate of each room's picture, asked once for a room shown and so at most three times a day,
 reads nothing the page does not already hold: the message and its room are noted for it
-([`FileOwners`](../../app/Files/FileOwners.php)) before it is asked. Pictures and speakers are read
-after the gate, for the items shown and no others. The grid of months is one read of every issue's
+([`FileOwners`](../../app/Files/FileOwners.php)) before it is asked. A room's picture, its speaker and every
+face are read after the gate, for the items shown and no others; a story's pictures are never read.
+A face or a group's image is signed from the row in hand, its owner noted for the gate as a room's
+picture is. The grid of months is one read of every issue's
 date, a row per published day.
 
 ## Routes
@@ -363,7 +382,7 @@ default, serves the front page there too, and `whats_new` serves the "What's new
 otherwise lives at `/dashboard`. The Modern nav leads with whichever page `/` does not serve, and the
 Home tab covers the one it does. The page `/` serves, and only that one, opens with the site notice
 the administrator writes on the Landing page settings page (`home_notice`, Markdown), above the
-masthead or the digest; the other page leaves it out so it is not shown twice. The notice and the
+band or the digest; the other page leaves it out so it is not shown twice. The notice and the
 digest's needs-action rows draw no heading on screen, the notice's text heading itself as OpenPNE 3's
 `informationBox` did; when `/` serves the digest, its h1 is visually hidden too, the brand bar already
 naming the place. `/home/issues` is the month of the latest issue,

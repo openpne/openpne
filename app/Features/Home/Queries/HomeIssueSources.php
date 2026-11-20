@@ -50,8 +50,8 @@ final class HomeIssueSources
     }
 
     /**
-     * No pictures and no faces: a month draws one per issue, which its caller reads once the gate
-     * has said which (docs/internals/home-issues.md, "The month page").
+     * No pictures and no faces: the caller reads those for the items the gate lets it draw
+     * (docs/internals/home-issues.md, "The month page").
      *
      * @param  Collection<int, HomeIssueItem>  $items
      * @return array<string, Collection<int, Model>> keyed by morph alias, then by id
