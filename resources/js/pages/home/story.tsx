@@ -54,7 +54,7 @@ function Byline({ story }: { story: IssueStory }) {
     const name = author?.name ?? t('%Withdrawn_member%');
 
     return (
-        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <Avatar
                 id={author?.id ?? 0}
                 name={name}
@@ -67,24 +67,22 @@ function Byline({ story }: { story: IssueStory }) {
             <span className="min-w-0 truncate">{name}</span>
             <AiChip isAi={author?.isAi ?? false} />
             {story.group && (
-                <>
+                <span className="flex min-w-0 items-center gap-x-1.5">
                     <Dot />
                     <span className="min-w-0 truncate">{story.group.name}</span>
-                </>
+                </span>
             )}
-            <Dot />
-            <Timestamp at={story.createdAt} preset="listStamp" />
+            <span className="flex items-center gap-x-1.5 whitespace-nowrap">
+                <Dot />
+                <Timestamp at={story.createdAt} preset="listStamp" />
+            </span>
+            {/* The icon separates the count, so a narrow column that wraps it leaves no dot behind. */}
             {story.commentCount > 0 && (
-                <>
-                    <Dot />
-                    <CountBadge
-                        icon={MessageCircle}
-                        count={story.commentCount}
-                        srLabel={
-                            story.kind === 'timeline' ? repliesPhrase(t, story.commentCount) : commentsPhrase(t, story.commentCount)
-                        }
-                    />
-                </>
+                <CountBadge
+                    icon={MessageCircle}
+                    count={story.commentCount}
+                    srLabel={story.kind === 'timeline' ? repliesPhrase(t, story.commentCount) : commentsPhrase(t, story.commentCount)}
+                />
             )}
         </div>
     );

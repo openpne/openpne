@@ -47,7 +47,7 @@ a missed migration.
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
 | `bar` | 16px | the phone header's hub title and place pill, and the place bar's (chrome, outside the content ranks) |
 | `headline` | 28px | the lead story on できごと only: a page with no nameplate, where a post's title is the largest text on it |
-| `kicker` | 12px, spaced capitals, muted | a section's name on できごと, set between two rules |
+| `kicker` | 12px, spaced capitals | a section's name on できごと, set between two rules |
 
 Three axes cross the ranks: `tone="destructive"` colors a danger page's title and group, `divided`
 underlines a heading that opens a block — a settings section — and `face="serif"` sets it in Mincho

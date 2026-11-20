@@ -35,11 +35,11 @@ export const headingVariants = cva('font-semibold', {
     },
     compoundVariants: [
         {
-            variant: ['display', 'page', 'pageCompose', 'group', 'section', 'minor', 'bar', 'headline'],
+            variant: ['display', 'page', 'pageCompose', 'group', 'section', 'minor', 'bar', 'headline', 'kicker'],
             tone: 'default',
             class: 'text-foreground',
         },
-        { variant: ['label', 'kicker'], tone: 'default', class: 'text-muted-foreground' },
+        { variant: 'label', tone: 'default', class: 'text-muted-foreground' },
         { tone: 'destructive', class: 'text-destructive' },
     ],
     defaultVariants: { variant: 'page', tone: 'default', face: 'sans' },
