@@ -49,14 +49,28 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
     /** The files of the pictures asked about, read once for the month; the gate itself reads nothing the page does not hold. */
     private const PICTURES = 1;
 
+    private string $storage;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // A signature writes the fast path's settings under storage, which is the checkout's own unless moved.
+        $this->storage = sys_get_temp_dir().'/openpne-month-budget-'.bin2hex(random_bytes(6));
+        mkdir($this->storage.'/framework', 0777, true);
+        $this->app->useStoragePath($this->storage);
 
         // The store a site runs on by default, where a settings read is a query and is counted.
         config(['cache.default' => 'database']);
 
         Carbon::setTestNow('2026-09-01 06:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        exec('rm -rf '.escapeshellarg($this->storage));
+
+        parent::tearDown();
     }
 
     public function test_a_month_costs_the_same_however_many_issues_it_holds(): void
