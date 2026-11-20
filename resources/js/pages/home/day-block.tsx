@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
+import { KindMark } from '@/components/kind-mark';
 import { Heading } from '@/components/ui/heading';
 import { stretchedLink } from '@/components/ui/surface';
 import { messagesPhrase, morePhrase, responsesPhrase } from '@/lib/count-phrase';
@@ -52,6 +53,7 @@ function Story({ item }: { item: DayStory }) {
     return (
         <li className={ROW}>
             <div className="min-w-0 flex-1 space-y-0.5">
+                <KindMark kind={item.kind} group={item.groupName ?? undefined} />
                 <p className="line-clamp-2 text-base break-words text-foreground">
                     <Link href={item.href} className={stretchedLink}>
                         {item.headline}
@@ -70,33 +72,37 @@ function Talk({ item }: { item: DayTalk }) {
     const name = speaker?.name ?? t('%Withdrawn_member%');
 
     return (
-        <li className={ROW}>
-            <Avatar
-                id={speaker?.id ?? 0}
-                name={name}
-                src={speaker?.imageUrl ?? null}
-                color={speaker?.avatarColor ?? null}
-                isAi={speaker?.isAi ?? false}
-                size="xs"
-                decorative
-            />
-            <div className="min-w-0 flex-1 space-y-0.5">
-                {/* Named in full: the line is cut where the row ends. */}
-                <Link href={item.href} aria-label={said(t, item)} className={cn(stretchedLink, 'flex min-w-0 items-baseline gap-2 text-foreground')}>
-                    {item.line !== '' && <span className="shrink-0 text-xs">{markedName(name, speaker?.isAi ?? false, t)}</span>}
-                    <span className="min-w-0 truncate text-sm">{item.line === '' ? item.group.name : item.line}</span>
-                </Link>
-                <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                    {item.line !== '' && (
-                        <>
-                            <span className="min-w-0 truncate">{item.group.name}</span>
-                            <Dot />
-                        </>
-                    )}
-                    <span className="shrink-0">{messagesPhrase(t, item.count)}</span>
-                </p>
+        <li className={cn(ROW, 'flex-col items-stretch gap-0.5')}>
+            {/* Over the face rather than beside it: every item opens on its mark at the same edge. */}
+            <KindMark kind="talk" />
+            <div className="flex items-start gap-3">
+                <Avatar
+                    id={speaker?.id ?? 0}
+                    name={name}
+                    src={speaker?.imageUrl ?? null}
+                    color={speaker?.avatarColor ?? null}
+                    isAi={speaker?.isAi ?? false}
+                    size="xs"
+                    decorative
+                />
+                <div className="min-w-0 flex-1 space-y-0.5">
+                    {/* Named in full: the line is cut where the row ends. */}
+                    <Link href={item.href} aria-label={said(t, item)} className={cn(stretchedLink, 'flex min-w-0 items-baseline gap-2 text-foreground')}>
+                        {item.line !== '' && <span className="shrink-0 text-xs">{markedName(name, speaker?.isAi ?? false, t)}</span>}
+                        <span className="min-w-0 truncate text-sm">{item.line === '' ? item.group.name : item.line}</span>
+                    </Link>
+                    <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                        {item.line !== '' && (
+                            <>
+                                <span className="min-w-0 truncate">{item.group.name}</span>
+                                <Dot />
+                            </>
+                        )}
+                        <span className="shrink-0">{messagesPhrase(t, item.count)}</span>
+                    </p>
+                </div>
+                {item.image && <StoryPicture image={item.image} shape="size-12 shrink-0 rounded-lg" sizes="3rem" />}
             </div>
-            {item.image && <StoryPicture image={item.image} shape="size-12 shrink-0 rounded-lg" sizes="3rem" />}
         </li>
     );
 }
@@ -143,7 +149,7 @@ export function DayBlock({ day }: { day: DaySummary }) {
             </Heading>
             {day.items.length > 0 && (
                 <ul>
-                    {day.items.map((item) => (item.kind === 'story' ? <Story key={item.href} item={item} /> : <Talk key={item.href} item={item} />))}
+                    {day.items.map((item) => (item.kind === 'talk' ? <Talk key={item.href} item={item} /> : <Story key={item.href} item={item} />))}
                 </ul>
             )}
             <div className="space-y-1">

@@ -649,11 +649,12 @@ class HomeIssueSerializerTest extends TestCase
 
         [$item] = $day['items'];
 
-        $this->assertSame(['kind', 'href', 'headline', 'responses'], array_keys($item));
-        $this->assertSame('story', $item['kind']);
+        $this->assertSame(['kind', 'href', 'headline', 'responses', 'groupName'], array_keys($item));
+        $this->assertSame('diary', $item['kind']);
         $this->assertSame("/diary/{$diary->getKey()}", $item['href']);
         $this->assertSame('Morning walk', $item['headline']);
         $this->assertSame(2, $item['responses']);
+        $this->assertNull($item['groupName']);
     }
 
     public function test_each_kind_of_story_is_opened_where_it_is_read(): void
@@ -673,6 +674,8 @@ class HomeIssueSerializerTest extends TestCase
             ["/timeline/{$post->getKey()}", "/topics/{$topic->getKey()}", "/events/{$event->getKey()}"],
             array_column($items, 'href'),
         );
+        $this->assertSame(['timeline', 'topic', 'event'], array_column($items, 'kind'));
+        $this->assertSame([null, $topic->group->name, $event->group->name], array_column($items, 'groupName'));
         $this->assertSame(['First line', 'What the topic is called', 'The gathering'], array_column($items, 'headline'));
         $this->assertSame([2, 0, 0], array_column($items, 'responses'));
     }
@@ -773,7 +776,7 @@ class HomeIssueSerializerTest extends TestCase
 
         $day = $this->month()['days'][0];
 
-        $this->assertSame(['story', 'talk', 'story'], array_column($day['items'], 'kind'));
+        $this->assertSame(['diary', 'talk', 'diary'], array_column($day['items'], 'kind'));
         $this->assertSame(2, $day['more']);
     }
 

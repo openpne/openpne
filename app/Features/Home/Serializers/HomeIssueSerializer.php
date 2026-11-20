@@ -146,11 +146,22 @@ final class HomeIssueSerializer
         }
 
         return [
-            'kind' => 'story',
+            'kind' => self::kindOf($item),
             'href' => self::hrefOf($item),
             'headline' => self::headline($item),
             'responses' => self::countOf($item, $item instanceof TimelinePost ? 'replies' : 'comments'),
+            'groupName' => $item instanceof GroupTopic || $item instanceof GroupEvent ? (string) $item->group->name : null,
         ];
+    }
+
+    private static function kindOf(Diary|TimelinePost|GroupTopic|GroupEvent $source): string
+    {
+        return match (true) {
+            $source instanceof Diary => 'diary',
+            $source instanceof TimelinePost => 'timeline',
+            $source instanceof GroupTopic => 'topic',
+            $source instanceof GroupEvent => 'event',
+        };
     }
 
     private static function hrefOf(Diary|TimelinePost|GroupTopic|GroupEvent $source): string
@@ -311,25 +322,25 @@ final class HomeIssueSerializer
 
         return match (true) {
             $source instanceof Diary => self::card(
-                'diary', $source,
+                $source,
                 self::dek($source->body, $source->format),
                 null,
                 self::countOf($source, 'comments'),
             ),
             $source instanceof TimelinePost => self::card(
-                'timeline', $source,
+                $source,
                 self::postLines($source)[1],
                 null,
                 self::countOf($source, 'replies'),
             ),
             $source instanceof GroupTopic => self::card(
-                'topic', $source,
+                $source,
                 self::dek($source->body, $source->format),
                 self::scope($source->group),
                 self::countOf($source, 'comments'),
             ),
             $source instanceof GroupEvent => self::card(
-                'event', $source,
+                $source,
                 self::dek($source->body, $source->format),
                 self::scope($source->group),
                 self::countOf($source, 'comments'),
@@ -377,14 +388,13 @@ final class HomeIssueSerializer
      * to ask about — a diary has no group the way a story with no photograph has no picture.
      */
     private static function card(
-        string $kind,
         Diary|TimelinePost|GroupTopic|GroupEvent $source,
         string $dek,
         ?array $group,
         int $commentCount,
     ): array {
         return [
-            'kind' => $kind,
+            'kind' => self::kindOf($source),
             'id' => (int) $source->getKey(),
             'href' => self::hrefOf($source),
             'headline' => self::headline($source),

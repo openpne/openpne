@@ -455,7 +455,7 @@ class SummarizeHomeIssuesTest extends TestCase
         }
 
         // Both days were drawn, the room's picture, its group's image and every face among what was.
-        $this->assertSame(['story', 'talk', 'story'], array_column($days[0]['items'], 'kind'));
+        $this->assertSame(['diary', 'talk', 'timeline'], array_column($days[0]['items'], 'kind'));
         $this->assertNotNull($days[0]['items'][1]['speaker']['imageUrl']);
         $this->assertNotNull($days[0]['newcomers'][0]['imageUrl']);
         $this->assertNotNull($days[0]['newGroups'][0]['imageUrl']);

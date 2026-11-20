@@ -85,12 +85,12 @@ variable unset.
 
 ## Content kinds
 
-The nav sections, a group page's section headings and the mark over a story in できごと take a
-kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts), and the mark its word
-as well; a new kind, or a new list that mixes kinds, takes them from there too. The mark
-([`KindMark`](../../resources/js/components/kind-mark.tsx)) always prints the kind's word beside the
-glyph, which is decorative. A glyph that does not name a kind, such as a member count or a button's
-camera, is not read from the table.
+The nav sections, a group page's section headings, the mark over a story in できごと and the rows
+of its month page take a kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts),
+and the mark its word as well; a new kind, or a new list that mixes kinds, takes them from there
+too. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)), in a dense row as on a
+card, always prints the kind's word beside the glyph, which is decorative. A glyph that does not
+name a kind, such as a member count or a button's camera, is not read from the table.
 
 ## Signed-out visitors
 
