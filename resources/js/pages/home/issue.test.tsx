@@ -167,7 +167,7 @@ test('the two after the lead are cards side by side, a rank down', () => {
         ['Third story -> /events/13'],
     ]);
 
-    // A board entry's byline names the group it was posted in — as text, since the card is the link.
+    // A board entry's group is named once, in its mark and not again in the byline.
     expect(within(grid).getAllByText('Book club')).toHaveLength(2);
     expect(grid.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('(min-width: 40rem) 21rem, 100vw');
 });
@@ -213,6 +213,33 @@ test('rank four and below are rows, with the picture beside the words where ther
     // One link per row, so anywhere in it opens the story.
     expect(rows.map((row) => linksIn(row as Element))).toEqual([['Fourth -> /diary/14'], ['Fifth -> /timeline/15']]);
     expect(screen.getByText('What the fourth says.').className).toContain('line-clamp-1');
+});
+
+test('every card opens on its kind in words, a board entry with its group, and none of it is a link', () => {
+    arrive({
+        issue: issueOf({
+            stories: [
+                story(),
+                story({ kind: 'topic', id: 12, href: '/topics/12', headline: 'Second story', group }),
+                story({ kind: 'event', id: 13, href: '/events/13', headline: 'Third story', group }),
+                story({ kind: 'timeline', id: 15, href: '/timeline/15', headline: 'Fourth', image: null }),
+            ],
+            talkBursts: [burst(61)],
+        }),
+    });
+
+    const marks = ['%Diary%', '%Topic%', 'Event', '%Activity%', 'Talk'].map((word) => screen.getByText(word).parentElement as HTMLElement);
+    expect(marks.map((mark) => mark.textContent)).toEqual(['%Diary%', '%Topic%·Book club', 'Event·Book club', '%Activity%', 'Talk']);
+
+    const headlines = ['Morning walk', 'Second story', 'Third story', 'Fourth', 'Room 61'].map((name) => screen.getByRole('link', { name }));
+    marks.forEach((mark, i) => {
+        expect(mark.closest('a')).toBeNull();
+        expect(mark.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+        // Over its own headline, inside the block that headline's link covers.
+        const block = mark.closest('.rounded-card, li') as HTMLElement;
+        expect(block.contains(headlines[i] as HTMLElement)).toBe(true);
+        expect(mark.compareDocumentPosition(headlines[i] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
 });
 
 const brief = (kind: 'topic' | 'event', id: number): CommunityActivityEntry => ({

@@ -3,6 +3,7 @@ import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
 import { CommunityImage } from '@/components/community-image';
+import { KindMark } from '@/components/kind-mark';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { stretchedLink } from '@/components/ui/surface';
@@ -54,6 +55,7 @@ export function TalkBurstCard({ burst }: { burst: TalkBurst }) {
 
     return (
         <Card className="relative px-4 py-4 sm:px-5">
+            <KindMark kind="talk" className="mb-2" />
             <div className="flex min-w-0 items-center gap-2">
                 <CommunityImage name={burst.group.name} src={burst.group.imageUrl} className="size-10" textClassName="text-sm" decorative />
                 <Heading as="h2" variant="section" className="min-w-0 flex-1 truncate">

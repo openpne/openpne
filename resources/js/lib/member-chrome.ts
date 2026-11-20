@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
-import { Activity, Bell, BookOpen, House, Mail, Newspaper, Pencil, Plus, Rss, Search, Settings, UserCircle2, UserPlus, Users } from 'lucide-react';
+import { House, Pencil, Plus, Rss, Search, Settings, UserPlus } from 'lucide-react';
+import { CONTENT_KINDS } from './content-kinds.ts';
 import type { FeatureKey, ModernHomeId, UnreadCounts } from '@/types';
 
 /**
@@ -133,7 +134,7 @@ export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
 const GROUPS_SECTION: NavSection & { badge: CountBadge } = {
     href: '/groups/mine',
     match: ['/groups', '/topics', '/events'],
-    icon: Users,
+    icon: CONTENT_KINDS.group.icon,
     label: COMMUNITIES,
     badge: {
         count: 'groupTalks',
@@ -147,7 +148,7 @@ const GROUPS_SECTION: NavSection & { badge: CountBadge } = {
 export const NOTIFICATIONS_SECTION: NavSection & { badge: CountBadge } = {
     href: '/notifications',
     match: ['/notifications'],
-    icon: Bell,
+    icon: CONTENT_KINDS.notification.icon,
     label: NOTIFICATIONS,
     badge: { count: 'notifications', label: t(':count unread notifications'), one: t('1 unread notification') },
 };
@@ -161,19 +162,19 @@ const MEMBER_SEARCH_SECTION: NavSection = {
 
 // No unit owns either: with every unit switched off each still renders.
 const WHATS_NEW_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], icon: Rss, label: WHATS_NEW };
-const HAPPENINGS_SECTION: NavSection = { href: '/home/latest', match: ['/home/'], icon: Newspaper, label: HAPPENINGS };
+const HAPPENINGS_SECTION: NavSection = { href: '/home/latest', match: ['/home/'], icon: CONTENT_KINDS.issue.icon, label: HAPPENINGS };
 
 /** Home is the brand row, so the nav leads with whichever of the two home pages `/` does not serve. */
 const navSections = (home: ModernHomeId): NavSection[] => [home === 'whats_new' ? HAPPENINGS_SECTION : WHATS_NEW_SECTION, ...UNIT_SECTIONS];
 
 const UNIT_SECTIONS: NavSection[] = [
-    { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
+    { href: '/diary/list', match: ['/diary'], icon: CONTENT_KINDS.diary.icon, label: DIARIES, feature: 'diary' },
     GROUPS_SECTION,
-    { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
+    { href: '/timeline', match: ['/timeline'], icon: CONTENT_KINDS.timeline.icon, label: ACTIVITY, feature: 'timeline' },
     {
         href: '/friend/list',
         match: ['/friend'],
-        icon: UserCircle2,
+        icon: CONTENT_KINDS.member.icon,
         label: FRIENDS,
         badge: { count: 'friendRequests', label: t(':count pending %friend% requests'), one: t('1 pending %friend% request') },
         feature: 'friend',
@@ -183,7 +184,7 @@ const UNIT_SECTIONS: NavSection[] = [
     {
         href: '/messages',
         match: ['/message'],
-        icon: Mail,
+        icon: CONTENT_KINDS.directMessage.icon,
         label: MESSAGES,
         badge: {
             count: 'unreadMessages',

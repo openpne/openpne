@@ -21,8 +21,8 @@ export interface BoardScope {
 }
 
 /**
- * Never a body: the block is a way in (docs/internals/home-issues.md, "Rendering"). `kind` is the
- * byline's grammar rather than a shape switch — a board entry names its group, a post counts replies.
+ * Never a body: the block is a way in (docs/internals/home-issues.md, "Rendering"). `kind` names the
+ * story in its mark and is not a shape switch.
  */
 export interface IssueStory {
     kind: 'diary' | 'timeline' | 'topic' | 'event';
