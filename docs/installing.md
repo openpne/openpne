@@ -547,10 +547,10 @@ push service of the member's browser, over HTTPS on port 443: the proxy variable
 
 Members then turn push notifications on themselves, one device at a time: from the notifications
 page, or with "Subscribe this device" under "Push notifications" in their notification settings.
-"Send push notifications to my devices", beside it, pauses pushes to all of a member's devices, and
-which kinds of notification are pushed follows the member's "In-app notifications" settings. On
-an iPhone or an iPad, the site has to be added to the Home Screen first and opened from there. These
-screens are Modern's: on a site set to `classic_only` (`php artisan openpne:surface-mode`) no one
+"Send push notifications to my devices", in the same section, pauses pushes to all of a member's
+devices, and which kinds of notification are pushed follows the member's "In-app notifications"
+settings. On an iPhone or an iPad, the site has to be added to the Home Screen first and opened from
+there. These screens are Modern's: on a site set to `classic_only` (`php artisan openpne:surface-mode`) no one
 can subscribe a device. Where members choose their look, one who uses Classic subscribes from
 Modern, and the device receives pushes whichever look they use afterwards.
 
