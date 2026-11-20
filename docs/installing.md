@@ -539,20 +539,22 @@ unsubscribes it and subscribes it again. `OPENPNE_VAPID_SUBJECT`, the contact a 
 given for the site, is `APP_URL` unless you set it; a `mailto:` address does as well.
 
 A push is sent for each notification that reaches a member's notifications page, and goes out with
-it through the queue of step 6, whichever of its three ways the site uses. With no worker, it is sent
-in the process of the request that caused it, after the response, and counts toward that request's
-`max_execution_time` ([runtime.md](internals/runtime.md#queue)). The server sends it straight to the
-push service of the member's browser, over HTTPS on port 443: the proxy variables of the environment
-(`HTTPS_PROXY` and the like) are not used, so the server has to reach the push services without one.
+it through the queue of step 6, whichever of its three ways the site uses. With no worker, it is
+sent in the process of the request that caused it, after the response, and counts toward that
+request's `max_execution_time` ([runtime.md](internals/runtime.md#queue)). The server sends it
+straight to the push service of the member's browser, over HTTPS on port 443: the proxy variables of
+the environment (`HTTPS_PROXY` and the like) are not used, so the server has to reach the push
+services without one.
 
 Members then turn push notifications on themselves, one device at a time: from the notifications
 page, or with "Subscribe this device" under "Push notifications" in their notification settings.
 "Send push notifications to my devices", in the same section, pauses pushes to all of a member's
 devices, and which kinds of notification are pushed follows the member's "In-app notifications"
 settings. On an iPhone or an iPad, the site has to be added to the Home Screen first and opened from
-there. These screens are Modern's: on a site set to `classic_only` (`php artisan openpne:surface-mode`) no one
-can subscribe a device. Where members choose their look, one who uses Classic subscribes from
-Modern, and the device receives pushes whichever look they use afterwards.
+there. These screens are Modern's: on a site set to `classic_only`
+(`php artisan openpne:surface-mode`) no one can subscribe a device. Where members choose their look,
+one who uses Classic subscribes from Modern, and the device receives pushes whichever look they use
+afterwards.
 
 ## 9. The first member
 
