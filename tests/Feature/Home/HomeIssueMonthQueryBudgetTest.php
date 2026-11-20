@@ -33,6 +33,7 @@ use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -68,7 +69,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
 
     protected function tearDown(): void
     {
-        exec('rm -rf '.escapeshellarg($this->storage));
+        (new Filesystem)->deleteDirectory($this->storage);
 
         parent::tearDown();
     }

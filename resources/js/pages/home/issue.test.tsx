@@ -179,6 +179,8 @@ test('a lone second takes the width rather than half of it', () => {
 
     expect(container.querySelector('.sm\\:grid-cols-2')).toBeNull();
     expect(screen.getByRole('heading', { level: 2, name: 'Second story' })).toBeTruthy();
+    const pictures = Array.from(container.querySelectorAll('img[srcset]'));
+    expect(pictures.map((picture) => picture.getAttribute('sizes'))).toEqual(['min(42rem, 100vw)', 'min(42rem, 100vw)']);
 });
 
 test('rank four and below are rows, with the picture beside the words where there is one', () => {

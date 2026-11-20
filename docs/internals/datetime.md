@@ -34,8 +34,9 @@ screens do not move under them.
 | civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. Wherever an event's own dates appear they appear with the weekday, so the same datum never shows in two shapes; できごと's event rows are the one exception and take the month-day below. |
 | civil month-day, day span | `11月17日(火)` · `11月12日〜18日` | A heading line naming a day or a run of days — できごと's band, its event rows, its day steps and its day blocks. The month is the short one (`Tue, Nov 17`), the year follows rule 3, and the second end of a run inside one month of this year is its day alone. An event row is a line in a week-ahead list rather than the event's own page, so its year follows rule 3 too. |
 
-Every shape but `absolute` carries the full value as a `title`; `absolute` does not, since it already
-names the day and the minute and a title differing only in seconds is noise.
+Every shape of an instant but `absolute` carries the full value as a `title`; `absolute` does not,
+since it already names the day and the minute and a title differing only in seconds is noise. A
+civil date or month-day carries none.
 
 ### A conversation
 
@@ -45,7 +46,7 @@ A conversation is the one place a date is split across two elements. The rows of
 the day is one unit of meaning and it is said once for the stretch it covers, so a row is left with
 only the part that tells it from the row above.
 
-**The heading carries the weekday**, which no shape in the table above does. Rule 6 is why: a reader
+**The heading carries the weekday**, which no shape of an instant in the table above does. Rule 6 is why: a reader
 scrolling back through a conversation is placing the day in their own week. It costs nothing per row,
 because the day is said once for the whole run under the heading. Today and yesterday stay words —
 `今日` is a more precise answer than a weekday, not a less precise one.

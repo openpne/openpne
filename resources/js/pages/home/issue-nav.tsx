@@ -13,11 +13,11 @@ export function PagerStep({ href, caption, side, children }: { href: string; cap
     const Chevron = side === 'prev' ? ChevronLeft : ChevronRight;
 
     return (
-        <Link href={href} className={cn('group flex min-h-11 items-center gap-1.5', side === 'next' && 'flex-row-reverse text-right')}>
+        <Link href={href} className={cn('group flex min-h-11 min-w-0 items-center gap-1.5', side === 'next' && 'flex-row-reverse text-right')}>
             <Chevron className="size-4 shrink-0 text-link" aria-hidden />
-            <span className="flex flex-col">
+            <span className="flex min-w-0 flex-col">
                 <span className="text-xs text-muted-foreground">{caption}</span>
-                <span className="whitespace-nowrap text-sm text-link group-hover:underline">{children}</span>
+                <span className="text-sm text-link group-hover:underline">{children}</span>
             </span>
         </Link>
     );
@@ -26,7 +26,7 @@ export function PagerStep({ href, caption, side, children }: { href: string; cap
 function Step({ issue, caption, side }: { issue: IssueRef; caption: string; side: 'prev' | 'next' }) {
     const { civilMonthDay } = useDateFormat();
     const { timezone } = usePage<PageProps>().props;
-    // Read for the re-render alone: the date drops its year by the reader's year, which turns over at midnight.
+    // Read for the re-render alone: the date drops its year by the site's year, which turns over at the site's midnight.
     useSiteDay(timezone);
 
     return (
@@ -42,11 +42,11 @@ export function IssueNav({ prev, next, monthHref }: { prev: IssueRef | null; nex
 
     return (
         <nav className="flex items-center gap-3" aria-label={t('Day navigation')}>
-            <div className="flex flex-1 justify-start">{prev && <Step issue={prev} caption={t('Earlier day')} side="prev" />}</div>
+            <div className="flex min-w-0 flex-1 justify-start">{prev && <Step issue={prev} caption={t('Earlier day')} side="prev" />}</div>
             <Link href={monthHref} className="flex min-h-11 shrink-0 items-center text-sm text-link hover:underline">
                 {t('View in calendar')}
             </Link>
-            <div className="flex flex-1 justify-end">{next && <Step issue={next} caption={t('Later day')} side="next" />}</div>
+            <div className="flex min-w-0 flex-1 justify-end">{next && <Step issue={next} caption={t('Later day')} side="next" />}</div>
         </nav>
     );
 }

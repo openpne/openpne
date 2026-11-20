@@ -129,7 +129,7 @@ export function DayBlock({ day }: { day: DaySummary }) {
     const t = useT();
     const date = useDateFormat();
     const { timezone } = usePage<PageProps>().props;
-    // Read for the re-render alone: the date drops its year by the reader's year, which turns over at midnight.
+    // Read for the re-render alone: the date drops its year by the site's year, which turns over at the site's midnight.
     useSiteDay(timezone);
     const single = day.bornDays.from === day.bornDays.to;
 

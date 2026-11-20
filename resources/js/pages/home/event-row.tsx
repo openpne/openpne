@@ -11,7 +11,7 @@ export function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
     const t = useT();
     const { civilMonthDay } = useDateFormat();
     const { timezone } = usePage<PageProps>().props;
-    // Read for the re-render alone: the date drops its year by the reader's year, which turns over at midnight.
+    // Read for the re-render alone: the date drops its year by the site's year, which turns over at the site's midnight.
     useSiteDay(timezone);
 
     return (

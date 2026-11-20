@@ -108,8 +108,8 @@ export function formatCivilMonthDay(
 }
 
 /**
- * The two ends of a run of civil days, the second cut to its day number when both fall in a month of
- * the reader's own year. Composed rather than `Intl#formatRange`, which writes Japanese ranges as
+ * The two ends of a run of civil days, the second cut to its day number when both fall in one month
+ * of the site's current year. Composed rather than `Intl#formatRange`, which writes Japanese ranges as
  * `11/12～11/18`.
  */
 export function formatCivilDaySpan(
