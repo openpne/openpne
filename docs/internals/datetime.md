@@ -32,6 +32,7 @@ screens do not move under them.
 | `relative` | `たったいま` · `3分前` · `5時間前` · `2日前`, then `listStamp` | A row whose reader is asking what is new: notifications, timeline posts and replies, comments. |
 | `clockTime` | `00:05` | A message in a conversation, whose day is named by the heading above it rather than by the row. |
 | civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. Wherever an event's own dates appear they appear with the weekday, so the same datum never shows in two shapes. |
+| civil month-day, day span | `11月17日(火)` · `11月12日〜18日` | A heading line naming a day or a run of days — できごと's band, its rows and its day blocks. The month is the short one (`Tue, Nov 17`), the year follows rule 3, and the second end of a run inside one month of this year is its day alone. |
 
 Every shape but `absolute` carries the full value as a `title`; `absolute` does not, since it already
 names the day and the minute and a title differing only in seconds is noise.

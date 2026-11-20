@@ -19,6 +19,7 @@ the row.
 | Screen | The header reads |
 |---|---|
 | Home, a member's page, a group's page | `[mark]` + the site name. These pages ARE a place: a member's and a group's name themselves in their own hero directly below |
+| A day of できごと, latest or past | `[mark]` + the site name. Its band names the day and steps to the days either side, and its foot leads to the month, so a crumb above it would be a third way to the same places |
 | A hub | `[mark] › section`. The bar's copy of the title is hidden from assistive technology; the page's own h1 stays on screen and is its one announcement |
 | A screen inside a place | `[mark] › place`, the place a pill that leads to its top |
 | A screen inside no place, with a trail | `[mark] › trail`, the trail's last item a pill that leads to it |

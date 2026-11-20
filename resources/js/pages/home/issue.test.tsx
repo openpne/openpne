@@ -1,6 +1,6 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import HomeIssue from './issue';
 import type { GridImage } from '@/components/image-grid';
 import { fakeT } from '@/lib/test-i18n';
@@ -25,7 +25,16 @@ vi.mock('@inertiajs/react', () => ({
     router: { visit: () => {} },
 }));
 
-afterEach(cleanup);
+beforeEach(() => {
+    // Inside the issue's year, so the dates below print without one whenever the suite runs.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-28T03:00:00Z'));
+});
+
+afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+});
 
 const allOn = Object.fromEntries(
     ['diary', 'directMessage', 'timeline', 'group', 'groupTopic', 'groupEvent', 'groupTalk', 'friend', 'mcp'].map((unit) => [unit, true]),
@@ -70,7 +79,7 @@ const issueOf = (overrides: Partial<Issue> = {}): Issue => ({
     number: 12,
     href: '/home/2026/08/27',
     monthHref: '/home/2026/08',
-    days: { from: '2026-08-27', to: '2026-08-27' },
+    bornDays: { from: '2026-08-27', to: '2026-08-27' },
     window: { from: '2026-08-27T06:00:00+09:00', to: '2026-08-28T06:00:00+09:00' },
     isCurrent: true,
     stories: [story()],
@@ -100,29 +109,29 @@ function arrive(props: Record<string, unknown>) {
     return renderWithProviders(<HomeIssue />);
 }
 
-test('the lead is one block: a hero over the headline, and nothing else in it to click', () => {
+test('the lead is one block: a picture over a Mincho headline, and nothing else in it to click', () => {
     const { container } = arrive({ issue: issueOf() });
 
-    const card = container.querySelector('.rounded-card') as HTMLElement;
-    const hero = card.querySelector('img[srcset]');
+    const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
+    const block = headline.parentElement as HTMLElement;
+    const hero = block.querySelector('img[srcset]');
 
     expect(hero?.getAttribute('srcset')).toBe('/f/1/w640 640w');
     expect(hero?.getAttribute('sizes')).toBe('min(42rem, 100vw)');
     expect(hero?.getAttribute('alt')).toBe('');
+    expect(headline.className).toContain('text-headline');
+    expect(headline.className).toContain('font-serif');
 
-    const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
-    expect(headline.className).toContain('text-2xl');
-
-    // One link in the whole card, named by the headline and stretched over the block that positions it.
-    expect(linksIn(card)).toEqual(['Morning walk -> /diary/11']);
+    // One link in the whole block, named by the headline and stretched over the block that positions it.
+    expect(linksIn(block)).toEqual(['Morning walk -> /diary/11']);
     expect(within(headline).getByRole('link', { name: 'Morning walk' }).className).toContain('after:absolute');
-    expect(card.className).toContain('relative');
+    expect(block.className).toContain('relative');
 
     // What the story says, not the story: no body, no card under it, and nothing offering to continue.
     expect(screen.getByText('Down to the river and back.')).toBeTruthy();
     expect(container.querySelector('.rich-body')).toBeNull();
+    expect(container.querySelector('.rounded-card')).toBeNull();
     expect(container.querySelector('a[href^="http"]')).toBeNull();
-    expect(screen.queryByText('Continue reading')).toBeNull();
 });
 
 test('a lead with no picture keeps its rank and reads a line longer', () => {
@@ -130,12 +139,12 @@ test('a lead with no picture keeps its rank and reads a line longer', () => {
 
     // No hero-shaped gap where there is no photograph: the lead's weight is its placement and size.
     expect(container.querySelector('img[srcset]')).toBeNull();
-    expect(screen.getByRole('heading', { level: 2, name: 'Morning walk' }).className).toContain('text-2xl');
+    expect(screen.getByRole('heading', { level: 2, name: 'Morning walk' }).className).toContain('text-headline');
     expect(screen.getByText('Down to the river and back.').className).toContain('line-clamp-4');
 });
 
-test('the two after the lead are cards side by side, a rank down', () => {
-    const { container } = arrive({
+test('the two after the lead stand abreast at every width, a rank down, a rule between them', () => {
+    arrive({
         issue: issueOf({
             stories: [
                 story(),
@@ -147,32 +156,37 @@ test('the two after the lead are cards side by side, a rank down', () => {
 
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['Morning walk', 'Second story', 'Third story']);
-    expect(headings.map((heading) => heading.className.includes('text-2xl'))).toEqual([true, false, false]);
-    expect(headings.map((heading) => heading.className.includes('text-lg'))).toEqual([false, true, true]);
+    expect(headings.map((heading) => heading.className.includes('font-serif'))).toEqual([true, true, true]);
+    expect(headings.map((heading) => heading.className.includes('text-base'))).toEqual([false, true, true]);
 
-    const grid = container.querySelector('.sm\\:grid-cols-2') as HTMLElement;
-    expect(grid.children).toHaveLength(2);
-    // Each card is one link, and it is its headline's.
-    expect(Array.from(grid.children).map((card) => linksIn(card))).toEqual([
+    const pair = headings[1]?.parentElement?.parentElement as HTMLElement;
+    // Not `sm:grid-cols-2`: a phone keeps the pair too.
+    expect(pair.className.split(' ')).toContain('grid-cols-2');
+    expect(pair.children).toHaveLength(2);
+    expect(pair.children[1]?.className).toContain('border-l');
+    // Each column is one link, and it is its headline's.
+    expect(Array.from(pair.children).map((column) => linksIn(column))).toEqual([
         ['Second story -> /topics/12'],
         ['Third story -> /events/13'],
     ]);
 
-    // A board entry's byline names the group it was posted in — as text, since the card is the link.
-    expect(within(grid).getAllByText('Book club')).toHaveLength(2);
-    expect(grid.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('(min-width: 40rem) 21rem, 100vw');
+    // A board entry's byline names the group it was posted in — as text, since the column is the link.
+    expect(within(pair).getAllByText('Book club')).toHaveLength(2);
+    expect(pair.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('min(21rem, 50vw)');
 });
 
-test('a lone second takes the width rather than half of it', () => {
+test('a lone second takes the width, its picture beside the words', () => {
     const { container } = arrive({
         issue: issueOf({ stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })] }),
     });
 
-    expect(container.querySelector('.sm\\:grid-cols-2')).toBeNull();
-    expect(screen.getByRole('heading', { level: 2, name: 'Second story' })).toBeTruthy();
+    expect(container.querySelector('.grid-cols-2')).toBeNull();
+    const headline = screen.getByRole('heading', { level: 2, name: 'Second story' });
+    expect(headline.className).toContain('text-lg');
+    expect(headline.parentElement?.parentElement?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('7rem');
 });
 
-test('rank four and below are rows, with the picture beside the words where there is one', () => {
+test('rank four and below are rows, their headlines Mincho at the regular weight', () => {
     const { container } = arrive({
         issue: issueOf({
             stories: [
@@ -185,22 +199,25 @@ test('rank four and below are rows, with the picture beside the words where ther
         }),
     });
 
-    const [withPicture, withNone] = Array.from(container.querySelectorAll('li'));
-    const rows = [withPicture, withNone];
-    expect(container.querySelectorAll('li')).toHaveLength(2);
+    const rows = Array.from(container.querySelectorAll('li'));
+    expect(rows).toHaveLength(2);
 
-    // A row's headline is its content line, not a heading rank: only the lead and the two cards are.
+    // A row's headline is its content line, not a heading rank: only the lead and the pair are.
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
         'Morning walk',
         'Second',
         'Third',
     ]);
+    const fourth = screen.getByText('Fourth').parentElement as HTMLElement;
+    // A paragraph outside the heading recipe, so it takes no weight of its own.
+    expect(fourth.tagName).toBe('P');
+    expect(fourth.className).toContain('font-serif');
 
-    expect(withPicture?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('6rem');
-    expect(withNone?.querySelector('img')).toBeNull();
+    expect(rows[0]?.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('5rem');
+    expect(rows[1]?.querySelector('img')).toBeNull();
 
     // One link per row, so anywhere in it opens the story.
-    expect(rows.map((row) => linksIn(row as Element))).toEqual([['Fourth -> /diary/14'], ['Fifth -> /timeline/15']]);
+    expect(rows.map((row) => linksIn(row))).toEqual([['Fourth -> /diary/14'], ['Fifth -> /timeline/15']]);
     expect(screen.getByText('What the fourth says.').className).toContain('line-clamp-1');
 });
 
@@ -236,7 +253,7 @@ const newcomer: PersonTile = { id: 31, name: 'Aki', imageUrl: null, avatarColor:
 const newGroup: HomeGroup = { id: 41, name: 'Film club', imageUrl: null, href: '/groups/41' };
 const upcoming: UpcomingEvent = { ...brief('event', 51), openDate: '2026-09-01' };
 
-test('the whole issue is one page of articles, bands and the day around them', () => {
+test('the sections are named between rules, in the order the page reads', () => {
     arrive({
         issue: issueOf({
             stories: [story(), story({ id: 12, href: '/diary/12', headline: 'Second story' })],
@@ -247,13 +264,14 @@ test('the whole issue is one page of articles, bands and the day around them', (
         }),
     });
 
-    expect(screen.getAllByRole('link', { name: 'Open talk' })).toHaveLength(2);
-    expect(screen.getByText('New members')).toBeTruthy();
-    expect(screen.getByText('New %communities%')).toBeTruthy();
-    expect(screen.getByText('Upcoming events')).toBeTruthy();
+    const labels = screen
+        .getAllByRole('heading', { level: 2 })
+        .filter((heading) => heading.className.includes('tracking-widest'))
+        .map((heading) => heading.textContent);
+    expect(labels).toEqual(['From %community% talk', 'Upcoming events', 'New members', 'New %communities%']);
 });
 
-test('a talk burst is the end of the conversation, printed', () => {
+test('a talk burst is its room by name, the end of the conversation, and the way to the rest', () => {
     const { container } = arrive({
         issue: issueOf({
             stories: undefined,
@@ -273,7 +291,11 @@ test('a talk burst is the end of the conversation, printed', () => {
         }),
     });
 
-    expect(screen.getByRole('heading', { level: 2, name: '7 messages' })).toBeTruthy();
+    // The room heads its excerpt and is not itself a way in: the foot is.
+    const room = screen.getByRole('heading', { level: 3, name: 'Room 61' });
+    expect(room.className).toContain('font-serif');
+    expect(room.querySelector('a')).toBeNull();
+    expect(screen.getByText('7 messages')).toBeTruthy();
 
     // Six turns, read as a conversation: each one's words, under the name that said them.
     ['hello @rin', 'turn 2', 'turn 3', 'turn 4', 'nobody is here any more', 'turn 6'].forEach((line) =>
@@ -290,7 +312,41 @@ test('a talk burst is the end of the conversation, printed', () => {
     expect(glimpse?.getAttribute('srcset')).toBe('/f/9/w640 640w');
     expect(glimpse?.getAttribute('sizes')).toBe('6rem');
 
-    expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
+    // Seven said and six shown: the one left is counted on the way in.
+    expect(screen.getByRole('link', { name: '1 more · Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
+});
+
+test('the way into a room counts what the excerpt left out, and only when it left something', () => {
+    arrive({ issue: issueOf({ talkBursts: [{ ...burst(61), count: 9 }, { ...burst(62), count: 5 }] }) });
+
+    expect(screen.getByRole('link', { name: '4 more · Open talk' }).getAttribute('href')).toBe('/groups/61/talk');
+    expect(screen.getByRole('link', { name: 'Open talk' }).getAttribute('href')).toBe('/groups/62/talk');
+});
+
+test('an upcoming event is a row: its day, its title, and where it is held', () => {
+    arrive({ issue: issueOf({ upcomingEvents: [upcoming] }) });
+
+    const row = screen.getByRole('link', { name: /event 51/ });
+    expect(row.getAttribute('href')).toBe('/events/51');
+    expect(row.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-01');
+    expect(row.querySelector('time')?.textContent).toBe('Tue, Sep 1');
+    expect(row.textContent).toContain('Book club · 4 participants');
+});
+
+test('newcomers and new groups are names to follow, an AI account named as one', () => {
+    arrive({
+        issue: issueOf({
+            newcomers: [newcomer, { ...newcomer, id: 32, name: 'Bot', isAi: true, href: '/member/32' }],
+            newGroups: [newGroup],
+        }),
+    });
+
+    expect(screen.getByRole('link', { name: 'Aki' }).getAttribute('href')).toBe('/member/31');
+    // The corner mark on the face is aria-hidden, so the name carries the fact.
+    expect(screen.getByRole('link', { name: 'Bot (AI)' }).getAttribute('href')).toBe('/member/32');
+    const club = screen.getByRole('link', { name: 'Film club' });
+    expect(club.getAttribute('href')).toBe('/groups/41');
+    expect(within(club).getByText('Film club').className).toContain('font-serif');
 });
 
 test('a section the issue does not have is absent, not empty', () => {
@@ -301,7 +357,7 @@ test('a section the issue does not have is absent, not empty', () => {
     expect(screen.queryByText('New members')).toBeNull();
     expect(screen.queryByText('New %communities%')).toBeNull();
     expect(screen.queryByText('Upcoming events')).toBeNull();
-    expect(screen.queryByText('Open talk')).toBeNull();
+    expect(screen.queryByText('From %community% talk')).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
 });
 
@@ -311,62 +367,65 @@ test('an issue whose stories have all gone is still the day around them', () => 
         issue: issueOf({ stories: undefined, talkBursts: [burst(61)], newcomers: [newcomer] }),
     });
 
-    expect(screen.getByRole('heading', { level: 2, name: '7 messages' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Room 61' })).toBeTruthy();
     expect(screen.getByText('New members')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Aki' }).getAttribute('href')).toBe('/member/31');
 
-    // Nothing stands where the stories were: no article, no card, and no count of what is missing.
+    // Nothing stands where the stories were: no article, and no count of what is missing.
     expect(container.querySelector('.rich-body')).toBeNull();
     expect(screen.queryByText('Morning walk')).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
 });
 
-test('the foot of the page says which stretch it was drawn from, and whether it is stale', () => {
-    arrive({ issue: issueOf({ isCurrent: false }) });
-    expect(screen.getByText('Nothing new today yet — the next post starts a new day here.')).toBeTruthy();
+test('the band names the days what is shown was born on, not the date in the URL', () => {
+    arrive({ issue: issueOf({ bornDays: { from: '2026-08-25', to: '2026-08-25' } }) });
 
-    cleanup();
-
-    // An archived day is not stale — there is a day after it, so "nothing new yet" would be false.
-    arrive({ issue: issueOf({ isCurrent: false }), next: { date: '2026-08-28', number: 13, href: '/home/2026/08/28' } });
-    expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
-
-    cleanup();
-
-    arrive({ issue: issueOf() });
-    expect(screen.queryByText('Nothing new today yet — the next post starts a new day here.')).toBeNull();
-    // A day here runs 06:00 to 06:00, so the page states the two instants the masthead's day means.
-    expect(screen.getByText('Posts from August 27, 2026 at 06:00 to August 28, 2026 at 06:00')).toBeTruthy();
-    expect(screen.getByText('Posts deleted or made private since are not shown here.')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('What happened on Tue, Aug 25');
 });
 
-test('a site with nothing published yet offers the way to fill it', () => {
-    arrive({ issue: null });
-
-    expect(screen.getByText('Welcome, Viewer.')).toBeTruthy();
-    expect(screen.getByText('The first post will appear here the next morning.')).toBeTruthy();
-    // Nothing has been put together, so there is no stretch to state and nothing to page through.
-    expect(screen.queryByText(/^Posts from /)).toBeNull();
-    expect(screen.queryByText('Past happenings')).toBeNull();
-});
-
-test('the pager offers only the directions there is an issue in', () => {
+test('the foot steps to the days either side and into the calendar', () => {
     arrive({
         issue: issueOf(),
         prev: { date: '2026-08-26', number: 11, href: '/home/2026/08/26' },
         next: { date: '2026-08-28', number: 13, href: '/home/2026/08/28' },
     });
 
-    expect(screen.getByText('Earlier day')).toBeTruthy();
-    expect(screen.getByText('Later day')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Past happenings' }).getAttribute('href')).toBe('/home/2026/08');
+    const foot = screen.getByRole('navigation', { name: 'Day navigation' });
+    expect(within(foot).getByRole('link', { name: 'View in calendar' }).getAttribute('href')).toBe('/home/2026/08');
+    expect(within(foot).getByRole('link', { name: /Earlier day/ }).getAttribute('href')).toBe('/home/2026/08/26');
+    expect(within(foot).getByRole('link', { name: /Later day/ }).textContent).toContain('Fri, Aug 28');
 
     cleanup();
 
     arrive({ issue: issueOf() });
 
-    expect(screen.queryByText('Earlier day')).toBeNull();
-    expect(screen.queryByText('Later day')).toBeNull();
+    const alone = screen.getByRole('navigation', { name: 'Day navigation' });
+    expect(within(alone).getAllByRole('link').map((link) => link.textContent)).toEqual(['View in calendar']);
+});
+
+test('the colophon states the stretch the issue was drawn from and what it cannot show, nothing more', () => {
+    // The newest issue with nothing after it once added a line calling itself stale; the band's
+    // "next update" took that over.
+    arrive({ issue: issueOf({ isCurrent: false }) });
+
+    const colophon = screen.getByRole('contentinfo');
+    // A day here runs 06:00 to 06:00, so the page states the two instants the band's day means.
+    expect(Array.from(colophon.querySelectorAll('p')).map((line) => line.textContent)).toEqual([
+        'Posts from August 27, 2026 at 06:00 to August 28, 2026 at 06:00',
+        'Posts deleted or made private since are not shown here.',
+    ]);
+});
+
+test('a site with nothing published yet offers the way to fill it', () => {
+    arrive({ issue: null });
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('What happened');
+    expect(screen.getByText('Next update at 06:00')).toBeTruthy();
+    expect(screen.getByText('Welcome, Viewer.')).toBeTruthy();
+    expect(screen.getByText('The first post will appear here the next morning.')).toBeTruthy();
+    // Nothing has been put together, so there is no stretch to state and nothing to page through.
+    expect(screen.queryByText(/^Posts from /)).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Day navigation' })).toBeNull();
 });
 
 test('the site notice opens the page with an issue and without one', () => {

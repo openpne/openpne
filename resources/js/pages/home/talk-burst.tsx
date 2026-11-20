@@ -1,13 +1,14 @@
 import { Link } from '@inertiajs/react';
+import { ChevronRight } from 'lucide-react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
-import { Card } from '@/components/card';
 import { CommunityImage } from '@/components/community-image';
 import { EntityText } from '@/components/entity-text';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { messagesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { PictureStrip } from './picture-strip';
 import type { TalkBurst, TalkExcerptMessage } from './types';
 
@@ -21,7 +22,7 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
     const name = author?.name ?? t('%Withdrawn_member%');
 
     return (
-        <li className="flex min-w-0 gap-2">
+        <li className="flex min-w-0 gap-2.5">
             <Avatar
                 id={author?.id ?? 0}
                 name={name}
@@ -38,35 +39,33 @@ function ExcerptMessage({ message }: { message: TalkExcerptMessage }) {
                     <Timestamp at={message.createdAt} preset="listStamp" />
                 </div>
                 {message.body.trim() !== '' && (
-                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm">
+                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm leading-relaxed">
                         <EntityText text={message.body} mentions={message.mentions} />
                     </p>
                 )}
-                <PictureStrip images={message.images} className="mt-1" />
+                <PictureStrip images={message.images} className="mt-1.5" />
             </div>
         </li>
     );
 }
 
 /**
- * Not the catch-up card it reads like: that one requires the two actions that spend a backlog, and
- * this has none to spend.
+ * The room's name heads it but is not a link, so the one way in is the line at its foot, which names
+ * what is left unread when the excerpt is not all of it.
  */
-export function TalkBurstCard({ burst }: { burst: TalkBurst }) {
+export function TalkBurstSection({ burst, first }: { burst: TalkBurst; first: boolean }) {
     const t = useT();
+    const rest = burst.count - burst.messages.length;
 
     return (
-        <Card className="space-y-3 px-4 py-3 sm:px-5">
-            <div className="flex min-w-0 items-center gap-2">
-                <CommunityImage name={burst.group.name} src={burst.group.imageUrl} className="size-10" textClassName="text-sm" decorative />
-                <Link href={burst.href} className="min-w-0 truncate text-sm text-link hover:underline">
+        <section className={cn('flex flex-col gap-2.5', !first && 'border-t border-border pt-5')}>
+            <div className="flex min-w-0 items-center gap-2.5">
+                <CommunityImage name={burst.group.name} src={burst.group.imageUrl} className="size-7" textClassName="text-xs" decorative />
+                <Heading as="h3" variant="group" face="serif" className="min-w-0 flex-1 truncate">
                     {burst.group.name}
-                </Link>
+                </Heading>
+                <span className="shrink-0 text-xs text-muted-foreground">{messagesPhrase(t, burst.count)}</span>
             </div>
-
-            <Heading as="h2" variant="group">
-                {messagesPhrase(t, burst.count)}
-            </Heading>
 
             {burst.messages.length > 0 && (
                 <ul className="space-y-3">
@@ -76,11 +75,10 @@ export function TalkBurstCard({ burst }: { burst: TalkBurst }) {
                 </ul>
             )}
 
-            <div className="text-sm">
-                <Link href={burst.href} className="text-link hover:underline">
-                    {t('Open talk')}
-                </Link>
-            </div>
-        </Card>
+            <Link href={burst.href} className="flex min-h-11 items-center gap-0.5 self-start text-sm text-foreground hover:underline">
+                {rest === 1 ? t('1 more · Open talk') : rest > 1 ? t(':count more · Open talk', { count: rest }) : t('Open talk')}
+                <ChevronRight className="size-4" aria-hidden />
+            </Link>
+        </section>
     );
 }

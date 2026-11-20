@@ -80,11 +80,13 @@ export interface UpcomingEvent extends CommunityActivityEntry {
 export interface Issue extends IssueRef {
     /** The month page the issue is listed on. */
     monthHref: string;
-    /** The days it covers, `Y-m-d` each. `to` is `date`; `from` differs only on a longer stretch. */
-    days: { from: string; to: string };
-    /** The instants those days were drawn from, `(from, to]`. What the colophon states. */
+    /** The days what this reader is shown was born on, `Y-m-d` each — narrower than the window when
+     *  days in it were quiet, and never outside it. What the band names. */
+    bornDays: { from: string; to: string };
+    /** The instants the issue was drawn from, `(from, to]`. What the colophon states. */
     window: { from: string; to: string };
-    /** Whether the page is showing the freshest issue there could be; a stale one says so below. */
+    /** Whether the page is showing the freshest issue there could be, by the 06:00 day rather than
+     *  the calendar's. */
     isCurrent: boolean;
     /** Ranks 1–8, in order: the lead, then the seconds, then the rest. Absent once every story the
      *  issue featured has been taken down or narrowed — the rest of the issue still stands, so it is

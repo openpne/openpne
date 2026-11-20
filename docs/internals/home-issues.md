@@ -81,10 +81,14 @@ ran; what has happened since waits for the next issue.
 Idempotency is unchanged and still reads "one issue per `issue_date`": the publisher looks for that
 day before planning, and the unique settles a race.
 
-The page reads the same rule twice more. Its masthead names the days the window covers — one day
-usually, a range when it reached further back — and its colophon states the two instants behind
-them, because a reader seeing last evening under yesterday's date needs to see where the day was
-cut. And "current" means the issue is the last one that could have come out (`HomeIssueDay::latest`),
+The page reads the same rule twice more. Its band names the days **what this reader is shown was
+born on** — one day usually, a range when the stories, talk, newcomers and groups it shows span
+more. Days in the window that nothing came from do not widen it, nor does a row the gate withheld
+from this reader, so two readers of one issue can see different ranges; a row born exactly on 06:00
+belongs to the day it closes, as the window's own last day does, and no day outside the window is
+ever named. With nothing left to show, the band names the window's days. The colophon states the two
+instants the window ran between, because a reader seeing last evening under yesterday's date needs
+to see where the day was cut. And "current" means the issue is the last one that could have come out (`HomeIssueDay::latest`),
 not that it is dated today: no fresh issue ever is, and comparing against the calendar would have
 every front page announce itself as stale.
 
@@ -271,9 +275,20 @@ the reader has not been shown and has no body here to be shown in. The dek is th
 plain text, cut server-side to a display width of 180 — a URL in it reads as the text it is.
 
 What ranks a story is the **room it gets**, not how much of it is printed: rank 1 leads across the
-width over a 16:9 picture, ranks 2 and 3 are a pair of cards at 4:3, and the rest are rows with the
-picture as a square beside the words. A story with no picture keeps its rank and reads a line
-further. The payload is still one ranked list in one shape — the placement is the page's decision.
+width over a 16:9 picture, ranks 2 and 3 stand abreast in two columns at every width with a rule
+between them (a lone rank 2 takes the width, its picture beside the words), and the rest are rows
+with the picture as a square beside the words. A story with no picture keeps its rank and reads a
+line further. Headlines are set in Mincho ([typography.md](typography.md#mincho)); a row's is its
+content line and takes the regular weight. The payload is still one ranked list in one shape — the
+placement is the page's decision.
+
+**The page is laid out as a printed one**, on the page's own ground rather than in cards: a double
+rule, then the **band** — the days' name as the `h1`, the neighbouring days either side of it, and,
+on the newest issue, when the next one comes (06:00) where the step forward would be. The band calls
+a day "yesterday" by the site's calendar, not by the 06:00 day: before 06:00 the latest issue is two
+calendar days back. Sections are named between rules, in the order stories, talk, upcoming events,
+newcomers, new groups. The foot repeats the steps either side, links the month in the calendar, and
+ends in the colophon; there is no line calling an issue stale.
 
 **Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))
 and named by its headline, so nothing inside it may be a link of its own: a byline names rather than
@@ -288,6 +303,8 @@ its mentions, and the pictures the reader may have, gated per file the same way 
 ([`TalkSampleDigest`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)). The tail and not
 the head: the first issue ever reaches back a week, and a week-old opening describes a room that has
 since moved on. There is no separate row of faces and no picture grid — an excerpt carries both.
+The room's name heads the excerpt and is not a link: the one way in is its foot, which counts what
+the excerpt left out.
 
 Every optional section key is absent rather than empty, so nothing on the page has to decide what
 `[]` means, and an issue of eight stories that lost seven is simply an issue of one.
@@ -363,7 +380,7 @@ default, serves the front page there too, and `whats_new` serves the "What's new
 otherwise lives at `/dashboard`. The Modern nav leads with whichever page `/` does not serve, and the
 Home tab covers the one it does. The page `/` serves, and only that one, opens with the site notice
 the administrator writes on the Landing page settings page (`home_notice`, Markdown), above the
-masthead or the digest; the other page leaves it out so it is not shown twice. The notice and the
+band or the digest; the other page leaves it out so it is not shown twice. The notice and the
 digest's needs-action rows draw no heading on screen, the notice's text heading itself as OpenPNE 3's
 `informationBox` did; when `/` serves the digest, its h1 is visually hidden too, the brand bar already
 naming the place. `/home/issues` is the month of the latest issue,

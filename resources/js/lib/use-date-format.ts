@@ -1,9 +1,12 @@
 import { usePage } from '@inertiajs/react';
 import {
+    civilDaysAgo,
     type DateFormatContext,
     formatAbsolute,
     formatCivilDate,
+    formatCivilDaySpan,
     formatCivilMonth,
+    formatCivilMonthDay,
     formatCivilMonthShort,
     formatClockTime,
     formatDayLabel,
@@ -35,6 +38,10 @@ export function useDateFormat(): {
     dayHeading: (iso: string, now?: Date) => string;
     dayHeadingTitle: (iso: string) => string;
     civilDate: (value: string, weekday?: boolean) => string;
+    civilMonthDay: (value: string, weekday?: boolean) => string;
+    civilDaySpan: (from: string, to: string) => { from: string; to: string };
+    /** 1 for the site's yesterday; null when the value is not a date. */
+    civilDaysAgo: (value: string, now?: Date) => number | null;
     civilMonth: (year: number, month: number) => string;
     civilMonthShort: (month: number) => string;
     /** `weekday` counts from Sunday, 0 to 6. */
@@ -62,6 +69,9 @@ export function useDateFormat(): {
             return day === null ? '' : formatCivilDate(day, context, true);
         },
         civilDate: (value, weekday) => formatCivilDate(value, context, weekday),
+        civilMonthDay: (value, weekday) => formatCivilMonthDay(value, context, weekday),
+        civilDaySpan: (from, to) => formatCivilDaySpan(from, to, context),
+        civilDaysAgo: (value, now) => civilDaysAgo(value, context.timeZone, now),
         civilMonth: (year, month) => formatCivilMonth(year, month, context),
         civilMonthShort: (month) => formatCivilMonthShort(month, context),
         weekday: (weekday, width) => formatWeekday(weekday, context, width),

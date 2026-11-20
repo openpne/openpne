@@ -115,6 +115,15 @@ test('the home bar is the site mark and its name, and nothing else', () => {
     expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });
 
+test('a past day of できごと takes the same bar as the latest, with no crumb above it', () => {
+    const chrome = arrive('home/archive', '/home/2026/08/20', { issue: { monthHref: '/home/2026/08' } });
+
+    renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
+    expect(screen.queryByRole('link', { name: 'Past happenings' })).toBeNull();
+});
+
 test('a hub is the mark and the section it stands on', () => {
     const chrome = arrive('community/list', '/groups/mine', { owner: user, isOwner: true });
 

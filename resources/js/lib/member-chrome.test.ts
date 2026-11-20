@@ -6,6 +6,7 @@ import {
     chromeRecedes,
     hasBottomNav,
     isHomeComponent,
+    isIssueDay,
     isPlaceTop,
     isSectionActive,
     NAV_SECTIONS,
@@ -232,7 +233,7 @@ test('the dashboard action goes with the diary unit', () => {
 });
 
 test('home takes the mobile brand bar', () => {
-    // A dated issue is somewhere below the run of them, and What's new is a hub.
+    // What's new is a hub; a dated issue takes the same bar, but through isIssueDay.
     assert.ok(isHomeComponent('home/issue', 'issue'));
     assert.ok(!isHomeComponent('home/archive', 'issue'));
     assert.ok(!isHomeComponent('dashboard', 'issue'));
@@ -247,31 +248,25 @@ test('the current issue takes the bare frame: its masthead is the page', () => {
     assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issue'));
 });
 
-test('a dated issue crumbs back to the run of them, still without a chrome heading', () => {
-    const archive = resolveChrome('home/archive', {});
-
-    assert.equal(archive.mode, 'embedded');
-    assert.deepEqual(
-        (archive.context ?? []).map((item) => item.href),
-        ['/home/issues'],
-    );
+test('a past day takes the bare frame and the brand bar, as the latest does', () => {
+    // Its band steps to the days either side and its foot to the month, so a crumb above it would be a
+    // third way to the same places.
+    assert.deepEqual(resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } }), {
+        mode: 'embedded',
+        width: 'standard',
+        gap: '4',
+    });
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/archive'));
+    assert.ok(isIssueDay('home/archive'));
+    assert.ok(isIssueDay('home/issue'));
+    assert.ok(!isIssueDay('home/issues'));
 });
 
-test('a dated issue crumbs back to the month it is listed in', () => {
-    const archive = resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } });
-
-    assert.deepEqual(
-        (archive.context ?? []).map((item) => item.href),
-        ['/home/2026/08'],
-    );
-});
-
-test('the run of issues is titled by the same words the crumb into it uses', () => {
+test('the run of issues crumbs back to the front page', () => {
     const list = resolveChrome('home/issues', {});
-    const crumb = resolveChrome('home/archive', {}).context?.[0];
 
     assert.equal(list.mode, 'contextual');
-    assert.deepEqual(list.title, crumb?.label);
+    assert.deepEqual(list.title, { key: 'Past happenings', replacements: undefined });
     // Its own one parent is the front page, named by the same word the Home tab wears.
     assert.deepEqual(list.context, [{ href: '/', label: { key: 'Home', replacements: undefined } }]);
 });

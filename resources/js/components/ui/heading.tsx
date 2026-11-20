@@ -18,6 +18,12 @@ export const headingVariants = cva('font-semibold', {
             minor: 'text-sm',
             label: 'text-xs',
             bar: 'text-base',
+            headline: 'text-headline break-words',
+            kicker: 'text-xs tracking-widest uppercase',
+        },
+        face: {
+            sans: '',
+            serif: 'font-serif',
         },
         tone: {
             default: '',
@@ -28,11 +34,15 @@ export const headingVariants = cva('font-semibold', {
         },
     },
     compoundVariants: [
-        { variant: ['display', 'page', 'pageCompose', 'group', 'section', 'minor', 'bar'], tone: 'default', class: 'text-foreground' },
-        { variant: 'label', tone: 'default', class: 'text-muted-foreground' },
+        {
+            variant: ['display', 'page', 'pageCompose', 'group', 'section', 'minor', 'bar', 'headline'],
+            tone: 'default',
+            class: 'text-foreground',
+        },
+        { variant: ['label', 'kicker'], tone: 'default', class: 'text-muted-foreground' },
         { tone: 'destructive', class: 'text-destructive' },
     ],
-    defaultVariants: { variant: 'page', tone: 'default' },
+    defaultVariants: { variant: 'page', tone: 'default', face: 'sans' },
 });
 
 type HeadingProps = ComponentProps<'h1'> &
@@ -40,6 +50,6 @@ type HeadingProps = ComponentProps<'h1'> &
         as?: 'h1' | 'h2' | 'h3';
     };
 
-export function Heading({ as: Tag = 'h1', variant, tone, divided, className, ...props }: HeadingProps) {
-    return <Tag className={cn(headingVariants({ variant, tone, divided }), className)} {...props} />;
+export function Heading({ as: Tag = 'h1', variant, tone, divided, face, className, ...props }: HeadingProps) {
+    return <Tag className={cn(headingVariants({ variant, tone, divided, face }), className)} {...props} />;
 }
