@@ -40,7 +40,7 @@ export function StoryPicture({ image, shape, sizes }: { image: GridImage; shape:
     );
 }
 
-function Dot() {
+export function Dot() {
     return <span aria-hidden>·</span>;
 }
 

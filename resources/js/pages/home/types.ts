@@ -122,7 +122,6 @@ export interface DayStory {
     headline: string;
     /** Comments, or replies on a post. */
     responses: number;
-    image: GridImage | null;
 }
 
 /** A room of the day, drawn by what was last said in it over the issue's stretch. */
@@ -132,7 +131,7 @@ export interface DayTalk {
     href: string;
     group: BoardScope;
     /** Null for a withdrawn member, drawn with the established label. */
-    speaker: { name: string; isAi: boolean } | null;
+    speaker: MemberRef | null;
     /** Empty when the message had no words and no picture the reader may have. */
     line: string;
     count: number;
@@ -142,22 +141,16 @@ export interface DayTalk {
 
 export type DayItem = DayStory | DayTalk;
 
-export interface DayName {
-    id: number;
-    name: string;
-    href: string;
-    isAi?: boolean;
-}
-
 /** Read live, of what the reader may still see (docs/internals/home-issues.md, "The month page"). */
 export interface DaySummary extends IssueRef {
-    days: { from: string; to: string };
+    /** As the issue's own, but from a room's last message alone, so a stretch of days can be narrower. */
+    bornDays: { from: string; to: string };
     /** Up to three; empty when nothing the day featured is left for this reader. */
     items: DayItem[];
     /** The stories and rooms that are left and not shown. */
     more: number;
-    newcomers: DayName[];
-    newGroups: DayName[];
+    newcomers: PersonTile[];
+    newGroups: HomeGroup[];
 }
 
 export interface IssuesPageProps extends PageProps {

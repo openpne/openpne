@@ -43,7 +43,7 @@ a missed migration.
 | `pageCompose` | 18px, 20px from `lg` | compose screens, where the sheet header sits right above the title |
 | `group` | 18px | a heading that stands outside the cards it groups — the settings page's groups |
 | `section` | 16px | a block within the content flow: a form section, a settings sub-section, a dialog title |
-| `minor` | 14px | a card's title band, a heading nested inside a section, できごと's band — a dateline that is the page's `h1` while the lead's headline is its largest text |
+| `minor` | 14px | a card's title band, a heading nested inside a section, できごと's bands — a day's dateline, the page's `h1` while the lead's headline is its largest text, and a month's name |
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
 | `bar` | 16px | the phone header's hub title and place pill, and the place bar's (chrome, outside the content ranks) |
 | `headline` | 28px | the lead story on できごと only: a page with no nameplate, where a post's title is the largest text on it |

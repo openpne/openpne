@@ -121,7 +121,17 @@ test('a past day of できごと takes the same bar as the latest, with no crumb
     renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
-    expect(screen.queryByRole('link', { name: 'Past happenings' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'What happened' })).toBeNull();
+});
+
+test('a month of できごと is the mark and the page it is, with no crumb above it', () => {
+    const chrome = arrive('home/issues', '/home/2026/08');
+
+    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
+    expect(container.textContent).toContain('What happened');
+    expect(screen.queryByRole('link', { name: 'What happened' })).toBeNull();
 });
 
 test('a hub is the mark and the section it stands on', () => {

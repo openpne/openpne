@@ -34,6 +34,8 @@ class I18nCountPhraseTest extends TestCase
         ':count days ago' => 'A day ago',
         ':count months ago' => 'A month ago',
         ':count years ago' => 'A year ago',
+        // A possessive the singular rule cannot read through.
+        ":count days' worth" => "1 day's worth",
         // Never one: the card exists from TalkAbsenceDigest::THRESHOLD messages up.
         ':count messages while you were away' => null,
         // Classic keeps its OpenPNE 3 wording.

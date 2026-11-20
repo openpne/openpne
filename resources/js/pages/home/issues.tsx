@@ -1,8 +1,10 @@
 import { Head, usePage } from '@inertiajs/react';
-import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { DayBlock } from './day-block';
-import { MonthPanel } from './month-panel';
+import { DoubleRule } from './masthead';
+import { MonthCalendar } from './month-calendar';
+import { MonthPager } from './month-nav';
+import { MonthBand } from './month-band';
 import type { IssuesPageProps } from './types';
 
 /** One month of days, newest first (docs/internals/home-issues.md, "The month page"). */
@@ -13,32 +15,34 @@ export default function HomeIssues() {
     if (month === null) {
         return (
             <>
-                <Head title={t('Past happenings')} />
-                <Panel>
-                    <p className="text-sm text-muted-foreground">{t('Nothing yet.')}</p>
-                </Panel>
+                <Head title={t('What happened')} />
+                <p className="text-sm text-muted-foreground">{t('Nothing yet.')}</p>
             </>
         );
     }
 
     return (
         <>
-            <Head title={t('Past happenings')} />
-            <MonthPanel month={month} prev={prev} next={next} days={days} months={months} />
-
-            {days.length === 0 ? (
-                <Panel>
-                    <p className="text-sm text-muted-foreground">{t('Nothing happened this month.')}</p>
-                </Panel>
-            ) : (
-                <Panel flush>
-                    <List>
+            <Head title={t('What happened')} />
+            <div className="flex flex-col">
+                <MonthBand month={month} prev={prev} next={next} months={months} />
+                <div className="mt-3.5">
+                    <MonthCalendar month={month} days={days} />
+                </div>
+                {days.length === 0 ? (
+                    <p className="mt-6 text-sm text-muted-foreground">{t('Nothing happened this month.')}</p>
+                ) : (
+                    <ul className="mt-6">
                         {days.map((day) => (
                             <DayBlock key={day.date} day={day} />
                         ))}
-                    </List>
-                </Panel>
-            )}
+                    </ul>
+                )}
+                <div className="mt-6">
+                    <DoubleRule heavyFirst={false} />
+                </div>
+                <MonthPager month={month} prev={prev} next={next} />
+            </div>
         </>
     );
 }

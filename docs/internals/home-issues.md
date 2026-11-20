@@ -311,7 +311,10 @@ Every optional section key is absent rather than empty, so nothing on the page h
 ## The month page
 
 `/home/{y}/{m}` draws one month of issues, newest first: each day as its date and the first few
-things that happened on it, every one a link to the thing itself.
+things that happened on it, every one a link to the thing itself. A day is headed by the days what it
+shows was born on, as an issue's band is ("A day runs 06:00 → 06:00"), but read from what the month
+reads: a room by its last message alone, so a stretch can be named narrower than on the day's own
+page.
 
 **A day has an issue when an issue is dated that day, and only then.** An issue belongs to the month
 of its `issue_date`, whatever its window reaches back over — the rule `/home/{y}/{m}/{d}` already
@@ -319,8 +322,8 @@ answers by. A window grows for two reasons, and only the first leaves the days i
 on which nothing happened published no issue, while the first issue ever, and one that follows a
 stopped scheduler, carry what happened on the days before under the last day's date.
 
-**What a day says about its sources is read live and through their gates.** Headlines, pictures,
-what was last said in a room and every count come from
+**What a day says about its sources is read live and through their gates.** Headlines, faces, a
+room's picture, what was last said in it and every count come from
 [`SummarizeHomeIssues`](../../app/Features/Home/Queries/SummarizeHomeIssues.php), which asks
 [`HomeItemGate::admits()`](../../app/Features/Home/HomeItemGate.php) — the rule the issue page
 asks — so a month never shows what the day's own page would drop. Frozen `score` and `stats` are
@@ -331,22 +334,24 @@ date alone, and the grid of months counts issues, not what is left of them
 ([`ListHomeIssueMonths`](../../app/Features/Home/Queries/ListHomeIssueMonths.php)). A month that
 holds none is drawn there and is not a link.
 
-**Every way to another day or month is in one panel above the days.** The month's name opens the
-grid of months under it, closed until asked for; the months either side are the nearest that hold an
-issue; the calendar below them is the month's days.
+**The page opens on a band, as a day's page does.** Its sides step to the months either side, the
+nearest that hold an issue; its middle, the month's name, opens the grid of months under it, closed
+until asked for, each month there counting the days it holds. The calendar of the month's days comes
+next, and the foot repeats the band's steps under the last day.
 
 **A day shows three items and says how many more there are.** The lead story, the busiest room, the
 second story; a kind that has run out gives its place to the other, so a day with talk in it always
-shows some. "More" counts the stories and rooms that survive and are not shown, and nothing else.
+shows some. A story is its headline and how much was said under it, with no picture. "More" counts
+the stories and rooms that survive and are not shown, and nothing else.
 
 | Read from the ledger | How deep | Shown as |
 |---|---|---|
 | stories, talk | every rank | up to three items, and the count of the rest |
-| newcomers, new groups | the first three rows | the names of those that pass the gate, which may be fewer than three |
+| newcomers, new groups | the first three rows | the faces and names of those that pass the gate, which may be fewer than three |
 | upcoming events | not read | — |
 
-**A room is drawn by what was last said in it**: who spoke, the line, how many messages the stretch
-holds ([`TalkSampleDigest::stretchesOf`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)),
+**A room is drawn by what was last said in it**: who spoke and their face, the line, how many
+messages the stretch holds ([`TalkSampleDigest::stretchesOf`](../../app/Features/GroupTalk/Queries/TalkSampleDigest.php)),
 and the first picture of that message. One picture is read and one is asked of the per-file gate,
 however many the message carries: a refused first picture shows none, where the issue page would
 show the next. Whether the message has a picture is what that gate answered, never that a row for
@@ -358,16 +363,16 @@ further down, and a day without one is its date alone. A cell prints what the bl
 each and at most three — a story by its headline, a room by its group's name, then names while
 there is room — with the count of what the block does not list beside the date. A line is cut where
 the cell ends and never wrapped. The link's name holds every word the cell prints and says the rest:
-the date in full, a room's name with what was last said in it, what a name is a name of, and that
-the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
+the days as the block names them, a room's name with what was last said in it, what a name is a name
+of, and that the day is today. A cell draws no picture, so the calendar costs no read and no request of its own.
 
 **The cost does not grow with the ledger.** One read per source table, one per relation the gate
 asks about, and the units asked once per gate rather than per row. One read does grow, with the
 month and not with its rows: one per issue that holds talk, since each issue has a window of its
 own. The gate of each room's picture, asked once for a room shown and so at most three times a day,
 reads nothing the page does not already hold: the message and its room are noted for it
-([`FileOwners`](../../app/Files/FileOwners.php)) before it is asked. Pictures and speakers are read
-after the gate, for the items shown and no others. The grid of months is one read of every issue's
+([`FileOwners`](../../app/Files/FileOwners.php)) before it is asked. A room's picture, its speaker and every
+face are read after the gate, for the items shown and no others; a story's pictures are never read. The grid of months is one read of every issue's
 date, a row per published day.
 
 ## Routes

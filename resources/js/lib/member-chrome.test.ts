@@ -135,10 +135,8 @@ test('a site whose home is the digest keeps the issue in the nav and the digest 
     assert.ok(!isHomeComponent('home/archive', 'whats_new'));
 });
 
-test('the crumbs above the issue list and the group digest follow the home setting', () => {
+test('the crumb above the group digest follows the home setting', () => {
     const crumb = (component: string, modernHome?: string) => resolveChrome(component, { enabledFeatures: allOn, modernHome }).context?.[0]?.href;
-    assert.equal(crumb('home/issues'), '/');
-    assert.equal(crumb('home/issues', 'whats_new'), '/home/latest');
     assert.equal(crumb('community/recent'), '/dashboard');
     assert.equal(crumb('community/recent', 'whats_new'), '/');
 });
@@ -262,13 +260,17 @@ test('a past day takes the bare frame and the brand bar, as the latest does', ()
     assert.ok(!isIssueDay('home/issues'));
 });
 
-test('the run of issues crumbs back to the front page', () => {
-    const list = resolveChrome('home/issues', {});
+test('a month of issues is titled as a hub, its h1 seen at desk width alone', () => {
+    for (const modernHome of ['issue', 'whats_new']) {
+        const month = resolveChrome('home/issues', { enabledFeatures: allOn, modernHome });
 
-    assert.equal(list.mode, 'contextual');
-    assert.deepEqual(list.title, { key: 'Past happenings', replacements: undefined });
-    // Its own one parent is the front page, named by the same word the Home tab wears.
-    assert.deepEqual(list.context, [{ href: '/', label: { key: 'Home', replacements: undefined } }]);
+        assert.equal(month.mode, 'section');
+        assert.deepEqual(month.title, { key: 'What happened', replacements: undefined });
+        assert.equal(month.deskHeading, true);
+        // Its band steps to the months either side and its days lead to their own pages, so it has no crumb.
+        assert.equal(month.context, undefined);
+    }
+    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issues'));
 });
 
 test('a community-scoped page is scoped to the group', () => {

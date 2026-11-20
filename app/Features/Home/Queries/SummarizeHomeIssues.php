@@ -176,12 +176,13 @@ final class SummarizeHomeIssues
         $talk = $shown->whereInstanceOf(TalkStretch::class);
         $said = $talk->map(fn (TalkStretch $stretch): GroupMessage => $stretch->last->setRelation('group', $stretch->group))->values();
 
-        foreach ($shown->whereInstanceOf(Model::class)->groupBy(fn (Model $story): string => $story::class) as $stories) {
-            EloquentCollection::make($stories->all())->load('images.file');
-        }
+        $named = collect($summaries);
+        $groups = [...$talk->map(fn (TalkStretch $stretch): Model => $stretch->group)->all(), ...$named->flatMap(fn (HomeIssueSummary $summary): array => $summary->newGroups)->all()];
+        EloquentCollection::make($groups)->unique()->load('image');
 
-        EloquentCollection::make($talk->map(fn (TalkStretch $stretch): Model => $stretch->group)->all())->unique()->load('image');
         EloquentCollection::make($said->all())->load('author');
+        $faces = [...$said->map(fn (GroupMessage $message): ?Member => $message->author)->filter()->all(), ...$named->flatMap(fn (HomeIssueSummary $summary): array => $summary->newcomers)->all()];
+        EloquentCollection::make($faces)->unique()->load('avatar.file');
 
         $pictures = $this->talk->firstPictures($viewer, $said);
 

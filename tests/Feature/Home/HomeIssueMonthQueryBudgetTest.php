@@ -28,6 +28,7 @@ use App\Models\GroupTopicImage;
 use App\Models\HomeIssue;
 use App\Models\HomeIssueItem;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Carbon\CarbonImmutable;
@@ -172,12 +173,13 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
         $this->assertCount($talking, $rooms);
         $this->assertCount($stories ?? $days * 3 - $talking, $told);
         $this->assertCount($pictured, array_filter($rooms, fn (array $room): bool => $room['image'] !== null));
-        $this->assertSame([], array_filter($told, fn (array $story): bool => $story['image'] === null));
         $this->assertSame([], array_filter($rooms, fn (array $room): bool => $room['group']['imageUrl'] === null));
+        $this->assertSame([], array_filter($rooms, fn (array $room): bool => $room['speaker']['imageUrl'] === null));
 
         foreach ($shown as $day) {
             $this->assertCount(3, $day['newcomers']);
             $this->assertCount(2, $day['newGroups']);
+            $this->assertNotContains(null, array_column([...$day['newcomers'], ...$day['newGroups']], 'imageUrl'));
         }
     }
 
@@ -213,6 +215,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
             }
 
             foreach (Member::factory()->count(3)->create() as $rank => $newcomer) {
+                MemberImage::factory()->create(['member_id' => $newcomer->getKey()]);
                 $this->feature($issue, HomeIssueSection::Newcomers, $newcomer, $rank + 1);
             }
 
@@ -269,6 +272,8 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
                 'created_at' => $until->subHours(3),
                 'updated_at' => $until->subHours(3),
             ]);
+
+            MemberImage::factory()->create(['member_id' => $said->last()->member_id]);
 
             foreach ($attachments === 0 ? [] : range(1, $attachments) as $number) {
                 $this->attach($said->last(), $number);

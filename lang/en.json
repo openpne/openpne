@@ -1,5 +1,7 @@
 {
     "(and :count more errors)": "(and :count more error)|(and :count more errors)|(and :count more errors)",
+    "1 day's worth": "1 day",
+    ":count days' worth": ":count days",
     "Read (adjective)": "Read",
     "Show next": "Next",
     "Show previous": "Previous",

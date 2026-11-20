@@ -14,6 +14,8 @@ interface Props {
     bucket: (count: number) => Bucket;
     /** The count in words, for the cell's accessible name. */
     countPhrase: (count: number) => string;
+    /** What a cell prints under its month; the bare count when absent. */
+    countText?: (count: number) => string;
     title?: string;
     /** Drawn beside the fold toggle, at the end of the row. */
     footer?: ReactNode;
@@ -38,7 +40,7 @@ export function MonthGrid({ title, ...grid }: Props) {
 }
 
 /** The grid with no surface of its own, for a caller that draws it inside one. */
-export function MonthGridBody({ rows, selected, bucket, countPhrase, footer }: Omit<Props, 'title'>) {
+export function MonthGridBody({ rows, selected, bucket, countPhrase, countText = String, footer }: Omit<Props, 'title'>) {
     const t = useT();
     const date = useDateFormat();
     const [showEarlier, setShowEarlier] = useState(false);
@@ -79,7 +81,7 @@ export function MonthGridBody({ rows, selected, bucket, countPhrase, footer }: O
                                         {/* The count line is always reserved (nbsp on empty months) so month labels sit
                                             at the same height, and it inherits the cell foreground because muted text
                                             fails contrast on the heavier fills. */}
-                                        <span className="text-3xs leading-none">{cell.count > 0 ? cell.count : ' '}</span>
+                                        <span className="text-3xs leading-none">{cell.count > 0 ? countText(cell.count) : ' '}</span>
                                     </>
                                 );
                                 return cell.href ? (

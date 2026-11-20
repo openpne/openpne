@@ -61,6 +61,8 @@ export interface Chrome {
     tabsLabel?: ChromeLabel;
     /** Rendered only for a signed-in member. */
     action?: ChromeAction;
+    /** The page opens on a band of its own, so below desk width its h1 is heard and not seen. */
+    deskHeading?: boolean;
     width: 'standard' | 'narrow';
     gap: '4' | '6' | '8';
     foreground?: boolean;
@@ -117,9 +119,6 @@ const MESSAGES = t('Messages');
 const NOTIFICATIONS = t('Notifications');
 const MEMBER_SEARCH = t('Search members');
 const SETTINGS = t('Settings');
-// The list screen's title and the crumb every dated issue takes back to it have to be the same
-// words.
-const PAST_HAPPENINGS = t('Past happenings');
 const HAPPENINGS = t('What happened');
 
 export type PolicyKind = 'terms' | 'privacy';
@@ -363,13 +362,8 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const action = enabled(props, 'diary') ? WRITE_DIARY : undefined;
         return isHomeComponent('dashboard', homeOf(props)) ? { mode: 'embedded', action } : { mode: 'section', title: WHATS_NEW, action };
     },
-    // Deliberately not a nav section: the run of issues is the front page's history, not a place in
-    // the nav.
-    'home/issues': (props) => ({
-        mode: 'contextual',
-        title: PAST_HAPPENINGS,
-        context: [homeOf(props) === 'whats_new' ? { href: HAPPENINGS_SECTION.href, label: HAPPENINGS } : { href: '/', label: HOME_SECTION.label }],
-    }),
+    // Titled as a hub though no nav section is its own: the run of issues is the front page's history.
+    'home/issues': () => ({ mode: 'section', title: HAPPENINGS, deskHeading: true }),
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
         mode: 'section',
@@ -639,9 +633,10 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'dashboard',
-    // A day of できごと is reached from its neighbours and its month through its own band and foot.
+    // A day or a month of できごと is reached from its neighbours through its own band and foot.
     'home/issue',
     'home/archive',
+    'home/issues',
     'diary/feed',
     'community/search',
     'group/topic/recent',

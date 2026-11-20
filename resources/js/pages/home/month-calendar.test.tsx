@@ -1,6 +1,6 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { MonthCalendar } from './month-calendar';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
@@ -16,6 +16,11 @@ vi.mock('@inertiajs/react', () => ({
         </a>
     ),
 }));
+
+beforeEach(() => {
+    // August 2026 is this year, so a day's name drops the year as its block's does.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-08-28T03:00:00Z') });
+});
 
 afterEach(() => {
     cleanup();
@@ -38,7 +43,6 @@ const story = (id: number, headline: string, rest: Partial<DayStory> = {}): DayS
     href: `/diary/${id}`,
     headline,
     responses: 0,
-    image: null,
     ...rest,
 });
 
@@ -46,7 +50,7 @@ const talk = (rest: Partial<DayTalk> = {}): DayTalk => ({
     kind: 'talk',
     href: '/groups/3/talk?m=40',
     group: { id: 3, name: 'Hikers', imageUrl: '/cache/img/group.png' },
-    speaker: { name: 'Hanako', isAi: false },
+    speaker: { id: 5, name: 'Hanako', imageUrl: null, avatarColor: null, isAi: false },
     line: 'Photos are up',
     count: 23,
     image: null,
@@ -57,7 +61,7 @@ const day = (date: string, rest: Partial<DaySummary> = {}, from = date): DaySumm
     date,
     number: 1,
     href: `/home/${date.replaceAll('-', '/')}`,
-    days: { from, to: date },
+    bornDays: { from, to: date },
     items: [story(1, 'Morning walk')],
     more: 0,
     newcomers: [],
@@ -120,7 +124,7 @@ test('a day prints what its block lists, a line each and in its order', () => {
     expect(printed(27)).toEqual(['Morning walk', 'Hikers', 'Evening run']);
 
     const link = within(cell(27)).getByRole('link', {
-        name: 'Thu, August 27, 2026, Morning walk, Hikers, Hanako: Photos are up, Evening run',
+        name: 'Thu, Aug 27, Morning walk, Hikers, Hanako: Photos are up, Evening run',
     });
 
     // To the day's block in this page, which is where the day is read.
@@ -142,9 +146,9 @@ test('a room is printed by its name, and the link says the name and what was las
     );
 
     expect(printed(27)).toEqual(['Hikers']);
-    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Hikers, Hanako: Photos are up' })).toBeTruthy();
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, Aug 27, Hikers, Hanako: Photos are up' })).toBeTruthy();
     // A room called by its name alone is named once.
-    expect(within(cell(26)).getByRole('link', { name: 'Wed, August 26, 2026, Hikers' })).toBeTruthy();
+    expect(within(cell(26)).getByRole('link', { name: 'Wed, Aug 26, Hikers' })).toBeTruthy();
 });
 
 test('a story and a room are told apart by how their lines are drawn', () => {
@@ -163,17 +167,17 @@ test('what the block does not list is counted', () => {
     expect(printed(27)).toEqual(['Morning walk']);
     expect(top(27)).toBe('27+5');
     expect(top(25)).toBe('25');
-    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Morning walk, 5 more' })).toBeTruthy();
-    expect(within(cell(26)).getByRole('link', { name: 'Wed, August 26, 2026, Morning walk, 1 more' })).toBeTruthy();
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, Aug 27, Morning walk, 5 more' })).toBeTruthy();
+    expect(within(cell(26)).getByRole('link', { name: 'Wed, Aug 26, Morning walk, 1 more' })).toBeTruthy();
     expect(printed(25)).toEqual(['Morning walk']);
 });
 
 test('names take the room the items leave, and none when there is none', () => {
     const names = {
-        newcomers: [{ id: 8, name: 'Robo', isAi: true, href: '/member/8' }],
+        newcomers: [{ id: 8, name: 'Robo', imageUrl: null, avatarColor: null, isAi: true, href: '/member/8' }],
         newGroups: [
-            { id: 3, name: 'Hikers', href: '/groups/3' },
-            { id: 4, name: 'Readers', href: '/groups/4' },
+            { id: 3, name: 'Hikers', imageUrl: null, href: '/groups/3' },
+            { id: 4, name: 'Readers', imageUrl: null, href: '/groups/4' },
         ],
     };
 
@@ -194,14 +198,14 @@ test('names take the room the items leave, and none when there is none', () => {
     // A name is said with what it is a name of.
     expect(
         within(cell(27)).getByRole('link', {
-            name: 'Thu, August 27, 2026, New members Robo (AI), New %communities% Hikers, New %communities% Readers',
+            name: 'Thu, Aug 27, New members Robo (AI), New %communities% Hikers, New %communities% Readers',
         }),
     ).toBeTruthy();
 });
 
 test('a cell draws no picture, whatever its day holds', () => {
     renderWithProviders(
-        <MonthCalendar month={august} days={[day('2026-08-27', { items: [story(1, 'Morning walk', { image: picture }), talk({ image: picture })] })]} />,
+        <MonthCalendar month={august} days={[day('2026-08-27', { items: [story(1, 'Morning walk'), talk({ image: picture })] })]} />,
     );
 
     expect(cell(27).querySelector('img')).toBeNull();
@@ -210,14 +214,14 @@ test('a cell draws no picture, whatever its day holds', () => {
 test('a day with nothing left is still a link, named by its date alone', () => {
     renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27', { items: [] })]} />);
 
-    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026' }).textContent).toBe('27');
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, Aug 27' }).textContent).toBe('27');
 });
 
 test('an issue covering a stretch of days stands on the day it is dated', () => {
     renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-27', {}, '2026-08-21')]} />);
 
     // Named as the block below names it, so the stretch is heard as one in both places.
-    expect(within(cell(27)).getByRole('link', { name: 'August 21, 2026 to August 27, 2026, Morning walk' })).toBeTruthy();
+    expect(within(cell(27)).getByRole('link', { name: 'Aug 21 to 27, Morning walk' })).toBeTruthy();
     expect(within(cell(21)).queryByRole('link')).toBeNull();
     expect(screen.getAllByRole('link')).toHaveLength(1);
 });
@@ -237,8 +241,8 @@ test('today is marked on the site\'s calendar, whether or not it has an issue', 
     // With an issue the label is all the link says, so the word is part of it.
     renderWithProviders(<MonthCalendar month={august} days={[day('2026-08-28'), day('2026-08-27')]} />);
 
-    expect(within(cell(28)).getByRole('link', { name: 'Fri, August 28, 2026, Today, Morning walk' })).toBeTruthy();
-    expect(within(cell(27)).getByRole('link', { name: 'Thu, August 27, 2026, Morning walk' })).toBeTruthy();
+    expect(within(cell(28)).getByRole('link', { name: 'Fri, Aug 28, Today, Morning walk' })).toBeTruthy();
+    expect(within(cell(27)).getByRole('link', { name: 'Thu, Aug 27, Morning walk' })).toBeTruthy();
 });
 
 test('every word a cell prints is in what its link says', () => {
@@ -249,7 +253,7 @@ test('every word a cell prints is in what its link says', () => {
                 day('2026-08-27', {
                     items: [story(1, 'Morning walk'), talk()],
                     more: 5,
-                    newcomers: [{ id: 8, name: 'Robo', isAi: true, href: '/member/8' }],
+                    newcomers: [{ id: 8, name: 'Robo', imageUrl: null, avatarColor: null, isAi: true, href: '/member/8' }],
                 }),
             ]}
         />,

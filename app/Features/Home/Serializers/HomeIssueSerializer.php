@@ -113,18 +113,15 @@ final class HomeIssueSerializer
     {
         return [
             ...self::linkTo($issue),
-            'days' => self::daysOf(self::windowOf($issue)),
+            'bornDays' => self::bornDaysOf(self::summaryBornOf($summary), self::windowOf($issue)),
             'items' => array_map(self::item(...), $summary->items()),
             'more' => $summary->more(),
             'newcomers' => array_map(fn (Member $member): array => [
-                'id' => (int) $member->getKey(),
-                'name' => $member->name,
-                'isAi' => $member->isAiAccount(),
+                ...MemberRefSerializer::ref($member),
                 'href' => "/member/{$member->getKey()}",
             ], $summary->newcomers),
             'newGroups' => array_map(fn (Group $group): array => [
-                'id' => (int) $group->getKey(),
-                'name' => $group->name,
+                ...self::scope($group),
                 'href' => "/groups/{$group->getKey()}",
             ], $summary->newGroups),
         ];
@@ -139,7 +136,7 @@ final class HomeIssueSerializer
                 'kind' => 'talk',
                 'href' => "/groups/{$item->group->getKey()}/talk?m={$item->last->getKey()}",
                 'group' => self::scope($item->group),
-                'speaker' => $author === null ? null : ['name' => $author->name, 'isAi' => $author->isAiAccount()],
+                'speaker' => $author === null ? null : MemberRefSerializer::ref($author),
                 // The picture that came through the gate, never the row's own word that it has one.
                 'line' => ChatPreview::lineOrImages([(string) $item->last->body], $item->picture !== null),
                 'count' => $item->count,
@@ -152,7 +149,6 @@ final class HomeIssueSerializer
             'href' => self::hrefOf($item),
             'headline' => self::headline($item),
             'responses' => self::countOf($item, $item instanceof TimelinePost ? 'replies' : 'comments'),
-            'image' => self::pictureOf($item),
         ];
     }
 
@@ -247,6 +243,31 @@ final class HomeIssueSerializer
                 // Back into the site's zone: a parsed offset is a fixed one, and its midnight drifts
                 // from the site's across a DST change.
                 $born[] = CarbonImmutable::parse($message['createdAt'])->setTimezone($zone);
+            }
+        }
+
+        return $born;
+    }
+
+    /**
+     * A month reads an issue shallower than its page does, a room by its last message alone, so a
+     * stretch of days can be named narrower here than on the day's own page.
+     *
+     * @return list<CarbonImmutable>
+     */
+    private static function summaryBornOf(HomeIssueSummary $summary): array
+    {
+        $born = [];
+
+        foreach ([...$summary->stories, ...$summary->newcomers, ...$summary->newGroups] as $source) {
+            if ($source->created_at !== null) {
+                $born[] = CarbonImmutable::instance($source->created_at);
+            }
+        }
+
+        foreach ($summary->bursts as $stretch) {
+            if ($stretch->last->created_at !== null) {
+                $born[] = CarbonImmutable::instance($stretch->last->created_at);
             }
         }
 
