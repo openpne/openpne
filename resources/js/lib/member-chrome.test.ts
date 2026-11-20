@@ -519,7 +519,7 @@ test('a form inside a group keeps its static trail rather than the place header'
     assert.equal(header('group/topic/edit', { group: cyclists, topic: null }).type, 'trail');
 });
 
-test('home, a day of できごと and a member page keep the brand header, and stand no place bar', () => {
+test("home, a day's issue and a member page keep the brand header, and stand no place bar", () => {
     for (const [component, props] of [
         ['home/issue', {}],
         ['home/archive', { issue: { monthHref: '/home/2026/08' } }],

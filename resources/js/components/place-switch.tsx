@@ -121,6 +121,7 @@ export function PlaceSwitch({ scope, variant }: { scope: ChromeScope; variant: V
     };
 
     const toggle = (next: boolean) => {
+        // Reopened during its fade-out, the panel never ran `onCloseAutoFocus`, so the last close's reason is still set.
         if (next) {
             leaving.current = null;
         }

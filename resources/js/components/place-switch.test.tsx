@@ -202,6 +202,8 @@ test('while open, a sheet over the page takes every press outside the panel', as
     // A page control can opt back into pointer events under Radix's modal, so the sheet must too.
     expect(sheet?.className).toContain('pointer-events-auto');
     expect(sheet?.className).toContain('fixed inset-0');
+    // Above the header and the talk's jump-to-latest pill, both z-20.
+    expect(sheet?.className).toContain('z-40');
     expect(panel()!.contains(sheet)).toBe(false);
 
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));

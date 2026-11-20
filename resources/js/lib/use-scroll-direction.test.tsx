@@ -127,7 +127,6 @@ test('a reload landing while the reader is down the page keeps their travel', as
     expect(direction()).toBe('up');
 });
 
-
 test('crossing lg brings the chrome back under the gate, wherever the reader had scrolled it', async () => {
     const desk = { listeners: [] as Array<() => void> };
     vi.stubGlobal('matchMedia', (query: string) => ({

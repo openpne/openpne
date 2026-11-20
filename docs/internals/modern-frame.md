@@ -112,7 +112,7 @@ variable unset.
 
 These take a kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts): the nav
 sections, a group page's section headings, a member page's group and people headings and its diary
-cards, the mark over a story in できごと, the rows of its month page, the notifications, and a
+cards, the mark over a story in a day's issue, the rows of its month page, the notifications, and a
 place's section tiles. The mark takes the kind's word from there as well, and a new kind, or a new
 list that mixes kinds, takes both from there too. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)), in a dense row as on a
 card, always prints the kind's word beside the glyph, which is decorative; it is phrasing text and
