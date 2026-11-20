@@ -39,10 +39,11 @@ const picture = {
 };
 
 const story = (id: number, headline: string, rest: Partial<DayStory> = {}): DayStory => ({
-    kind: 'story',
+    kind: 'diary',
     href: `/diary/${id}`,
     headline,
     responses: 0,
+    groupName: null,
     ...rest,
 });
 

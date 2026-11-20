@@ -38,7 +38,7 @@ const weekend = (weekday: number): string | undefined => (weekday === 0 ? 'text-
  */
 export function chips(t: Translate, day: DaySummary): Chip[] {
     const items = day.items.map((item): Chip => {
-        if (item.kind === 'story') {
+        if (item.kind !== 'talk') {
             return { tone: 'story', text: item.headline, name: item.headline };
         }
 

@@ -49,10 +49,11 @@ const picture = {
 };
 
 const story = (id: number, headline: string, rest: Partial<DayStory> = {}): DayStory => ({
-    kind: 'story',
+    kind: 'diary',
     href: `/diary/${id}`,
     headline,
     responses: 0,
+    groupName: null,
     ...rest,
 });
 
@@ -143,7 +144,42 @@ test('a story says how much was said under it, and nothing when nothing was', ()
 
     const items = within(block(0)).getAllByRole('listitem');
 
-    expect(items.map((item) => item.textContent)).toEqual(['Morning walk8 responses', 'Evening run', 'Noon nap1 response']);
+    expect(items.map((item) => item.textContent)).toEqual(['%Diary%Morning walk8 responses', '%Diary%Evening run', '%Diary%Noon nap1 response']);
+});
+
+test('each item opens on its kind, a board entry on its group as well, by a word and a glyph that is not read', () => {
+    arrive({
+        days: [
+            day('2026-08-27', {
+                items: [
+                    story(1, 'Morning walk'),
+                    story(2, 'Pick the next book', { kind: 'topic', href: '/topics/2', groupName: 'Book club' }),
+                    story(3, 'Year-end hike', { kind: 'event', href: '/events/3', groupName: 'Hikers' }),
+                    story(4, 'Ginkgo by the station', { kind: 'timeline', href: '/timeline/4' }),
+                    talk(),
+                ],
+            }),
+        ],
+    });
+
+    const items = within(block(0)).getAllByRole('listitem');
+    const marks = [
+        ['%Diary%', 'lucide-book-open'],
+        ['%Topic%', 'lucide-message-square-text', 'Book club'],
+        ['Event', 'lucide-calendar-days', 'Hikers'],
+        ['%Activity%', 'lucide-activity'],
+        ['Talk', 'lucide-messages-square'],
+    ];
+
+    expect(items).toHaveLength(marks.length);
+    items.forEach((item, index) => {
+        const [word, glyph, group] = marks[index] as [string, string, string?];
+        const mark = within(item).getByText(word).parentElement as HTMLElement;
+
+        expect(mark.closest('a')).toBeNull();
+        expect(mark.querySelector(`svg.${glyph}`)?.getAttribute('aria-hidden')).toBe('true');
+        expect(spoken(mark)).toBe(group === undefined ? word : `${word}${group}`);
+    });
 });
 
 test('a room is drawn by what was last said in it, under its name and its count', () => {

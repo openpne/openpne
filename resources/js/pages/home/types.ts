@@ -117,11 +117,13 @@ export interface MonthRef {
 
 /** A story of the day, as much of it as a line draws: the way in, never the body. */
 export interface DayStory {
-    kind: 'story';
+    kind: IssueStory['kind'];
     href: string;
     headline: string;
     /** Comments, or replies on a post. */
     responses: number;
+    /** The group a board entry was posted in; null on a diary or a post. */
+    groupName: string | null;
 }
 
 /** A room of the day, drawn by what was last said in it over the issue's stretch. */

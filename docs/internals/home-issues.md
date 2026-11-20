@@ -338,7 +338,9 @@ calendar of the month's days under it, and the foot repeats the band's steps und
 
 **A day shows three items and says how many more there are.** The lead story, the busiest room, the
 second story; a kind that has run out gives its place to the other, so a day with talk in it always
-shows some. A story is its headline and how much was said under it, with no picture. "More" counts
+shows some. A story is its headline and how much was said under it, with no picture. Every item
+opens on its kind's mark ([modern-frame.md](modern-frame.md), "Content kinds"), a board entry's
+naming its group as on the issue page. "More" counts
 the stories and rooms that survive and are not shown, and nothing else.
 
 | Read from the ledger | How deep | Shown as |

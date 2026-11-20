@@ -205,7 +205,7 @@ class HomeIssueMonthQueryBudgetTest extends TestCase
 
         $items = array_merge(...array_column($shown, 'items'));
         $rooms = array_filter($items, fn (array $item): bool => $item['kind'] === 'talk');
-        $told = array_filter($items, fn (array $item): bool => $item['kind'] === 'story');
+        $told = array_filter($items, fn (array $item): bool => in_array($item['kind'], ['diary', 'timeline', 'topic', 'event'], true));
 
         $this->assertCount($days * 3, $items);
         $this->assertCount($talking, $rooms);

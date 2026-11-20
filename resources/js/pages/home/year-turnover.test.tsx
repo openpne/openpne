@@ -81,7 +81,7 @@ const lastDay: DaySummary = {
     number: 9,
     href: '/home/2026/12/30',
     bornDays: { from: '2026-12-30', to: '2026-12-30' },
-    items: [{ kind: 'story', href: '/diary/1', headline: 'Last walk', responses: 0 }],
+    items: [{ kind: 'diary', href: '/diary/1', headline: 'Last walk', responses: 0, groupName: null }],
     more: 0,
     newcomers: [],
     newGroups: [],
