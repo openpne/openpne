@@ -36,8 +36,9 @@ function Phrase({ days }: { days: { from: string; to: string } | null }) {
 }
 
 /**
- * The sides break only between words and the middle takes what width is left, so a long middle
- * wraps rather than pushing a side off the screen. Equal growth from a zero basis keeps it centred while there is room.
+ * A side never breaks inside a word and the middle takes what width is left, so a long middle wraps
+ * rather than pushing a side off the screen. Equal growth from a zero basis keeps it centred while
+ * there is room.
  */
 export function Band({ start, end, children }: { start: ReactNode; end: ReactNode; children: ReactNode }) {
     return (

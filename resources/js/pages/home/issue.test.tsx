@@ -309,6 +309,16 @@ test('a talk burst is a card that is one link into its room, over the end of the
 
 });
 
+test("an AI speaker's face lets a tap through to the card's link", () => {
+    const { container } = arrive({
+        issue: issueOf({ stories: undefined, talkBursts: [{ ...burst(61), messages: [said(1, { author: { ...author, isAi: true } })] }] }),
+    });
+
+    const face = container.querySelector('li span.relative.inline-flex');
+    expect(face).not.toBeNull();
+    expect(face?.classList.contains('pointer-events-none')).toBe(true);
+});
+
 test('an upcoming event is a row: its day, its title, and where it is held', () => {
     arrive({ issue: issueOf({ upcomingEvents: [upcoming] }) });
 
@@ -343,7 +353,7 @@ test('a section the issue does not have is absent, not empty', () => {
     expect(screen.queryByText('New members')).toBeNull();
     expect(screen.queryByText('New %communities%')).toBeNull();
     expect(screen.queryByText('Upcoming events')).toBeNull();
-    expect(container.querySelector('a[href$="/talk"]')).toBeNull();
+    expect(container.querySelector('a[href*="/talk"]')).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
 });
 
