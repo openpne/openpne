@@ -48,3 +48,21 @@ test('an event row leads with its open date; a topic row has none', () => {
     renderWithProviders(<ActivityRow entry={entry(0)} />);
     expect(screen.queryByText(/Open date:/)).toBeNull();
 });
+
+test('in a list that mixes kinds, a row opens on its kind, a word outside the link that stands in for the note', () => {
+    renderWithProviders(<ActivityRow entry={{ ...entry(0), kind: 'event', participantCount: 4, openDate: '2030-04-05' }} marked />);
+    const word = screen.getByText('Event');
+    expect(word.closest('a')).toBeNull();
+    const glyph = word.parentElement?.querySelector('svg');
+    expect(glyph?.classList.contains('lucide-calendar-days')).toBe(true);
+    expect(glyph?.getAttribute('aria-hidden')).toBe('true');
+
+    cleanup();
+    renderWithProviders(<ActivityRow entry={entry(0)} marked />);
+    expect(screen.getAllByText('%Topic%')).toHaveLength(1);
+
+    cleanup();
+    renderWithProviders(<ActivityRow entry={entry(0)} />);
+    expect(screen.getAllByText('%Topic%')).toHaveLength(1);
+    expect(document.querySelector('svg.lucide-message-square-text')).toBeNull();
+});

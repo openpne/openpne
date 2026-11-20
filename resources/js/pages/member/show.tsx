@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, ChevronRight, IdCard, UserCircle2, Users } from 'lucide-react';
+import { Activity, ChevronRight, IdCard } from 'lucide-react';
 import { UserText } from '@/components/user-text';
+import { CONTENT_KINDS } from '@/lib/content-kinds';
 import { useT } from '@/lib/i18n';
 import type { PersonTile, PageProps } from '@/types';
 import type { DiarySummary } from '../diary/types';
@@ -61,7 +62,7 @@ export default function MemberShow() {
             {groups.length > 0 && (
                 <HomeSection
                     title={t('%Communities% you belong to')}
-                    icon={Users}
+                    icon={CONTENT_KINDS.group.icon}
                     viewAll={{ label: t('View all'), href: `/groups/mine?id=${profile.id}` }}
                 >
                     <GroupGrid groups={groups} />
@@ -71,7 +72,7 @@ export default function MemberShow() {
             {friends.length > 0 && (
                 <HomeSection
                     title={t('People around you')}
-                    icon={UserCircle2}
+                    icon={CONTENT_KINDS.member.icon}
                     viewAll={{ label: t('View all'), href: `/friend/list?id=${profile.id}` }}
                 >
                     <PeopleGrid people={friends} />

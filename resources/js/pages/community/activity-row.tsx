@@ -16,16 +16,17 @@ export interface CommunityActivityEntry {
 
 /** The group, not a member, is the byline subject: bumped_at is the last commenter's instant when
  *  there is a comment, so an author byline would misattribute the row. */
-export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
+export function ActivityRow({ entry, marked = false }: { entry: CommunityActivityEntry; marked?: boolean }) {
     const t = useT();
     return (
         <EntryRow
             href={entry.kind === 'topic' ? `/topics/${entry.id}` : `/events/${entry.id}`}
+            kind={marked ? entry.kind : undefined}
             group={entry.group}
             content={entry.name}
             // An event's open date names its kind; a note and a weekday beside it would push the
             // group name out of a phone-wide byline.
-            bylineNote={entry.kind === 'topic' ? t('%Topic%') : undefined}
+            bylineNote={entry.kind === 'topic' && !marked ? t('%Topic%') : undefined}
             date={
                 entry.openDate === null ? (
                     <BoardStamp commentCount={entry.commentCount} bumpedAt={entry.bumpedAt} />

@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 import { AiChip } from '@/components/ai-chip';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
+import { KindMark } from '@/components/kind-mark';
 import { ListRow, stretchedLink } from '@/components/ui/surface';
+import type { ContentKind } from '@/lib/content-kinds';
 import { commentsPhrase, participantsPhrase, repliesPhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -46,6 +48,8 @@ type EntrySubject =
 
 type EntryRowProps = EntrySubject & {
     href: string;
+    /** In a list that mixes kinds. */
+    kind?: ContentKind;
     /**
      * The line that identifies the entry: a title where there is one, the body itself where there
      * is not.
@@ -72,7 +76,7 @@ type EntryRowProps = EntrySubject & {
  * The content-entry list row (diary / topic / event / timeline / activity digests). Person and action
  * rows — friend, block, message boxes — keep their own layouts and are not this.
  */
-export function EntryRow({ href, author, group, content, contentLines = 1, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
+export function EntryRow({ href, kind, author, group, content, contentLines = 1, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
     const t = useT();
 
     // The photo strip already shows there are photos, so the camera marker only appears without it.
@@ -127,6 +131,7 @@ export function EntryRow({ href, author, group, content, contentLines = 1, bylin
     // content line sits the same distance from the row top in every row of a list.
     const textColumn = (
         <div className="min-w-0 flex-1">
+            {kind && <KindMark kind={kind} className="mb-0.5" />}
             <div className="flex min-h-5 min-w-0 items-center gap-1.5">
                 <span className="truncate text-sm text-foreground">{subjectName}</span>
                 <AiChip isAi={author?.isAi ?? false} />

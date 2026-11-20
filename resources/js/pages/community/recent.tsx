@@ -24,7 +24,7 @@ export default function CommunityRecent() {
                 <Panel flush>
                     <List>
                         {activity.map((entry) => (
-                            <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
+                            <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} marked />
                         ))}
                     </List>
                 </Panel>
