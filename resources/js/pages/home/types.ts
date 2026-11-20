@@ -122,7 +122,6 @@ export interface DayStory {
     headline: string;
     /** Comments, or replies on a post. */
     responses: number;
-    /** The group a board entry was posted in; null on a diary or a post. */
     groupName: string | null;
 }
 
