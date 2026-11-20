@@ -69,7 +69,7 @@ export interface TalkBurst {
 }
 
 export interface UpcomingEvent extends CommunityActivityEntry {
-    /** `Y-m-d` civil date, no instant — format with <CivilDate>, never as an instant. */
+    /** `Y-m-d` civil date, no instant — format as a civil date, never as an instant. */
     openDate: string;
 }
 

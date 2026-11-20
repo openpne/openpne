@@ -64,10 +64,9 @@ next one, so what a reader is handed at 06:00 is everything since 06:00 the morn
 the instant, less the publishing hour, to its own midnight — and a window `(start, end]` covers the
 days `of(start)` … `of(end − 1s)`.
 
-**`issue_date` is the last day the window covers**, which is what the page is titled and addressed
-by. The scheduled 06:00 run on the 28th covers `(27th 06:00, 28th 06:00]` and is therefore **the
+**`issue_date` is the last day the window covers**, which is what the page is addressed by. The scheduled 06:00 run on the 28th covers `(27th 06:00, 28th 06:00]` and is therefore **the
 27th's issue**; the first issue ever spans seven days and takes the last of them. Dating either by
-the day the run happened would headline yesterday evening's posts with today's date, which is the
+the day the run happened would address yesterday evening's posts by today's date, which is the
 one thing a dateline may not do.
 
 **A window closes on a boundary, never on the clock.** The scheduled run lands a second or two past
@@ -88,9 +87,9 @@ from this reader, so two readers of one issue can see different ranges; a row bo
 belongs to the day it closes, as the window's own last day does, and no day outside the window is
 ever named. With nothing left to show, the band names the window's days. The colophon states the two
 instants the window ran between, because a reader seeing last evening under yesterday's date needs
-to see where the day was cut. And "current" means the issue is the last one that could have come out (`HomeIssueDay::latest`),
-not that it is dated today: no fresh issue ever is, and comparing against the calendar would have
-every front page announce itself as stale.
+to see where the day was cut. `isCurrent` means the issue is the last one that could have come out
+(`HomeIssueDay::latest`), not that it is dated today; the page does not read it, and names a day
+"yesterday" by the site's calendar instead ("Rendering").
 
 ## The window, and 休刊
 
@@ -286,8 +285,8 @@ placement is the page's decision.
 rule, then the **band** — the days' name as the `h1`, the neighbouring days either side of it, and,
 on the newest issue, when the next one comes (06:00) where the step forward would be. The band calls
 a day "yesterday" by the site's calendar, not by the 06:00 day: before 06:00 the latest issue is two
-calendar days back. Sections are named between rules, in the order stories, talk, upcoming events,
-newcomers, new groups. The foot repeats the steps either side, links the month in the calendar, and
+calendar days back. Below the stories, sections are named between rules, in the order talk, upcoming
+events, newcomers, new groups. The foot repeats the steps either side, links the month in the calendar, and
 ends in the colophon; there is no line calling an issue stale.
 
 **Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))

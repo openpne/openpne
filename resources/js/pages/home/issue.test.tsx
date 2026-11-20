@@ -406,9 +406,10 @@ test('the foot steps to the days either side and into the calendar', () => {
 test('the colophon states the stretch the issue was drawn from and what it cannot show, nothing more', () => {
     // The newest issue with nothing after it once added a line calling itself stale; the band's
     // "next update" took that over.
-    arrive({ issue: issueOf({ isCurrent: false }) });
+    const { container } = arrive({ issue: issueOf({ isCurrent: false }) });
 
-    const colophon = screen.getByRole('contentinfo');
+    // Not by role: a footer inside an article is no contentinfo landmark in a browser.
+    const colophon = container.querySelector('article > footer') as HTMLElement;
     // A day here runs 06:00 to 06:00, so the page states the two instants the band's day means.
     expect(Array.from(colophon.querySelectorAll('p')).map((line) => line.textContent)).toEqual([
         'Posts from August 27, 2026 at 06:00 to August 28, 2026 at 06:00',

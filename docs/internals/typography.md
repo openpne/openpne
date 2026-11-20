@@ -43,7 +43,7 @@ a missed migration.
 | `pageCompose` | 18px, 20px from `lg` | compose screens, where the sheet header sits right above the title |
 | `group` | 18px | a heading that stands outside the cards it groups — the settings page's groups |
 | `section` | 16px | a block within the content flow: a form section, a settings sub-section, a dialog title |
-| `minor` | 14px | a card's title band, a heading nested inside a section |
+| `minor` | 14px | a card's title band, a heading nested inside a section, できごと's band — a dateline that is the page's `h1` while the lead's headline is its largest text |
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
 | `bar` | 16px | the phone header's hub title and place pill, and the place bar's (chrome, outside the content ranks) |
 | `headline` | 28px | the lead story on できごと only: a page with no nameplate, where a post's title is the largest text on it |
@@ -68,8 +68,8 @@ title red without leaving two color utilities on one element for the stylesheet'
 font, which for Japanese is megabytes per face. It is for what a printed page would set in it: the
 titles of posts and the names of groups on できごと, through `face="serif"` on a heading and the bare
 utility on a row's title. Where no Mincho is installed — Android 8.1 and earlier, Windows without
-Japanese support — the stack falls back to the sans and the page reads as the rest of the app does,
-which is accepted rather than worked around.
+Japanese support — Japanese falls back to the sans while Latin letters take the browser's generic
+serif, which is accepted rather than worked around.
 
 Android reaches Noto Serif CJK only through the generic `serif` at the end of the stack, and ships it
 in a single Regular face. Chromium synthesizes bold from 700, so a 600 heading in Mincho renders at

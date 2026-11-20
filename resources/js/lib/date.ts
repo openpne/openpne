@@ -121,7 +121,7 @@ export function formatCivilDaySpan(
     const start = civilToUtcInstant(from);
     const end = civilToUtcInstant(to);
     const sameMonthThisYear =
-        start.getUTCFullYear() === siteDayParts(now, context.timeZone).year &&
+        dayShape({ year: start.getUTCFullYear() }, siteDayParts(now, context.timeZone), 'short') === SHORT_MONTH_DAY &&
         start.getUTCFullYear() === end.getUTCFullYear() &&
         start.getUTCMonth() === end.getUTCMonth();
 

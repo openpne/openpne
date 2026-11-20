@@ -33,6 +33,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /** Its subject is the shape: how much survived decides which keys are there. */
@@ -260,27 +261,51 @@ class HomeIssueSerializerTest extends TestCase
         $this->feature(HomeIssueSection::Newcomers, Member::factory()->create(['created_at' => '2026-08-26 12:00:00']));
         $this->feature(HomeIssueSection::NewGroups, Group::factory()->create(['created_at' => '2026-08-26 13:00:00']));
 
-        $room = Group::factory()->create(['created_at' => '2026-01-01 00:00:00']);
-        $at = '2026-08-23 09:00:00';
-        GroupMessage::factory()->create(['group_id' => $room->getKey(), 'created_at' => $at, 'updated_at' => $at]);
-        $this->feature(HomeIssueSection::Talk, $room, stats: [
-            'since' => $this->now()->subDays(7)->toIso8601String(),
-            'until' => $this->now()->toIso8601String(),
-        ]);
+        $this->featureTalkSaidAt('2026-08-23 09:00:00');
 
         $this->assertSame(['from' => '2026-08-23', 'to' => '2026-08-26'], $this->page()['issue']['bornDays']);
     }
 
-    /** What the gate withheld from this reader does not stretch the band they read. */
+    /** @return array<string, array{HomeIssueSection}> */
+    public static function sectionsWithABirth(): array
+    {
+        return [
+            'stories' => [HomeIssueSection::Stories],
+            'newcomers' => [HomeIssueSection::Newcomers],
+            'new groups' => [HomeIssueSection::NewGroups],
+            'talk' => [HomeIssueSection::Talk],
+        ];
+    }
+
+    /** Alone in the issue, so a section whose births went unread would fall back to the window's days. */
+    #[DataProvider('sectionsWithABirth')]
+    public function test_each_section_dates_the_band_on_its_own(HomeIssueSection $section): void
+    {
+        $this->issue->update(['window_start' => $this->now()->subDays(7)]);
+        $born = ['created_at' => '2026-08-24 12:00:00'];
+        match ($section) {
+            HomeIssueSection::Stories => $this->feature($section, Diary::factory()->create($born)),
+            HomeIssueSection::Newcomers => $this->feature($section, Member::factory()->create($born)),
+            HomeIssueSection::NewGroups => $this->feature($section, Group::factory()->create($born)),
+            HomeIssueSection::Talk => $this->featureTalkSaidAt($born['created_at']),
+        };
+
+        $this->assertSame(['from' => '2026-08-24', 'to' => '2026-08-24'], $this->page()['issue']['bornDays']);
+    }
+
+    /** A block rather than a deletion, so the story is loaded and only the per-reader gate drops it. */
     public function test_a_story_the_reader_cannot_see_does_not_widen_the_band(): void
     {
         $this->issue->update(['window_start' => $this->now()->subDays(7)]);
         $this->feature(HomeIssueSection::Stories, Diary::factory()->create(), rank: 1);
-        $gone = Diary::factory()->create(['created_at' => '2026-08-22 12:00:00']);
-        $this->feature(HomeIssueSection::Stories, $gone, rank: 2);
-        $gone->delete();
+        $withheld = Diary::factory()->create(['created_at' => '2026-08-22 12:00:00']);
+        $this->feature(HomeIssueSection::Stories, $withheld, rank: 2);
+        $withheld->member->blocksMade()->attach($this->viewer, ['created_at' => now()]);
 
         $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
+
+        $this->viewer = Member::factory()->create();
+        $this->assertSame(['from' => '2026-08-22', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
     }
 
     /**
@@ -296,10 +321,11 @@ class HomeIssueSerializerTest extends TestCase
         $this->assertSame(['from' => '2026-08-26', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
     }
 
-    /** The band never names a day outside the issue's own, whatever the ledger points at. */
+    /** The band never names a day outside the issue's own, whatever the ledger points at — on either side. */
     public function test_a_birth_outside_the_window_is_held_to_its_days(): void
     {
         $this->feature(HomeIssueSection::Stories, Diary::factory()->create(['created_at' => '2026-08-01 12:00:00']));
+        $this->featureTalkSaidAt('2026-08-28 09:00:00', until: $this->now()->addDay());
 
         $this->assertSame(['from' => '2026-08-27', 'to' => '2026-08-27'], $this->page()['issue']['bornDays']);
     }
@@ -856,6 +882,18 @@ class HomeIssueSerializerTest extends TestCase
         ]);
 
         return $file;
+    }
+
+    /** A room older than any window, so only the message it shows can date the burst. */
+    private function featureTalkSaidAt(string $at, ?CarbonImmutable $until = null): HomeIssueItem
+    {
+        $room = Group::factory()->create(['created_at' => '2026-01-01 00:00:00']);
+        GroupMessage::factory()->create(['group_id' => $room->getKey(), 'created_at' => $at, 'updated_at' => $at]);
+
+        return $this->feature(HomeIssueSection::Talk, $room, stats: [
+            'since' => $this->now()->subDays(7)->toIso8601String(),
+            'until' => ($until ?? $this->now())->toIso8601String(),
+        ]);
     }
 
     private function page(?HomeIssue $previous = null, ?HomeIssue $next = null): array

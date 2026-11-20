@@ -65,6 +65,7 @@ export function Masthead({ days, prev, next }: { days: { from: string; to: strin
                     )}
                 </div>
                 <div className="min-w-0 text-balance text-center">
+                    {/* The h1 at a small rank on purpose (docs/internals/typography.md, "Heading roles"). */}
                     <Heading as="h1" variant="minor">
                         <Phrase days={days} />
                     </Heading>

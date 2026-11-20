@@ -1,12 +1,17 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
+import { useSiteDay } from '@/lib/use-site-day';
 import { cn } from '@/lib/utils';
+import type { PageProps } from '@/types';
 import type { IssueRef } from './types';
 
 function Step({ issue, caption, side }: { issue: IssueRef; caption: string; side: 'prev' | 'next' }) {
     const { civilMonthDay } = useDateFormat();
+    const { timezone } = usePage<PageProps>().props;
+    // Read for the re-render alone: the date drops its year by the reader's year, which turns over at midnight.
+    useSiteDay(timezone);
     const Chevron = side === 'prev' ? ChevronLeft : ChevronRight;
 
     return (

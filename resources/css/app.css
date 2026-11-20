@@ -67,7 +67,7 @@
     /* Two steps under text-xs; neither sets a line-height, so a site keeps the one it inherits. */
     --text-2xs: 0.6875rem;
     --text-3xs: 0.625rem;
-    /* The lead headline of できごと, the one size above text-2xl (docs/internals/typography.md, "Heading roles"). */
+    /* The lead headline of できごと, between text-2xl and text-3xl (docs/internals/typography.md, "Heading roles"). */
     --text-headline: 1.75rem;
     --text-headline--line-height: 1.35;
     /* Mode-aware elevation via the var() indirection (values live in :root / .dark). */

@@ -37,7 +37,7 @@ describe('each axis renders the class set its call sites used to add by hand', (
 
     // Read off the raw recipe, not cn(): a consumer of the recipe has no twMerge to drop a second color.
     test('a heading recipe emits exactly one color class at every rank and tone', () => {
-        for (const variant of ['display', 'page', 'pageCompose', 'group', 'section', 'minor', 'label', 'bar'] as const) {
+        for (const variant of ['display', 'page', 'pageCompose', 'group', 'section', 'minor', 'label', 'bar', 'headline', 'kicker'] as const) {
             for (const tone of ['default', 'destructive'] as const) {
                 const found = [...classes(headingVariants({ variant, tone }))].filter((c) => COLORS.includes(c));
                 expect(found, `${variant}/${tone}`).toHaveLength(1);
