@@ -48,7 +48,7 @@ type EntrySubject =
 
 type EntryRowProps = EntrySubject & {
     href: string;
-    /** In a list that mixes kinds. */
+    /** Given to every row of a list or to none, so the content line keeps one height; a group subject is then named in the mark, not the byline. */
     kind?: ContentKind;
     /**
      * The line that identifies the entry: a title where there is one, the body itself where there
@@ -127,20 +127,26 @@ export function EntryRow({ href, kind, author, group, content, contentLines = 1,
     }
     bylineMeta.push(...counts);
 
+    const groupInMark = kind !== undefined && group !== undefined;
+
     // The byline holds a line's height whatever it carries, and the row aligns to its top, so the
     // content line sits the same distance from the row top in every row of a list.
     const textColumn = (
         <div className="min-w-0 flex-1">
-            {kind && <KindMark kind={kind} className="mb-0.5" />}
+            {kind && <KindMark kind={kind} group={group?.name} className="mb-0.5" />}
             <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-                <span className="truncate text-sm text-foreground">{subjectName}</span>
+                {!groupInMark && <span className="truncate text-sm text-foreground">{subjectName}</span>}
                 <AiChip isAi={author?.isAi ?? false} />
                 {bylineMeta.length > 0 && (
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
                         {bylineMeta.flatMap((item, index) => [
-                            <span key={`sep-${index}`} aria-hidden>
-                                ·
-                            </span>,
+                            ...(index === 0 && groupInMark
+                                ? []
+                                : [
+                                      <span key={`sep-${index}`} aria-hidden>
+                                          ·
+                                      </span>,
+                                  ]),
                             item,
                         ])}
                     </span>
