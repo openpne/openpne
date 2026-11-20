@@ -23,6 +23,7 @@ This repository is OpenPNE 4, a rewrite on Laravel 13 that succeeds
 - **Diaries**: posts with photos, comments and reactions, and a choice of who may read each one.
 - **Groups**: a talk room for chat, topics for longer threads, events with sign-up.
 - **A timeline** for short posts, and **a home page** that sums up what has happened on the site.
+- **Push notifications** to a phone or a desktop browser, with no app to install.
 - **Two looks**: Modern, built for phones first, and Classic, which keeps the screens, addresses and
   themes of an OpenPNE 3 site.
 - **An admin panel** for members, what they post, who may register and the look of the site.
