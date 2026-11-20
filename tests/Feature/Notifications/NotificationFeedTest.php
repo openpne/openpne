@@ -51,6 +51,48 @@ class NotificationFeedTest extends TestCase
             );
     }
 
+    public function test_each_row_names_the_kind_of_what_it_points_at_and_an_unknown_row_none(): void
+    {
+        $viewer = Member::factory()->create();
+        $expected = [
+            'friend_requested' => [['requester_id' => 1], 'member'],
+            'friend_request_accepted' => [['accepter_id' => 1], 'member'],
+            'direct_message_received' => [['sender_id' => 1, 'direct_message_id' => 1], 'directMessage'],
+            'diary_commented' => [['diary_id' => 1], 'diary'],
+            'diary_posted' => [['diary_id' => 1], 'diary'],
+            'group_topic_commented' => [['topic_id' => 1], 'topic'],
+            'group_topic_posted' => [['topic_id' => 1], 'topic'],
+            'group_event_commented' => [['event_id' => 1], 'event'],
+            'group_event_posted' => [['event_id' => 1], 'event'],
+            'group_joined' => [['group_id' => 1], 'group'],
+            'group_admin_transfer_requested' => [['group_id' => 1], 'group'],
+            'group_sub_admin_appointed' => [['group_id' => 1], 'group'],
+            'group_talk_mention' => [['message_id' => 1], 'talk'],
+            'group_talk_new_message' => [['group_id' => 1], 'talk'],
+            'timeline_mentioned' => [['post_id' => 1], 'timeline'],
+            'timeline_posted' => [['post_id' => 1], 'timeline'],
+            'timeline_replied' => [['post_id' => 1], 'timeline'],
+            'from_a_plugin' => [['thing_id' => 1], null],
+        ];
+        $minutes = 0;
+        foreach ($expected as $kind => [$data]) {
+            $this->seedRow($viewer, $kind, $data, createdAt: now()->subMinutes(++$minutes));
+        }
+
+        $rows = $this->actingOnModern($viewer)->get('/notifications')->viewData('page')['props']['feed']['data'];
+
+        $this->assertSame(array_map(fn (array $case): ?string => $case[1], $expected), array_column($rows, 'contentKind', 'kind'));
+    }
+
+    public function test_a_known_kind_without_its_id_names_no_kind(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->seedRow($viewer, 'diary_posted', ['author_id' => 1]);
+
+        $this->actingOnModern($viewer)->get('/notifications')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.data.0.contentKind', null));
+    }
+
     public function test_two_pages_of_one_second_split_at_the_uuid_with_no_row_repeated_or_lost(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();

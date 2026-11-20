@@ -26,9 +26,9 @@ use App\Notifications\Timeline\TimelineRepliedNotification;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * The single table saying which `data` ids each kind points at, read both by the URL a row opens and by
- * the rule that reading that target marks the row read, so a row can never open one place and be consumed
- * by another.
+ * The single table saying which `data` ids each kind points at, read by the URL a row opens, by the rule
+ * that reading that target marks the row read and by the row's mark, so a row can never open one place
+ * and be consumed or marked as another.
  */
 final class NotificationTarget
 {

@@ -39,7 +39,7 @@ class NotificationFeedSerializer
 {
     /**
      * @param  StreamPage<DatabaseNotification>  $page
-     * @return ScrollProp<array{data: list<array{id: string, kind: string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool}}>}>
+     * @return ScrollProp<array{data: list<array{id: string, kind: string, contentKind: ?string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool}}>}>
      */
     public static function stream(StreamPage $page, ?StreamCursor $before): ScrollProp
     {
@@ -151,7 +151,7 @@ class NotificationFeedSerializer
 
     /**
      * @param  Collection<int, Member>  $actors
-     * @return array{id: string, kind: string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool}}
+     * @return array{id: string, kind: string, contentKind: ?string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, isAi: bool}}
      */
     private static function row(DatabaseNotification $row, Collection $actors): array
     {
@@ -160,12 +160,28 @@ class NotificationFeedSerializer
         return [
             'id' => $row->getKey(),
             'kind' => $row->data['kind'] ?? 'unknown',
+            'contentKind' => self::contentKindOf($row),
             'reason' => $row->data['reason'] ?? null,
             'label' => self::label($row, $actors),
             'createdAt' => $row->created_at?->toISOString() ?? '',
             'read' => $row->read_at !== null,
             'actor' => $actor === null ? null : MemberRefSerializer::ref($actor),
         ];
+    }
+
+    private static function contentKindOf(DatabaseNotification $row): ?string
+    {
+        return match (NotificationTarget::of($row)?->type) {
+            NotificationTargetType::FriendRequests, NotificationTargetType::Member => 'member',
+            NotificationTargetType::DirectMessage => 'directMessage',
+            NotificationTargetType::Diary => 'diary',
+            NotificationTargetType::Topic => 'topic',
+            NotificationTargetType::Event => 'event',
+            NotificationTargetType::Group => 'group',
+            NotificationTargetType::TalkMessage, NotificationTargetType::TalkRoom => 'talk',
+            NotificationTargetType::TimelinePost => 'timeline',
+            null => null,
+        };
     }
 
     /** @param  Collection<int, Member>  $actors */
