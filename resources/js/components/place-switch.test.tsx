@@ -164,13 +164,52 @@ test('another tile visits its section and closes without pulling focus back to t
     expect(document.activeElement).not.toBe(trigger());
 });
 
-test('a page swapped in by the browser closes the sections', async () => {
+test('a page swapped in by the browser closes the sections, without pulling focus back to the name', async () => {
     renderWithProviders(<PlaceSwitch scope={cyclists()} variant="phone" />);
     openOn();
 
     act(() => inertia.navigate.forEach((listener) => listener()));
 
     await waitFor(() => expect(panel()).toBeNull());
+    expect(document.activeElement).not.toBe(trigger());
+});
+
+test('a page swapped in while the sections are shut leaves the next close its usual focus', async () => {
+    renderWithProviders(<PlaceSwitch scope={cyclists()} variant="phone" />);
+    act(() => inertia.navigate.forEach((listener) => listener()));
+    openOn();
+
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+
+    await waitFor(() => expect(panel()).toBeNull());
+    expect(document.activeElement).toBe(trigger());
+});
+
+test('a tile pressed with a modifier is left to the browser and keeps the sections open', () => {
+    renderWithProviders(<PlaceSwitch scope={cyclists()} variant="phone" />);
+
+    fireEvent.click(within(openOn()).getByRole('link', { name: 'Top page' }), { ctrlKey: true });
+
+    expect(panel()).not.toBeNull();
+});
+
+test('while open, a sheet over the page takes every press outside the panel', async () => {
+    renderWithProviders(<PlaceSwitch scope={cyclists()} variant="phone" />);
+    expect(document.querySelector('[data-place-backdrop]')).toBeNull();
+
+    openOn();
+    const sheet = document.querySelector<HTMLElement>('[data-place-backdrop]');
+    // A page control can opt back into pointer events under Radix's modal, so the sheet must too.
+    expect(sheet?.className).toContain('pointer-events-auto');
+    expect(sheet?.className).toContain('fixed inset-0');
+    expect(panel()!.contains(sheet)).toBe(false);
+
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    fireEvent.pointerDown(sheet!);
+    fireEvent.click(sheet!);
+
+    await waitFor(() => expect(panel()).toBeNull());
+    expect(document.querySelector('[data-place-backdrop]')).toBeNull();
 });
 
 test('a board the viewer may not open is not offered', () => {
@@ -222,13 +261,22 @@ test('the name now on screen takes focus only once the receded header has come b
         </>,
     );
     openOn('desk');
+    // Frames run only when the test says, so the wait's budget cannot run out under a loaded runner.
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback));
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+    const frame = () => act(() => frames.splice(0).forEach((callback) => callback(performance.now())));
 
     desk.matches = false;
     act(() => desk.listeners.forEach((listener) => listener()));
     await waitFor(() => expect(panel()).toBeNull());
+    frame();
+    frame();
+    frame();
     expect(document.activeElement).not.toBe(trigger('phone'));
 
     trigger('phone').closest('header')!.removeAttribute('inert');
+    frame();
 
-    await waitFor(() => expect(document.activeElement).toBe(trigger('phone')));
+    expect(document.activeElement).toBe(trigger('phone'));
 });

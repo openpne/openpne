@@ -1,19 +1,18 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { headingVariants } from '@/components/ui/heading';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DESK_QUERY } from '@/lib/desk-query';
 import { useT } from '@/lib/i18n';
 import type { ChromeScope } from '@/lib/member-chrome';
 import { type PlaceSectionItem, placeSections } from '@/lib/place-sections';
 import { cn } from '@/lib/utils';
 
 type Variant = 'phone' | 'desk';
-
-/** The `lg` breakpoint, where the phone header gives way to the place bar. */
-const DESK_QUERY = '(min-width: 64rem)';
 
 const deskNow = () => typeof window.matchMedia === 'function' && window.matchMedia(DESK_QUERY).matches;
 
@@ -84,7 +83,16 @@ export function PlaceSwitch({ scope, variant }: { scope: ChromeScope; variant: V
     );
 
     // The browser's back and forward swap the page under an open panel.
-    useEffect(() => router.on('navigate', () => setOpen(false)), []);
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        return router.on('navigate', () => {
+            leaving.current = 'navigate';
+            setOpen(false);
+        });
+    }, [open]);
 
     useEffect(() => {
         if (!open || typeof window.matchMedia !== 'function') {
@@ -112,8 +120,17 @@ export function PlaceSwitch({ scope, variant }: { scope: ChromeScope; variant: V
         setOpen(false);
     };
 
+    const toggle = (next: boolean) => {
+        if (next) {
+            leaving.current = null;
+        }
+        setOpen(next);
+    };
+
     return (
-        <Popover open={open} onOpenChange={setOpen} modal>
+        <Popover open={open} onOpenChange={toggle} modal>
+            {/* Radix's modal leaves a `pointer-events-auto` descendant pressable, so this takes every press outside the panel. */}
+            {open && createPortal(<div aria-hidden data-place-backdrop className="pointer-events-auto fixed inset-0 z-40" />, document.body)}
             {variant === 'phone' && <PopoverAnchor virtualRef={header} />}
             <PopoverTrigger asChild>
                 <button

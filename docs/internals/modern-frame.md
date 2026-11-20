@@ -42,12 +42,13 @@ Two decisions here are deliberate rather than pending:
 
 ## Place sections
 
-A place's sections are listed in [`lib/place-sections.ts`](../../resources/js/lib/place-sections.ts),
-and the registry entry of every screen inside a place names the place and the section it stands
-in; the page itself declares nothing. Pressing the place's name opens its sections as tiles, the
+A group's sections are listed in [`lib/place-sections.ts`](../../resources/js/lib/place-sections.ts),
+and the registry entry of every screen inside a group names the group and the section it stands
+in; the page itself declares nothing. Pressing the group's name opens its sections as tiles, the
 current one marked: `aria-current="page"` on the section's own list, `"true"` on a screen deeper
-inside it. The panel is modal: pressing outside it only closes it, and while it is open Tab stays
-inside and the page does not scroll.
+inside it. The panel is modal: pressing outside it only closes it, even on a control the page
+keeps pressable over its content, and while it is open Tab stays inside and the page does not
+scroll.
 
 - **One panel, two triggers.** The phone header's name and the desk place bar's are both mounted
   at every width, so each holds its own open state. What differs by width is the trigger and
@@ -109,11 +110,11 @@ variable unset.
 
 ## Content kinds
 
-The nav sections, a group page's section headings, a member page's group and people headings
-and its diary cards, the mark over a story in できごと, the rows of its month page and the
-notifications and a place's section tiles take a kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts),
-and the mark its word as well; a new kind, or a new list that mixes kinds, takes them from there
-too. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)), in a dense row as on a
+These take a kind's glyph from [`CONTENT_KINDS`](../../resources/js/lib/content-kinds.ts): the nav
+sections, a group page's section headings, a member page's group and people headings and its diary
+cards, the mark over a story in できごと, the rows of its month page, the notifications, and a
+place's section tiles. The mark takes the kind's word from there as well, and a new kind, or a new
+list that mixes kinds, takes both from there too. The mark ([`KindMark`](../../resources/js/components/kind-mark.tsx)), in a dense row as on a
 card, always prints the kind's word beside the glyph, which is decorative; it is phrasing text and
 never a link, so it can sit inside a row that is one link or one button. A glyph that does not
 name a kind, such as a member count or a button's camera, is not read from the table.

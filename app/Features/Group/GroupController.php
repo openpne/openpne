@@ -83,8 +83,6 @@ class GroupController extends Controller
         $canPostTopic = GroupTopicAccess::canPostTopic($found, $viewer);
         $events = $showEvents ? $recentEvents($found) : null;
         $canPostEvent = GroupEventAccess::canPostEvent($found, $viewer);
-        // Talk is a separate unit from the boards, so a site running talk with the boards switched
-        // off must still get its entrance.
         $canViewTalk = $openSections['talk'];
         // Never read the conversation before the gate says the viewer may: the preview carries a
         // member's words, so the access question comes first and the query does not run otherwise.

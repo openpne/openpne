@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { DESK_QUERY } from './desk-query.ts';
 
 export type ScrollDirection = 'up' | 'down';
 
@@ -142,7 +143,7 @@ export function useScrollDirection({
         window.addEventListener('scroll', onScroll, { passive: true });
         // Desk-width scrolling recedes the phone header too, hidden there, so crossing `lg` re-gates
         // rather than land on an inert header off screen.
-        const desk = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 64rem)') : null;
+        const desk = typeof window.matchMedia === 'function' ? window.matchMedia(DESK_QUERY) : null;
         desk?.addEventListener('change', gate);
         const offSuccess = router.on('success', arrived);
         const offError = router.on('error', arrived);

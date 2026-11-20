@@ -48,7 +48,6 @@ export interface ChromeAction {
     icon: Icon;
 }
 
-/** `section` is the one of the place's sections the screen stands in (lib/place-sections.ts). */
 export type ChromeScope =
     | { kind: 'group'; id: number; name: string; imageUrl: string | null; section: GroupSection; open: GroupOpenSections }
     | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null; isAi: boolean };
@@ -633,7 +632,7 @@ interface PlaceRef {
 
 const memberPlace = (member: PlaceRef): Place => ({ label: member.name, href: `/member/${member.id}` });
 
-/** The pages that ARE a place, whose own hero names it directly below the header. */
+/** The pages that ARE a member's place, whose own hero names it directly below the header. */
 const PLACE_TOPS = ['member/show'] as const;
 
 export interface BreadcrumbCrumb {

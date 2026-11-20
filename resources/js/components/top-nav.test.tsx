@@ -157,7 +157,7 @@ test("a deep page inside a group names the group, as the way to the group's sect
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(screen.getByRole('button', { name: 'Cyclists' }).getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
-    // Nothing sits between the mark and the name: the trail's › went with the pill.
+    // Nothing sits between the mark and the name.
     expect(document.querySelector('header')?.textContent).not.toContain('›');
     // No back control: swipe, the browser and the mark are the ways out.
     expect(screen.queryByRole('link', { name: 'Back' })).toBeNull();

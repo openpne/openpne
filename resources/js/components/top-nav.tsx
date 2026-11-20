@@ -148,8 +148,8 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     if (header.type === 'place') {
         return (
             <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
-                {/* Equal outer columns hold the name at the middle of the screen, whatever the two ends weigh. */}
-                <div className="grid min-w-0 flex-1 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2">
+                {/* Neither outer column drops below the menu's 44px, the wider end, so even a name that fills the row stays at the middle of the screen. */}
+                <div className="grid min-w-0 flex-1 grid-cols-[minmax(2.75rem,1fr)_minmax(0,auto)_minmax(2.75rem,1fr)] items-center gap-2">
                     <MarkHome />
                     <PlaceSwitch scope={header.scope} variant="phone" />
                     <div className="flex justify-end">{end}</div>
