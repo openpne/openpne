@@ -13,9 +13,8 @@ use Tests\TestCase;
 /**
  * Pins the seam rule from docs/internals/outbound-http.md: App\Outbound alone may fetch a URL a
  * member supplied, since SSRF defence is only the property that every such fetch went through the
- * guard; App\Files\Imgproxy dials one operator-configured address, and App\SiteCheck\SiteFetcher those
- * openpne:check is given, and nothing else. Stream wrappers and raw sockets are forbidden too, as they dereference
- * a URL just as well.
+ * guard; App\Files\Imgproxy dials one operator-configured address, and App\SiteCheck\SiteFetcher the
+ * site's own. Stream wrappers and raw sockets are forbidden too, as they dereference a URL just as well.
  */
 class OutboundEgressBoundaryTest extends TestCase
 {
@@ -60,6 +59,7 @@ class OutboundEgressBoundaryTest extends TestCase
         'Files/FileUploader.php',
         'Files/ImageFastPath.php',
         'Mail/Template/MailTemplateDefaults.php',
+        'Setup/PrivateFile.php',
         'Support/ClassicThemes.php',
         'Support/CommonPasswordList.php',
         'Support/ReleaseMarker.php',
@@ -342,13 +342,13 @@ class OutboundEgressBoundaryTest extends TestCase
         ));
     }
 
-    /** SiteFetcher checks no address and WebCheck only --parent-url's scheme, so a caller outside the command could hand one a member's URL. */
-    public function test_the_site_fetcher_is_reachable_only_from_the_site_check_command(): void
+    /** SiteFetcher checks no address and WebCheck only --parent-url's scheme, so a caller outside the two commands could hand one a member's URL. */
+    public function test_the_site_fetcher_is_reachable_only_from_the_site_check_and_setup_commands(): void
     {
         $offenders = [];
         $allowed = [
             'SiteFetcher' => ['SiteCheck/SiteFetcher.php', 'SiteCheck/WebCheck.php'],
-            'WebCheck' => ['SiteCheck/WebCheck.php', 'Console/Commands/CheckCommand.php'],
+            'WebCheck' => ['SiteCheck/WebCheck.php', 'Console/Commands/Concerns/RunsWebCheck.php', 'Console/Commands/CheckCommand.php', 'Console/Commands/SetupCommand.php'],
         ];
 
         foreach ($this->appFiles() as $file) {

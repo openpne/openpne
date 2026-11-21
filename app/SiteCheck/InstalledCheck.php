@@ -244,7 +244,8 @@ final class InstalledCheck
         return self::firstLine($e->getMessage());
     }
 
-    private static function firstLine(string $text): string
+    /** A command's first line of output, the database password taken out as in reason(). */
+    public static function firstLine(string $text): string
     {
         $line = trim((string) strtok(trim($text), "\n"));
         $password = (string) config('database.connections.'.config('database.default').'.password');

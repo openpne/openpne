@@ -6,7 +6,8 @@ request forwarder for anyone who can post, so every such fetch goes through one 
 the two exceptions dial addresses an operator configured, never one a member typed:
 [`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php) a single sidecar
 ([images](images.md), "Processing"), and [`SiteFetcher`](../../app/SiteCheck/SiteFetcher.php) the
-site's own `APP_URL`, or the address given to `openpne:check` ([runtime](runtime.md), "Site check") — and
+site's own `APP_URL`, or the address given to `openpne:check` ([runtime](runtime.md), "Site check"), for
+that command and `openpne:setup` — and
 [`OutboundEgressBoundaryTest`](../../tests/Feature/Architecture/OutboundEgressBoundaryTest.php)
 fails the build if something else does.
 
@@ -172,8 +173,8 @@ bounded here beyond libcurl's own limits).
   enforced by test. Two single files are on the allowlist besides, their neighbours staying under
   every check: `App\Files\Imgproxy\ImgproxyImageProcessor` dials `OPENPNE_IMGPROXY_URL` and nothing
   else, on a path that carries no member input beyond a random spool name; `App\SiteCheck\SiteFetcher`
-  fetches only `APP_URL` and `openpne:check`'s `--parent-url`, is reachable only from that command by
-  test, follows no redirect and reads at most 64 KiB of a response. The
+  fetches only `APP_URL` and `openpne:check`'s `--parent-url`, is reachable only from that command and
+  `openpne:setup` by test, follows no redirect and reads at most 64 KiB of a response. The
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
   are banned outright everywhere else, with the existing local-path readers named in an exact
   allowlist. The check tokenises rather than greps: requiring a literal `'https://…'` argument would

@@ -365,5 +365,34 @@ minutes old, so a running check's files are never taken for a misconfiguration.
 
 Where `openpne-data/` exists beside the release, the check takes it for a directory that must stay
 unserved even where a host serves the release's parent, and requires an `.htaccess` in it (its
-contents are not compared), mode 0700, and for MySQL the option file its dump reads, `mysql-backup.cnf`, at
+contents are not compared; `openpne:setup` copies the release's top one there), mode 0700, and for MySQL the option file its dump reads, `mysql-backup.cnf`, at
 0600, with a schema-only dump through it that still succeeds.
+
+## Site setup
+
+`php artisan openpne:setup` is the questions-and-answers way in for a shared host: it writes a new
+site's `.env`, then runs `openpne:install`, `openpne:admin:create` and `openpne:member:invite`
+unchanged, waiting on `openpne:check`'s web part in between. It runs only on a terminal. Run again,
+it goes on from the first step not yet done: `openpne-data/`, `.env`, the MySQL option file,
+`APP_KEY`, an administrator, the web check. `openpne:install` runs every time, being a no-op on an
+installed site, except where an administrator exists and a migration has not run, which is a new
+version unpacked over a live site and stops the command.
+
+Key invariants:
+
+1. **`.env` is written only where none exists**, from `.env.example` with the answers set, through a
+   file beside it at 0600 that is renamed into place once `Dotenv::parse` reads every answer back.
+   An answer `Env` would read otherwise (`true`, a quoted value, `${`, a control character, `"` with
+   `\` or `'`) is refused before it is written. The one later write is `TRUSTED_PROXIES`, while empty,
+   typed by the operator and never taken from what the web check saw; every other key must read back
+   unchanged.
+2. **The process that wrote `.env` does not go on with it**: it runs the command again through
+   `proc_open`, its environment stripped of the keys `.env` holds, and where `proc_open` is disabled
+   asks to be run again.
+3. **`openpne-data/`** is made beside the release at 0700 whichever the database, with a copy of the
+   release's top `.htaccess`; the SQLite database, the MySQL option file (`mysql-backup.cnf`, 0600)
+   and the backups go there. The backup line it prints writes `backup.sqlite` (`VACUUM INTO`) or
+   `backup.sql` beside a `.new` copy moved over the last, refuses a path holding a character a shell
+   or cron reads as its own, and is run once where `proc_open` allows.
+4. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
+   the web's PHP running as this account.
