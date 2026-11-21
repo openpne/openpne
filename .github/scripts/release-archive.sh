@@ -151,7 +151,7 @@ PY
 # check_tree <site> <sha>: what an archive has to hold, and what it must not.
 check_tree() {
   local site=$1 sha=$2 path failed=0
-  for path in .env.example artisan RELEASE tests/release-archive-probe.php public/index.php public/.htaccess public/robots.txt \
+  for path in .env.example .htaccess artisan RELEASE tests/release-archive-probe.php public/index.php public/.htaccess public/robots.txt \
     public/build/manifest.json public/build/.vite/license.md public/js/filament public/css/filament \
     vendor/autoload.php bootstrap/cache/packages.php bootstrap/cache/services.php \
     storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions \
@@ -166,6 +166,9 @@ check_tree() {
   # A site's own data: a database file, a log, a compiled view, a session, a signing key.
   path=$({ find "$site/storage" -type f ! -name .gitignore; find "$site/database" -type f -name '*.sqlite*'; } | head -n 5)
   [ -z "$path" ] || { printf '::error::a site'"'"'s own data is in the archive:\n%s\n' "$path" >&2; failed=1; }
+  # Rewrite rules of its own in any other directory would take the place of the top file's 403 there.
+  path=$(find "$site" -name .htaccess ! -path "$site/.htaccess" ! -path "$site/public/.htaccess" | head -n 5)
+  [ -z "$path" ] || { printf '::error::an .htaccess besides the top one and public/'"'"'s is in the archive:\n%s\n' "$path" >&2; failed=1; }
   grep -qxF "sha=$sha" "$site/RELEASE" || { printf '::error::RELEASE does not name %s\n' "$sha" >&2; failed=1; }
   [ "$failed" = 0 ] || exit 1
 }
