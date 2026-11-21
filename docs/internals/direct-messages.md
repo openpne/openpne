@@ -319,8 +319,8 @@ published content, and a private message is not that.
 8. Marking read moves `read_at` from null to a time and never the other way, so every report is
    idempotent and order between reports does not matter.
 9. A message written as chat carries no subject and no lineage. A new message — from either screen
-   or the MCP tool — is sent through `SendDirectMessage`, a draft through `UpdateDraft`, with the
-   same check, rate limit and notification.
+   or the MCP tool — is sent through `SendDirectMessage`, a saved draft through `UpdateDraft`, with
+   the same check and notification and the same rate-limit figure.
 10. No mailbox URL moves. What a Modern viewer gets from one is a redirect into the chat reading, and
     only ever for a message they are a party to.
 11. Deleting a conversation writes no record of itself. It moves the viewer's own side of the rows

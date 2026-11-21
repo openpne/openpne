@@ -39,7 +39,7 @@ not poll; the route inventory records the poll
 
 The room is a chrome registry **conversation** screen
 ([feature-modules.md](feature-modules.md)): below lg its bottom tab bar leaves while the composer is
-engaged and its chrome does not recede, so the composer is the last thing on the screen at every
+engaged and its chrome does not recede, so the composer reaches the foot of the screen at every
 scroll position.
 
 It also places itself when it opens — at the foot, or on the message a `?m=` link named — and
@@ -165,8 +165,8 @@ one the list stood at, every window change moves it on, and `applied()` is the s
 comes through. One that arrives against a generation that has passed is dropped rather than merged,
 which is what stops a live row being spliced across the gap (and the next watermark being taken from
 beyond it, where "load newer" would never ask). Three things are deliberately outside it: a deletion,
-which is a fact about the conversation rather than a page of it, a reaction write's answer, for the
-same reason, and the composer's own message,
+which is a fact about the conversation rather than a page of it; a reaction write's answer, for the
+same reason; and the composer's own message,
 which is held to the live window instead — it belongs at the foot of any list that ends at the
 newest, including the one just re-read to get back there.
 
@@ -618,7 +618,7 @@ merge its way out of. So `CreateGroupMessage` puts everything else — the messa
 resolution, the cursor advance, the posted event — inside `attach`'s persist callback rather than
 around it.
 
-A refused file — one over its cap, or a picture only the sidecar reads on a GD site — is a 422 on
+A refused file — one over its cap, or a picture only the sidecar reads on a GD site, for example — is a 422 on
 `images`/`images.N` that
 takes the **whole message** down, and the composer keeps the whole draft: body, mention rows and
 every picked file. Nothing is cleared until the message is actually written, so a retry carries what
@@ -725,9 +725,9 @@ reactions. An unparseable value is read as none, as an unparseable cursor is.
 Live agreement is the **latest window's** only, like the poll itself: the history window does not
 poll, so it catches up when the reader returns to the newest page. And some writes are exempt on
 purpose — a withdrawing member's rows go by FK cascade, which bumps nothing, so an open tab keeps
-showing them until it is reloaded; deleting a message or tearing a group down bumps nothing either,
-since the message a client would re-read is gone. Advancing every group's counter on a withdrawal is not worth what
-it buys.
+showing them until it is reloaded; advancing every group's counter on a withdrawal is not worth
+what it buys. Deleting a message or tearing a group down bumps nothing either, since the message a
+client would re-read is gone.
 
 Reactions are invisible to unread. They create no message row, and no unread read looks at a version,
 so cursors, badges and the room list's order cannot move because someone reacted.
