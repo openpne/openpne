@@ -46,7 +46,6 @@ class LinkCardTest extends TestCase
             'both sides just under the floor' => [[199, 149], false, 'Below 200 a side has nothing to enlarge.'],
             'at the height floor' => [[267, 200], true, 'The floor is inclusive: 200 is big enough.'],
             'one side under the floor' => [[200, 150], false, 'Both sides must clear it, not just the wide one.'],
-            // The term neither Signal nor Mattermost has: Mattermost would draw this one wide.
             'wide but short' => [[1000, 150], false, 'A short banner drawn full width reads as a stripe.'],
             // `files` never records a zero side — a canonical always has both — so
             // the case an unmeasurable picture actually produces is this one, not a 0.

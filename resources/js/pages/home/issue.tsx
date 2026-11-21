@@ -60,7 +60,7 @@ function Stories({ stories }: { stories: IssueStory[] }) {
 }
 
 /**
- * One issue (号), the same for every member, serving `/` and a dated URL through `home/archive`.
+ * One issue, the same for every member, serving `/` and a dated URL through `home/archive`.
  * Every optional section is drawn exactly when its key is present
  * (docs/internals/home-issues.md, "Rendering").
  */

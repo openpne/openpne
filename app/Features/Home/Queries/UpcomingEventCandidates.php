@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
 /**
  * Events about to happen, soonest first — a calendar, not news, and the only section that reads
  * forward from the publishing instant. Being a calendar is why it never consults the ledger and
- * never triggers an issue on its own (docs/internals/home-issues.md, "The window, and 休刊").
+ * never triggers an issue on its own (docs/internals/home-issues.md, "The window, and quiet days").
  */
 final class UpcomingEventCandidates
 {

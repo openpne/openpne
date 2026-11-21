@@ -487,11 +487,10 @@ what crosses to the renderers — the same reason the gates are decided once: tw
 tiles. A fetched card asks it through `LinkCard::hasLargeImage()` and an internal one from the
 record's own file, so the two kinds of card cannot take different shapes at the same size either.
 
-The threshold is **ours**, assembled rather than copied. Signal requires both sides ≥ 200 and merely
-not-square, so it enlarges portraits too; Mattermost requires width ≥ 150 and 4:3 with no lower bound
-on height. Here it is both sides ≥ 200 **and** 4:3, by integer cross-multiplication so the boundary
-is exact and a zero height cannot divide. The `height >= 200` term is in neither source and is what
-keeps a wide, short banner — 1000×150 — out of the full-width shape, where it draws as a stripe.
+The threshold is both sides ≥ 200 **and** at least 4:3, by integer cross-multiplication so the
+boundary is exact and a zero height cannot divide. The 4:3 term keeps portraits and squares out of
+the full-width shape, and the `height >= 200` term keeps a wide, short banner — 1000×150 — out of it,
+where it draws as a stripe.
 
 **The dimensions come from the `File`, not from `link_cards.image_width/height`.** Those columns are
 what the container declared, recorded before decoding as part of the size guard and read by nothing;

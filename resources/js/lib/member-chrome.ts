@@ -229,7 +229,7 @@ export function isHomeComponent(component: string, home: ModernHomeId): boolean 
     return component === 'home/issue' || (home === 'whats_new' && component === 'dashboard');
 }
 
-/** A day of できごと, latest or past: its band names the day and steps to the next, so nothing stands above it. */
+/** A day's issue, latest or past: its band names the day and steps to the next, so nothing stands above it. */
 export function isIssueDay(component: string): boolean {
     return component === 'home/issue' || component === 'home/archive';
 }
@@ -586,7 +586,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'dashboard',
-    // A day or a month of できごと is reached from its neighbours through its own band and foot.
+    // The issue pages, a day or a month, are reached from their neighbours through their own band and foot.
     'home/issue',
     'home/archive',
     'home/issues',

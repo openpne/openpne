@@ -36,7 +36,7 @@ class EmojiMapTest extends TestCase
     public function test_unmapped_id_stays_literal(): void
     {
         $this->assertSame('[i:999]', EmojiMap::convert('[i:999]'));
-        // i:108 exists in OP3 (iモード logo) but has no Unicode equivalent.
+        // i:108 exists in OP3 (the i-mode logo) but has no Unicode equivalent.
         $this->assertSame('[i:108]', EmojiMap::convert('[i:108]'));
     }
 

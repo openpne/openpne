@@ -115,7 +115,7 @@ test('the home bar is the site mark and its name, and nothing else', () => {
     expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });
 
-test('a past day of できごと takes the same bar as the latest, with no crumb above it', () => {
+test("a past day's issue takes the same bar as the latest, with no crumb above it", () => {
     const chrome = arrive('home/archive', '/home/2026/08/20', { issue: { monthHref: '/home/2026/08' } });
 
     renderWithProviders(<TopNav chrome={chrome} />);
@@ -124,7 +124,7 @@ test('a past day of できごと takes the same bar as the latest, with no crumb
     expect(screen.queryByRole('link', { name: 'What happened' })).toBeNull();
 });
 
-test('a month of できごと is the mark and the page it is, with no crumb above it', () => {
+test('a month of issues is the mark and the page it is, with no crumb above it', () => {
     const chrome = arrive('home/issues', '/home/2026/08');
 
     const { container } = renderWithProviders(<TopNav chrome={chrome} />);

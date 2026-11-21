@@ -95,7 +95,7 @@ final class PublishHomeIssue
     }
 
     /**
-     * Null is the 休刊 rule ({@see HomeIssuePlan::isBlank()}): a day on which nothing was born gets no
+     * Null is the quiet-day rule ({@see HomeIssuePlan::isBlank()}): a day on which nothing was born gets no
      * issue rather than an empty one.
      */
     public function plan(CarbonImmutable $now, ?SourceRef $pin = null, ?HomeIssueWindow $window = null): ?HomeIssuePlan

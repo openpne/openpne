@@ -91,7 +91,7 @@ to see where the day was cut. `isCurrent` means the issue is the last one that c
 (`HomeIssueDay::latest`), not that it is dated today; the page does not read it, and names a day
 "yesterday" by the site's calendar instead ("Rendering").
 
-## The window, and 休刊
+## The window, and quiet days
 
 An issue covers **`(previous issue's published_at, the last 06:00 boundary]`** — open at the start,
 closed at the end. Consecutive issues share their boundary instant, and a row written exactly on it
@@ -104,7 +104,7 @@ drew comments this week is not news again — the comments are, and they are not
 features. The score is then the cumulative count at publish time, so an old-but-still-busy thread
 cannot win a place it is not eligible for.
 
-**A quiet day gets no issue** (休刊). If stories, talk, newcomers and new groups are all empty, the
+**A quiet day gets no issue.** If stories, talk, newcomers and new groups are all empty, the
 publisher writes nothing and the next run's window simply spans the gap. Upcoming events do not
 count: the calendar is not news, and the same gathering is worth listing every day until it happens,
 so an issue it could trigger would come out every day of a quiet month saying nothing new.

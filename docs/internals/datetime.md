@@ -31,8 +31,8 @@ screens do not move under them.
 | `listStamp` | today `00:05` · this year `8月10日` · older `2025年12月31日` | A row whose reader is placing it on a calendar: diary and topic lists, the message inbox, community activity. |
 | `relative` | `たったいま` · `3分前` · `5時間前` · `2日前`, then `listStamp` | A row whose reader is asking what is new: notifications, timeline posts and replies, comments. |
 | `clockTime` | `00:05` | A message in a conversation, whose day is named by the heading above it rather than by the row. |
-| civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. Wherever an event's own dates appear they appear with the weekday, so the same datum never shows in two shapes; できごと's event rows are the one exception and take the month-day below. |
-| civil month-day, day span | `11月17日(火)` · `11月12日〜18日` | A heading line naming a day or a run of days — できごと's band, its event rows, its day steps and its day blocks. The month is the short one (`Tue, Nov 17`), the year follows rule 3, and the second end of a run inside one month of this year is its day alone. An event row is a line in a week-ahead list rather than the event's own page, so its year follows rule 3 too. |
+| civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. Wherever an event's own dates appear they appear with the weekday, so the same datum never shows in two shapes; the issue pages' event rows are the one exception and take the month-day below. |
+| civil month-day, day span | `11月17日(火)` · `11月12日〜18日` | A heading line naming a day or a run of days — an issue page's band, its event rows, its day steps and its day blocks. The month is the short one (`Tue, Nov 17`), the year follows rule 3, and the second end of a run inside one month of this year is its day alone. An event row is a line in a week-ahead list rather than the event's own page, so its year follows rule 3 too. |
 
 Every shape of an instant but `absolute` carries the full value as a `title`; `absolute` does not,
 since it already names the day and the minute and a title differing only in seconds is noise. A
