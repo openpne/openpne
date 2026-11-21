@@ -758,7 +758,7 @@ class SetupCommand extends Command
         $copy = PrivateFile::temp($data, self::TRIAL_PREFIX, '', 0o600);
 
         try {
-            $write = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', $database, "VACUUM INTO '{$copy}'"]);
+            $write = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', '-cmd', BackupLine::SQLITE_WAIT, $database, "VACUUM INTO '{$copy}'"]);
             if (! $write->successful()) {
                 return self::firstLine($write->errorOutput());
             }

@@ -145,7 +145,7 @@ final class SetupValuesTest extends TestCase
     public function test_the_backup_lines_write_aside_and_move_over_the_last_copy(): void
     {
         $this->assertSame(
-            "rm -f '/h/openpne-data/backup.sqlite.new' && '/usr/bin/sqlite3' -readonly '/h/openpne-data/database.sqlite'"
+            "rm -f '/h/openpne-data/backup.sqlite.new' && '/usr/bin/sqlite3' -readonly -cmd \".timeout 60000\" '/h/openpne-data/database.sqlite'"
             ." \"VACUUM INTO '/h/openpne-data/backup.sqlite.new'\" && mv '/h/openpne-data/backup.sqlite.new' '/h/openpne-data/backup.sqlite'",
             BackupLine::sqlite('/usr/bin/sqlite3', '/h/openpne-data/database.sqlite', '/h/openpne-data'),
         );
