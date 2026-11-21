@@ -133,6 +133,18 @@ class OperatorMarkdownAdminTest extends TestCase
         $this->assertNull(Banner::where('name', 'top_after')->value('markdown'));
     }
 
+    public function test_a_stored_footer_set_back_to_the_default_is_saved(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::FooterAfterMarkdown, 'custom');
+
+        Livewire::test(DesignSettings::class)
+            ->fillForm(['footer_after_markdown' => SnsSettingKey::FooterAfterMarkdown->default()])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after_markdown', 'value' => SnsSettingKey::FooterAfterMarkdown->default()]);
+    }
+
     /** The first two have only the HTML row, as raw-HTML mode leaves them, and their save changes nothing but the order. */
     public function test_saving_a_gadget_leaves_a_body_nobody_wrote_unconverted(): void
     {
