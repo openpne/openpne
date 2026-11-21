@@ -17,8 +17,7 @@ use Tests\TestCase;
 /**
  * Pins the feature gate on every route a unit owns, over the whole route inventory so a later route
  * cannot dodge it; ownership is claimed by name prefix, by URL segment (catching an unnamed alias) or
- * by OUT_OF_PREFIX. A DEPENDENCIES route requires every gate in its set, so ownership is single but
- * the gate set is not.
+ * by OUT_OF_PREFIX. A DEPENDENCIES route needs every gate in its set, owned or not.
  */
 class FeatureRouteMiddlewarePinTest extends TestCase
 {
@@ -30,9 +29,9 @@ class FeatureRouteMiddlewarePinTest extends TestCase
     ];
 
     /**
-     * Routes needing a second unit's gate as well as their owner's: a screen one unit owns whose
-     * purpose is another unit's lens (the friend diary feed). Both gates are required here and
-     * neither counts as a stray below, so the pair cannot decay to one.
+     * Routes needing a unit's gate beyond their owner's, if they have one: a screen one unit owns
+     * whose purpose is another unit's lens (the friend diary feed). Every gate is required here and
+     * none counts as a stray below, so the set cannot decay.
      *
      * @var array<string, list<string>>
      */
@@ -53,7 +52,7 @@ class FeatureRouteMiddlewarePinTest extends TestCase
      */
     private const UNGATED = [];
 
-    public function test_every_feature_owned_route_carries_its_gate(): void
+    public function test_every_route_carries_its_owners_gate_and_its_dependencies(): void
     {
         $offenders = [];
 
@@ -61,11 +60,11 @@ class FeatureRouteMiddlewarePinTest extends TestCase
             $feature = $this->owner($route);
             $name = (string) $route->getName();
 
-            if ($feature === null || in_array($name, self::UNGATED, true)) {
+            if (in_array($name, self::UNGATED, true)) {
                 continue;
             }
 
-            foreach ([$feature->value, ...(self::DEPENDENCIES[$name] ?? [])] as $required) {
+            foreach ([...($feature === null ? [] : [$feature->value]), ...(self::DEPENDENCIES[$name] ?? [])] as $required) {
                 if (! in_array(EnsureFeatureEnabled::class.':'.$required, $route->gatherMiddleware(), true)) {
                     $offenders[] = ($name === '' ? '(unnamed)' : $name)." [{$route->uri()}] expects {$required}";
                 }
@@ -73,7 +72,7 @@ class FeatureRouteMiddlewarePinTest extends TestCase
         }
 
         $this->assertSame([], $offenders,
-            'Feature-owned routes without their EnsureFeatureEnabled gate: '.implode(', ', $offenders));
+            'Routes without the EnsureFeatureEnabled gates they need: '.implode(', ', $offenders));
     }
 
     public function test_no_route_carries_a_gate_for_a_unit_that_does_not_own_it(): void
@@ -87,9 +86,11 @@ class FeatureRouteMiddlewarePinTest extends TestCase
                 }
 
                 $declared = substr($middleware, strlen(EnsureFeatureEnabled::class) + 1);
-                $allowed = in_array($declared, self::DEPENDENCIES[(string) $route->getName()] ?? [], true);
-                if (! $allowed && Feature::tryFrom($declared) !== $this->owner($route)) {
-                    $offenders[] = $route->getName().' [gated as '.$declared.']';
+                $unit = Feature::tryFrom($declared);
+                $allowed = $unit !== null
+                    && ($unit === $this->owner($route) || in_array($declared, self::DEPENDENCIES[(string) $route->getName()] ?? [], true));
+                if (! $allowed) {
+                    $offenders[] = ($route->getName() ?? '(unnamed)')." [{$route->uri()}] gated as {$declared}";
                 }
             }
         }

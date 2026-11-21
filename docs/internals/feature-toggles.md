@@ -60,12 +60,15 @@ routes stay **registered** —
 route exists — so the middleware, not the route table, is the gate. It is attached in
 [`routes/web.php`](../../routes/web.php): to each unit's route group, and individually to the
 feature-owned endpoints that live outside their prefix (e.g. `member.config.diary`,
-`notifications.center.friendAccept` / `friendReject`), and to the `mcp` OAuth consent screen. The
-rest of `mcp` carries it in [`routes/ai.php`](../../routes/ai.php) instead: on the group wrapping all
-three of the endpoint's methods, and on the OAuth routes.
+`notifications.center.friendAccept` / `friendReject`), to the `group` seat an owner gives an AI
+account from the member-config pages (`member.config.ai.groups.*`, routes no unit owns), and to the
+`mcp` OAuth consent screen. The rest of `mcp` carries it in [`routes/ai.php`](../../routes/ai.php)
+instead: on the group wrapping all three of the endpoint's methods, and on the OAuth routes.
 
 `FeatureRouteMiddlewarePinTest` walks the whole route inventory and fails on a feature-owned route
-that is neither gated nor consciously allowlisted, so a route added later cannot dodge the gate.
+that is neither gated nor consciously allowlisted, so a route added later cannot dodge the gate. Its
+dependency map names the gates a route needs beyond its owner's, owned or not, and a gate naming no
+unit fails wherever it sits.
 
 Deliberately **not** gated: the shared compose preview (its store path gates per feature), blocks,
 member profiles, and the `/m/*` compat redirects (their canonical target answers).
