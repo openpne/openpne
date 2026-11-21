@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { PlaceSwitch } from '@/components/place-switch';
 import { headingVariants } from '@/components/ui/heading';
@@ -8,7 +8,7 @@ import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
-/** One shape and one height whether the crumb links or is plain text: what sticks below the bar offsets by the single `--modern-place-bar` the shell publishes. */
+/** One shape and one height whether the bar holds a place or a title: what sticks below the bar offsets by the single `--modern-place-bar` the shell publishes. */
 const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
 
 /**
@@ -38,25 +38,16 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
         );
     }
 
-    const crumb = header.type === 'trail' ? header.crumb : null;
-    if (!crumb) {
+    if (header.type !== 'title' || !header.desk) {
         return null;
     }
-    const text = <span className="min-w-0 truncate">{typeof crumb.label === 'string' ? crumb.label : t(crumb.label.key, crumb.label.replacements)}</span>;
 
     return (
         <Bar>
-            {crumb.link ? (
-                // The phone pill's fill, unchanged: the same element means the same thing at both
-                // widths, and it is the affordance the bare trail failed to be.
-                <Link href={crumb.href} className={cn(PILL, 'px-3', headingVariants({ variant: 'bar' }), 'bg-accent')}>
-                    {text}
-                </Link>
-            ) : (
-                // A form's crumb goes nowhere, so it is painted as text — in the ground color, which
-                // shows as nothing until the form scrolls under it.
-                <span className={cn(PILL, 'px-3 bg-background text-sm text-muted-foreground')}>{text}</span>
-            )}
+            {/* Nothing here is pressable, so it is painted as text — in the ground color, which shows as nothing until the page scrolls under it. */}
+            <span className={cn(PILL, 'bg-background px-3 text-sm text-muted-foreground')}>
+                <span className="min-w-0 truncate">{typeof header.label === 'string' ? header.label : t(header.label.key, header.label.replacements)}</span>
+            </span>
         </Bar>
     );
 }

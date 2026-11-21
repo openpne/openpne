@@ -10,7 +10,7 @@ import { headingVariants } from '@/components/ui/heading';
 import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
-import { type Chrome, type ChromeLabel, headerOf } from '@/lib/member-chrome';
+import { type Chrome, headerOf } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
@@ -142,76 +142,47 @@ function MarkHome() {
 }
 
 /** The site mark, then where the reader is (docs/internals/modern-frame.md, "The phone header"). */
-function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
+function HeaderBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
     const { component, props } = usePage<PageProps>();
-    const label = (l: ChromeLabel) => t(l.key, l.replacements);
-    const text = (l: ChromeLabel | string) => (typeof l === 'string' ? l : label(l));
     const guest = props.auth.user === null;
     const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
     const end = guest ? <GuestEntry className="ml-auto" /> : <NavDrawer />;
+    const name = cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate px-1 text-center');
 
-    if (header.type === 'place') {
+    if (header.type === 'brand') {
         return (
             <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
-                {/* Each outer column is as wide as the wider of the two ends — the menu's 44px, or a guest's way in ghosted under the mark — so even a name that fills the row stays at the middle of the screen. */}
-                <div className="grid min-w-0 flex-1 grid-cols-[minmax(min-content,1fr)_minmax(0,auto)_minmax(min-content,1fr)] items-center gap-2">
-                    <div className="grid min-w-11 items-center justify-items-start *:[grid-area:1/1]">
-                        <MarkHome />
-                        {guest && <GuestEntryGhost />}
-                    </div>
-                    {header.pressable ? (
-                        <PlaceSwitch scope={header.scope} variant="phone" />
-                    ) : (
-                        <span className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate px-1 text-center')}>{header.scope.name}</span>
-                    )}
-                    <div className="flex min-w-11 justify-end">{end}</div>
-                </div>
-            </TopBar>
-        );
-    }
-
-    const brand = header.type === 'brand';
-    // A hub names itself; everything else names where it is.
-    const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
-    const crumb = header.type === 'trail' && !hubTitle ? header.crumb : null;
-
-    return (
-        <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
-            {/* Left-aligned, not centered: a trail reads from its root, and the root is the way home. */}
-            {brand ? (
-                // No Tip: the site name beside the mark is the word a reader sees.
+                {/* No Tip: the site name beside the mark is the word a reader sees. */}
                 <Link href="/" {...pressPrefetch('/')} className="flex min-h-12 min-w-0 items-center gap-2">
                     <BrandMark size="sm" />
                     <BrandName className="truncate" />
                 </Link>
-            ) : (
-                <MarkHome />
-            )}
-            {(hubTitle || crumb) && (
-                <span aria-hidden className="shrink-0 text-muted-foreground">
-                    ›
-                </span>
-            )}
-            {/* A hub's own h1 stays in the page, so the bar's copy of it would be a second
-                announcement of the same words. */}
-            {hubTitle && (
-                <span aria-hidden className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate')}>
-                    {label(hubTitle)}
-                </span>
-            )}
-            {crumb &&
-                (crumb.link ? (
-                    // Pressable, so it is painted as pressable: the pill is the affordance a bare
-                    // trailing › was not.
-                    <Link href={crumb.href} className="flex min-h-11 min-w-0 items-center rounded-full bg-accent px-3">
-                        <span className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate')}>{text(crumb.label)}</span>
-                    </Link>
-                ) : (
-                    // A form's crumb goes nowhere, so it must not look as though it does.
-                    <span className="min-w-0 truncate text-sm text-muted-foreground">{text(crumb.label)}</span>
-                ))}
-            {end}
+                {end}
+            </TopBar>
+        );
+    }
+
+    return (
+        <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
+            {/* Each outer column is as wide as the wider of the two ends — the menu's 44px, or a guest's way in ghosted under the mark — so even a name that fills the row stays at the middle of the screen. */}
+            <div className="grid min-w-0 flex-1 grid-cols-[minmax(min-content,1fr)_minmax(0,auto)_minmax(min-content,1fr)] items-center gap-2">
+                <div className="grid min-w-11 items-center justify-items-start *:[grid-area:1/1]">
+                    <MarkHome />
+                    {guest && <GuestEntryGhost />}
+                </div>
+                {header.type === 'place' &&
+                    (header.pressable ? <PlaceSwitch scope={header.scope} variant="phone" /> : <span className={name}>{header.scope.name}</span>)}
+                {header.type === 'title' && (
+                    // A hub's own h1 stays in the page, so the bar's copy of it would be a second
+                    // announcement of the same words.
+                    <span aria-hidden={header.hub || undefined} className={name}>
+                        {typeof header.label === 'string' ? header.label : t(header.label.key, header.label.replacements)}
+                    </span>
+                )}
+                {header.type === 'none' && <span />}
+                <div className="flex min-w-11 justify-end">{end}</div>
+            </div>
         </TopBar>
     );
 }
@@ -221,7 +192,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
  * ✕ is how a mode is left (docs/internals/modern-frame.md, "The phone header").
  */
 export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
-    return chrome.compose ? <SheetBar chrome={chrome} hidden={hidden} /> : <BreadcrumbBar chrome={chrome} hidden={hidden} />;
+    return chrome.compose ? <SheetBar chrome={chrome} hidden={hidden} /> : <HeaderBar chrome={chrome} hidden={hidden} />;
 }
 
 function SheetBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {

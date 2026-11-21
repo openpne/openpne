@@ -63,8 +63,6 @@ export interface Chrome {
     tabsLabel?: ChromeLabel;
     /** Rendered only for a signed-in member. */
     action?: ChromeAction;
-    /** The page opens on a band of its own, so below desk width its h1 is heard and not seen. */
-    deskHeading?: boolean;
     width: 'standard' | 'narrow';
     gap: '4' | '6' | '8';
     foreground?: boolean;
@@ -222,14 +220,14 @@ const HOME_SECTION: NavSection = { href: '/', match: ['/', '/home/'], icon: Hous
 const homeSection = (home: ModernHomeId): NavSection => (home === 'whats_new' ? { ...HOME_SECTION, match: ['/', '/dashboard'] } : HOME_SECTION);
 
 /**
- * The page `/` serves, plus the latest issue where `/` serves the other one. A dated issue is not one,
- * though its bar carries the brand too ({@link isIssueDay}).
+ * The page `/` serves, plus the latest issue where `/` serves the other one. A past day's issue is not
+ * one: its header names the section it stands in ({@link isIssueDay}).
  */
 export function isHomeComponent(component: string, home: ModernHomeId): boolean {
     return component === 'home/issue' || (home === 'whats_new' && component === 'dashboard');
 }
 
-/** A day's issue, latest or past: its band names the day and steps to the next, so nothing stands above it. */
+/** A day's issue, latest or past: its band names the day and steps to the next, so the header names no day. */
 export function isIssueDay(component: string): boolean {
     return component === 'home/issue' || component === 'home/archive';
 }
@@ -363,7 +361,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const action = enabled(props, 'diary') ? WRITE_DIARY : undefined;
         return isHomeComponent('dashboard', homeOf(props)) ? { mode: 'embedded', action } : { mode: 'section', title: WHATS_NEW, action };
     },
-    'home/issues': () => ({ mode: 'section', title: HAPPENINGS, deskHeading: true }),
+    'home/issues': () => ({ mode: 'section', title: HAPPENINGS }),
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
         mode: 'section',
@@ -572,8 +570,8 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
 };
 
 /**
- * Modern components with intentionally no context crumb; ChromeContextCoverageTest fails a new page
- * that lands unclassified.
+ * Modern components with intentionally no context; ChromeContextCoverageTest fails a new page that
+ * lands unclassified.
  */
 export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'dashboard',
@@ -596,7 +594,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'block/add',
     'block/remove',
     'friend/link',
-    // Reached by a guest as well as a member, so there is no one parent to crumb back to.
+    // Reached by a guest as well as a member, so it stands in no one part of the site.
     'policy/show',
 ];
 
@@ -612,27 +610,21 @@ export function resolveChrome(
 /** The pages that ARE a place, whose own hero names it directly below the header. */
 const PLACE_TOPS = ['group/show', 'member/show'] as const;
 
-/** These pages speak the home grammar in the header: mark and site name, no crumb (docs/internals/modern-frame.md, "The phone header"). */
+/** These pages speak the home grammar in the header: mark and site name, and no name in the middle (docs/internals/modern-frame.md, "The phone header"). */
 export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
 
-export interface TrailCrumb {
-    label: ChromeLabel | string;
-    href: string;
-    /** A crumb that is not pressable must not be painted as one. */
-    link: boolean;
-}
-
 /**
- * `place` is pressable for a member only, since a guest's sections may sit behind the login wall;
- * `trail` draws the hub title or the last item of a screen's trail (docs/internals/modern-frame.md,
- * "The phone header").
+ * A guest's `place` is not pressable, since their sections may sit behind the login wall. A `hub`
+ * title is the screen's own h1 again and so is not read aloud, and only a `desk` title stands in the
+ * place bar too (docs/internals/modern-frame.md, "The phone header").
  */
 export type Header =
     | { type: 'brand' }
     | { type: 'place'; scope: ChromeScope; pressable: boolean }
-    | { type: 'trail'; crumb: TrailCrumb | null };
+    | { type: 'title'; label: ChromeLabel | string; hub: boolean; desk: boolean }
+    | { type: 'none' };
 
 export interface HeaderPage {
     component: string;
@@ -641,27 +633,36 @@ export interface HeaderPage {
 }
 
 /**
- * A screen inside no place answers its trail's last item and never home, since "you are at home" on
- * a settings page would be false. A form takes its trail rather than its scope, and a guest's trail is
- * text: the bar never carries a link beside unsaved input or into the login wall.
+ * A title names the part of the site a screen stands in, never the screen, and a screen inside no
+ * place answers the last item of its context rather than home, since "you are at home" on a settings
+ * page would be false. A form takes its context rather than its scope, so no sections open beside
+ * unsaved input.
  */
 export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage): Header {
-    if (isHomeComponent(component, home) || isIssueDay(component) || isPlaceTop(component)) {
+    if (isHomeComponent(component, home) || isPlaceTop(component)) {
         return { type: 'brand' };
+    }
+
+    if (isIssueDay(component)) {
+        return { type: 'title', label: HAPPENINGS, hub: false, desk: false };
     }
 
     if (chrome.scope && chrome.form !== true) {
         return { type: 'place', scope: chrome.scope, pressable: !guest };
     }
 
+    if (chrome.mode === 'section' && chrome.title) {
+        return { type: 'title', label: chrome.title, hub: true, desk: false };
+    }
+
     const last = chrome.context?.[chrome.context.length - 1];
 
-    return { type: 'trail', crumb: last ? { label: last.label, href: last.href, link: chrome.form !== true && !guest } : null };
+    return last ? { type: 'title', label: last.label, hub: false, desk: true } : { type: 'none' };
 }
 
 /** The shell publishes `--modern-place-bar` on exactly the screens PlaceBar draws on. */
 export function hasPlaceBar(chrome: Chrome, page: HeaderPage): boolean {
     const header = headerOf(chrome, page);
 
-    return header.type === 'place' || (header.type === 'trail' && header.crumb !== null);
+    return header.type === 'place' || (header.type === 'title' && header.desk);
 }

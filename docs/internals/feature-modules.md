@@ -206,7 +206,8 @@ into ([layout-hooks.md](layout-hooks.md)). Per-section defaults live in the chro
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame. What the
 frame draws from it — the phone header, the bottom tabs, the drawer, the desk-width place bar —
-is [modern-frame.md](modern-frame.md). The heading row's action button is desktop-only: on
+is [modern-frame.md](modern-frame.md). Below `lg` a hub's h1 is read and not drawn, the phone
+header naming the hub instead. The heading row's action button is desktop-only: on
 mobile the registry's `action` is the extended FAB
 ([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
 bottom bar, and an `embedded` page, having no heading row, has only the FAB. That mobile chrome recedes as a signed-in member reads: scrolling down
@@ -222,7 +223,7 @@ hub's instant-save controls are not.
 The registry's `compose` flag (which implies `form`) marks the seven screens whose
 job is writing one thing — creating and editing a diary, a topic, an event, a
 message, and posting to the timeline. Below lg those become a full-page sheet: the
-top bar carries a close control (in-app history, else the registry's trail) plus the page's
+top bar carries a close control (in-app history, else the registry's context) plus the page's
 own action(s), portalled in by
 [`ComposeSheetAction`](../../resources/js/components/compose/compose-sheet-action.tsx).
 A form that submits natively wires them as external submitters
@@ -237,7 +238,7 @@ enters bottom-to-top and slides back down when the
 close control is used, which is the one exit that animates: a system back and the
 navigation after a submit are immediate. No animation runs under
 `prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
-header with its trail as static text.
+header, its context's last item named in the middle as text.
 The registry's `conversation` flag marks a room a member stays in, reading and
 writing in the same place — group talk and a direct message room. Below lg it holds its
 chrome still: the header and the bottom tabs stand while the room is read, and the tabs

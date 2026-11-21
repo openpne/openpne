@@ -73,6 +73,24 @@ const DATE_FORMATTING_RESTRICTIONS = [
     },
 ];
 
+// The frame answers to the width, so a page under pages/ draws one layout for both (docs/internals/modern-frame.md,
+// "Desk width"). The files listed held an lg branch already; the rule keeps the list from growing.
+const PAGES_WITH_WIDTH_BRANCHES = [
+    'resources/js/pages/diary/edit.tsx',
+    'resources/js/pages/diary/new.tsx',
+    'resources/js/pages/group/event/edit.tsx',
+    'resources/js/pages/group/talk/index.tsx',
+    'resources/js/pages/group/topic/edit.tsx',
+    'resources/js/pages/message/conversation/index.tsx',
+    'resources/js/pages/message/edit.tsx',
+    'resources/js/pages/timeline/new.tsx',
+];
+const PAGE_WIDTH_MESSAGE = 'A page under pages/ takes no lg: or max-lg: class of its own: the frame and the shared components answer to the width.';
+const PAGE_WIDTH_RESTRICTIONS = [
+    { selector: 'Literal[value=/(^|[\\s:])(max-)?lg:/]', message: PAGE_WIDTH_MESSAGE },
+    { selector: 'TemplateElement[value.raw=/(^|[\\s:])(max-)?lg:/]', message: PAGE_WIDTH_MESSAGE },
+];
+
 const APPEARANCE = ['color', 'typography', 'spacing', 'shape', 'effects', 'motion'];
 // The margin and position utilities app.css declares are layout the grammar cannot place; a
 // contract that writes its own allow inherits nothing, so each one spreads this too.
@@ -140,6 +158,20 @@ export default tseslint.config(
                 JSX_LINE_COMMENT_RESTRICTION,
                 ...GLOB_RESTRICTIONS,
                 COUNT_PHRASE_RESTRICTION,
+            ],
+        },
+    },
+    {
+        files: ['resources/js/pages/**/*.{ts,tsx}'],
+        ignores: ['resources/js/pages/**/*.test.{ts,tsx}', ...PAGES_WITH_WIDTH_BRANCHES],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                ...DATE_FORMATTING_RESTRICTIONS,
+                JSX_LINE_COMMENT_RESTRICTION,
+                ...GLOB_RESTRICTIONS,
+                COUNT_PHRASE_RESTRICTION,
+                ...PAGE_WIDTH_RESTRICTIONS,
             ],
         },
     },

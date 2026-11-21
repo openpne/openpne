@@ -55,7 +55,8 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
-                    className={chrome.deskHeading ? 'max-lg:sr-only' : undefined}
+                    // Below lg the phone header names a hub, so its h1 is heard and not seen there.
+                    className={chrome.mode === 'section' ? 'max-lg:sr-only' : undefined}
                     action={
                         action && (
                             <ActionLink href={action.href}>
