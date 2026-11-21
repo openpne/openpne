@@ -1,5 +1,4 @@
 {
-    "%Activity%": "%Activity%",
     "%Activity% %Friend%": "%friend%の%activity%",
     "%Activity% All": "SNSメンバーの%activity%",
     "%Activity% of %Friend%": "%Friend%の%Activity%",
@@ -57,8 +56,6 @@
     "%Friend% requests": "%Friend%申請",
     "%Friends% only": "%Friends%のみ",
     "%my_friend% Setting": "%my_friend%管理",
-    "%Post_activity%": "%Post_activity%",
-    "%Topic%": "%Topic%",
     "%Topic% deleted.": "%Topic%を削除しました。",
     "%Topic% Name": "%topic%名",
     "%Topic% post authority": "%topic%の作成権限",

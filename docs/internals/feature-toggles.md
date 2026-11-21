@@ -8,7 +8,8 @@ The nine units are the cases of [`App\Support\Feature`](../../app/Support/Featur
 `diary`, `directMessage`, `timeline`, `group`, `groupTopic`, `groupEvent`, `groupTalk`, `friend`,
 `mcp`. The case value is the feature vocabulary the
 [surface resolver](feature-modules.md#surface-selection) already uses, and normally the route-name
-prefix and the URL segment too. Some units come apart from it: `directMessage`'s routes and URLs stay
+prefix and the URL segment too. Some units come apart from it: `group`'s URL segment is `groups`,
+`directMessage`'s routes and URLs stay
 on the OpenPNE 3 `message` word until they are redesigned, and `groupTopic` / `groupEvent` /
 `groupTalk` own `group.topics.*` / `group.events.*` / `group.talk.*` — nested inside their parent's
 prefix, which `owningRouteName()` resolves by longest match. They declare their prefixes explicitly
@@ -38,7 +39,7 @@ content. The security keys in the same enum fail *closed*, for the opposite reas
 
 ## Administration
 
-[`FeatureSettings`](../../app/Filament/Pages/FeatureSettings.php) (admin → Settings → Features)
+[`FeatureSettings`](../../app/Filament/Pages/FeatureSettings.php) (admin → Settings → Feature settings)
 carries one toggle per unit and, like its sibling settings pages, stores every key of its group on
 save — so the first save materializes a row for every unit, including the enabled ones. Only the
 settings cache is cleared; the nav and gadget row caches never embed feature state (see below).
@@ -59,9 +60,9 @@ routes stay **registered** —
 route exists — so the middleware, not the route table, is the gate. It is attached in
 [`routes/web.php`](../../routes/web.php): to each unit's route group, and individually to the
 feature-owned endpoints that live outside their prefix (`member.config.diary`,
-`notifications.center.friendAccept` / `friendReject`). `mcp` carries it in
-[`routes/ai.php`](../../routes/ai.php) instead, on the group wrapping all three of the endpoint's
-methods.
+`notifications.center.friendAccept` / `friendReject`), and to the `mcp` OAuth consent screen. The
+rest of `mcp` carries it in [`routes/ai.php`](../../routes/ai.php) instead: on the group wrapping all
+three of the endpoint's methods, and on the OAuth routes.
 
 `FeatureRouteMiddlewarePinTest` walks the whole route inventory and fails on a feature-owned route
 that is neither gated nor consciously allowlisted, so a route added later cannot dodge the gate.
@@ -87,7 +88,8 @@ switching a unit takes effect without clearing them.
 ## Modern surface
 
 The Inertia shell shares `enabledFeatures`, the resolved state of every unit
-(`Feature::enabledMap()`, so a call site never re-applies the dependency). The nav sections, the
+(`Feature::enabledMap()`, so a call site never re-applies the dependency); a guest gets every unit
+`false`, so the prop discloses no toggle state. The nav sections, the
 compose action, the dashboard sections and the member page read it and stop offering a
 switched-off unit.
 

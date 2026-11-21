@@ -50,7 +50,8 @@ the packet ends up. `64:ff9b:1::/48` is refused outright: RFC 6052 allows the em
 several offsets there, so there is no single position to read.
 
 A NAT64 **network-specific** prefix is any global prefix the operator chose, so it cannot be
-recognised from the address alone. An install behind one must list it in `outbound.denied_cidrs`.
+recognised from the address alone. An install behind one must list it in
+`OPENPNE_OUTBOUND_DENIED_CIDRS`.
 
 ## Why there is no proxy setting
 
@@ -97,11 +98,12 @@ resolver's own timeout, outside the budget.
 
 ## The push endpoint seam
 
-Web push is the one outbound path that does not go through `SafeHttpFetcher`. The requests are made
+Of the outbound paths to an address the operator did not choose, web push is the one that does not
+go through `SafeHttpFetcher`. The requests are made
 by `minishlink/web-push`, which encrypts the payload and hands it to an HTTP client; short of
 reimplementing that encryption there is nowhere to inject the fetcher. The client itself is built by
 [`PushClientFactory`](../../app/Outbound/PushClientFactory.php), so the boundary test above still
-holds — an HTTP client is still only constructed inside `App\Outbound` — but what it builds does not
+holds — the client is constructed inside `App\Outbound` — but what it builds does not
 validate a destination or pin a connection. This is a second seam, and it is weaker. What it is,
 plainly:
 
@@ -160,7 +162,7 @@ bounded here beyond libcurl's own limits).
 
 - Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy,
   bounded-response client this app builds; that is a weaker guarantee than the fetcher's, and it is
-  the only outbound path allowed to be. The client is reachable only from the push seam, by test —
+  the only path to an address the operator did not choose that is allowed to be. The client is reachable only from the push seam, by test —
   the directory allowlist below would not otherwise stop anything in `App\Outbound` from fetching
   on it.
 - `App\Outbound` is the only directory in `app/` that fetches a URL anyone but the operator chose,

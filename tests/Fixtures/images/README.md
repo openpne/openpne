@@ -1,9 +1,9 @@
 # Image fixtures
 
-Byte images for the image-processor contract and canonical-delivery tests. Each carries a searchable
-`LEAK` or date sentinel, so a byte that survives a re-encode fails an assertion. GD wrote
-a clean baseline image, then a throwaway generator spliced hand-built EXIF / XMP / comment segments
-(a real GPS IFD plus Orientation) into the container:
+Byte images for the image-processor contract and canonical-delivery tests. The ones with metadata
+carry a searchable `LEAK` or date sentinel, so a byte that survives a re-encode fails an assertion.
+For those not written by imgproxy, GD wrote a clean baseline image, then a throwaway generator spliced
+hand-built EXIF / XMP / comment segments (a real GPS IFD plus Orientation) into the container:
 
 | file | contents |
 |---|---|

@@ -24,7 +24,7 @@ locale mismatch would silently drop the group to the end of the sidebar.
   above rather than standing on its own: one subject named twice means two screens claim one job.
 - A Resource overrides `getNavigationLabel()` for this, never its `modelLabel` /
   `pluralModelLabel` — those stay the plain entity name that buttons, breadcrumbs and record
-  headings read ("Create community"), which is a different job from labelling a sidebar row.
+  headings read ("Create Admin User"), which is a different job from labelling a sidebar row.
 
 ## Placement
 
