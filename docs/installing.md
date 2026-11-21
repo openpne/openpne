@@ -576,9 +576,10 @@ there. All of those send mail.
 - **Back up** the database, `.env` (it holds `APP_KEY`), `storage/oauth-private.key` and
   `storage/oauth-public.key` if step 3 made them, and, when `OPENPNE_FILES_DISK` names a disk, the
   files on it. With the default the stored files are in the database. For SQLite,
-  `sqlite3 -readonly /srv/openpne/database.sqlite ".backup '/path/to/copy.sqlite'"` writes a
-  consistent copy while the site runs; copying the file alone can lose the latest rows. A copy
-  holds everything the database does: keep it where only the site user reads it.
+  `sqlite3 -readonly -cmd ".timeout 60000" /srv/openpne/database.sqlite "VACUUM INTO '/path/to/copy.sqlite'"`
+  writes a consistent copy while the site runs, and fails rather than write over an earlier copy
+  at that path; copying the file alone can lose the latest rows. A copy holds everything the
+  database does: keep it where only the site user reads it.
 - **Update** by [updating.md](updating.md).
 - **After editing `.env`**, restart the queue worker if you run one
   (`sudo systemctl restart openpne-worker`): it read the settings when it started. A site that has
