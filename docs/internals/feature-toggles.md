@@ -175,10 +175,11 @@ friend diary feed (`diary.list_friend`, gated as `diary` **and** `friend`), the 
 dashboard digest of it, the friend-scoped gadgets, and the home feed's friend branch
 ([`TimelineFeedScope::apply()`](../../app/Features/Timeline/TimelineFeedScope.php), so its three
 consumers follow from one place while the own-posts and all-members tiers stay). Two seams state the
-dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinTest`'s dependency map
-(a route needing a second gate) and [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
-second unit per context — `activityBox` goes on the home, where it is the friend feed, and stays on a
-profile, where it is the owner's own timeline).
+dependency where the unit is not the owner: `FeatureRouteMiddlewarePinTest`'s dependency map (a route
+needing a gate beyond its owner's, or a gate on a route no unit owns) and
+[`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a second unit per context —
+`activityBox` goes on the home, where it is the friend feed, and stays on a profile, where it is the
+owner's own timeline).
 
 ## Upgrade
 
