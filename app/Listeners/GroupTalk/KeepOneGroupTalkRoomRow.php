@@ -12,9 +12,9 @@ use Throwable;
 
 /**
  * On `NotificationSent` rather than before the send, so the deletion can never outrun the insert.
- * Everything past the filters is wrapped in a `try`/`report()`: an escaping exception would skip the
- * event's later listeners, the push among them, and fail the delivery after its row is written (on
- * `sync`, with the broadcast's remaining recipients).
+ * Everything past the filters is wrapped in a `try`/`report()`: an escaping exception would skip
+ * whichever listeners run after it, possibly the push, and fail the delivery after its row is written
+ * (on `sync`, with the broadcast's remaining recipients).
  */
 final class KeepOneGroupTalkRoomRow
 {
