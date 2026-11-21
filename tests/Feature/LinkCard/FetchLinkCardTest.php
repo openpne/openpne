@@ -27,6 +27,7 @@ use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
 
@@ -105,6 +106,44 @@ class FetchLinkCardTest extends TestCase
 
         $this->assertSame(LinkCardStatus::Failed, $card->fresh()?->status);
         $this->assertSame([], $this->outboundRequests, 'The guard must refuse before a socket is opened.');
+    }
+
+    #[DataProvider('unusableJobTimeouts')]
+    public function test_an_unusable_job_timeout_falls_back_to_the_default(mixed $timeout): void
+    {
+        config()->set('openpne.outbound.job_timeout', $timeout);
+        $card = $this->card('https://example.com/article');
+        $this->queueHtml('<html><head><meta property="og:title" content="An article"></head></html>');
+
+        $this->runJob($card);
+
+        $this->assertCount(1, $this->outboundRequests);
+        $this->assertSame(LinkCardStatus::Ok, $card->fresh()?->status);
+        // The fake fetcher's 8-second request timeout fits inside the 20-second default, not inside a 1-second fallback.
+        $this->assertSame(8, $this->outboundOptions[0]['timeout']);
+    }
+
+    public function test_a_positive_job_timeout_bounds_the_request(): void
+    {
+        config()->set('openpne.outbound.job_timeout', 2);
+        $card = $this->card('https://example.com/article');
+        $this->queueHtml('<html><head><meta property="og:title" content="An article"></head></html>');
+
+        $this->runJob($card);
+
+        $timeout = $this->outboundOptions[0]['timeout'];
+        $this->assertGreaterThan(1, $timeout);
+        $this->assertLessThanOrEqual(2, $timeout);
+    }
+
+    /** @return array<string, array{mixed}> */
+    public static function unusableJobTimeouts(): array
+    {
+        return [
+            'zero' => [0],
+            'negative' => [-5],
+            'not a number' => ['twenty'],
+        ];
     }
 
     public function test_repeated_failures_wait_longer_each_time(): void

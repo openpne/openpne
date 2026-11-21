@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Outbound\CurlClientFactory;
 use App\Outbound\DnsHostResolver;
 use App\Outbound\HostResolver;
+use App\Outbound\OutboundTimeout;
 use App\Outbound\PublicIpGuard;
 use App\Outbound\SafeHttpFetcher;
 use Illuminate\Support\ServiceProvider;
@@ -30,23 +31,12 @@ class OutboundServiceProvider extends ServiceProvider
                 resolver: $this->app->make(HostResolver::class),
                 guard: $this->app->make(PublicIpGuard::class),
                 userAgent: $this->userAgent(),
-                connectTimeout: $this->positive('connect_timeout', 3),
-                requestTimeout: $this->positive('request_timeout', 8),
-                fetchTimeout: $this->positive('fetch_timeout', 10),
+                connectTimeout: OutboundTimeout::seconds('connect_timeout', 3),
+                requestTimeout: OutboundTimeout::seconds('request_timeout', 8),
+                fetchTimeout: OutboundTimeout::seconds('fetch_timeout', 10),
                 maxRedirects: max(0, (int) config('openpne.outbound.max_redirects')),
             );
         });
-    }
-
-    /**
-     * Zero means no limit to Guzzle and libcurl (docs/internals/outbound-http.md). The default rather
-     * than a bare 1 second, so a mistyped value behaves like an unset one.
-     */
-    private function positive(string $key, int $fallback): int
-    {
-        $value = (int) config("openpne.outbound.{$key}");
-
-        return $value > 0 ? $value : $fallback;
     }
 
     /**
