@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Console;
 
 use App\Models\AdminUser;
+use App\Models\Member;
 use App\Setup\EnvFile;
 use App\Setup\SetupHost;
+use App\Setup\SetupLock;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\WebCheck;
@@ -16,6 +18,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
@@ -38,8 +42,11 @@ class SetupCommandTest extends TestCase
 
     private string $connection;
 
-    /** @var array{interactive: bool, spawn: bool, hide: bool, spawned: list<array{list<string>, array<string, string>}>} */
-    private array $hostState = ['interactive' => true, 'spawn' => true, 'hide' => true, 'spawned' => []];
+    /** @var array{interactive: bool, spawn: bool, hide: bool, code: int, spawned: list<array{list<string>, array<string, string>, mixed}>} */
+    private array $hostState = ['interactive' => true, 'spawn' => true, 'hide' => true, 'code' => 0, 'spawned' => []];
+
+    /** @var array<string, array{mixed, mixed, string|false}> */
+    private array $shell = [];
 
     protected function setUp(): void
     {
@@ -71,11 +78,11 @@ class SetupCommandTest extends TestCase
                 return $this->state['hide'];
             }
 
-            public function spawn(array $command, array $environment, string $directory): int
+            public function spawn(array $command, array $environment, string $directory, mixed $lock): int
             {
-                $this->state['spawned'][] = [$command, $environment];
+                $this->state['spawned'][] = [$command, $environment, $lock];
 
-                return 0;
+                return $this->state['code'];
             }
         });
         config(['app.url' => self::URL, 'trustedproxy.proxies' => []]);
@@ -85,6 +92,11 @@ class SetupCommandTest extends TestCase
     {
         putenv('PATH='.$this->path);
         putenv('APP_NAME');
+        foreach ($this->shell as $key => [$env, $server, $put]) {
+            $env === null ? Arr::forget($_ENV, $key) : $_ENV[$key] = $env;
+            $server === null ? Arr::forget($_SERVER, $key) : $_SERVER[$key] = $server;
+            putenv($put === false ? $key : "{$key}={$put}");
+        }
         (new Filesystem)->deleteDirectory($this->root);
         config(['database.default' => $this->connection]);
 
@@ -123,12 +135,14 @@ class SetupCommandTest extends TestCase
             'QUEUE_CONNECTION' => 'deferred', 'MAIL_MAILER' => 'log',
         ], array_intersect_key($env, array_flip(['APP_ENV', 'APP_DEBUG', 'LOG_LEVEL', 'APP_URL', 'APP_NAME', 'APP_TIMEZONE',
             'DB_CONNECTION', 'DB_DATABASE', 'DB_JOURNAL_MODE', 'DB_SYNCHRONOUS', 'QUEUE_CONNECTION', 'MAIL_MAILER'])));
+        $this->assertSame(32, strlen((string) base64_decode(substr((string) $env['APP_KEY'], strlen('base64:')), true)));
         $this->assertSame(0o600, fileperms($this->layout->envFile) & 0o777);
         $this->assertSame(0o700, fileperms($data) & 0o777);
         $this->assertSame(self::HTACCESS, file_get_contents($data.'/.htaccess'));
 
         $this->assertCount(1, $this->hostState['spawned']);
-        [$command, $environment] = $this->hostState['spawned'][0];
+        [$command, $environment, $lock] = $this->hostState['spawned'][0];
+        $this->assertSame(stat($this->layout->storage.'/framework/'.SetupLock::FILE)['ino'], fstat($lock)['ino']);
         $this->assertSame([PHP_BINARY, base_path('artisan'), 'openpne:setup', '--lang=en'], $command);
         $this->assertArrayNotHasKey('APP_NAME', $environment);
         $this->assertSame($this->layout->base.'/tools', $environment['PATH']);
@@ -240,7 +254,20 @@ class SetupCommandTest extends TestCase
         $this->assertSame([], $this->hostState['spawned']);
     }
 
-    public function test_a_password_this_host_would_show_is_asked_only_once_agreed_to(): void
+    public function test_the_first_process_fails_when_the_one_it_started_does(): void
+    {
+        $this->tools('sqlite3');
+        $this->hostState['code'] = 1;
+
+        $this->answerSite($this->runSetup())
+            ->expectsChoice('Mail', 'later', ['later' => 'Later (nothing is sent until then)', 'smtp' => 'An SMTP server'])
+            ->expectsChoice('Background work', 'deferred', $this->queueChoices())
+            ->assertFailed();
+
+        $this->assertCount(1, $this->hostState['spawned']);
+    }
+
+    public function test_a_password_this_host_would_show_stops_the_command_when_declined(): void
     {
         $this->tools('mysqldump');
         $this->hostState['spawn'] = false;
@@ -256,6 +283,72 @@ class SetupCommandTest extends TestCase
             ->assertFailed();
 
         $this->assertFileDoesNotExist($this->layout->envFile);
+    }
+
+    public function test_a_password_this_host_would_show_is_asked_about_once_when_agreed_to(): void
+    {
+        $this->tools('mysqldump');
+        $this->hostState['spawn'] = false;
+        $this->hostState['hide'] = false;
+
+        $command = $this->answerSite($this->runSetup());
+        foreach ([true, false] as $first) {
+            $command->expectsQuestion('MySQL server', '127.0.0.1')
+                ->expectsQuestion('Port', '1')
+                ->expectsQuestion('Database name', 'site_db')
+                ->expectsQuestion('User name', 'site');
+            if ($first) {
+                $command->expectsConfirmation('Go on, with the password showing as you type?', 'yes');
+            }
+            $command->expectsQuestion('Password', 'x')
+                ->expectsConfirmation('Enter them again?', $first ? 'yes' : 'no');
+        }
+        $command->assertFailed();
+    }
+
+    public function test_prompts_hide_a_password_through_proc_open_where_symfony_cannot(): void
+    {
+        $this->tools('mysqldump');
+        $this->hostState['hide'] = false;
+
+        $this->answerSite($this->runSetup())
+            ->expectsQuestion('MySQL server', '127.0.0.1')
+            ->expectsQuestion('Port', '1')
+            ->expectsQuestion('Database name', 'site_db')
+            ->expectsQuestion('User name', 'site')
+            ->doesntExpectOutputToContain('a password shows on the screen')
+            ->expectsQuestion('Password', 'x')
+            ->expectsConfirmation('Enter them again?', 'no')
+            ->assertFailed();
+    }
+
+    public function test_a_sqlite_database_holding_a_site_is_not_set_up_over(): void
+    {
+        $this->tools('sqlite3');
+        mkdir($this->layout->dataDirectory(), 0o700);
+        $database = new \PDO('sqlite:'.$this->sqlitePath());
+        $database->exec('CREATE TABLE admin_users (id INTEGER PRIMARY KEY); INSERT INTO admin_users VALUES (1);');
+        $database = null;
+
+        $this->answerSite($this->runSetup())
+            ->expectsOutputToContain('holds a site already')
+            ->assertFailed();
+
+        $this->assertFileDoesNotExist($this->layout->envFile);
+    }
+
+    public function test_a_second_run_stops_at_once_while_one_holds_the_lock(): void
+    {
+        $lock = fopen($this->layout->storage.'/framework/'.SetupLock::FILE, 'c');
+        $this->assertNotFalse($lock);
+        flock($lock, LOCK_EX);
+
+        try {
+            $this->runSetup()->expectsOutputToContain('running for this site already')->assertFailed();
+        } finally {
+            fclose($lock);
+        }
+        $this->assertDirectoryDoesNotExist($this->layout->dataDirectory());
     }
 
     public function test_a_parent_directory_that_cannot_be_written_stops_before_any_question(): void
@@ -275,6 +368,98 @@ class SetupCommandTest extends TestCase
     }
 
     // With .env
+
+    public function test_an_empty_env_is_not_taken_for_one_written_and_what_a_killed_run_left_is_cleared(): void
+    {
+        file_put_contents($this->layout->envFile, '');
+        mkdir($this->layout->dataDirectory(), 0o700);
+        $left = [$this->layout->base.'/.env.openpne-setup-0123456789abcdef', $this->layout->dataDirectory().'/openpne-setup-0123456789abcdef-wal'];
+        $kept = $this->layout->dataDirectory().'/openpne-setup-notes';
+        array_map(touch(...), [...$left, $kept]);
+
+        $this->runSetup()
+            ->expectsOutputToContain('empty or without APP_URL and DB_CONNECTION')
+            ->doesntExpectOutputToContain('Creating the tables')
+            ->assertFailed();
+
+        $this->assertSame('', file_get_contents($this->layout->envFile));
+        $this->assertSame([false, false, true], array_map(file_exists(...), [...$left, $kept]));
+    }
+
+    public function test_a_connection_setting_held_by_the_shell_stops_before_the_database_is_touched(): void
+    {
+        $this->withEnv();
+        $this->shellEnv('DB_URL', 'sqlite:///'.$this->root.'/other.sqlite');
+
+        $this->runSetup()
+            ->expectsOutputToContain('DB_URL in this shell is not what '.$this->layout->envFile.' says')
+            ->doesntExpectOutputToContain('Creating the tables')
+            ->assertFailed();
+
+        $this->assertFileDoesNotExist($this->root.'/other.sqlite');
+    }
+
+    public function test_an_empty_app_key_is_set_through_a_file_beside_env(): void
+    {
+        $this->shellEnv('APP_KEY', '');
+        $this->withEnv();
+        config(['app.key' => '']);
+        $this->fakeWeb();
+        $this->fakeTools();
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+
+        $this->runSetup()
+            ->expectsOutputToContain('Set APP_KEY in .env.')
+            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->assertSuccessful();
+
+        $key = (string) EnvFile::read((string) file_get_contents($this->layout->envFile))['APP_KEY'];
+        $this->assertStringStartsWith('base64:', $key);
+        $this->assertSame($key, config('app.key'));
+        $this->assertSame([], glob($this->layout->base.'/.env.*') ?: []);
+    }
+
+    public function test_an_open_data_directory_and_an_empty_htaccess_are_put_right(): void
+    {
+        $this->withEnv();
+        $this->fakeWeb();
+        $this->fakeTools();
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        mkdir($this->layout->dataDirectory(), 0o755);
+        touch($this->layout->dataDirectory().'/.htaccess');
+
+        $this->runSetup()
+            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->assertSuccessful();
+
+        $this->assertSame(0o700, fileperms($this->layout->dataDirectory()) & 0o777);
+        $this->assertSame(self::HTACCESS, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
+    }
+
+    public function test_a_migration_stopped_midway_is_said_with_how_to_start_over_while_nobody_has_registered(): void
+    {
+        $this->withEnv();
+        $this->stoppedMigration();
+
+        $this->runSetup()
+            ->expectsOutputToContain('stopped while making the tables: members is there')
+            ->expectsOutputToContain('Nobody has registered yet')
+            ->doesntExpectOutputToContain('Creating the tables')
+            ->assertFailed();
+    }
+
+    public function test_a_migration_stopped_midway_with_members_in_is_not_offered_a_start_over(): void
+    {
+        $this->withEnv();
+        $this->stoppedMigration();
+        Member::factory()->create();
+
+        $this->runSetup()
+            ->expectsOutputToContain('stopped while making the tables')
+            ->expectsOutputToContain('do not remove it')
+            ->doesntExpectOutputToContain('Nobody has registered yet')
+            ->assertFailed();
+    }
 
     public function test_a_site_with_env_is_installed_checked_closed_and_given_its_first_member_and_backup(): void
     {
@@ -387,9 +572,35 @@ class SetupCommandTest extends TestCase
         $this->assertSame(0o775, fileperms($this->layout->storage) & 0o777);
     }
 
+    public function test_a_check_that_cannot_tell_is_not_taken_for_one_that_passed(): void
+    {
+        $this->withEnv();
+        $this->fakeWeb();
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        mkdir($this->layout->storage.'/framework/'.WebCheck::LOCK_FILE);
+
+        $this->runSetup()
+            ->expectsConfirmation('Check again?', 'no')
+            ->doesntExpectOutputToContain('The web serves the site as it should.')
+            ->assertFailed();
+    }
+
+    public function test_an_administrator_password_this_host_would_show_is_asked_about_first(): void
+    {
+        $this->withEnv();
+        $this->hostState['hide'] = false;
+
+        $this->runSetup()
+            ->expectsQuestion('The first administrator\'s user name', 'admin')
+            ->expectsConfirmation('Go on, with the password showing as you type?', 'no')
+            ->assertFailed();
+
+        $this->assertFalse(AdminUser::query()->exists());
+    }
+
     public function test_proxy_addresses_are_typed_never_taken_from_what_was_seen_and_set_alone(): void
     {
-        $this->withEnv("APP_NAME=\"Example SNS\"\nTRUSTED_PROXIES=\"\"\nMAIL_PASSWORD='p#ss'\n");
+        $before = $this->withEnv("APP_NAME=\"Example SNS\"\nTRUSTED_PROXIES=\"\"\nMAIL_PASSWORD='p#ss'\n");
         $this->fakeWeb(['proxy_headers' => ['X-Forwarded-For'], 'peer' => '198.51.100.7']);
         $this->fakeTools();
         AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
@@ -409,15 +620,27 @@ class SetupCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(
-            "APP_NAME=\"Example SNS\"\nTRUSTED_PROXIES=\"203.0.113.0/24,2001:db8::/32\"\nMAIL_PASSWORD='p#ss'\n",
+            str_replace('TRUSTED_PROXIES=""', 'TRUSTED_PROXIES="203.0.113.0/24,2001:db8::/32"', $before),
             file_get_contents($this->layout->envFile),
         );
     }
 
+    public function test_trusted_proxies_read_as_empty_by_the_config_is_asked_about(): void
+    {
+        $this->withEnv("TRUSTED_PROXIES=null\n");
+        $this->fakeWeb(['proxy_headers' => ['X-Forwarded-For']]);
+        $this->fakeTools();
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+
+        $this->runSetup()
+            ->expectsChoice('TRUSTED_PROXIES', 'later', ['later' => 'Later (the site works without it)', 'enter' => 'Enter the proxy\'s addresses'])
+            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->assertSuccessful();
+    }
+
     public function test_a_set_trusted_proxies_is_not_asked_about_and_env_is_untouched(): void
     {
-        $before = "APP_NAME=x\nTRUSTED_PROXIES=192.0.2.1\n";
-        $this->withEnv($before);
+        $before = $this->withEnv("APP_NAME=x\nTRUSTED_PROXIES=192.0.2.1\n");
         $this->fakeWeb(['proxy_headers' => ['X-Forwarded-For']]);
         $this->fakeTools();
         AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
@@ -465,13 +688,28 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb();
-        $this->fakeTools(backupWorks: false);
+        $this->fakeTools('fails');
         AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->expectsOutputToContain('Tried once, and it failed: '.($this->sqlite() ? 'Error: in prepare, no such table: migrations' : 'mysqldump: Got error: 1044'))
             ->assertSuccessful();
+    }
+
+    public function test_a_backup_that_runs_but_copies_no_table_is_said_to_fail(): void
+    {
+        $this->withEnv();
+        $this->fakeWeb();
+        $this->fakeTools('empty');
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+
+        $this->runSetup()
+            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->expectsOutputToContain('Tried once, and it failed: the copy holds no tables.')
+            ->assertSuccessful();
+
+        $this->assertSame([], glob($this->layout->dataDirectory().'/openpne-setup-*') ?: []);
     }
 
     public function test_a_path_a_shell_would_read_shows_no_line(): void
@@ -486,7 +724,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->expectsOutputToContain('The backup line is not shown')
+            ->expectsOutputToContain('The backup line is not shown: '.$this->layout->base.'/tools/')
             ->expectsOutputToContain('The cron line is not shown')
             ->doesntExpectOutputToContain('backup.sql')
             ->assertSuccessful();
@@ -537,16 +775,46 @@ class SetupCommandTest extends TestCase
         }
     }
 
-    /** The test database stands in for the site's; the SQLite path is only what the backup line names. */
-    private function withEnv(string $contents = "APP_ENV=production\n"): void
+    /**
+     * The test database stands in for the site's; the SQLite path is only what the backup line names.
+     * The connection keys are what the test's environment holds, which setup requires `.env` to match.
+     */
+    private function withEnv(string $more = ''): string
     {
         $this->tools('sqlite3', 'mysqldump');
+        $contents = 'APP_URL='.self::URL."\n";
+        foreach (['APP_KEY', 'DB_CONNECTION', 'DB_URL', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_SOCKET'] as $key) {
+            if (Env::get($key) !== null) {
+                $contents .= $key.'="'.Env::get($key)."\"\n";
+            }
+        }
+        $contents .= $more;
         file_put_contents($this->layout->envFile, $contents);
         chmod($this->layout->envFile, 0o600);
         config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
         if (config('database.connections.'.$this->connection.'.driver') === 'sqlite') {
             config(['database.connections.'.$this->connection.'.database' => $this->sqlitePath()]);
         }
+
+        return $contents;
+    }
+
+    /** Sets $key as a shell would before running the command, undone in tearDown. */
+    private function shellEnv(string $key, string $value): void
+    {
+        $this->shell[$key] ??= [$_ENV[$key] ?? null, $_SERVER[$key] ?? null, getenv($key)];
+        $_ENV[$key] = $_SERVER[$key] = $value;
+        putenv("{$key}={$value}");
+    }
+
+    /** A migration not yet recorded whose table is there, as a run killed inside it leaves it. */
+    private function stoppedMigration(): void
+    {
+        $migrations = $this->root.'/migrations';
+        mkdir($migrations);
+        file_put_contents($migrations.'/2999_01_01_000000_setup_test_members.php',
+            "<?php\nuse Illuminate\\Database\\Migrations\\Migration;\nuse Illuminate\\Support\\Facades\\Schema;\nreturn new class extends Migration { public function up(): void { Schema::create('members', fn (\$t) => \$t->id()); } };\n");
+        $this->app->make('migrator')->path($migrations);
     }
 
     private function sqlitePath(): string
@@ -569,20 +837,27 @@ class SetupCommandTest extends TestCase
             : "rm -f '{$data}/backup.sql.new' && '{$tools}/mysqldump' --defaults-extra-file='{$this->layout->mysqlOptionFile()}'";
     }
 
-    private function fakeTools(bool $backupWorks = true): void
+    /** @param 'works'|'empty'|'fails' $backup */
+    private function fakeTools(string $backup = 'works'): void
     {
-        Process::fake(function (PendingProcess $process) use ($backupWorks) {
+        Process::fake(function (PendingProcess $process) use ($backup) {
             $command = is_array($process->command) ? $process->command : [$process->command];
             $last = (string) end($command);
+            $copy = preg_grep('/\A--result-file=/', $command);
+            if ($copy !== [] && $backup !== 'fails') {
+                file_put_contents(substr((string) reset($copy), strlen('--result-file=')), $backup === 'works' ? "CREATE TABLE `migrations` (\n" : "-- MySQL dump\n");
+            }
 
             return match (true) {
                 $last === '-version' => Process::result('3.46.1 2024-08-13 09:16:08 c9c2ab54ba'),
-                str_ends_with((string) $command[0], 'mysqldump') => $backupWorks
-                    ? Process::result("CREATE TABLE `migrations` (\n")
+                str_ends_with((string) $command[0], 'mysqldump') => $backup !== 'fails'
+                    ? Process::result()
                     : Process::result('', "mysqldump: Got error: 1044: Access denied for user 'site'@'%' to database 'site_db'\n", 2),
-                str_starts_with($last, 'SELECT') => $backupWorks
-                    ? Process::result("80\n")
-                    : Process::result('', 'Error: in prepare, no such table: migrations', 1),
+                str_starts_with($last, 'SELECT') => match ($backup) {
+                    'works' => Process::result("80\n"),
+                    'empty' => Process::result("0\n"),
+                    'fails' => Process::result('', 'Error: in prepare, no such table: migrations', 1),
+                },
                 default => Process::result(),
             };
         });

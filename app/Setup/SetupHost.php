@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Setup;
 
-/** What openpne:setup asks of the PHP it runs under; a test swaps it for one it controls. */
+/** What openpne:setup asks of the PHP it runs under. */
 class SetupHost
 {
     public function interactive(): bool
@@ -25,14 +25,15 @@ class SetupHost
     }
 
     /**
-     * Runs a command on this terminal and waits for it.
+     * Runs a command on this terminal, handing it $lock, and waits for it.
      *
      * @param  list<string>  $command
      * @param  array<string, string>  $environment
+     * @param  resource  $lock
      */
-    public function spawn(array $command, array $environment, string $directory): int
+    public function spawn(array $command, array $environment, string $directory, mixed $lock): int
     {
-        $process = proc_open($command, [STDIN, STDOUT, STDERR], $pipes, $directory, $environment);
+        $process = proc_open($command, [STDIN, STDOUT, STDERR, SetupLock::DESCRIPTOR => $lock], $pipes, $directory, $environment);
 
         return is_resource($process) ? proc_close($process) : 1;
     }

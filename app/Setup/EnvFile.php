@@ -58,6 +58,16 @@ final class EnvFile
         }
     }
 
+    /** A value as read from the file, given as `(string) env()` gives it. */
+    public static function asEnv(?string $value): string
+    {
+        return match (strtolower($value ?? '')) {
+            'true', '(true)' => '1',
+            'false', '(false)', 'empty', '(empty)', 'null', '(null)' => '',
+            default => preg_match('/\A([\'"])(.*)\1\z/', (string) $value, $match) === 1 ? $match[2] : (string) $value,
+        };
+    }
+
     /** @return array<string, string|null> */
     public static function read(string $contents): array
     {

@@ -51,6 +51,15 @@ final class EnvFileTest extends TestCase
         $this->assertSame(['example'], array_values(array_diff(scandir($this->directory), ['.', '..'])));
     }
 
+    public function test_a_written_file_that_does_not_parse_leaves_no_env(): void
+    {
+        $example = $this->directory.'/example';
+        file_put_contents($example, "MAIL_PASSWORD=\nAPP_NAME=OpenPNE\n");
+
+        $this->assertSame(EnvFile::UNREADABLE, EnvFile::create($this->directory.'/.env', $example, ['MAIL_PASSWORD' => 'ab="cd']));
+        $this->assertSame(['example'], array_values(array_diff(scandir($this->directory), ['.', '..'])));
+    }
+
     public function test_setting_a_key_rewrites_its_line_and_no_other_byte(): void
     {
         $env = $this->directory.'/.env';

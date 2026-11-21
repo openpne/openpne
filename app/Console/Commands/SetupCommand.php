@@ -9,8 +9,10 @@ use App\Setup\BackupLine;
 use App\Setup\EnvFile;
 use App\Setup\EnvValue;
 use App\Setup\MysqlOptionFile;
+use App\Setup\PrivateFile;
 use App\Setup\ProxyList;
 use App\Setup\SetupHost;
+use App\Setup\SetupLock;
 use App\Setup\StopSetup;
 use App\SiteCheck\BackupTools;
 use App\SiteCheck\Finding;
@@ -20,6 +22,11 @@ use App\SiteCheck\Verdict;
 use Closure;
 use DateTimeZone;
 use Illuminate\Console\Command;
+use Illuminate\Database\Connection;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Encryption\Encrypter;
+use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -29,6 +36,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Prompts\Prompt;
+use RuntimeException;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Throwable;
@@ -49,6 +57,13 @@ class SetupCommand extends Command
 
     private const ADMIN_ATTEMPTS = 3;
 
+    private const TRIAL_PREFIX = 'openpne-setup-';
+
+    private const TRIAL_SECONDS = 300;
+
+    /** What the database connection is made from, which must read here as in `.env`. */
+    private const CONNECTION_KEYS = ['APP_KEY', 'DB_CONNECTION', 'DB_URL', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_SOCKET'];
+
     private string $locale = 'en';
 
     private SetupHost $host;
@@ -56,6 +71,8 @@ class SetupCommand extends Command
     private SiteLayout $layout;
 
     private ?bool $shownInputAccepted = null;
+
+    private SetupLock $lock;
 
     public function handle(SetupHost $host): int
     {
@@ -78,11 +95,28 @@ class SetupCommand extends Command
         if (! $host->canSpawn()) {
             Prompt::fallbackWhen(true);
         }
+        $this->layout = $this->laravel->bound(SiteLayout::class) ? $this->laravel->make(SiteLayout::class) : SiteLayout::of($this->laravel);
+        try {
+            $lock = SetupLock::take($this->layout->storage.'/framework/'.SetupLock::FILE);
+        } catch (RuntimeException) {
+            $this->say('lock_unwritable', ['path' => $this->layout->storage.'/framework'], 'error');
+
+            return self::FAILURE;
+        }
+        if ($lock === null) {
+            $this->say('busy', [], 'error');
+
+            return self::FAILURE;
+        }
+        $this->lock = $lock;
+        PrivateFile::removeStale($this->layout->base, EnvFile::TEMP_PREFIX);
+        foreach ([self::TRIAL_PREFIX, '.htaccess.', basename($this->layout->mysqlOptionFile()).'.'] as $prefix) {
+            PrivateFile::removeStale($this->layout->dataDirectory(), $prefix);
+        }
+
         if ($lang === null) {
             $this->locale = (string) select('Language / 言語', ['ja' => '日本語', 'en' => 'English'], $this->locale);
         }
-
-        $this->layout = $this->laravel->bound(SiteLayout::class) ? $this->laravel->make(SiteLayout::class) : SiteLayout::of($this->laravel);
 
         try {
             return file_exists($this->layout->envFile) ? $this->continueSetup() : $this->startSetup();
@@ -126,6 +160,7 @@ class SetupCommand extends Command
             [PHP_BINARY, $this->laravel->basePath('artisan'), 'openpne:setup', '--lang='.$this->locale],
             $environment,
             $this->laravel->basePath(),
+            $this->lock->handle,
         );
 
         return $code === 0 ? self::SUCCESS : self::FAILURE;
@@ -133,6 +168,15 @@ class SetupCommand extends Command
 
     private function continueSetup(): int
     {
+        $env = $this->readEnv();
+        // The web reads .env alone, so a value this shell holds would set up another site than it serves.
+        foreach (self::CONNECTION_KEYS as $key) {
+            if ((string) Env::get($key) !== EnvFile::asEnv($env[$key] ?? null)) {
+                $this->say('env_overridden', ['key' => $key, 'path' => $this->layout->envFile], 'error');
+
+                return self::FAILURE;
+            }
+        }
         $this->dataDirectory();
         $connection = (string) config('database.default');
         $settings = (array) config("database.connections.{$connection}");
@@ -152,14 +196,32 @@ class SetupCommand extends Command
             return self::FAILURE;
         }
 
-        if (! filled(config('app.key')) && $this->call('key:generate', ['--force' => true]) !== self::SUCCESS) {
-            return self::FAILURE;
+        if (! filled(config('app.key'))) {
+            $key = self::newKey();
+            if (EnvFile::set($this->layout->envFile, 'APP_KEY', $key) !== null) {
+                $this->say('key_refused', ['path' => $this->layout->envFile], 'error');
+
+                return self::FAILURE;
+            }
+            config(['app.key' => $key]);
+            $this->say('key_written');
         }
 
         $hasAdmin = Schema::hasTable('admin_users') && DB::table('admin_users')->exists();
         // An unpacked new version run here would otherwise migrate a live site outside maintenance mode.
         if ($hasAdmin && $this->pendingMigrations() > 0) {
             $this->say('pending_migrations', [], 'error');
+
+            return self::FAILURE;
+        }
+        $stopped = $hasAdmin ? null : $this->stoppedMigration();
+        if ($stopped !== null) {
+            $this->say('install_stopped', ['table' => $stopped], 'error');
+            $this->say(match (true) {
+                ! $this->nobodyYet() => 'install_keep',
+                $driver === 'sqlite' => 'install_restart_sqlite',
+                default => 'install_restart_mysql',
+            }, ['path' => (string) ($settings['database'] ?? ''), 'database' => (string) ($settings['database'] ?? '')]);
 
             return self::FAILURE;
         }
@@ -175,6 +237,8 @@ class SetupCommand extends Command
 
             return self::FAILURE;
         }
+        // Not before: openpne:install seeds in the site's locale.
+        $this->laravel->setLocale($this->locale);
         if (! $hasAdmin) {
             $this->createAdmin();
         }
@@ -195,7 +259,7 @@ class SetupCommand extends Command
     /** @return array<string, string> */
     private function askSettings(): array
     {
-        $values = ['APP_ENV' => 'production', 'APP_DEBUG' => 'false', 'LOG_LEVEL' => 'warning'];
+        $values = ['APP_ENV' => 'production', 'APP_DEBUG' => 'false', 'LOG_LEVEL' => 'warning', 'APP_KEY' => self::newKey()];
 
         $values['APP_URL'] = rtrim($this->until(
             fn (): string => text($this->text('url'), placeholder: 'https://sns.example.com', required: true, hint: $this->text('url_hint')),
@@ -243,9 +307,16 @@ class SetupCommand extends Command
         }
 
         if ($choice === 'sqlite') {
+            $path = $this->layout->dataDirectory().'/database.sqlite';
+            if (is_file($path) && filesize($path) > 0 && $this->holdsSite('sqlite', ['database' => $path])) {
+                $this->say('db_holds_site_sqlite', ['path' => $path, 'base' => $this->layout->base], 'error');
+
+                throw new StopSetup;
+            }
+
             return [
                 'DB_CONNECTION' => 'sqlite',
-                'DB_DATABASE' => $this->layout->dataDirectory().'/database.sqlite',
+                'DB_DATABASE' => $path,
                 'DB_JOURNAL_MODE' => 'WAL',
                 'DB_SYNCHRONOUS' => 'NORMAL',
             ];
@@ -262,10 +333,12 @@ class SetupCommand extends Command
             $settings['DB_PASSWORD'] = $this->until(fn (): string => password($this->text('mysql_password')), EnvValue::problem(...));
 
             $refusal = $this->mysqlRefusal($settings);
-            if ($refusal === null) {
+            if ($refusal === null && ! $this->holdsSite('mysql', self::mysqlConnection($settings))) {
                 return ['DB_CONNECTION' => 'mysql', ...$settings];
             }
-            $this->say('mysql_refused', ['reason' => $refusal], 'error');
+            $refusal === null
+                ? $this->say('db_holds_site_mysql', ['database' => $settings['DB_DATABASE']], 'error')
+                : $this->say('mysql_refused', ['reason' => $refusal], 'error');
             if (! confirm($this->text('mysql_again'), true)) {
                 throw new StopSetup;
             }
@@ -304,30 +377,92 @@ class SetupCommand extends Command
     /** @param array<string, string> $settings */
     private function mysqlRefusal(array $settings): ?string
     {
-        $name = 'openpne_setup';
-        config(["database.connections.{$name}" => array_merge((array) config('database.connections.mysql'), [
-            'url' => null,
+        return $this->onConnection('mysql', self::mysqlConnection($settings), function (Connection $db) use ($settings): ?string {
+            try {
+                $db->getPdo();
+
+                return null;
+            } catch (Throwable $e) {
+                $line = trim((string) strtok(trim($e->getMessage()), "\n"));
+
+                return $settings['DB_PASSWORD'] === '' ? $line : str_replace($settings['DB_PASSWORD'], '…', $line);
+            }
+        });
+    }
+
+    /**
+     * @param  array<string, string>  $settings
+     * @return array<string, string>
+     */
+    private static function mysqlConnection(array $settings): array
+    {
+        return [
             'host' => $settings['DB_HOST'],
             'port' => $settings['DB_PORT'],
             'database' => $settings['DB_DATABASE'],
             'username' => $settings['DB_USERNAME'],
             'password' => $settings['DB_PASSWORD'],
-        ])]);
+        ];
+    }
+
+    /**
+     * A new APP_KEY would leave what that site encrypted unreadable.
+     *
+     * @param  array<string, string>  $connection
+     */
+    private function holdsSite(string $template, array $connection): bool
+    {
+        return $this->onConnection($template, $connection, function (Connection $db): bool {
+            try {
+                return $db->getSchemaBuilder()->hasTable('admin_users') && $db->table('admin_users')->exists();
+            } catch (Throwable) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * @template T
+     *
+     * @param  array<string, string>  $connection
+     * @param  Closure(Connection): T  $use
+     * @return T
+     */
+    private function onConnection(string $template, array $connection, Closure $use): mixed
+    {
+        $name = 'openpne_setup';
+        config(["database.connections.{$name}" => array_merge((array) config("database.connections.{$template}"), ['url' => null], $connection)]);
 
         try {
-            DB::connection($name)->getPdo();
-
-            return null;
-        } catch (Throwable $e) {
-            $line = trim((string) strtok(trim($e->getMessage()), "\n"));
-
-            return $settings['DB_PASSWORD'] === '' ? $line : str_replace($settings['DB_PASSWORD'], '…', $line);
+            return $use(DB::connection($name));
         } finally {
             DB::purge($name);
         }
     }
 
-    /** openpne-data/ beside the release, made before the SQLite database goes in it. */
+    /** @return array<string, string|null> */
+    private function readEnv(): array
+    {
+        try {
+            $env = EnvFile::read(File::get($this->layout->envFile));
+        } catch (Throwable) {
+            $env = [];
+        }
+        if (EnvFile::asEnv($env['APP_URL'] ?? null) === '' || EnvFile::asEnv($env['DB_CONNECTION'] ?? null) === '') {
+            $this->say('env_incomplete', ['path' => $this->layout->envFile], 'error');
+
+            throw new StopSetup;
+        }
+
+        return $env;
+    }
+
+    private static function newKey(): string
+    {
+        return 'base64:'.base64_encode(Encrypter::generateKey((string) config('app.cipher')));
+    }
+
+    /** openpne-data/ beside the release, closed to others and denied to the web on every run, before anything goes in it. */
     private function dataDirectory(): void
     {
         $directory = $this->layout->dataDirectory();
@@ -337,16 +472,32 @@ class SetupCommand extends Command
 
                 throw new StopSetup;
             }
-            chmod($directory, 0o700);
             $this->say('data_made', ['path' => $directory]);
         }
-        $htaccess = $directory.'/.htaccess';
-        if (! file_exists($htaccess)) {
-            $top = $this->layout->base.'/.htaccess';
-            if (! is_file($top) || ! File::copy($top, $htaccess)) {
-                $this->say('data_htaccess_failed', ['path' => $htaccess, 'top' => $top], 'error');
+        clearstatcache(true, $directory);
+        if ((fileperms($directory) & 0o077) !== 0 && ! @chmod($directory, 0o700)) {
+            $this->say('data_open', ['path' => $directory], 'error');
 
-                throw new StopSetup;
+            throw new StopSetup;
+        }
+
+        $htaccess = $directory.'/.htaccess';
+        $top = $this->layout->base.'/.htaccess';
+        $temp = null;
+        try {
+            $deny = File::get($top);
+            if (is_file($htaccess) && File::get($htaccess) === $deny) {
+                return;
+            }
+            $temp = PrivateFile::temp($directory, '.htaccess.', $deny, 0o644);
+            PrivateFile::rename($temp, $htaccess);
+        } catch (Throwable) {
+            $this->say('data_htaccess_failed', ['path' => $htaccess, 'top' => $top], 'error');
+
+            throw new StopSetup;
+        } finally {
+            if ($temp !== null) {
+                @unlink($temp);
             }
         }
     }
@@ -390,6 +541,42 @@ class SetupCommand extends Command
         $files = $migrator->getMigrationFiles([database_path('migrations'), ...$migrator->paths()]);
 
         return count(array_diff(array_keys($files), $migrator->getRepository()->getRan()));
+    }
+
+    /** A table the first migration not yet recorded makes, there already: a run stopped inside that migration. */
+    private function stoppedMigration(): ?string
+    {
+        $migrator = $this->laravel->make('migrator');
+        $files = $migrator->getMigrationFiles([database_path('migrations'), ...$migrator->paths()]);
+        $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
+        $file = array_values(array_diff_key($files, array_flip($ran)))[0] ?? null;
+
+        try {
+            $migration = $file === null ? null : File::getRequire($file);
+            if (! $migration instanceof Migration) {
+                return null;
+            }
+            foreach (DB::connection()->pretend(fn () => $migration->up()) as $query) {
+                if (preg_match('/\Acreate table [`"]?([^`"\s(]+)/i', (string) $query['query'], $match) === 1 && Schema::hasTable($match[1])) {
+                    return $match[1];
+                }
+            }
+        } catch (Throwable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private function nobodyYet(): bool
+    {
+        foreach (['members', 'admin_users'] as $table) {
+            if (Schema::hasTable($table) && DB::table($table)->exists()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function createAdmin(): void
@@ -453,7 +640,7 @@ class SetupCommand extends Command
     private function offerProxies(array $findings): void
     {
         $warned = array_filter($findings, fn (Finding $f): bool => $f->message === 'web_proxy_untrusted');
-        $current = trim((string) (EnvFile::read(File::get($this->layout->envFile))['TRUSTED_PROXIES'] ?? ''));
+        $current = trim(EnvFile::asEnv(EnvFile::read(File::get($this->layout->envFile))['TRUSTED_PROXIES'] ?? null));
         if ($warned === [] || $current !== '') {
             return;
         }
@@ -482,7 +669,7 @@ class SetupCommand extends Command
         $this->say('proxy_written');
     }
 
-    /** docs/installing.md, step 2: logs, keys and cached settings are the site user's alone, once the web is known to run as that user. */
+    /** Only once the web is known to run as this account, which otherwise could no longer read its logs and cache. */
     private function closeDirectories(): void
     {
         foreach ([$this->layout->storage, $this->layout->bootstrapCache] as $directory) {
@@ -517,9 +704,14 @@ class SetupCommand extends Command
 
             return;
         }
+        // Called mysqldump, MariaDB's tool warns at every run, cron's included.
+        if ($driver !== 'sqlite' && MysqlOptionFile::isMariaDb($tool)) {
+            $tool = realpath($tool) ?: $tool;
+        }
         $option = $this->layout->mysqlOptionFile();
-        if (! BackupLine::safe($tool, $database, $data, ...($driver === 'sqlite' ? [] : [$option]))) {
-            $this->say('backup_unsafe_path', ['path' => $data]);
+        $unsafe = array_filter([$tool, $database, $data, ...($driver === 'sqlite' ? [] : [$option])], fn (string $part): bool => ! BackupLine::safe($part));
+        if ($unsafe !== []) {
+            $this->say('backup_unsafe_path', ['path' => reset($unsafe)]);
 
             return;
         }
@@ -542,7 +734,13 @@ class SetupCommand extends Command
 
             return;
         }
-        $failure = $driver === 'sqlite' ? $this->trySqliteBackup($tool, $database, $data) : $this->tryMysqlBackup($tool, $option, $database);
+        try {
+            $failure = $driver === 'sqlite' ? $this->trySqliteBackup($tool, $database, $data) : $this->tryMysqlBackup($tool, $option, $database, $data);
+        } catch (ProcessTimedOutException) {
+            $failure = $this->text('backup_timeout', ['seconds' => self::TRIAL_SECONDS]);
+        } catch (RuntimeException $e) {
+            $failure = $e->getMessage();
+        }
         if ($failure === null) {
             $this->say('backup_tried');
         } else {
@@ -553,30 +751,44 @@ class SetupCommand extends Command
         }
     }
 
-    /** The copy is judged by reading a table from it: a `.backup` cut short leaves one that passes integrity_check with none. */
     private function trySqliteBackup(string $tool, string $database, string $data): ?string
     {
-        $copy = $data.'/openpne-setup-'.bin2hex(random_bytes(8)).'.sqlite';
+        // VACUUM INTO writes into an empty file as it finds it, so the copy stays at 0600.
+        $copy = PrivateFile::temp($data, self::TRIAL_PREFIX, '', 0o600);
 
         try {
-            $write = Process::timeout(300)->run([$tool, '-readonly', $database, "VACUUM INTO '{$copy}'"]);
+            $write = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', $database, "VACUUM INTO '{$copy}'"]);
             if (! $write->successful()) {
                 return self::firstLine($write->errorOutput());
             }
             $read = Process::timeout(60)->run([$tool, '-readonly', $copy, 'SELECT count(*) FROM migrations']);
+            if (! $read->successful()) {
+                return self::firstLine($read->errorOutput().$read->output());
+            }
 
-            return $read->successful() && (int) trim($read->output()) > 0 ? null : self::firstLine($read->errorOutput().$read->output());
+            return (int) trim($read->output()) > 0 ? null : $this->text('backup_no_tables');
         } finally {
-            @unlink($copy);
+            foreach (['', '-wal', '-shm', '-journal'] as $suffix) {
+                @unlink($copy.$suffix);
+            }
         }
     }
 
-    private function tryMysqlBackup(string $tool, string $option, string $database): ?string
+    private function tryMysqlBackup(string $tool, string $option, string $database, string $data): ?string
     {
-        // The option file's own path must come first: the dump tools read it nowhere else.
-        $dump = Process::timeout(300)->run([$tool, '--defaults-extra-file='.$option, '--single-transaction', '--no-tablespaces', $database]);
+        $copy = PrivateFile::temp($data, self::TRIAL_PREFIX, '', 0o600);
 
-        return $dump->successful() && str_contains($dump->output(), 'CREATE TABLE') ? null : InstalledCheck::firstLine($dump->errorOutput());
+        try {
+            // The option file's own path must come first: the dump tools read it nowhere else.
+            $dump = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '--defaults-extra-file='.$option, '--single-transaction', '--no-tablespaces', '--result-file='.$copy, $database]);
+            if (! $dump->successful()) {
+                return InstalledCheck::firstLine($dump->errorOutput());
+            }
+
+            return PrivateFile::holds($copy, 'CREATE TABLE') ? null : $this->text('backup_no_tables');
+        } finally {
+            @unlink($copy);
+        }
     }
 
     private function cron(): void
@@ -596,7 +808,11 @@ class SetupCommand extends Command
         if (! $this->host->canSpawn()) {
             return null;
         }
-        $result = Process::timeout(30)->run([$tool, '-version']);
+        try {
+            $result = Process::timeout(30)->run([$tool, '-version']);
+        } catch (ProcessTimedOutException) {
+            return null;
+        }
 
         return $result->successful() && preg_match('/\A(\d+\.\d+\.\d+)/', trim($result->output()), $match) === 1 ? $match[1] : null;
     }

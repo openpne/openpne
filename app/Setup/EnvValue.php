@@ -20,6 +20,8 @@ final class EnvValue
             preg_match('/\A(["\']).*\1\z/s', $value) === 1 => 'env_quoted',
             // Env::writeVariables writes these single-quoted, which Dotenv reads back otherwise.
             str_contains($value, '"') && (str_contains($value, '\\') || str_contains($value, "'")) => 'env_quote_mix',
+            // Dotenv reads a line whose one `"` follows `=` as the start of a value over several lines.
+            str_contains($value, '="') && substr_count($value, '"') === 1 => 'env_quote_equals',
             default => null,
         };
     }

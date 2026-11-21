@@ -14,7 +14,7 @@ use Tests\TestCase;
  * Pins the seam rule from docs/internals/outbound-http.md: App\Outbound alone may fetch a URL a
  * member supplied, since SSRF defence is only the property that every such fetch went through the
  * guard; App\Files\Imgproxy dials one operator-configured address, and App\SiteCheck\SiteFetcher the
- * site's own. Stream wrappers and raw sockets are forbidden too, as they dereference a URL just as well.
+ * site's own and its operator-given parent. Stream wrappers and raw sockets are forbidden too, as they dereference a URL just as well.
  */
 class OutboundEgressBoundaryTest extends TestCase
 {
@@ -60,6 +60,7 @@ class OutboundEgressBoundaryTest extends TestCase
         'Files/ImageFastPath.php',
         'Mail/Template/MailTemplateDefaults.php',
         'Setup/PrivateFile.php',
+        'Setup/SetupLock.php',
         'Support/ClassicThemes.php',
         'Support/CommonPasswordList.php',
         'Support/ReleaseMarker.php',
