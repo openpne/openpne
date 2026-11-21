@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Group\Classic;
 
+use App\Features\Group\Actions\AcceptAdminTransfer;
 use App\Features\Group\Events\GroupJoinRequested;
 use App\Features\Group\GroupRole;
 use App\Features\Group\Queries\ListPendingMembers;
@@ -14,6 +15,7 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class GroupRoutesTest extends TestCase
@@ -570,6 +572,23 @@ class GroupRoutesTest extends TestCase
         $this->actingAs($admin)->post(route('group.delete', $group))
             ->assertRedirect(route('group.search'));
         $this->assertDatabaseMissing('groups', ['id' => $group->getKey()]);
+    }
+
+    public function test_a_transfer_accepted_between_the_page_check_and_the_delete_answers_404(): void
+    {
+        $group = Group::factory()->create();
+        $admin = $this->memberWithRole($group, GroupRole::Admin);
+        $nominee = $this->memberWithRole($group, GroupRole::Member);
+        $group->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+        // The controller's Gate still sees the admin; the transfer lands before the action runs.
+        Gate::after(function ($user, string $ability, $result, array $arguments) use ($nominee, $group): void {
+            if ($ability === 'delete' && ($arguments[0] ?? null) instanceof Group && $group->fresh()?->pending_admin_member_id !== null) {
+                app(AcceptAdminTransfer::class)($nominee, $group);
+            }
+        });
+
+        $this->actingAs($admin)->post(route('group.delete', $group))->assertNotFound();
+        $this->assertDatabaseHas('groups', ['id' => $group->getKey()]);
     }
 
     private function memberWithRole(Group $group, GroupRole $role): Member
