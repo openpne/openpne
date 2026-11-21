@@ -11,6 +11,7 @@ use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
 use App\Models\BannerImage;
 use App\Support\OperatorContent;
+use App\Support\OperatorContentConversion;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -117,8 +118,8 @@ class BannerSettings extends Page
                 $banner->html = ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null;
             }
             $markdown = (string) ($data[$name.'_markdown'] ?? '');
-            // NULL reads as "not converted yet": an emptied text is stored as '', and a placement nobody wrote stays NULL for the conversion.
-            if ($mode === 'html' && ! OperatorContent::rawHtml() && ($banner->markdown !== null || $markdown !== '')) {
+            // NULL reads as "not converted yet", so an emptied text is stored as ''.
+            if ($mode === 'html' && ! OperatorContent::rawHtml() && OperatorContentConversion::savesMarkdown($banner->markdown !== null, $markdown)) {
                 $banner->markdown = $markdown;
             }
             $banner->save();

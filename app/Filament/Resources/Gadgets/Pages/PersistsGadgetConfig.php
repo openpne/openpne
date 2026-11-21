@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Gadgets\Pages;
 use App\Filament\Resources\Gadgets\Schemas\GadgetForm;
 use App\Services\GadgetService;
 use App\Support\GadgetConfigRow;
+use App\Support\OperatorContentConversion;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -51,8 +52,13 @@ trait PersistsGadgetConfig
             foreach ($this->gadgetConfig as $name => $value) {
                 $target = ['gadget_id' => (int) $this->record->getKey(), 'name' => (string) $name];
                 $row = ['value' => $value === null ? null : (string) $value];
+                $stored = GadgetConfigRow::lockedExists($target['gadget_id'], $target['name']);
 
-                GadgetConfigRow::lockedExists($target['gadget_id'], $target['name'])
+                if ($target['name'] === OperatorContentConversion::GADGET_MARKDOWN && ! OperatorContentConversion::savesMarkdown($stored, (string) $value)) {
+                    continue;
+                }
+
+                $stored
                     ? DB::table('gadget_configs')->where($target)->update($row)
                     : DB::table('gadget_configs')->insert([...$target, ...$row]);
             }
