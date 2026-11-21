@@ -342,7 +342,7 @@ class OutboundEgressBoundaryTest extends TestCase
         ));
     }
 
-    /** Neither checks an address beyond its scheme, so a caller outside the command could hand one a member's URL. */
+    /** SiteFetcher checks no address and WebCheck only --parent-url's scheme, so a caller outside the command could hand one a member's URL. */
     public function test_the_site_fetcher_is_reachable_only_from_the_site_check_command(): void
     {
         $offenders = [];

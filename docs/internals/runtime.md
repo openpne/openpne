@@ -322,7 +322,7 @@ no more than 64 KiB of a response is read.
 
 The web part writes files into the site's own directories for the length of the check, named
 `openpne-check-` and 32 hex digits, and removes them in a `finally`, and on SIGINT, SIGTERM or SIGHUP
-where pcntl is loaded:
+where pcntl's signal functions can be called:
 
 - a text file of one name, each holding its own token, in `public/`, in the release's top directory
   and in `storage/` when that is the release's own. Fetched at `APP_URL/<name>`, the right document

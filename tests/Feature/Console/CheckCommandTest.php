@@ -503,9 +503,14 @@ class CheckCommandTest extends TestCase
             config(['trustedproxy.proxies' => $proxies]);
             $this->assertStringContainsString('[ OK ] The proxy in front is in TRUSTED_PROXIES.', $this->runCheck(['--only' => 'web']), $proxies);
         }
+        config(['trustedproxy.proxies' => '198.51.100.0/24,*']);
+        $this->assertStringContainsString('[WARN] The request reached the site from an address outside TRUSTED_PROXIES', $this->runCheck(['--only' => 'web']));
         $this->fakeHost(['php' => ['proxy_headers' => ['X-Forwarded-For'], 'peer' => '10.0.0.5']]);
         config(['trustedproxy.proxies' => 'PRIVATE_SUBNETS']);
         $this->assertStringContainsString('[ OK ] The proxy in front is in TRUSTED_PROXIES.', $this->runCheck(['--only' => 'web']));
+        // In IpUtils::PRIVATE_SUBNETS but not the PRIVATE_RANGES that Request trusts for the keyword.
+        $this->fakeHost(['php' => ['proxy_headers' => ['X-Forwarded-For'], 'peer' => '198.18.0.1']]);
+        $this->assertStringContainsString('[WARN] The request reached the site from an address outside TRUSTED_PROXIES', $this->runCheck(['--only' => 'web']));
     }
 
     public function test_the_parent_address_is_proved_before_it_is_trusted_with_a_verdict(): void
@@ -534,15 +539,16 @@ class CheckCommandTest extends TestCase
     {
         $this->installEnv();
         $this->fakeHost(['parent' => 'deny']);
-        chmod($this->layout->parent(), 0o555);
-
-        try {
-            $this->artisan('openpne:check', ['--only' => 'web', '--parent-url' => self::PARENT_URL, '--lang' => 'en'])
-                ->expectsOutputToContain('[ ?? ] Not checked: '.$this->layout->parent().' cannot be written to.')
-                ->doesntExpectOutputToContain('the site\'s own files cannot be read.')
-                ->assertSuccessful();
-        } finally {
-            chmod($this->layout->parent(), 0o755);
+        foreach ([$this->layout->parent(), $this->layout->base] as $unwritable) {
+            chmod($unwritable, 0o555);
+            try {
+                $this->artisan('openpne:check', ['--only' => 'web', '--parent-url' => self::PARENT_URL, '--lang' => 'en'])
+                    ->expectsOutputToContain('[ ?? ] Not checked: '.$unwritable.' cannot be written to.')
+                    ->doesntExpectOutputToContain('the site\'s own files cannot be read.')
+                    ->assertSuccessful();
+            } finally {
+                chmod($unwritable, 0o755);
+            }
         }
     }
 

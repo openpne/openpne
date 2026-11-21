@@ -72,7 +72,7 @@ final class WebCheck
         }
     }
 
-    /** Safe to call twice, and from a signal handler while a fetch is under way. */
+    /** Safe to call twice, and from a signal handler between two steps of a run. */
     public function cleanUp(): void
     {
         foreach ($this->written as $path) {
@@ -287,12 +287,12 @@ final class WebCheck
                 ? Finding::ok('web.proxy', 'web_proxy_none')
                 : Finding::warn('web.proxy', 'web_proxy_untrusted', ['list' => implode(', ', $headers)]);
         }
-        // The keywords TrustProxies and Symfony's Request read in place of addresses.
-        if (array_intersect(['*', '**', 'REMOTE_ADDR'], $trusted) !== []) {
+        // TrustProxies reads `*` and `**` only as the whole value; Request reads REMOTE_ADDR and PRIVATE_SUBNETS in a list.
+        if (in_array(config('trustedproxy.proxies'), ['*', '**'], true) || in_array('REMOTE_ADDR', $trusted, true)) {
             return Finding::ok('web.proxy', 'web_proxy_trusted');
         }
         $ranges = array_merge(...array_map(
-            fn (string $entry): array => in_array($entry, ['PRIVATE_SUBNETS', 'private_ranges'], true) ? IpUtils::PRIVATE_SUBNETS : [$entry],
+            fn (string $entry): array => in_array($entry, ['PRIVATE_SUBNETS', 'private_ranges'], true) ? IpUtils::PRIVATE_RANGES : [$entry],
             array_map('strval', $trusted),
         ));
         if ($peer !== null && IpUtils::checkIp($peer, $ranges)) {

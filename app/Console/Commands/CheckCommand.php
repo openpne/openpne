@@ -63,11 +63,13 @@ class CheckCommand extends Command
             }
             if ($only === null || $only === 'web') {
                 $web = $this->laravel->make(WebCheck::class, ['layout' => $layout]);
-                // Signals are named in a closure, as their constants exist only where pcntl is loaded.
-                $this->trap(fn (): array => [SIGINT, SIGTERM, SIGHUP], function (int $signal) use ($web): never {
-                    $web->cleanUp();
-                    exit(128 + $signal);
-                });
+                // Laravel traps wherever pcntl is loaded, and fails where disable_functions holds what its trap calls.
+                if (function_exists('pcntl_signal') && function_exists('pcntl_signal_get_handler') && function_exists('pcntl_async_signals')) {
+                    $this->trap(fn (): array => [SIGINT, SIGTERM, SIGHUP], function (int $signal) use ($web): never {
+                        $web->cleanUp();
+                        exit(128 + $signal);
+                    });
+                }
                 $findings = [...$findings, ...$this->part(
                     'heading_web',
                     ['url' => InstalledCheck::shownUrl((string) config('app.url'))],

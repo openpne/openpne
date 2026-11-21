@@ -57,7 +57,19 @@ class SiteFetcherTest extends TestCase
         }
     }
 
-    public function test_a_transfer_cut_short_for_any_other_reason_has_no_status(): void
+    public function test_a_transfer_cut_short_for_any_other_reason_stays_a_failure(): void
+    {
+        $handler = fn (RequestInterface $request): PromiseInterface => Create::rejectionFor(
+            new ResponseTransferException('cURL error 18: transfer closed with outstanding read data remaining', $request, new Response(200)),
+        );
+        $stack = HandlerStack::create($handler);
+        $stack->push(SiteFetcher::cappedBody());
+
+        $this->expectException(ResponseTransferException::class);
+        (new Client(['handler' => $stack, 'http_errors' => false]))->get('https://sns.example.com/');
+    }
+
+    public function test_a_failed_transfer_is_a_page_without_status(): void
     {
         Http::fake(fn (Request $request) => Create::rejectionFor(
             new ResponseTransferException('cURL error 18: transfer closed with outstanding read data remaining', $request->toPsrRequest(), new Response(200)),
