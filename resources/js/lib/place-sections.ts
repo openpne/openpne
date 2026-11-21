@@ -8,7 +8,8 @@ const t = (key: string): ChromeLabel => ({ key });
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number; 'aria-hidden'?: boolean }>;
 
-export type GroupSection = 'top' | 'talk' | 'topic' | 'event' | 'members';
+/** A place's top stands in no section: it names the place in its own hero, not in the header. */
+export type GroupSection = 'talk' | 'topic' | 'event' | 'members';
 
 /** The boards of a group the viewer may open, each already folded with its unit's switch (GroupPlace::openSections). */
 export interface GroupOpenSections {
@@ -18,19 +19,19 @@ export interface GroupOpenSections {
 }
 
 interface PlaceSectionEntry<K extends string> {
-    key: K;
+    key: K | 'top';
     icon: Icon;
     label: ChromeLabel;
     href: (id: number) => string;
     /** The component of the section's own list: the one screen whose tile is the page itself. */
-    index: string;
+    index?: string;
 }
 
 // The top's grid names no kind, so it is not read from CONTENT_KINDS (docs/internals/modern-frame.md, "Content kinds").
 const TOP = { key: 'top', icon: LayoutGrid, label: t('Top page') } as const;
 
 const GROUP_SECTIONS: PlaceSectionEntry<GroupSection>[] = [
-    { ...TOP, href: (id) => `/groups/${id}`, index: 'group/show' },
+    { ...TOP, href: (id) => `/groups/${id}` },
     { key: 'talk', icon: CONTENT_KINDS.talk.icon, label: t('Talk'), href: (id) => `/groups/${id}/talk`, index: 'group/talk/index' },
     { key: 'topic', icon: CONTENT_KINDS.topic.icon, label: t('%Topics%'), href: (id) => `/groups/${id}/topics`, index: 'group/topic/index' },
     { key: 'event', icon: CONTENT_KINDS.event.icon, label: t('Events'), href: (id) => `/groups/${id}/events`, index: 'group/event/index' },

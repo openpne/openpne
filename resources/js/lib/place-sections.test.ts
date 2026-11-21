@@ -5,7 +5,7 @@ import { placeSections } from './place-sections.ts';
 
 const allOpen = { talk: true, topic: true, event: true };
 
-const group = (section: 'top' | 'talk' | 'topic' | 'event' | 'members', open = allOpen): ChromeScope => ({
+const group = (section: 'talk' | 'topic' | 'event' | 'members', open = allOpen): ChromeScope => ({
     kind: 'group',
     id: 7,
     name: 'Cyclists',
@@ -31,11 +31,11 @@ test('a board the viewer may not open is not offered, while the top and the memb
     const closed = { talk: false, topic: false, event: false };
 
     assert.deepEqual(
-        placeSections(group('top', closed), 'group/show').map(({ key }) => key),
+        placeSections(group('members', closed), 'community/members').map(({ key }) => key),
         ['top', 'members'],
     );
     assert.deepEqual(
-        placeSections(group('top', { talk: true, topic: false, event: true }), 'group/show').map(({ key }) => key),
+        placeSections(group('members', { talk: true, topic: false, event: true }), 'community/members').map(({ key }) => key),
         ['top', 'talk', 'event', 'members'],
     );
 });
@@ -46,7 +46,6 @@ test("the section's own list is the page itself; a screen deeper inside marks it
             .filter((item) => item.current !== undefined)
             .map(({ key, current }) => [key, current]);
 
-    assert.deepEqual(current('top', 'group/show'), [['top', 'page']]);
     assert.deepEqual(current('topic', 'group/topic/index'), [['topic', 'page']]);
     assert.deepEqual(current('topic', 'group/topic/show'), [['topic', 'true']]);
     assert.deepEqual(current('event', 'group/event/members'), [['event', 'true']]);
@@ -55,7 +54,7 @@ test("the section's own list is the page itself; a screen deeper inside marks it
 });
 
 test('every tile names itself in words, and the top is the same word in every place', () => {
-    const items = placeSections(group('top'), 'group/show');
+    const items = placeSections(group('talk'), 'group/talk/index');
 
     assert.deepEqual(
         items.map(({ label }) => label.key),

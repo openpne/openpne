@@ -486,7 +486,6 @@ const OWNER_PLACE = { label: 'Owner', href: '/member/1' };
  * the wrong place would carry the reader out of the space they are in.
  */
 const GROUP_PLACES: { component: string; props: Record<string, unknown>; section: string }[] = [
-    { component: 'group/show', props: { group: cyclists }, section: 'top' },
     { component: 'group/talk/index', props: { group: cyclists }, section: 'talk' },
     { component: 'group/topic/index', props: { group: cyclists, canPost: false }, section: 'topic' },
     { component: 'group/topic/show', props: { group: cyclists }, section: 'topic' },
@@ -519,10 +518,11 @@ test('a form inside a group keeps its static trail rather than the place header'
     assert.equal(header('group/topic/edit', { group: cyclists, topic: null }).type, 'trail');
 });
 
-test("home, a day's issue and a member page keep the brand header, and stand no place bar", () => {
+test("home, a day's issue and a place's top keep the brand header, and stand no place bar", () => {
     for (const [component, props] of [
         ['home/issue', {}],
         ['home/archive', { issue: { monthHref: '/home/2026/08' } }],
+        ['group/show', { group: cyclists }],
         ['member/show', { profile: owner }],
     ] as const) {
         assert.deepEqual(header(component, props), { type: 'brand' }, component);
@@ -581,17 +581,19 @@ test("a guest's place top, hub and site policy answer no crumb, as a member's do
     assert.equal(guestCrumb('policy/show', { kind: 'terms' }), null);
 });
 
-test("a member's page answers no crumb — the header speaks the home grammar there", () => {
+test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {
     // The place's own hero names it directly below, so a crumb would name it twice in 60px.
-    const component = 'member/show';
-    const props = { profile: owner };
-
-    assert.equal(isPlaceTop(component), true);
-    assert.equal(crumb(component, props), null);
-    assert.ok(NO_CONTEXT_COMPONENTS.includes(component));
-    assert.ok(!isHomeComponent(component, 'issue'));
-    assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).scope, undefined);
-    assert.equal(isPlaceTop('group/show'), false);
+    for (const [component, props] of [
+        ['group/show', { group: cyclists }],
+        ['member/show', { profile: owner }],
+    ] as const) {
+        assert.equal(isPlaceTop(component), true);
+        assert.equal(crumb(component, props), null);
+        assert.ok(NO_CONTEXT_COMPONENTS.includes(component));
+        assert.ok(!isHomeComponent(component, 'issue'));
+        assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).scope, undefined);
+    }
+    assert.equal(isPlaceTop('group/talk/index'), false);
     assert.equal(isPlaceTop('dashboard'), false);
 });
 

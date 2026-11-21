@@ -104,13 +104,10 @@ test("the place bar is the desk answer to where the reader is: the group's face 
     expect(placeBar()?.querySelector('a')).toBeNull();
 });
 
-test("a group's top stands the same place bar as the screens inside it", () => {
-    arrive('group/show', { group: { ...cyclists, avatarUrl: '/img/cyclists-640.png' } });
+test("a group's top stands no place bar: its hero names the group", () => {
+    arrive('group/show', { group: cyclists });
 
-    const name = screen.getByRole('button', { name: 'Cyclists' });
-    expect(placeBar()?.contains(name)).toBe(true);
-    // The inner screens' face, not the hero's larger one, so moving between them redraws nothing.
-    expect(name.querySelector('img')?.getAttribute('src')).toBe('/img/cyclists.png');
+    expect(placeBar()).toBeNull();
 });
 
 test('a form says where it is without offering a way out of it', () => {

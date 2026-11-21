@@ -108,7 +108,7 @@ test('the shell paints the one ground, the color line and the offsets that clear
 
 test.each([
     ['group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
-    ['group/show', '/groups/7', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['group/show', '/groups/7', null],
     ['member/show', '/member/9', null],
     // A form's crumb is plain text with no scope, and the editor's toolbar stands below its bar.
     ['diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],

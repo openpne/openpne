@@ -117,7 +117,7 @@ class GroupController extends Controller
                     'canViewTalk' => $canViewTalk,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount, $openSections) {
+            SurfaceResolver::MODERN => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $staff, $topics, $canPostTopic, $events, $canPostEvent, $canViewTalk, $talkPreview, $talkUnreadCount) {
                 $canManage = $role?->canManage() ?? false;
                 $canJoin = $role === null && ! $isPending;
                 $canLeave = $role !== null && $role !== GroupRole::Admin;
@@ -146,7 +146,6 @@ class GroupController extends Controller
                     talkPreview: $preview,
                     talkUnread: $talkUnreadCount,
                     about: GroupSerializer::about($found, $staff),
-                    openSections: $openSections,
                 ));
             },
         ]);

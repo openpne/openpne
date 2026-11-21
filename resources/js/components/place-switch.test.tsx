@@ -71,7 +71,7 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-const cyclists = (section: 'top' | 'talk' | 'topic' | 'event' | 'members' = 'talk', open = { talk: true, topic: true, event: true }): ChromeScope => ({
+const cyclists = (section: 'talk' | 'topic' | 'event' | 'members' = 'talk', open = { talk: true, topic: true, event: true }): ChromeScope => ({
     kind: 'group',
     id: 7,
     name: 'Cyclists',
@@ -215,7 +215,7 @@ test('while open, a sheet over the page takes every press outside the panel', as
 });
 
 test('a board the viewer may not open is not offered', () => {
-    renderWithProviders(<PlaceSwitch scope={cyclists('top', { talk: false, topic: false, event: false })} variant="phone" />);
+    renderWithProviders(<PlaceSwitch scope={cyclists('members', { talk: false, topic: false, event: false })} variant="phone" />);
 
     expect(within(openOn()).getAllByRole('link').map((link) => link.textContent)).toEqual(['Top page', 'Members']);
 });

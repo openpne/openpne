@@ -497,7 +497,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     'community/manage': (props) => ({ mode: 'contextual', title: t('Management member'), scope: groupScope(props, 'members') }),
     // Its event is a link at the head of the page, the one level above it that is no section.
     'group/event/members': (props) => ({ mode: 'contextual', title: t('Count of Member'), scope: groupScope(props, 'event') }),
-    'group/show': (props) => ({ scope: groupScope(props, 'top') }),
     'timeline/index': (props) => ({ mode: 'section', title: ACTIVITY, ...postActivityAction(props) }),
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
@@ -596,6 +595,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'community/search',
     'group/topic/recent',
     'group/event/recent',
+    'group/show',
     'timeline/index',
     'message/conversations/index',
     'member/search',
@@ -632,8 +632,8 @@ interface PlaceRef {
 
 const memberPlace = (member: PlaceRef): Place => ({ label: member.name, href: `/member/${member.id}` });
 
-/** The pages that ARE a member's place, whose own hero names it directly below the header. */
-const PLACE_TOPS = ['member/show'] as const;
+/** The pages that ARE a place, whose own hero names it directly below the header. */
+const PLACE_TOPS = ['group/show', 'member/show'] as const;
 
 export interface BreadcrumbCrumb {
     label: ChromeLabel | string;

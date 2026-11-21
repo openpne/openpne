@@ -18,11 +18,11 @@ the row.
 
 | Screen | The header reads |
 |---|---|
-| Home, a member's page | `[mark]` + the site name. A member's page IS a place, and names itself in its own hero directly below |
+| Home, a member's page, a group's page | `[mark]` + the site name. These pages ARE a place: a member's and a group's name themselves in their own hero directly below |
 | A day of できごと, latest or past | `[mark]` + the site name. Its band names the day and steps to the days either side, and its foot leads to the month, so a crumb above it would be a third way to the same places |
 | A hub | `[mark] › section`. The bar's copy of the title is hidden from assistive technology; the page's own h1 stays on screen and is its one announcement |
 | A month of できごと | `[mark] › できごと`, as a hub reads, with no crumb: its band steps to the months either side and each day leads to its own page. The page opens on that band, so its h1 is kept for assistive technology and not drawn (`Chrome.deskHeading`) |
-| A screen inside a group, its top included | `[mark]`, then the group's name in the middle of the row, which opens the group's sections ("Place sections") |
+| A screen inside a group | `[mark]`, then the group's name in the middle of the row, which opens the group's sections ("Place sections") |
 | A screen inside a member's place | `[mark] › place`, the place a pill that leads to its top |
 | A screen inside no place, with a trail | `[mark] › trail`, the trail's last item a pill that leads to it |
 | A form | `[mark] › trail`, as static text |
@@ -100,9 +100,9 @@ off the phone's screen is drawn here.
 
 On a screen deep enough to be inside somewhere, a sticky place bar
 ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
-column: the phone header's crumb in the same pill, carrying the place's face. Inside a group, its
-top included, the bar is the group's face and name, which open its sections. Home, a hub, a
-member's own page and anything the sidebar's own active row already names draw none. The bar is one height on every
+column: the phone header's crumb in the same pill, carrying the place's face. Inside a group, the bar
+is the group's face and name, which open its sections. Home, a hub, a member's or a group's own
+page and anything the sidebar's own active row already names draw none. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
 banner and day indicator, and the editor's toolbar. A screen with no place bar leaves the

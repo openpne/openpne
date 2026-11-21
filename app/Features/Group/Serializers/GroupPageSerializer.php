@@ -35,8 +35,7 @@ final class GroupPageSerializer
      * @param  Collection<int, GroupTopic>|null  $recentTopics  null = the viewer may not read the boards
      * @param  Collection<int, GroupEvent>|null  $recentEvents
      * @param  array{body: string, authorName: string|null, createdAt: string}|null  $talkPreview
-     * @param  array{talk: bool, topic: bool, event: bool}  $openSections
-     * @return array{group: array{id: int, name: string, imageUrl: string|null, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: null, isAi: false, bio: string|null, memberCount: int, categoryName: string|null, registerPolicy: string}, viewerRole: string|null, isPending: bool, isTransferNominee: bool, canManage: bool, canJoin: bool, canLeave: bool, members: list<array>, categoryGroups: list<array>, recentTopics: list<array>|null, canPostTopic: bool, recentEvents: list<array>|null, canPostEvent: bool, canViewTalk: bool, talkPreview: array|null, talkUnread: int, about: array, recentPhotos: list<array>, openSections: array{talk: bool, topic: bool, event: bool}}
+     * @return array{group: array{id: int, name: string, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: null, isAi: false, bio: string|null, memberCount: int, categoryName: string|null, registerPolicy: string}, viewerRole: string|null, isPending: bool, isTransferNominee: bool, canManage: bool, canJoin: bool, canLeave: bool, members: list<array>, categoryGroups: list<array>, recentTopics: list<array>|null, canPostTopic: bool, recentEvents: list<array>|null, canPostEvent: bool, canViewTalk: bool, talkPreview: array|null, talkUnread: int, about: array, recentPhotos: list<array>}
      */
     public static function page(
         Member $viewer,
@@ -56,7 +55,6 @@ final class GroupPageSerializer
         ?array $talkPreview,
         int $talkUnread,
         array $about,
-        array $openSections,
     ): array {
         return [
             'group' => self::identity($group),
@@ -79,16 +77,14 @@ final class GroupPageSerializer
             // The board collections are null exactly when their read gate refused, so they are the
             // gate the picture sources ask as well — a source whose rows may not be read is not read.
             'recentPhotos' => self::photos($viewer, $group, $canViewTalk, $recentTopics !== null, $recentEvents !== null),
-            'openSections' => $openSections,
         ];
     }
 
     /**
      * avatarColor / isAi are the shared header's member fields, which a group carries nothing in —
-     * the initial badge stands in when there is no cover. imageUrl is GroupSerializer::summary's
-     * face, so the place bar draws the same file on the top and on every screen inside.
+     * the initial badge stands in when there is no cover.
      *
-     * @return array{id: int, name: string, imageUrl: string|null, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: null, isAi: false, bio: string|null, memberCount: int, categoryName: string|null, registerPolicy: string}
+     * @return array{id: int, name: string, avatarUrl: string|null, avatarUrlLarge: string|null, avatarColor: null, isAi: false, bio: string|null, memberCount: int, categoryName: string|null, registerPolicy: string}
      */
     private static function identity(Group $group): array
     {
@@ -97,7 +93,6 @@ final class GroupPageSerializer
         return [
             'id' => $group->getKey(),
             'name' => $group->name,
-            'imageUrl' => $file?->thumbnailUrl(180, 180, square: true),
             'avatarUrl' => $file?->thumbnailUrl(640, 640, square: true),
             'avatarUrlLarge' => $file?->thumbnailUrl(1200, 1200, square: true),
             'avatarColor' => null,
