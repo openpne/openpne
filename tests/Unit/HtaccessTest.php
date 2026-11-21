@@ -45,10 +45,13 @@ final class HtaccessTest extends TestCase
         $this->assertSame(file_get_contents(dirname(__DIR__, 2).'/.htaccess'), SiteLayout::DENY);
     }
 
-    public function test_a_copy_denies_whatever_its_comments_and_line_endings(): void
+    public function test_only_the_top_file_as_it_is_denies(): void
     {
-        $this->assertTrue(SiteLayout::denies("# An older comment\r\nRewriteEngine On\r\n\r\nRewriteRule ^ - [F]"));
-        $this->assertFalse(SiteLayout::denies("RewriteEngine On\n# RewriteRule ^ - [F]\n"));
+        $this->assertTrue(SiteLayout::denies(SiteLayout::DENY));
+        // Apache serves the directory under both: a backslash ends the comment line into the next, and CR alone ends no line.
+        $this->assertFalse(SiteLayout::denies("# Kept out \\\n".SiteLayout::DENY));
+        $this->assertFalse(SiteLayout::denies(str_replace("\n", "\r", SiteLayout::DENY)));
+        $this->assertFalse(SiteLayout::denies("\0".SiteLayout::DENY));
         $this->assertFalse(SiteLayout::denies(''));
     }
 

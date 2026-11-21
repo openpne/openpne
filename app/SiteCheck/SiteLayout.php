@@ -22,19 +22,10 @@ final class SiteLayout
 
         HTACCESS;
 
-    /** Comments, blank lines and line endings aside, so a release changing only those keeps existing copies good. */
+    /** Byte for byte, as Apache reads lines its own way (a comment ending in a backslash takes the next line); a release changing DENY keeps its earlier bytes accepted here, or every updated site fails openpne:check. */
     public static function denies(string $contents): bool
     {
-        return self::directives($contents) === self::directives(self::DENY);
-    }
-
-    /** @return list<string> */
-    private static function directives(string $contents): array
-    {
-        return array_values(array_filter(
-            array_map(trim(...), preg_split('/\r\n|\r|\n/', $contents) ?: []),
-            fn (string $line): bool => $line !== '' && ! str_starts_with($line, '#'),
-        ));
+        return $contents === self::DENY;
     }
 
     public function __construct(
