@@ -60,12 +60,15 @@ routes stay **registered** —
 route exists — so the middleware, not the route table, is the gate. It is attached in
 [`routes/web.php`](../../routes/web.php): to each unit's route group, and individually to the
 feature-owned endpoints that live outside their prefix (e.g. `member.config.diary`,
-`notifications.center.friendAccept` / `friendReject`), and to the `mcp` OAuth consent screen. The
-rest of `mcp` carries it in [`routes/ai.php`](../../routes/ai.php) instead: on the group wrapping all
-three of the endpoint's methods, and on the OAuth routes.
+`notifications.center.friendAccept` / `friendReject`), to the `group` seat an owner gives an AI
+account from the member-config pages (`member.config.ai.groups.*`, routes no unit owns), and to the
+`mcp` OAuth consent screen. The rest of `mcp` carries it in [`routes/ai.php`](../../routes/ai.php)
+instead: on the group wrapping all three of the endpoint's methods, and on the OAuth routes.
 
 `FeatureRouteMiddlewarePinTest` walks the whole route inventory and fails on a feature-owned route
-that is neither gated nor consciously allowlisted, so a route added later cannot dodge the gate.
+that is neither gated nor consciously allowlisted, so a route added later cannot dodge the gate. Its
+dependency map names the gates a route needs beyond its owner's, owned or not, and a gate naming no
+unit fails wherever it sits.
 
 Deliberately **not** gated: the shared compose preview (its store path gates per feature), blocks,
 member profiles, and the `/m/*` compat redirects (their canonical target answers).
@@ -175,11 +178,10 @@ friend diary feed (`diary.list_friend`, gated as `diary` **and** `friend`), the 
 dashboard digest of it, the friend-scoped gadgets, and the home feed's friend branch
 ([`TimelineFeedScope::apply()`](../../app/Features/Timeline/TimelineFeedScope.php), so its three
 consumers follow from one place while the own-posts and all-members tiers stay). Two seams state the
-dependency where the unit is not the owner: `FeatureRouteMiddlewarePinTest`'s dependency map (a route
-needing a gate beyond its owner's, or a gate on a route no unit owns) and
-[`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a second unit per context —
-`activityBox` goes on the home, where it is the friend feed, and stays on a profile, where it is the
-owner's own timeline).
+dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinTest`'s dependency map
+(a route needing a second gate) and [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
+second unit per context — `activityBox` goes on the home, where it is the friend feed, and stays on a
+profile, where it is the owner's own timeline).
 
 ## Upgrade
 
