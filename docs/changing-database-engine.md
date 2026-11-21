@@ -39,7 +39,9 @@ journal mode needs that same exclusive lock, so doing it while another connectio
 fails with `database is locked`.
 
 The WAL journal mode is persistent — it is recorded in the database file, so it holds even if the
-variable is later unset. A typo does not announce itself the same way: depending on its shape it
+variable is later unset. Keep it set all the same: the backup copy below is not in WAL, and a
+database restored from one, or carried into a new release by an update from an archive, gets WAL
+back only from the variable. A typo does not announce itself the same way: depending on its shape it
 either leaves the previous mode in place or fails every connection outright. Confirm it took.
 
 ```console

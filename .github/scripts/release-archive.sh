@@ -355,6 +355,7 @@ update() {
 
   step "the site after the update"
   expect 200 /login
+  [ -z "$db" ] || [ "$(sqlite3 -cmd ".timeout 60000" "$db" 'PRAGMA journal_mode')" = wal ] || die "the database is not in WAL mode once the updated site has opened it"
   [ -z "${ARCHIVE_NEW_MARK:-}" ] || grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the login page is not the new release's"
   expect 200 /admin/login
   probe check
@@ -395,7 +396,7 @@ update() {
   worker=$!
   php artisan up
   expect 200 /login
-  [ "$(sqlite3 "$db" 'PRAGMA journal_mode')" = wal ] || die "the database put back is not in WAL mode once the site has opened it"
+  [ "$(sqlite3 -cmd ".timeout 60000" "$db" 'PRAGMA journal_mode')" = wal ] || die "the database put back is not in WAL mode once the site has opened it"
   [ -z "${ARCHIVE_NEW_MARK:-}" ] || ! grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the old release is drawing the new release's login page"
   probe check
   [ -e "$marker" ] || die "going back did not bring back the old release's code"
