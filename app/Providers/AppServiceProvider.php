@@ -103,8 +103,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AuthCodeRepository::class, SingleUseAuthCodeRepository::class);
         $this->app->when(AuthorizeController::class)->needs(StatefulGuard::class)->give(fn () => Auth::guard('member'));
 
-        // Singleton so its constructor captures the member-surface session config
-        // once per process, before any request's surface pin mutates it.
+        // Singleton so its constructor captures the member-realm session config
+        // once per process, before any request's realm pin mutates it.
         $this->app->singleton(UseAdminSessionStore::class);
 
         // Bound under the framework class rather than listed in the web group: every stack naming

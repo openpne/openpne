@@ -8,7 +8,7 @@ the member realm's Classic/Modern presentation.)
 
 | Realm | Guard | Cookie (`config/session.php`) | DB table | Login |
 |-------|-------|------------------------------|----------|-------|
-| Member (`/`, everything else) | `member` | `session.cookie` (`SESSION_COOKIE`) | `session.table` (`sessions`) | `/login` (Fortify), `/passkeys/login` |
+| Member (`/`, everything else) | `member` | `session.cookie` (`SESSION_COOKIE`) | `session.member_table` (`sessions`) | `/login` (Fortify), `/passkeys/login` |
 | Admin (`/admin*`, Livewire + Filament system routes) | `admin` | `session.admin_cookie` (`SESSION_ADMIN_COOKIE`) | `session.admin_table` (`admin_sessions`) | `/admin/login` (Filament) |
 
 `/mcp` is a third realm and holds no session at all: it is mounted outside the `web` group, accepts a
@@ -192,7 +192,7 @@ to the store, so the request is wrapped to keep it.
    still enforced on read.
 6. **`members.last_login_at` names the calendar day of the member's last activity**:
    `App\Listeners\Auth\RecordLastLogin` writes it on every `member`-guard `Login`
-   (password, passkey, two-factor, post-registration) and
+   (password, passkey, two-factor, emailed login code, post-registration) and
    again on the first `Authenticated` of each later day (site timezone), because
    a session kept alive by polling never logs in again. A failed write is
    reported, not thrown, so it cannot block a login. The write leaves

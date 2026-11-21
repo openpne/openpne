@@ -100,7 +100,8 @@ Differences from the admin posture, all deliberate:
   once and opens a short window (below) rather than re-asking per step. The
   admin's set-up is a single modal, so it demands the password **and** a code
   inline with no window. Disabling and regenerating match the admin posture
-  directly: the account password **and** a second-factor proof, inline, every time.
+  directly: the account password **and** a second-factor proof, inline, every time — or,
+  for disabling, a passkey ("Member re-authentication").
 - **No "remember me" either.** A member stays signed in through the session
   itself ("Session lifetime"), which exists only after the challenge succeeds;
   the `member` guard issues and reads no recaller cookie.
@@ -170,7 +171,7 @@ regeneration, or a completed email change, and survives **only** a password chan
 below.
 
 **Reset-link boundary invariant** (the reason the admin path is safe against a
-malicious or hijacked admin, T2/T3): issuing a link gives the admin panel **no
+malicious or hijacked admin): issuing a link gives the admin panel **no
 direct account-takeover ability**. The link is delivered only to the member's
 registered mailbox, and consuming it requires the member's own account password —
 both evidence outside the admin's reach. So the action has no primary-member gate
@@ -202,7 +203,7 @@ Accepted residual: a pending (unconfirmed) set-up QR is visible to whoever
 holds the member's session, and inside the enable re-auth window it could even
 be confirmed without the password — bounded by the window's length, and until
 confirmed the pending secret gates nothing. Outside the window every
-security-relevant action requires the account password, and restarting set-up
+security-relevant action requires the account password or a passkey, and restarting set-up
 mints a fresh secret.
 
 There is no site-wide enforcement setting ("this site requires MFA"): enabling
@@ -309,8 +310,8 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
 - **Relying party = `APP_URL`'s host**, the host `trustHosts` already pins.
   Moving a site to another domain orphans its passkeys (authenticators stop
   offering them; the rows stay and the password still works). The opaque user
-  handle is an HMAC under `fortify.passkeys.user_handle_secret`, which Fortify
-  defaults to `APP_KEY` (the package's own env is overridden); rotating the key
+  handle is an HMAC under `fortify.passkeys.user_handle_secret`, which is
+  `PASSKEYS_USER_HANDLE_SECRET`, or `APP_KEY` when that is unset; rotating the key
   leaves existing passkeys valid and only changes the handle new ones carry.
 - `credential_id` is stored at 512 characters under a binary collation on
   MySQL (base64url is case-sensitive). The WebAuthn maximum of 1023 bytes would
@@ -627,7 +628,7 @@ flows, password reset, and the email-change and MFA-reset landings — carries
 the baseline already withholds the path cross-origin, so what `no-referrer`
 closes is the same-origin channel — the landing's own subresources and
 follow-up requests, and `document.referrer`. It covers the responses the route
-returns; an abort (a 429 from the throttle, a 500) unwinds past it and ships
+returns; an abort (a 429 from the throttle) unwinds past it and ships
 the baseline.
 
 Deliberately not set:
@@ -684,12 +685,13 @@ OpenPNE 3 never met them, so the GD processor reads the header first and rejects
 a source over [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php) —
 `OPENPNE_IMAGE_MAX_SOURCE_KB` bytes, a declared side over `max_upload_dimension`,
 or more declared pixels than `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` — without
-allocating anything. Left blank, both follow the upload rules (the upload cap, and
-the per-side limit squared: 25 MP at the shipped 5000), so raising an upload limit
+allocating anything. Left blank, both follow the upload rules (the larger of 20480 KB and the upload
+cap, and the per-side limit squared: 25 MP at the shipped 5000), so raising an upload limit
 raises them too. What this bounds is one decode at `max_source_pixels × 4` bytes,
 100 MB at the shipped default; a host sized below that sets the pixel cap lower,
-and a stored image over it then yields no variant (a 404, or the shipped app icon —
-a verdict the cache disk keeps until the file is replaced, whatever the caps are set to afterwards);
+and a stored image over it then yields no variant (a 404, or the generated icon —
+a verdict the cache disk keeps until the file is replaced or `openpne:image-cache warm
+--retry-failed` / `rebuild` asks again);
 an upload over it is refused as an upload, since its canonical is produced before
 the row is saved. An out-of-memory kill is not catchable, so
 this header check is the whole defence in the GD process; nothing serialises
