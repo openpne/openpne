@@ -629,8 +629,8 @@ flows, password reset, and the email-change and MFA-reset landings — carries
 the baseline already withholds the path cross-origin, so what `no-referrer`
 closes is the same-origin channel — the landing's own subresources and
 follow-up requests, and `document.referrer`. It covers the responses the route
-returns, an abort inside it included; a 429 from the throttle, which the middleware priority runs
-ahead of it, never reaches it and ships the baseline.
+returns, an abort inside it included; a response from middleware that runs ahead of it — the 419,
+the throttle's 429 — ships the baseline.
 
 Deliberately not set:
 
@@ -690,12 +690,12 @@ allocating anything. Left blank, the byte cap is the larger of 20480 KB and the 
 pixel cap is the per-side limit squared (25 MP at the shipped 5000), so neither falls below what an
 upload may be. What this bounds is one decode at `max_source_pixels × 4` bytes,
 100 MB at the shipped default; a host sized below that sets the pixel cap lower,
-and a stored image over it then yields no variant (a 404, or the generated icon). The cache disk
-keeps a refused canonical, with the icons refused for it, until the file is replaced or
-`openpne:image-cache warm --retry-failed` / `rebuild` asks again, and an icon refused from a
-canonical that stands until the file is replaced or `rebuild`;
-an upload over it is refused as an upload, since its canonical is produced before
-the row is saved. An out-of-memory kill is not catchable, so
+and a stored image over it then yields no variant (a 404, or the generated icon), while an upload
+over it is refused as an upload, since its canonical is produced before
+the row is saved. The cache disk remembers a refused canonical, and the icons refused with it,
+until the file is replaced or `openpne:image-cache warm --retry-failed` / `rebuild` asks again; an
+icon refused while its canonical stands is remembered until the file is replaced or `rebuild` runs.
+An out-of-memory kill is not catchable, so
 this header check is the whole defence in the GD process; nothing serialises
 concurrent misses of the same picture. Under `imgproxy` the same header check
 applies the sidecar's budget instead (50 MP, no per-side limit); HEIC and AVIF,
