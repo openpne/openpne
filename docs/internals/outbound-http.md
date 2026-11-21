@@ -3,8 +3,10 @@
 Some features need to dereference a URL a member typed. Doing that turns the server into a
 request forwarder for anyone who can post, so every such fetch goes through one seam:
 [`App\Outbound`](../../app/Outbound). Nothing else in `app/` may open an outbound connection —
-the one exception being [`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php), which dials a single
-operator-configured address ([images](images.md), "Processing") — and
+the two exceptions dial addresses an operator configured, never one a member typed:
+[`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php) a single sidecar
+([images](images.md), "Processing"), and [`SiteFetcher`](../../app/SiteCheck/SiteFetcher.php) the
+site's own `APP_URL`, or the address given to `openpne:check` ([runtime](runtime.md), "Site check") — and
 [`OutboundEgressBoundaryTest`](../../tests/Feature/Architecture/OutboundEgressBoundaryTest.php)
 fails the build if something else does.
 
@@ -164,9 +166,11 @@ bounded here beyond libcurl's own limits).
   the directory allowlist below would not otherwise stop anything in `App\Outbound` from fetching
   on it.
 - `App\Outbound` is the only directory in `app/` that fetches a URL anyone but the operator chose,
-  enforced by test. `App\Files\Imgproxy\ImgproxyImageProcessor` is the other name on the allowlist, as
-  a single file: it dials `OPENPNE_IMGPROXY_URL` and nothing else, on a path that carries no member
-  input beyond a random spool name, and its neighbours in that directory stay under every check. The
+  enforced by test. Two single files are on the allowlist besides, their neighbours staying under
+  every check: `App\Files\Imgproxy\ImgproxyImageProcessor` dials `OPENPNE_IMGPROXY_URL` and nothing
+  else, on a path that carries no member input beyond a random spool name; `App\SiteCheck\SiteFetcher`
+  fetches only `APP_URL` and `openpne:check`'s `--parent-url`, is reachable only from that command by
+  test, follows no redirect and reads at most 64 KiB of a response. The
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
   are banned outright everywhere else, with the existing local-path readers named in an exact
   allowlist. The check tokenises rather than greps: requiring a literal `'https://…'` argument would

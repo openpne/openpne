@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\SiteCheck;
+
+use Illuminate\Contracts\Foundation\Application;
+
+/** The directories openpne:check reads and writes; the data directory sits beside the release, not inside it (docs/internals/runtime.md, "Site check"). */
+final class SiteLayout
+{
+    public const DATA_DIRECTORY = 'openpne-data';
+
+    public const MYSQL_OPTION_FILE = 'mysql-backup.cnf';
+
+    public function __construct(
+        public readonly string $base,
+        public readonly string $public,
+        public readonly string $storage,
+        public readonly string $bootstrapCache,
+        public readonly string $envFile,
+    ) {}
+
+    public static function of(Application $app): self
+    {
+        return new self(
+            $app->basePath(),
+            $app->publicPath(),
+            $app->storagePath(),
+            $app->bootstrapPath('cache'),
+            $app->environmentFilePath(),
+        );
+    }
+
+    public function parent(): string
+    {
+        return dirname($this->base);
+    }
+
+    public function dataDirectory(): string
+    {
+        return $this->parent().DIRECTORY_SEPARATOR.self::DATA_DIRECTORY;
+    }
+
+    public function mysqlOptionFile(): string
+    {
+        return $this->dataDirectory().DIRECTORY_SEPARATOR.self::MYSQL_OPTION_FILE;
+    }
+
+    /** Whether storage/ is the release's own directory, and so served wherever the release is. */
+    public function storageInTree(): bool
+    {
+        return realpath($this->storage) === realpath($this->base.DIRECTORY_SEPARATOR.'storage');
+    }
+}

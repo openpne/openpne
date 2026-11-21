@@ -4,6 +4,7 @@ down
 events.scanned.php
 image-fast-path.json*
 maintenance.php
+openpne-check.lock
 routes.php
 routes.scanned.php
 schedule-*
