@@ -10,9 +10,8 @@ use App\Models\Member;
 use App\Support\Feature;
 
 /**
- * The one answer to which of a group's boards a viewer may open: the group page gates its boxes and
- * their queries on it, and every screen inside the group lists its sections from it
- * (docs/internals/modern-frame.md, "Place sections").
+ * The one answer to which of a group's boards a viewer may open, shared by the group page's boxes and
+ * the place's sections (docs/internals/modern-frame.md, "Place sections").
  */
 final class GroupPlace
 {

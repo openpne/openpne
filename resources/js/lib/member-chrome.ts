@@ -495,7 +495,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     },
     'community/members': (props) => ({ mode: 'contextual', title: t('Members'), scope: groupScope(props, 'members') }),
     'community/manage': (props) => ({ mode: 'contextual', title: t('Management member'), scope: groupScope(props, 'members') }),
-    // Its event is a link at the head of the page, the one level above it that is no section.
     'group/event/members': (props) => ({ mode: 'contextual', title: t('Count of Member'), scope: groupScope(props, 'event') }),
     'timeline/index': (props) => ({ mode: 'section', title: ACTIVITY, ...postActivityAction(props) }),
     'timeline/member': (props) => {

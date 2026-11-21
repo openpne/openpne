@@ -19,7 +19,6 @@ export default function GroupEventMembers() {
         <>
             <Head title={t('Count of Member')} />
 
-            {/* The place's tiles reach the event list; the event itself is the one level above this page they do not offer. */}
             <p>
                 <Link href={`/events/${event.id}`} className="text-link hover:underline">
                     {event.name}

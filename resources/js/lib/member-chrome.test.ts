@@ -500,7 +500,7 @@ const GROUP_PLACES: { component: string; props: Record<string, unknown>; section
 const header = (component: string, props: Record<string, unknown>, guest = false) =>
     headerOf(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest });
 
-test('every screen inside a group, its top included, heads with the group and the section it stands in', () => {
+test('every screen inside a group heads with the group and the section it stands in', () => {
     for (const { component, props, section } of GROUP_PLACES) {
         const answer = header(component, props);
 

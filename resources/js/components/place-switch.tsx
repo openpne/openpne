@@ -143,7 +143,8 @@ export function PlaceSwitch({ scope, variant }: { scope: ChromeScope; variant: V
                         headingVariants({ variant: 'bar' }),
                         variant === 'phone'
                             ? 'min-h-11 justify-center px-1'
-                            : 'h-8 rounded-full pr-2 pl-1 hover:bg-accent data-[state=open]:bg-accent',
+                            : // PlaceBar's pill height, which the shell's single `--modern-place-bar` offsets by.
+                              'h-8 rounded-full pr-2 pl-1 hover:bg-accent data-[state=open]:bg-accent',
                     )}
                 >
                     {variant === 'desk' && <PlaceFace scope={scope} />}

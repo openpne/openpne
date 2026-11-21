@@ -43,8 +43,8 @@ Two decisions here are deliberate rather than pending:
 ## Place sections
 
 A group's sections are listed in [`lib/place-sections.ts`](../../resources/js/lib/place-sections.ts),
-and the registry entry of every screen inside a group names the group and the section it stands
-in; the page itself declares nothing. Pressing the group's name opens its sections as tiles, the
+and the registry entry of every screen inside a group, its forms aside, names the group and the
+section it stands in; the page itself declares nothing. Pressing the group's name opens its sections as tiles, the
 current one marked: `aria-current="page"` on the section's own list, `"true"` on a screen deeper
 inside it. The panel is modal: pressing outside it only closes it, even on a control the page
 keeps pressable over its content, and while it is open Tab stays inside and the page does not
@@ -100,8 +100,8 @@ off the phone's screen is drawn here.
 
 On a screen deep enough to be inside somewhere, a sticky place bar
 ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
-column: the phone header's crumb in the same pill, carrying the place's face. Inside a group, the bar
-is the group's face and name, which open its sections. Home, a hub, a member's or a group's own
+column: the phone header's crumb in the same pill, carrying the place's face. Inside a group, a form
+aside, the bar is the group's face and name, which open its sections. Home, a hub, a member's or a group's own
 page and anything the sidebar's own active row already names draw none. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
