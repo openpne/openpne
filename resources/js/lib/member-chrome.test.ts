@@ -136,10 +136,10 @@ test('a site whose home is the digest keeps the issue in the nav and the digest 
     assert.ok(!isHomeComponent('home/archive', 'whats_new'));
 });
 
-test('the crumb above the group digest follows the home setting', () => {
-    const crumb = (component: string, modernHome?: string) => resolveChrome(component, { enabledFeatures: allOn, modernHome }).context?.[0]?.href;
-    assert.equal(crumb('community/recent'), '/dashboard');
-    assert.equal(crumb('community/recent', 'whats_new'), '/');
+test('the context of the group digest follows the home setting', () => {
+    const parent = (component: string, modernHome?: string) => resolveChrome(component, { enabledFeatures: allOn, modernHome }).context?.[0]?.href;
+    assert.equal(parent('community/recent'), '/dashboard');
+    assert.equal(parent('community/recent', 'whats_new'), '/');
 });
 
 test('the comment history lights none of the diary hub tabs', () => {
@@ -189,7 +189,7 @@ test("the mixed activity page is the digest's full list, not a hub tab", () => {
 
     assert.equal(recent.mode, 'contextual');
     assert.equal(recent.tabs, undefined);
-    assert.deepEqual(recent.context?.map((crumb) => crumb.href), ['/dashboard']);
+    assert.deepEqual(recent.context?.map((item) => item.href), ['/dashboard']);
 });
 
 const chrome = (component: string, props: Record<string, unknown>) =>
@@ -250,8 +250,6 @@ test('the current issue takes the bare frame: its masthead is the page', () => {
 });
 
 test('a past day takes the bare frame, as the latest does', () => {
-    // Its band steps to the days either side and its foot to the month, so a context above it would be
-    // a third way to the same places.
     assert.deepEqual(resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } }), {
         mode: 'embedded',
         width: 'standard',
@@ -423,7 +421,7 @@ test('a compose screen is a form with no floating action', () => {
 
 test('a form outside the compose set keeps the ordinary bar', () => {
     // community/edit is the near miss: the create/edit form shares its component with group
-    // settings, which is a settings screen and stays on the static-trail bar.
+    // settings, which is a settings screen and keeps the ordinary header.
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
         if (component in COMPOSE_SCREENS) {
             continue;
@@ -433,13 +431,13 @@ test('a form outside the compose set keeps the ordinary bar', () => {
 });
 
 test('a form keeps its context but takes no scope', () => {
-    // The bar's contract: a form has nothing to be inside, so its trail stays static text.
+    // A form opens no sections, so its header names its context as text.
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
         const form = chrome(component, props);
 
         assert.equal(form.form, true, component);
         assert.equal(form.scope, undefined, component);
-        // The entry points classified as crumbless have no trail to keep; every other form does.
+        // The entry points classified as having no context name nothing; every other form names its context.
         if (!NO_CONTEXT_COMPONENTS.includes(component)) {
             assert.ok((form.context?.length ?? 0) > 0, component);
         }
@@ -459,7 +457,7 @@ test('the messages entry counts conversations and lands where they are listed', 
     assert.deepEqual(messages?.match, ['/message']);
 });
 
-test('a message-scoped screen crumbs back to the conversation list', () => {
+test('a message-scoped screen names the conversation list as its context', () => {
     // The four boxes are gone from Modern, leaving one parent for the draft form and the withdrawn
     // bucket to return to.
     assert.deepEqual(chrome('message/edit', {}).context, [{ href: '/messages', label: MESSAGES_LABEL }]);
@@ -503,7 +501,7 @@ test('every screen inside a group heads with the group and the section it stands
 
         assert.equal(answer.type, 'place', component);
         assert.equal(answer.type === 'place' && answer.scope.kind === 'group' ? `${answer.scope.id}:${answer.scope.section}` : null, `7:${section}`, component);
-        // The bar names the group on its own, so the registry keeps no trail of its name to say it twice.
+        // The bar names the group on its own, so the registry keeps no context naming it a second time.
         assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).context, undefined, component);
         assert.ok(!NO_CONTEXT_COMPONENTS.includes(component), component);
         assert.ok(hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
@@ -638,7 +636,7 @@ test('a screen that is nowhere and has no context leaves the mark standing alone
     assert.ok(!hasPlaceBar(chrome('policy/show', { kind: 'terms' }), { component: 'policy/show', home: 'issue', guest: false }));
 });
 
-test('the screens with no nav entry of their own crumb back to the screen that links to them', () => {
+test('the screens with no nav entry of their own name the screen that links to them', () => {
     assert.deepEqual(chrome('block/list', {}).context, [{ href: '/member/config', label: { key: 'Settings', replacements: undefined } }]);
     assert.deepEqual(chrome('member/invite', {}).context, [
         { href: '/member/search', label: { key: 'Search members', replacements: undefined } },

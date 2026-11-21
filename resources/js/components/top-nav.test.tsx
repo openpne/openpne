@@ -114,7 +114,6 @@ test('the home bar is the site mark and its name, and nothing else', () => {
     expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });
 
-/** Read aloud, since the day's h1 is its date and not these words. */
 test("a past day's issue names the section it stands in, and offers no way there", () => {
     const chrome = arrive('home/archive', '/home/2026/08/20', { issue: { monthHref: '/home/2026/08' } });
 
@@ -190,7 +189,7 @@ test("a deep page inside another member's place names them, as the way to their 
     expect(document.querySelector('header')?.textContent).not.toContain('›');
 });
 
-test('a place top speaks the home grammar — no crumb over its own hero', () => {
+test('a place top speaks the home grammar — no name over its own hero', () => {
     // The three-page symmetry extends to the header: home, a member's page and a group's share one
     // bar, and the place's hero names it directly below where a pill would have repeated it.
     const chrome = arrive('group/show', '/groups/7', {

@@ -14,8 +14,8 @@ frame draws from those answers.
 
 Below `lg`, [`TopNav`](../../resources/js/components/top-nav.tsx) speaks one grammar on every
 screen class: the site mark, then the name of the part of the site the reader stands in, in the
-middle of the row, with the site color as a 4px line atop the row. The name is that of the place
-or section, never of the screen itself, and only a place's name can be pressed.
+middle of the row, with the site color as a 4px line atop the row. Only a place's name can be
+pressed.
 
 | Screen | The header reads |
 |---|---|
@@ -32,8 +32,8 @@ mark are the ways out.
 
 Two decisions here are deliberate rather than pending:
 
-- **A form carries no way back.** A form has no place to open, even inside a group, so nothing
-  beside unsaved input leads away from it.
+- **A form's name opens nothing.** Even inside a group, the middle of a form's header is text, so
+  no section list opens beside unsaved input.
 - **A compose sheet keeps its own header.** A sheet is a mode rather than a screen class: its
   header is the ✕ that leaves it plus the page's own actions, and it draws no bottom tabs
   ([feature-modules.md](feature-modules.md), "Surface responsibilities").

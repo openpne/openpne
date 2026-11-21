@@ -73,8 +73,7 @@ const DATE_FORMATTING_RESTRICTIONS = [
     },
 ];
 
-// The frame answers to the width, so a page under pages/ draws one layout for both (docs/internals/modern-frame.md,
-// "Desk width"). The files listed held an lg branch already; the rule keeps the list from growing.
+// These pages held an lg: or max-lg: class already, and the page rule below keeps the list from growing (docs/internals/modern-frame.md, "Desk width").
 const PAGES_WITH_WIDTH_BRANCHES = [
     'resources/js/pages/diary/edit.tsx',
     'resources/js/pages/diary/new.tsx',

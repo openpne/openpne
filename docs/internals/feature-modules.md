@@ -238,7 +238,8 @@ enters bottom-to-top and slides back down when the
 close control is used, which is the one exit that animates: a system back and the
 navigation after a submit are immediate. No animation runs under
 `prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
-header, its context's last item named in the middle as text.
+phone header, naming its context's last item in the middle as text, or showing the mark alone when
+it has no context.
 The registry's `conversation` flag marks a room a member stays in, reading and
 writing in the same place — group talk and a direct message room. Below lg it holds its
 chrome still: the header and the bottom tabs stand while the room is read, and the tabs

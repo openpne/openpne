@@ -633,10 +633,9 @@ export interface HeaderPage {
 }
 
 /**
- * A title names the part of the site a screen stands in, never the screen, and a screen inside no
- * place answers the last item of its context rather than home, since "you are at home" on a settings
- * page would be false. A form takes its context rather than its scope, so no sections open beside
- * unsaved input.
+ * A screen inside no place answers the last item of its context rather than home, since "you are at
+ * home" on a settings page would be false. A form takes its context rather than its scope, so no
+ * sections open beside unsaved input.
  */
 export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage): Header {
     if (isHomeComponent(component, home) || isPlaceTop(component)) {

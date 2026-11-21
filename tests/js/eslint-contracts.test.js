@@ -203,9 +203,14 @@ test('a new page is refused an lg: or max-lg: class in every spelling, and keeps
         assert.ok(found.some((m) => m.startsWith(WIDTH)), spelling);
     }
 
-    const kept = await messages('new Intl.DateTimeFormat();\nconst j = <b>\n// drawn on screen\n</b>;\n', 'resources/js/pages/diary/list.tsx');
+    const kept = await messages(
+        "new Intl.DateTimeFormat();\nconst j = <b>\n// drawn on screen\n</b>;\nimport.meta.glob('./x/*.tsx');\nconst c = t(':count members', { count: n });\n",
+        'resources/js/pages/diary/list.tsx',
+    );
     assert.ok(kept.some((m) => m.startsWith('Format dates through')));
     assert.ok(kept.some((m) => m.startsWith('This is a JSX text node')));
+    assert.ok(kept.some((m) => m.startsWith('A glob over modules here')));
+    assert.ok(kept.some((m) => m.startsWith('Say one in the singular')));
 
     const prose = await messages('const a = <div className="block sm:flex" title="Help: large" />;', 'resources/js/pages/diary/list.tsx');
     assert.deepEqual(prose.filter((m) => m.startsWith(WIDTH)), []);

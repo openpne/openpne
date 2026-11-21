@@ -58,7 +58,6 @@ function hubHeadingRow(props: Record<string, unknown>): Element | null {
 
 const placeBar = () => screen.queryByTestId('place-bar');
 
-/** The phone header's copy of a hub's name is hidden from assistive technology, so the page's own heading is the one announcement there. */
 test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a hub keeps its heading for assistive technology alone below lg, for %s', (_who, props) => {
     expect(hubHeadingRow(props)?.className).toContain('max-lg:sr-only');
 });
