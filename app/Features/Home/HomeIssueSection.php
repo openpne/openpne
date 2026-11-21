@@ -23,7 +23,7 @@ enum HomeIssueSection: string
     case UpcomingEvents = 'upcoming_events';
 
     /**
-     * A cap, not a target: a quiet day publishes fewer and the page never pads
+     * A cap, not a target: a slow day publishes fewer and the page never pads
      * (docs/internals/home-issues.md, "Ranking, caps and the tiebreak").
      */
     public function cap(): int

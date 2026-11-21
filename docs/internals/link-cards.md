@@ -468,8 +468,7 @@ from are decided once, in there.
 **The domain is always shown, and shown first.** A title is written by the page being previewed and
 can claim to be anyone; the host is the one part of a card that cannot misstate where the link goes,
 so the reader gets it before the claim rather than after it. It is the host from the URL and never
-`og:site_name` — the page naming itself is exactly the thing that can lie, which is why the clients
-that show a site name here are not followed in that. `www.` is dropped because it distinguishes
+`og:site_name` — the page naming itself is exactly the thing that can lie. `www.` is dropped because it distinguishes
 nothing a reader acts on.
 
 The card is one link and opens where a body link would: a page of ours in place, another site in a

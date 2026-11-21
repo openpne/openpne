@@ -125,7 +125,7 @@ of those is an error rather than a question with an answer.
 ## Ranking, caps and the tiebreak
 
 Each section has a cap (`HomeIssueSection::cap()`): 8 stories, 3 talk, 12 newcomers, 6 new groups,
-6 upcoming events. It is a cap, not a target — a quiet day publishes fewer and the page never pads.
+6 upcoming events. It is a cap, not a target — a slow day publishes fewer and the page never pads.
 
 Stories are four separate queries merged into one band. Each kind is asked for the **whole** cap, so
 the merged top-8 is exact; asking for a share each would cap a quiet kind's best story out to make

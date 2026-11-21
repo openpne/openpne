@@ -179,7 +179,7 @@ final class PublishHomeIssue
 
     /**
      * Each kind is asked for the whole cap so the merged top-N is exact — asking for a share each
-     * would cap a quiet day's best story out for a busier kind's eighth.
+     * would cap a quiet kind's best story out for a busier kind's eighth.
      *
      * @return list<PlannedItem>
      */
