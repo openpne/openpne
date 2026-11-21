@@ -101,8 +101,8 @@ because the drop guard would otherwise swallow a broken dump.
 ## KV config tables
 
 `member_config` and `community_config` have no `(owner, name)` unique, so every read takes the
-latest row per name (`ORDER BY id DESC LIMIT 1`, or `MAX(id)` in a filter). They are read by
-subquery rather than as a step's FROM, so the per-step column audit cannot show which names migrate;
+latest row per name (`ORDER BY id DESC LIMIT 1`, or `MAX(id)` in a filter). A name is a row rather
+than a column, so the per-step column audit cannot show which names migrate;
 `StepRegistry::memberConfigDispositions()` / `communityConfigDispositions()` /
 `notificationMailDispositions()` are that per-name coverage, and `knownMemberConfigNames()` /
 `knownCommunityConfigNames()` / `knownNotificationMailNames()` are the sets the preflight's
@@ -126,7 +126,7 @@ OpenPNE 3 install), so OpenPNE 4 must not spend it in a noun slot ("%activity% p
 `I18nTermLiteralTest` pins `lang/ja.json` to that). The mobile application's rows (half-width kana)
 and unrecognised names are not migrated, the latter reported by the unknown-name scan. A value is
 carried as `/admin/term-settings` would save it (`TermValue`: both ends trimmed of the characters PHP's
-`trim()` strips, by regular expression so the source collation has no say), and one with nothing else
+`trim()` strips, NUL aside, by regular expression so the source collation has no say), and one with nothing else
 in it, or NULL, is not carried at all: OpenPNE 3 rendered it as nothing, but the admin page cannot hold
 it (a blank field means the default), so the default stands in. `lang` folds to the locale
 slug by `SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to
@@ -204,7 +204,7 @@ number of times where a TEMPORARY table may not (1137); a step whose own source 
 preflight error for a state the run itself survives (the rewire below rebuilds nothing): the rows
 become the app's table under the app's strict mode, and any later rebuild of it fails on them.
 
-`MailTemplatePreflight` render-tests every template the translation step will carry, because the
+`MailTemplatePreflight` render-tests every ja / en template the translation step will carry, because the
 step copies bodies without parsing them. A translation whose template is empty is neither carried
 nor tested: OpenPNE 3 never sends such a body and falls back to its built-in sample, which is what
 an absent OpenPNE 4 row sends. An empty title is carried as a NULL subject, so the OpenPNE 4 default
@@ -248,15 +248,16 @@ hash covers `{key, kind, version}` in that order. The runner's first write store
 `naming_epoch` row (`metadata = {epoch, manifest, release, stamped_at}`; `release` is the build
 that started the run), and each completed step checkpoint stores its own definition.
 
-`UpgradeRunner::resumeVerdict()` reads the state table alone — before the source preflight, so
+`UpgradeRunner::resumeVerdict()` reads no source table — before the source preflight, so
 a completed site whose OpenPNE 3 tables are gone still answers — and the runner acts on it once,
 before any write; `--force-restart` is never gated, its dry run included (which still shows
 the checkpoints as they are, since a dry run resets nothing). In
 order: the completion marker exists → `completed`, the run prints `Completed: …; nothing to
 do` and walks nothing (a step or pass added by a later build is never run against a completed
-site, and `--force-restart` is never the message on one); the two epoch refusals; a stored
-manifest whose hash differs → `blocked`, naming the first phase that was added, removed,
-changed or reordered; an epoch row without a manifest (state written before manifests, whose
+site, and `--force-restart` is never the message on one); the two epoch refusals, an empty
+state table being `fresh` instead; a stored manifest this build cannot read → `blocked`; one
+whose hash differs → `blocked`, naming the first phase that was added, removed, changed or
+reordered; an epoch row without a manifest (state written before manifests, whose
 set of steps is therefore unknown), nothing failed or running, and the `surface_mode` row
 present (only a full success writes it, or an operator's `openpne:surface-mode` before one) →
 `legacy_complete`, adopted: the unverified completion marker is stamped and nothing walks
@@ -285,7 +286,7 @@ has its checkpoints completed — a phase with none to write counts; `file_bin_m
 and must be completed only if present); `completed_unverified` (the marker is unverified, or
 its hash differs, or a current phase lacks a completed checkpoint (named), or legacy state
 that `resumeVerdict()` would adopt and no marker yet — `reason` says which; `upgrade_release` is the build that
-started the run, null when unverified, `upgrade_completed_at` likewise); `blocked`
+started the run, null when unverified; `upgrade_completed_at` is the marker's; both are null while there is no marker); `blocked`
 (`resumeVerdict()` blocked: `reason`, `blocking_phase`); `in_progress` (`next_phase` = the
 first phase in manifest order without a completed checkpoint, `failed_phase`, `legacy`).
 Always: `site`, `release` (current build), `manifest_hash` (current) and `phases[]` in manifest
@@ -321,7 +322,7 @@ contracts:
 - `next_steps` carries a line only when it applied to this run: the surface-mode and
   picture-warming lines are recorded by the run that first completed the site (the one that
   inserted `surface_mode`), so a re-run has an empty list, and an operator who set the mode
-  before the first completion never sees the picture line (the guide's §5 says the same). The
+  before the first completion never sees the picture line. The
   tab-icon line is recorded by the run that inserted `brand_favicon_fallback`, the Modern home
   line by the run that inserted `modern_home`, the joined-group line by the run that inserted
   `modern_group_list`, and the home-notice line by the run that wrote `home_notice`, whatever the

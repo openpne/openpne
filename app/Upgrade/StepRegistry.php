@@ -273,7 +273,7 @@ final class StepRegistry
     }
 
     /**
-     * Disposition of each known OpenPNE 3 `member_config` name: the table is read by subquery, so this
+     * Disposition of each known OpenPNE 3 `member_config` name: a name is a row, not a column, so this
      * is the per-name coverage the per-step column audit cannot give (docs/internals/upgrade.md). A
      * name absent here is an unrecognised custom config the upgrade does not migrate.
      *
