@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from '@testing-library/react';
+import { act, cleanup, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import HomeIssue from './issue';
@@ -87,9 +87,9 @@ const issueOf = (overrides: Partial<Issue> = {}): Issue => ({
 });
 
 /** One page for the issue to be read off: the shared props, plus whatever the issue is today. */
-function arrive(props: Record<string, unknown>) {
+function arrive(props: Record<string, unknown>, component = 'home/issue') {
     inertia.page = {
-        component: 'home/issue',
+        component,
         url: '/',
         props: {
             name: 'Test SNS',
@@ -404,6 +404,26 @@ test('the band names the days what is shown was born on, not the date in the URL
     arrive({ issue: issueOf({ bornDays: { from: '2026-08-25', to: '2026-08-25' } }) });
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('What happened on Tue, Aug 25');
+});
+
+test("a past day's band is its date under the section's h1, opening the month's issues; the front page's is the h1 itself", () => {
+    const monthDays = [
+        { date: '2026-08-27', number: 12, href: '/home/2026/08/27' },
+        { date: '2026-08-21', number: 8, href: '/home/2026/08/21' },
+    ];
+    arrive({ issue: issueOf(), monthDays }, 'home/archive');
+
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    act(() => screen.getByRole('button', { name: 'Thu, Aug 27 Calendar' }).click());
+    expect(screen.getByRole('link', { name: 'Fri, Aug 21' }).getAttribute('href')).toBe('/home/2026/08/21');
+    expect(screen.getByRole('link', { name: 'Aug at a glance' }).getAttribute('href')).toBe('/home/2026/08');
+
+    cleanup();
+
+    arrive({ issue: issueOf() });
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('What happened yesterday');
+    expect(screen.queryByRole('button', { name: /Calendar/ })).toBeNull();
 });
 
 test('the foot steps to the days either side and into the calendar', () => {

@@ -221,15 +221,10 @@ const homeSection = (home: ModernHomeId): NavSection => (home === 'whats_new' ? 
 
 /**
  * The page `/` serves, plus the latest issue where `/` serves the other one. A past day's issue is not
- * one: its header names the section it stands in ({@link isIssueDay}).
+ * one: it is a page of the section, as its month is.
  */
 export function isHomeComponent(component: string, home: ModernHomeId): boolean {
     return component === 'home/issue' || (home === 'whats_new' && component === 'dashboard');
-}
-
-/** A day's issue, latest or past: its band names the day and steps to the next, so the header names no day. */
-export function isIssueDay(component: string): boolean {
-    return component === 'home/issue' || component === 'home/archive';
 }
 
 /**
@@ -362,6 +357,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         return isHomeComponent('dashboard', homeOf(props)) ? { mode: 'embedded', action } : { mode: 'section', title: WHATS_NEW, action };
     },
     'home/issues': () => ({ mode: 'section', title: HAPPENINGS }),
+    'home/archive': () => ({ mode: 'section', title: HAPPENINGS }),
     'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
         mode: 'section',
@@ -640,10 +636,6 @@ export interface HeaderPage {
 export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage): Header {
     if (isHomeComponent(component, home) || isPlaceTop(component)) {
         return { type: 'brand' };
-    }
-
-    if (isIssueDay(component)) {
-        return { type: 'title', label: HAPPENINGS, hub: false, desk: false };
     }
 
     if (chrome.scope && chrome.form !== true) {

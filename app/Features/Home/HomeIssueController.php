@@ -74,13 +74,11 @@ class HomeIssueController extends Controller
 
         ['previous' => $previous, 'next' => $next] = $adjacent($issue);
 
-        return Inertia::render('home/archive', [...HomeIssueSerializer::page(
-            $issue,
-            $show($viewer, $issue),
-            $previous,
-            $next,
-            CarbonImmutable::now(),
-        ), 'notice' => null]);
+        return Inertia::render('home/archive', [
+            ...HomeIssueSerializer::page($issue, $show($viewer, $issue), $previous, $next, CarbonImmutable::now()),
+            'monthDays' => HomeIssueSerializer::refs(($this->inMonth)(HomeIssueMonth::of($issue->issue_date))),
+            'notice' => null,
+        ]);
     }
 
     private function render(Request $request, HomeIssueMonth $month): Response

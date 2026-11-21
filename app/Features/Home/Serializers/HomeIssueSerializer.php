@@ -76,6 +76,15 @@ final class HomeIssueSerializer
     }
 
     /**
+     * @param  Collection<int, HomeIssue>  $issues
+     * @return list<array{date: string, number: int, href: string}>
+     */
+    public static function refs(Collection $issues): array
+    {
+        return $issues->map(fn (HomeIssue $issue): array => self::linkTo($issue))->values()->all();
+    }
+
+    /**
      * A null month is a site that has published nothing, which has no month to be in.
      *
      * @param  Collection<int, HomeIssue>  $issues  newest first

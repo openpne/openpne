@@ -280,11 +280,15 @@ further. The payload is still one ranked list in one shape — the placement is 
 Every story and talk card opens on its kind's mark ([modern-frame.md](modern-frame.md), "Content
 kinds"), which carries a board entry's group as well, so the byline does not repeat it.
 
-**The page opens on a band**: the days' name as the `h1`, the neighbouring days either side of it,
-and, on the newest issue, when the next one comes (06:00) where the step forward would be. The band
-calls a day "yesterday" by the site's calendar, not by the 06:00 day: before 06:00 the latest issue
-is two calendar days back. Below the stories come the talk rooms, a card each, then upcoming events,
-newcomers and new groups, each a panel named by its title. The foot repeats the steps either side, links the month in the
+**The page opens on a band**: the days' name, the neighbouring days either side of it, and, on the
+newest issue, when the next one comes (06:00) where the step forward would be. On the front page the
+name is a phrase and the `h1`, and calls a day "yesterday" by the site's calendar, not by the 06:00
+day: before 06:00 the latest issue is two calendar days back. A past day's page is a page of the
+section, as its month is: the section's name is the `h1`, and the band names the days alone under it.
+That name opens the month below the band, each day with an issue a link to it, the day being read
+marked and the month page at its foot. The mark is on the issue's date, which the band's days can stop
+short of, as on the month page; the month is one read of its issues' dates. Below the stories come
+the talk rooms, a card each, then upcoming events, newcomers and new groups, each a panel named by its title. The foot repeats the steps either side, links the month in the
 calendar, and ends in the colophon; there is no line calling an issue stale.
 
 **Each block is one link**, stretched over the whole block ([`stretchedLink`](../../resources/js/components/ui/surface.tsx))

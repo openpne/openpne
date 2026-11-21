@@ -21,8 +21,7 @@ pressed.
 |---|---|
 | Home (the latest issue, or What's new where it is home), a member's page, a group's page | `[mark]` + the site name, left-aligned. A member's and a group's page ARE a place, and name themselves in their own hero directly below |
 | A screen inside a group or a member's place | `[mark]`, then the place's name, which opens its sections ("Place sections"). A conversation stands in its counterpart's place |
-| A hub, a month of issues included | `[mark]`, then the hub's name. That copy is hidden from assistive technology, and the page's h1 is kept for it alone below `lg`: the h1 is the one announcement |
-| A past day's issue | `[mark]`, then What happened, read aloud: the day's h1 is its date |
+| A hub, a month of issues and a past day's issue included | `[mark]`, then the hub's name. That copy is hidden from assistive technology, and the page's h1 is kept for it alone below `lg`: the h1 is the one announcement |
 | A screen inside no place, with a context, a form included | `[mark]`, then the context's last item |
 | A screen inside nothing, with no context | `[mark]` alone |
 
@@ -105,7 +104,7 @@ On a screen deep enough to be inside somewhere, a sticky place bar
 ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
 column. Inside a place, a form aside, the bar is the place's face and name, which open its sections;
 on a screen inside no place that has a context, it is the context's last item as text. Home, a hub,
-a day's issue, a member's or a group's own page and anything the sidebar's own active row already
+a member's or a group's own page and anything the sidebar's own active row already
 names draw none. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
