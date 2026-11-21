@@ -101,7 +101,8 @@ OpenPNE 4's empty one first, or restore before creating the schema in stage 1 �
 `file_bin` alone when it is already there. The layouts below sidestep this by keeping the source's
 tables under their own names.
 
-Where you restore it decides an option you will pass to the commands in stages 3 to 5:
+Where you restore it decides an option you will pass to `openpne:upgrade-from-3` and
+`openpne:verify-upgrade`:
 
 | Source layout | Option | |
 |---|---|---|
@@ -109,8 +110,8 @@ Where you restore it decides an option you will pass to the commands in stages 3
 | Same database, prefixed tables | `--source-prefix=op3_` | Use the prefix your dump actually has. |
 | Another database, same MySQL server | `--source-database=openpne3` | For a customised source whose table names would clash. |
 
-Every command in stages 3 to 5 takes it the same way, and they all need it — each one has to find the
-source the same way the others did:
+Both take it the same way, and both need it — each has to find the source the same way the other
+did:
 
 ```console
 $ php artisan openpne:upgrade-from-3 --dry-run --source-database=openpne3
@@ -129,8 +130,8 @@ Writes nothing. It prints the SQL each step would run, and — the part worth re
 **preflight** found: a read-only inspection of your source that runs before anything is written.
 
 The lines to act on start with one of these words, apart from the unprefixed instructions a
-first completion ends with (the surface switch and warming the pictures: §5; the tab icon, the
-Modern home and what a joined community opens: "What the upgrade changed"); the rest is the
+first completion ends with (warming the pictures: §5; the surface switch, the tab icon, the Modern
+home, what a joined community opens and the home notice: "What the upgrade changed"); the rest is the
 `Site timezone` line to check, the dry run's `PLAN` lines and their SQL, progress, `Reset:` under
 `--force-restart`, and the closing `Finished in …`:
 
@@ -148,11 +149,12 @@ Modern home and what a joined community opens: "What the upgrade changed"); the 
 code unchanged, even under `-q` — for a script that migrates many sites. `-v` prints the exception
 after the document, on the same stream, so a script parsing stdout must not pass `-v`.
 
-**`ERROR` aborts the run**, before anything is written. These are states the upgrade cannot survive:
+**`ERROR` aborts the run**, before anything is written. These are states the upgrade cannot survive,
+among them:
 a required table or column missing (an older or customised OpenPNE 3), a plugin whose tables are
 only partly present, files whose bytes are missing, two mail translations that would land on the same
-template and locale, a diary, message, topic, event or timeline post belonging to a member who never
-finished registering (see [Members who never finished registering](#members-who-never-finished-registering)),
+template and locale, content tied to a member who never finished registering (see
+[Members who never finished registering](#members-who-never-finished-registering)),
 a timeline post whose audience flag is not one OpenPNE 3 could write, an activity with more than 255
 attached files, a file that two records point at (OpenPNE 4 gives a file one owner, so one
 record's readers would see it from the other's page), a member who liked one post, talk message,
@@ -160,9 +162,11 @@ diary or comment twice (OpenPNE 4 keeps one 👍 per member), or a date column h
 (or a zero month or day) on a row the upgrade copies — MySQL's strict mode, which OpenPNE 4 runs
 under, refuses the value, so the line names the table, the column, the count and the first ids;
 set a real time there (or NULL where the column allows it). Fix the source and dry-run again.
-One `ERROR` is about the OpenPNE 4 side instead: a `navigations`, `gadgets`, `profiles` or
-`banners` table that already holds rows, from `openpne:install` or a visit to the admin Banner page.
-Restore the empty schema, or rerun with `--force-restart`.
+Some are about the OpenPNE 4 side instead. A `navigations`, `gadgets`, `profiles`, `banners` or
+`admin_users` table that already holds rows, from `openpne:install`, `openpne:admin:create` or a visit
+to the admin Banner page: restore the empty schema, or rerun with `--force-restart`. Under
+`--source-prefix` or `--source-database`, an OpenPNE 4 `file_bin` that already holds rows:
+`--force-restart` leaves `file_bin` alone, so start again from a fresh database (stages 1 and 2).
 
 **`WARN` never stops the run**; its code says what happened to the row. Each line is
 `WARN <code>: …`, and the JSON entry carries the `code`, its `category` and a `count` in the
@@ -395,7 +399,7 @@ change from a problem when you go through it.
 - **Friends** — a site that had `enable_friend_link = 0` has the friend feature off here too: no friend
   requests, no friend list, and the friends-only audience is gone from every picker (existing
   friendships still decide who may read what was already published). Switch it on under *Settings →
-  Features* if you want it back.
+  Feature settings* if you want it back.
 - **Inserted HTML, footer, banner HTML and gadget bodies** — OpenPNE 4 shows these as Markdown, and the
   upgrade writes a Markdown version of each. Text, links, images, lists, headings and tables carry over;
   scripts, frames, forms, `<style>`, colours and `id` / `class` attributes do not, and `pc_html_head` is
@@ -472,8 +476,9 @@ conservative one: OpenPNE 3's registration form saves the nickname, password and
 *before* it activates the account, so an abandoned signup that reached that point would otherwise
 arrive in OpenPNE 4 as a member who can sign in.
 
-What the upgrade will not decide for you is content — a diary, message, topic, event or like — belonging
-to one of those members. Stock OpenPNE 3 cannot produce it, so its presence means something wrote to
+What the upgrade will not decide for you is content tied to one of those members — their diaries,
+topics, events, messages, timeline posts and likes, their comments and event sign-ups, messages
+addressed to them, and an admin handover offered to one of them. Stock OpenPNE 3 cannot produce it, so its presence means something wrote to
 your database outside OpenPNE 3, and dropping it would take its comments and attachments too. The
 preflight names the table and the row count and stops. Delete or reassign those rows in the source
 and run again.
@@ -506,7 +511,8 @@ actually keep using:
 4. Restore the final dump in the same layout you rehearsed with (stage 2). With `--source-database`,
    that means a fresh database for the source too — the rehearsal moved the last one's `file_bin`
    away.
-5. Repeat stages 3 through 5 against it, with the same option you rehearsed with.
+5. Repeat stages 3 through 5 against it, giving `openpne:upgrade-from-3` and
+   `openpne:verify-upgrade` the same option you rehearsed with.
 6. Reapply anything you had fixed only inside OpenPNE 4 during the rehearsal. This site is built from
    a different dump into a different database, so none of it is here. Mail templates are the usual
    case — the editor re-renders each one as you save it, so a fix that no longer works is refused
