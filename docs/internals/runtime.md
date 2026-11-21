@@ -181,6 +181,16 @@ The shipped rules leave responses from `index.php` alone. Compressing a page tha
 token next to reflected input is the BREACH side channel, so whether to compress dynamic responses
 is the operator's decision.
 
+## Apache .htaccess files
+
+The release has two, and they use only directives that `AllowOverride FileInfo` permits, so a host
+that forbids `Options` or `Require` in `.htaccess` still runs the site. The one at the top of the
+tree answers every request with 403, for a document root that is the tree, or holds it, instead of
+being `public/`. `public/.htaccess` has rewrite rules of its own, which Apache applies under
+`public/` in place of the top file's; it sends a request for an existing directory to `index.php`,
+so Apache lists none. A `.htaccess` with rewrite directives anywhere else in the tree would lift the
+403 for its directory, and the release has none.
+
 ## Cache reads
 
 Site settings, terms, navigation rows and gadget rows are cached under one key each, and a request
