@@ -129,3 +129,39 @@ test('a page left open past midnight stops calling its day yesterday', () => {
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('8月27日(木)のできごと');
 });
+
+const calendar = {
+    date: '2026-08-20',
+    monthHref: '/home/2026/08',
+    days: [next, { date: '2026-08-20', number: 12, href: '/home/2026/08/20' }, prev],
+};
+
+test("a past day's band names the day alone, a rank under the section's h1, and opens its month below", async () => {
+    inLocale('ja');
+    const { container } = renderWithProviders(<Masthead days={day('2026-08-20')} prev={prev} next={next} calendar={calendar} />);
+
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('8月20日(木)カレンダー');
+    expect(container.querySelector('time')?.getAttribute('datetime')).toBe('2026-08-20');
+
+    const button = screen.getByRole('button', { name: '8月20日(木) カレンダー' });
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('[data-day-calendar]')).toBeNull();
+
+    act(() => button.click());
+
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(document.getElementById(String(button.getAttribute('aria-controls')))?.hasAttribute('data-day-calendar')).toBe(true);
+
+    act(() => button.click());
+
+    expect(container.querySelector('[data-day-calendar]')).toBeNull();
+});
+
+test("a past run of days names both ends without the phrase, and no single day's machine-readable value", () => {
+    inLocale('en');
+    const { container } = renderWithProviders(<Masthead days={{ from: '2026-08-21', to: '2026-08-27' }} prev={prev} next={null} calendar={calendar} />);
+
+    expect(screen.getByRole('button', { name: 'Aug 21 to 27 Calendar' })).toBeTruthy();
+    expect(container.querySelector('time')).toBeNull();
+});

@@ -7,7 +7,6 @@ import {
     hasPlaceBar,
     headerOf,
     isHomeComponent,
-    isIssueDay,
     isPlaceTop,
     isSectionActive,
     NAV_SECTIONS,
@@ -234,7 +233,7 @@ test('the dashboard action goes with the diary unit', () => {
 });
 
 test('home takes the mobile brand bar', () => {
-    // What's new is a hub; a dated issue takes the same bar, but through isIssueDay.
+    // What's new is a hub, and so is a dated issue: a page of its month's section.
     assert.ok(isHomeComponent('home/issue', 'issue'));
     assert.ok(!isHomeComponent('home/archive', 'issue'));
     assert.ok(!isHomeComponent('dashboard', 'issue'));
@@ -249,28 +248,23 @@ test('the current issue takes the bare frame: its masthead is the page', () => {
     assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issue'));
 });
 
-test('a past day takes the bare frame, as the latest does', () => {
-    assert.deepEqual(resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } }), {
-        mode: 'embedded',
-        width: 'standard',
-        gap: '4',
-    });
-    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/archive'));
-    assert.ok(isIssueDay('home/archive'));
-    assert.ok(isIssueDay('home/issue'));
-    assert.ok(!isIssueDay('home/issues'));
-});
+test('a month of issues and a past day are titled as a hub alike', () => {
+    for (const component of ['home/issues', 'home/archive']) {
+        for (const modernHome of ['issue', 'whats_new'] as const) {
+            const chrome = resolveChrome(component, { enabledFeatures: allOn, modernHome, issue: { monthHref: '/home/2026/08' } });
 
-test('a month of issues is titled as a hub', () => {
-    for (const modernHome of ['issue', 'whats_new']) {
-        const month = resolveChrome('home/issues', { enabledFeatures: allOn, modernHome });
-
-        assert.equal(month.mode, 'section');
-        assert.deepEqual(month.title, { key: 'What happened', replacements: undefined });
-        // Its band steps to the months either side and its days lead to their own pages, so it has no context.
-        assert.equal(month.context, undefined);
+            assert.equal(chrome.mode, 'section', component);
+            assert.deepEqual(chrome.title, { key: 'What happened', replacements: undefined }, component);
+            // Its band steps to its neighbours either side, so it has no context.
+            assert.equal(chrome.context, undefined, component);
+            assert.ok(NO_CONTEXT_COMPONENTS.includes(component), component);
+            assert.deepEqual(
+                headerOf(chrome, { component, home: modernHome, guest: false }),
+                { type: 'title', label: { key: 'What happened', replacements: undefined }, hub: true, desk: false },
+                `${component} ${modernHome}`,
+            );
+        }
     }
-    assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issues'));
 });
 
 test('a community-scoped page is scoped to the group, in the section it stands in', () => {
@@ -524,21 +518,12 @@ test("home and a place's top keep the brand header, and stand no place bar", () 
     }
 });
 
-test('a past day is titled What happened, read aloud since its h1 is the date, and stands no place bar', () => {
-    for (const home of ['issue', 'whats_new'] as const) {
-        const page = { component: 'home/archive', home, guest: false };
-        const chrome = resolveChrome('home/archive', { enabledFeatures: allOn, issue: { monthHref: '/home/2026/08' } });
-
-        assert.deepEqual(headerOf(chrome, page), { type: 'title', label: { key: 'What happened', replacements: undefined }, hub: false, desk: false }, home);
-        assert.ok(!hasPlaceBar(chrome, page), home);
-    }
-});
-
 test('a hub is titled by its own name, kept from assistive technology, and stands no place bar', () => {
     for (const [component, props, key] of [
         ['message/conversations/index', {}, 'Messages'],
         ['notifications/index', {}, 'Notifications'],
         ['home/issues', {}, 'What happened'],
+        ['home/archive', { issue: { monthHref: '/home/2026/08' } }, 'What happened'],
         ['dashboard', {}, "What's new"],
     ] as const) {
         assert.deepEqual(header(component, props), { type: 'title', label: { key, replacements: undefined }, hub: true, desk: false }, component);

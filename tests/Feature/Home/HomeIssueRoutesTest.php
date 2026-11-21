@@ -285,6 +285,23 @@ class HomeIssueRoutesTest extends TestCase
                 ->where('next', null));
     }
 
+    /** An issue either side of the month's edges, so a bound left off the query lets one in. */
+    public function test_a_day_page_lists_the_issues_of_its_month_and_no_other(): void
+    {
+        foreach (['2026-07-31', '2026-08-01', '2026-08-20', '2026-08-27', '2026-09-01'] as $date) {
+            $this->publishOn($date);
+        }
+
+        $this->actingAs(Member::factory()->create())->get('/home/2026/08/20')->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('monthDays', fn ($days): bool => collect($days)->pluck('href')->all() === [
+                    '/home/2026/08/27',
+                    '/home/2026/08/20',
+                    '/home/2026/08/01',
+                ])
+                ->has('monthDays.0', fn (AssertableInertia $day) => $day->where('date', '2026-08-27')->hasAll(['number', 'href'])));
+    }
+
     /** The front page is the newest issue there is, under either Modern surface. */
     #[DataProvider('modernSurfaceModes')]
     public function test_the_root_is_the_latest_issue(string $mode): void
@@ -370,7 +387,9 @@ class HomeIssueRoutesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('prev.href', '/home/2026/08/26')
-                ->where('next', null));
+                ->where('next', null)
+                // Its band opens no calendar, so it is not handed one.
+                ->missing('monthDays'));
     }
 
     /**

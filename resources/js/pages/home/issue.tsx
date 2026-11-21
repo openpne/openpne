@@ -66,7 +66,8 @@ function Stories({ stories }: { stories: IssueStory[] }) {
  */
 export default function HomeIssue() {
     const t = useT();
-    const { issue, prev, next, auth, enabledFeatures, notice } = usePage<IssuePageProps>().props;
+    const { component, props } = usePage<IssuePageProps>();
+    const { issue, prev, next, auth, enabledFeatures, notice, monthDays } = props;
 
     if (issue === null) {
         return (
@@ -84,7 +85,13 @@ export default function HomeIssue() {
         <>
             <Head title={t('What happened')} />
             <SiteNotice notice={notice} />
-            <Masthead days={issue.bornDays} prev={prev} next={next} />
+            <Masthead
+                days={issue.bornDays}
+                prev={prev}
+                next={next}
+                // The signal the frame's h1 is chosen by, so the page has one h1 either way.
+                calendar={component === 'home/archive' ? { date: issue.date, monthHref: issue.monthHref, days: monthDays ?? [] } : undefined}
+            />
 
             {issue.stories && <Stories stories={issue.stories} />}
 

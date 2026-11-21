@@ -114,23 +114,16 @@ test('the home bar is the site mark and its name, and nothing else', () => {
     expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });
 
-test("a past day's issue names the section it stands in, and offers no way there", () => {
-    const chrome = arrive('home/archive', '/home/2026/08/20', { issue: { monthHref: '/home/2026/08' } });
+test.each([
+    ['home/issues', '/home/2026/08'],
+    ['home/archive', '/home/2026/08/20'],
+])('%s is the mark and the section name, unspoken beside the h1 that says it', (component, url) => {
+    const chrome = arrive(component, url, { issue: { monthHref: '/home/2026/08' } });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(screen.queryByRole('link', { name: 'Test SNS' })).toBeNull();
-    expect(screen.getByText('What happened').closest('[aria-hidden]')).toBeNull();
-    expect(screen.queryByRole('link', { name: 'What happened' })).toBeNull();
-});
-
-test('a month of issues is the mark and its name, unspoken beside the h1 that says it', () => {
-    const chrome = arrive('home/issues', '/home/2026/08');
-
-    renderWithProviders(<TopNav chrome={chrome} />);
-
-    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(screen.getByText('What happened').getAttribute('aria-hidden')).toBe('true');
     expect(screen.queryByRole('link', { name: 'What happened' })).toBeNull();
     expect(document.querySelector('header')?.textContent).not.toContain('›');

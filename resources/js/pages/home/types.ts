@@ -107,6 +107,8 @@ export interface IssuePageProps extends PageProps {
     next: IssueRef | null;
     /** Null unless this page is the one `/` serves; a past day's page sends null too. */
     notice: SiteNoticeBody | null;
+    /** A past day's page alone: the issues of its month, for the band's calendar. */
+    monthDays?: IssueRef[];
 }
 
 export interface MonthRef {

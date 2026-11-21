@@ -1,12 +1,14 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useId, useState, type ReactNode } from 'react';
 import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { useDateFormat } from '@/lib/use-date-format';
 import { useSiteDay } from '@/lib/use-site-day';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
+import { DayCalendar } from './day-calendar';
+import { daysCovered } from './day-block';
 import type { IssueRef } from './types';
 
 function Phrase({ days }: { days: { from: string; to: string } | null }) {
@@ -65,11 +67,37 @@ export function BandLink({ href, side, label, children }: { href: string; side: 
     );
 }
 
-/** The page's `h1` in the band, the neighbouring days either side of it. */
-export function Masthead({ days, prev, next }: { days: { from: string; to: string } | null; prev: IssueRef | null; next: IssueRef | null }) {
+/** The days alone, as the month page names a day's block. */
+function Dates({ days }: { days: { from: string; to: string } }) {
     const t = useT();
+    const date = useDateFormat();
+    const name = daysCovered(t, date, days);
 
-    return (
+    return days.from === days.to ? <time dateTime={days.from}>{name}</time> : name;
+}
+
+/** The month a past day's band opens. */
+export interface BandCalendar {
+    date: string;
+    monthHref: string;
+    days: IssueRef[];
+}
+
+interface Props {
+    days: { from: string; to: string } | null;
+    prev: IssueRef | null;
+    next: IssueRef | null;
+    /** A past day's: the band then names the days alone, as a rank under the section's h1, and opens their month. */
+    calendar?: BandCalendar;
+}
+
+/** The page's heading in the band, the neighbouring days either side of it. */
+export function Masthead({ days, prev, next, calendar }: Props) {
+    const t = useT();
+    const panel = useId();
+    const [open, setOpen] = useState(false);
+
+    const band = (
         <Band
             start={
                 prev && (
@@ -89,10 +117,33 @@ export function Masthead({ days, prev, next }: { days: { from: string; to: strin
                 )
             }
         >
-            {/* The h1 at a small rank on purpose (docs/internals/typography.md, "Heading roles"). */}
-            <Heading as="h1" variant="minor">
-                <Phrase days={days} />
-            </Heading>
+            {calendar && days ? (
+                <Heading as="h2" variant="minor">
+                    <button
+                        type="button"
+                        onClick={() => setOpen((shown) => !shown)}
+                        aria-expanded={open}
+                        aria-controls={panel}
+                        className="inline-flex min-h-11 items-center gap-1 rounded px-1 hover:bg-muted/40"
+                    >
+                        <Dates days={days} />
+                        <span className="sr-only">{t('Calendar')}</span>
+                        <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} aria-hidden />
+                    </button>
+                </Heading>
+            ) : (
+                // The h1 at a small rank on purpose (docs/internals/typography.md, "Heading roles").
+                <Heading as="h1" variant="minor">
+                    <Phrase days={days} />
+                </Heading>
+            )}
         </Band>
+    );
+
+    return (
+        <>
+            {band}
+            {calendar && open && <DayCalendar id={panel} {...calendar} />}
+        </>
     );
 }

@@ -62,8 +62,8 @@ test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a
     expect(hubHeadingRow(props)?.className).toContain('max-lg:sr-only');
 });
 
-test('a month of issues is a hub like any other, its heading drawn at desk width alone', () => {
-    arrive('home/issues');
+test.each(['home/issues', 'home/archive'])('%s is a hub like any other, its heading drawn at desk width alone', (component) => {
+    arrive(component, { issue: { monthHref: '/home/2026/08' } });
 
     expect(screen.getByRole('heading', { level: 1, name: 'What happened' }).parentElement?.className).toContain('max-lg:sr-only');
 });
