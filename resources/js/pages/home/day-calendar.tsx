@@ -94,8 +94,8 @@ export function DayCalendar({ id, date, days, monthHref }: { id: string; date: s
                         ))}
                     </tbody>
                 </table>
-                {/* Its words at the top of a full-height press that reaches into the panel's padding, so they sit right under the last week. */}
-                <div className="-mt-1 -mb-5 flex justify-end">
+                {/* Its words at the top of a full-height press that reaches down into the panel's padding and no further, so they sit right under the last week. */}
+                <div className="-mt-1 -mb-4 flex justify-end">
                     <Link href={monthHref} className="flex min-h-11 items-start pt-1 text-sm text-link hover:underline">
                         {t(':month at a glance', { month: monthName })}
                     </Link>

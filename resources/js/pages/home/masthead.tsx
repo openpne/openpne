@@ -67,16 +67,17 @@ export function BandLink({ href, side, label, children }: { href: string; side: 
     );
 }
 
-/** The days alone, as the month page names a day's block. */
 function Dates({ days }: { days: { from: string; to: string } }) {
     const t = useT();
+    const { timezone } = usePage<PageProps>().props;
     const date = useDateFormat();
+    // Read for the re-render alone: the year a date carries turns with the site's.
+    useSiteDay(timezone);
     const name = daysCovered(t, date, days);
 
     return days.from === days.to ? <time dateTime={days.from}>{name}</time> : name;
 }
 
-/** The month a past day's band opens. */
 export interface BandCalendar {
     date: string;
     monthHref: string;
@@ -91,7 +92,6 @@ interface Props {
     calendar?: BandCalendar;
 }
 
-/** The page's heading in the band, the neighbouring days either side of it. */
 export function Masthead({ days, prev, next, calendar }: Props) {
     const t = useT();
     const panel = useId();
