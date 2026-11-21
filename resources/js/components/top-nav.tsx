@@ -3,7 +3,6 @@ import { X } from 'lucide-react';
 import { type CSSProperties, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
-import { CrumbText } from '@/components/crumb-text';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { PlaceSwitch } from '@/components/place-switch';
@@ -11,7 +10,7 @@ import { headingVariants } from '@/components/ui/heading';
 import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
-import { breadcrumbCrumb, type Chrome, type ChromeLabel, headerOf } from '@/lib/member-chrome';
+import { type Chrome, type ChromeLabel, headerOf } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { pressPrefetch } from '@/lib/press-prefetch';
 import { cn } from '@/lib/utils';
@@ -105,21 +104,27 @@ function SheetClose({ target, label }: { target: BackTarget; label: string }) {
     );
 }
 
+const GUEST_ENTRY = 'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm whitespace-nowrap';
+
 /** Where a member's bar ends in the menu, a guest's ends in the way in. */
 function GuestEntry({ className }: { className?: string }) {
     const t = useT();
 
     return (
-        <Link
-            href="/login"
-            className={cn(
-                'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm text-link transition hover:bg-accent',
-                BAR_ACTION_HIT,
-                className,
-            )}
-        >
+        <Link href="/login" className={cn(GUEST_ENTRY, 'text-link transition hover:bg-accent', BAR_ACTION_HIT, className)}>
             {t('Log In')}
         </Link>
+    );
+}
+
+/** The way in's width without the way in, so the column across from it is held as wide. */
+function GuestEntryGhost() {
+    const t = useT();
+
+    return (
+        <span aria-hidden className={cn(GUEST_ENTRY, 'invisible')}>
+            {t('Log In')}
+        </span>
     );
 }
 
@@ -141,6 +146,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const t = useT();
     const { component, props } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
+    const text = (l: ChromeLabel | string) => (typeof l === 'string' ? l : label(l));
     const guest = props.auth.user === null;
     const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
     const end = guest ? <GuestEntry className="ml-auto" /> : <NavDrawer />;
@@ -148,11 +154,18 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     if (header.type === 'place') {
         return (
             <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
-                {/* Neither outer column drops below the menu's 44px, the wider end, so even a name that fills the row stays at the middle of the screen. */}
-                <div className="grid min-w-0 flex-1 grid-cols-[minmax(2.75rem,1fr)_minmax(0,auto)_minmax(2.75rem,1fr)] items-center gap-2">
-                    <MarkHome />
-                    <PlaceSwitch scope={header.scope} variant="phone" />
-                    <div className="flex justify-end">{end}</div>
+                {/* Each outer column is as wide as the wider of the two ends — the menu's 44px, or a guest's way in ghosted under the mark — so even a name that fills the row stays at the middle of the screen. */}
+                <div className="grid min-w-0 flex-1 grid-cols-[minmax(min-content,1fr)_minmax(0,auto)_minmax(min-content,1fr)] items-center gap-2">
+                    <div className="grid min-w-11 items-center justify-items-start *:[grid-area:1/1]">
+                        <MarkHome />
+                        {guest && <GuestEntryGhost />}
+                    </div>
+                    {header.pressable ? (
+                        <PlaceSwitch scope={header.scope} variant="phone" />
+                    ) : (
+                        <span className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate px-1 text-center')}>{header.scope.name}</span>
+                    )}
+                    <div className="flex min-w-11 justify-end">{end}</div>
                 </div>
             </TopBar>
         );
@@ -161,7 +174,7 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const brand = header.type === 'brand';
     // A hub names itself; everything else names where it is.
     const hubTitle = !brand && chrome.mode === 'section' ? chrome.title : undefined;
-    const crumb = brand || hubTitle ? null : breadcrumbCrumb(chrome, guest);
+    const crumb = header.type === 'trail' && !hubTitle ? header.crumb : null;
 
     return (
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
@@ -192,11 +205,11 @@ function BreadcrumbBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                     // Pressable, so it is painted as pressable: the pill is the affordance a bare
                     // trailing › was not.
                     <Link href={crumb.href} className="flex min-h-11 min-w-0 items-center rounded-full bg-accent px-3">
-                        <CrumbText label={crumb.label} className={headingVariants({ variant: 'bar' })} />
+                        <span className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate')}>{text(crumb.label)}</span>
                     </Link>
                 ) : (
                     // A form's crumb goes nowhere, so it must not look as though it does.
-                    <CrumbText label={crumb.label} className="text-sm text-muted-foreground" />
+                    <span className="min-w-0 truncate text-sm text-muted-foreground">{text(crumb.label)}</span>
                 ))}
             {end}
         </TopBar>

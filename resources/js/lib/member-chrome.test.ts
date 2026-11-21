@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     bottomNavSections,
-    breadcrumbCrumb,
     chromeRecedes,
     hasBottomNav,
     hasPlaceBar,
@@ -308,6 +307,7 @@ test("another member's list is scoped to that member", () => {
         imageUrl: '/f/1',
         avatarColor: '#123456',
         isAi: false,
+        section: 'diary',
     });
 });
 
@@ -391,8 +391,8 @@ test('a conversation leaves the bottom bar to the shell and keeps its chrome sti
 });
 
 test('the withdrawn bucket names itself, since it has no member to be scoped to', () => {
-    // Every departed member's messages collapse into one conversation, so there is no profile for the
-    // header's place pill to link to — the heading carries who it is with instead.
+    // Every departed member's messages collapse into one conversation, so there is no member for the
+    // header to name — the heading carries who it is with instead.
     const bucket = chrome('message/conversation/index', { counterpart: null });
 
     assert.equal(bucket.conversation, true);
@@ -479,8 +479,6 @@ test('the Messages hub starts a message the way every other hub starts its own t
     assert.equal(hub.tabs, undefined);
 });
 
-const OWNER_PLACE = { label: 'Owner', href: '/member/1' };
-
 /**
  * Where the header says a member is standing, enumerated rather than sampled: a screen resolving to
  * the wrong place would carry the reader out of the space they are in.
@@ -530,56 +528,54 @@ test("home, a day's issue and a place's top keep the brand header, and stand no 
     }
 });
 
-const PLACE_FIXTURES: { component: string; props: Record<string, unknown>; place: { label: string; href: string } }[] = [
-    // Scoped to a member: a page about somebody else.
-    { component: 'diary/show', props: { diary: { author: owner } }, place: OWNER_PLACE },
-    { component: 'diary/list', props: { owner, isOwner: false }, place: OWNER_PLACE },
-    { component: 'timeline/member', props: { owner, isOwner: false }, place: OWNER_PLACE },
-    { component: 'message/conversation/index', props: { counterpart: owner }, place: OWNER_PLACE },
+/** The member-scoped screens, enumerated for the same reason as the group's. */
+const MEMBER_PLACES: { component: string; props: Record<string, unknown>; section: string | null }[] = [
+    { component: 'diary/list', props: { owner, isOwner: false }, section: 'diary' },
+    { component: 'diary/show', props: { diary: { author: owner } }, section: 'diary' },
+    { component: 'timeline/member', props: { owner, isOwner: false }, section: 'timeline' },
+    { component: 'timeline/show', props: { post: { author: owner } }, section: 'timeline' },
+    { component: 'community/list', props: { owner, isOwner: false }, section: 'groups' },
+    { component: 'friend/list', props: { owner, isOwner: false }, section: 'friends' },
+    { component: 'message/conversation/index', props: { counterpart: owner }, section: null },
 ];
 
-const crumb = (component: string, props: Record<string, unknown>) => {
-    const page = { enabledFeatures: allOn, ...props };
+test("every screen inside another member's place heads with that member and the section it stands in", () => {
+    for (const { component, props, section } of MEMBER_PLACES) {
+        const answer = header(component, props);
 
-    return breadcrumbCrumb(resolveChrome(component, page));
-};
-
-test('every screen inside a place crumbs to that place', () => {
-    for (const { component, props, place } of PLACE_FIXTURES) {
-        const answer = crumb(component, props);
-
-        assert.equal(answer?.label, place.label, component);
-        assert.equal(answer?.href, place.href, component);
+        assert.deepEqual(
+            answer.type === 'place' && answer.scope.kind === 'member' ? [answer.scope.id, answer.scope.section, answer.pressable] : answer.type,
+            [1, section, true],
+            component,
+        );
+        assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).context, undefined, component);
+        assert.ok(hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
     }
 });
 
-test('the breadcrumb claims the place a screen is inside, and it is pressable', () => {
-    assert.deepEqual(crumb('diary/show', { diary: { author: owner } }), { label: 'Owner', href: '/member/1', link: true });
+test('a guest is told whose place it is and given nothing to press', () => {
+    for (const [component, props] of [
+        ['diary/show', { diary: { author: owner } }],
+        ['diary/list', { owner, isOwner: false }],
+    ] as const) {
+        const answer = header(component, props, true);
+
+        assert.equal(answer.type === 'place' ? `${answer.scope.name}:${answer.pressable}` : answer.type, 'Owner:false', component);
+    }
 });
 
-const guestCrumb = (component: string, props: Record<string, unknown>) => {
-    const page = { enabledFeatures: allOn, ...props };
-
-    return breadcrumbCrumb(resolveChrome(component, page), true);
-};
-
-test("a guest's crumb leads only where a guest may go", () => {
-    // The author's page may sit behind the login wall, where their entries list never does.
-    assert.deepEqual(guestCrumb('diary/show', { diary: { author: owner } }), {
-        label: { key: ":name's %diary%", replacements: { name: 'Owner' } },
-        href: '/diary/listMember/1',
-        link: true,
-    });
-    // Somebody else's entries: the trail's target is their page, so it is named and not offered.
-    assert.deepEqual(guestCrumb('diary/list', { owner, isOwner: false }), { label: 'Owner', href: '/member/1', link: false });
-});
-
-test("a guest's place top, hub and site policy answer no crumb, as a member's do", () => {
-    assert.equal(guestCrumb('member/show', { profile: owner }), null);
-    assert.equal(guestCrumb('diary/feed', { variant: 'all' }), null);
+test("a guest's place top, hub and site policy head as a member's do", () => {
+    assert.deepEqual(header('member/show', { profile: owner }, true), { type: 'brand' });
+    assert.deepEqual(header('diary/feed', { variant: 'all' }, true), { type: 'trail', crumb: null });
     // The page's own heading names a policy directly below the bar.
-    assert.equal(guestCrumb('policy/show', { kind: 'terms' }), null);
+    assert.deepEqual(header('policy/show', { kind: 'terms' }, true), { type: 'trail', crumb: null });
 });
+
+const trail = (component: string, props: Record<string, unknown>, guest = false) => {
+    const answer = header(component, props, guest);
+
+    return answer.type === 'trail' ? answer.crumb : undefined;
+};
 
 test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {
     // The place's own hero names it directly below, so a crumb would name it twice in 60px.
@@ -588,7 +584,7 @@ test('a page that IS the place answers no crumb — the header speaks the home g
         ['member/show', { profile: owner }],
     ] as const) {
         assert.equal(isPlaceTop(component), true);
-        assert.equal(crumb(component, props), null);
+        assert.deepEqual(header(component, props), { type: 'brand' });
         assert.ok(NO_CONTEXT_COMPONENTS.includes(component));
         assert.ok(!isHomeComponent(component, 'issue'));
         assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).scope, undefined);
@@ -599,31 +595,32 @@ test('a page that IS the place answers no crumb — the header speaks the home g
 
 test('a screen inside no place takes the last crumb of its trail instead of claiming home', () => {
     // A breadcrumb saying "you are at home" on a screen that is inside nothing would be false.
-    assert.deepEqual(crumb('timeline/tag', { tag: 'ride' }), {
+    assert.deepEqual(trail('timeline/tag', { tag: 'ride' }), {
         label: { key: '%Activity%', replacements: undefined },
         href: '/timeline',
         link: true,
     });
+    // A guest's trail may lead behind the login wall, so it is named and not offered.
+    assert.equal(trail('timeline/tag', { tag: 'ride' }, true)?.link, false);
 });
 
 test("a form's crumb is static text, whatever it would otherwise have been", () => {
     // The group edit form is the sharp case: the same word as a place, and still not a way out of
     // it.
-    assert.deepEqual(crumb('member/config/email', {}), {
+    assert.deepEqual(trail('member/config/email', {}), {
         label: { key: 'Settings', replacements: undefined },
         href: '/member/config',
         link: false,
     });
-    assert.deepEqual(crumb('community/edit', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: false });
+    assert.deepEqual(trail('community/edit', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: false });
 
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
-        assert.equal(crumb(component, props)?.link ?? false, false, component);
+        assert.equal(trail(component, props)?.link ?? false, false, component);
     }
 });
 
 test('a screen that is nowhere and crumbs to nothing leaves the mark standing alone', () => {
-    // Home included: the mark expands to the site name there rather than pointing at a second thing.
-    assert.equal(crumb('home/issue', {}), null);
+    assert.equal(trail('policy/show', { kind: 'terms' }), null);
 });
 
 test('the screens with no nav entry of their own crumb back to the screen that links to them', () => {

@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import { House, Pencil, Plus, Rss, Search, Settings, UserPlus } from 'lucide-react';
 import { CONTENT_KINDS } from './content-kinds.ts';
-import type { GroupOpenSections, GroupSection } from './place-sections.ts';
+import type { GroupOpenSections, GroupSection, MemberSection } from './place-sections.ts';
 import type { FeatureKey, ModernHomeId, UnreadCounts } from '@/types';
 
 /**
@@ -50,7 +50,7 @@ export interface ChromeAction {
 
 export type ChromeScope =
     | { kind: 'group'; id: number; name: string; imageUrl: string | null; section: GroupSection; open: GroupOpenSections }
-    | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null; isAi: boolean };
+    | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null; isAi: boolean; section: MemberSection | null };
 
 export interface Chrome {
     /**
@@ -329,19 +329,16 @@ interface MemberRef {
     isAi: boolean;
 }
 
-// The crumb is the one place the chrome shows the member's name, so titles stay generic and the
+// The header is the one place the chrome shows the member's name, so titles stay generic and the
 // name never renders twice back to back.
-const memberContext = (member: MemberRef): Chrome['context'] => [
-    { href: `/member/${member.id}`, label: member.name },
-];
-
-const memberScope = (member: MemberRef): ChromeScope => ({
+const memberScope = (member: MemberRef, section: MemberSection | null): ChromeScope => ({
     kind: 'member',
     id: member.id,
     name: member.name,
     imageUrl: member.imageUrl,
     avatarColor: member.avatarColor,
     isAi: member.isAi,
+    section,
 });
 
 const MESSAGES_HUB: Chrome['context'] = [{ href: '/messages', label: MESSAGES }];
@@ -385,14 +382,11 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   tabs: diaryTabs('mine', enabled(props, 'friend')),
                   action: WRITE_DIARY,
               }
-            : { mode: 'contextual', title: DIARIES, context: memberContext(owner), scope: memberScope(owner) };
+            : { mode: 'contextual', title: DIARIES, scope: memberScope(owner, 'diary') };
     },
     'diary/show': (props) => {
         const { diary } = props as unknown as { diary: { author: MemberRef } };
-        return {
-            context: [{ href: `/diary/listMember/${diary.author.id}`, label: t(":name's %diary%", { name: diary.author.name }) }],
-            scope: memberScope(diary.author),
-        };
+        return { scope: memberScope(diary.author, 'diary') };
     },
     'diary/edit': (props) => {
         const { diary } = props as unknown as { diary: { id: number; title: string } };
@@ -417,7 +411,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   tabs: communityTabs('joined', boardUnits(props)),
                   action: CREATE_COMMUNITY,
               }
-            : { mode: 'contextual', title: COMMUNITIES, context: memberContext(owner), scope: memberScope(owner) };
+            : { mode: 'contextual', title: COMMUNITIES, scope: memberScope(owner, 'groups') };
     },
     'group/topic/recent': (props) => ({
         mode: 'section',
@@ -501,7 +495,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: ACTIVITY, ...postActivityAction(props) }
-            : { mode: 'contextual', title: ACTIVITY, context: memberContext(owner), scope: memberScope(owner) };
+            : { mode: 'contextual', title: ACTIVITY, scope: memberScope(owner, 'timeline') };
     },
     'timeline/tag': (props) => ({
         mode: 'contextual',
@@ -510,16 +504,13 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     }),
     'timeline/show': (props) => {
         const { post } = props as unknown as { post: { author: MemberRef } };
-        return {
-            context: [{ href: `/member/${post.author.id}/timeline`, label: post.author.name }],
-            scope: memberScope(post.author),
-        };
+        return { scope: memberScope(post.author, 'timeline') };
     },
     'friend/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: FRIENDS, tabsLabel: FRIENDS, tabs: friendTabs('list') }
-            : { mode: 'contextual', title: FRIENDS, context: memberContext(owner), scope: memberScope(owner) };
+            : { mode: 'contextual', title: FRIENDS, scope: memberScope(owner, 'friends') };
     },
     'friend/requests': () => ({
         mode: 'section',
@@ -528,16 +519,16 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: friendTabs('requests'),
     }),
     'message/conversations/index': () => ({ mode: 'section', title: MESSAGES, action: NEW_MESSAGE }),
-    // A withdrawn counterpart has no member page for a scope to link to and no name for the bar to
-    // carry, so the room falls back to a heading.
+    // A withdrawn counterpart has no place to open and no name for the bar to carry, so the room
+    // falls back to a heading.
     'message/conversation/index': (props) => {
         const { counterpart } = props as unknown as { counterpart: MemberRef | null };
 
         return {
             mode: 'contextual',
             title: counterpart ? MESSAGES : t('%Withdrawn_member%'),
-            context: counterpart ? memberContext(counterpart) : MESSAGES_HUB,
-            scope: counterpart ? memberScope(counterpart) : undefined,
+            context: counterpart ? undefined : MESSAGES_HUB,
+            scope: counterpart ? memberScope(counterpart, null) : undefined,
             conversation: true,
         };
     },
@@ -618,71 +609,30 @@ export function resolveChrome(
     return { ...base, ...STATIC_CHROME[component], ...HUB_CHROME[component]?.(props), ...override };
 }
 
-/** A name is member text, so it is a plain string. */
-interface Place {
-    label: ChromeLabel | string;
-    href: string;
-}
-
-interface PlaceRef {
-    id: number;
-    name: string;
-}
-
-const memberPlace = (member: PlaceRef): Place => ({ label: member.name, href: `/member/${member.id}` });
-
 /** The pages that ARE a place, whose own hero names it directly below the header. */
 const PLACE_TOPS = ['group/show', 'member/show'] as const;
-
-export interface BreadcrumbCrumb {
-    label: ChromeLabel | string;
-    href: string;
-    /** A crumb that is not pressable must not be painted as one. */
-    link: boolean;
-}
 
 /** These pages speak the home grammar in the header: mark and site name, no crumb (docs/internals/modern-frame.md, "The phone header"). */
 export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
 
-/** The one trail target a guest may open: an author's entries list admits a guest whenever one of that author's entries does. */
-const GUEST_OPEN = /^\/diary\/listMember\/\d+$/;
-
-/**
- * A guest's crumb never takes the scope tier, whose target is a profile that may sit behind the
- * login wall, and a trail target not open to a guest is painted as text.
- */
-function guestCrumb(chrome: Chrome): BreadcrumbCrumb | null {
-    const last = chrome.context?.[chrome.context.length - 1];
-
-    return last ? { label: last.label, href: last.href, link: chrome.form !== true && GUEST_OPEN.test(last.href) } : null;
+export interface TrailCrumb {
+    label: ChromeLabel | string;
+    href: string;
+    /** A crumb that is not pressable must not be painted as one. */
+    link: boolean;
 }
 
 /**
- * A screen inside no place answers its trail's last item and never home, since "you are at home" on
- * a settings page would be false. A form takes its trail rather than its scope: the scope tier is
- * pressable by construction, and the bar must never carry a link beside unsaved input.
+ * `place` is pressable for a member only, since a guest's sections may sit behind the login wall;
+ * `trail` draws the hub title or the last item of a screen's trail (docs/internals/modern-frame.md,
+ * "The phone header").
  */
-export function breadcrumbCrumb(chrome: Chrome, guest = false): BreadcrumbCrumb | null {
-    if (guest) {
-        return guestCrumb(chrome);
-    }
-
-    if (chrome.form !== true) {
-        const { scope } = chrome;
-        if (scope?.kind === 'member') {
-            return { ...memberPlace(scope), link: true };
-        }
-    }
-
-    const last = chrome.context?.[chrome.context.length - 1];
-
-    return last ? { label: last.label, href: last.href, link: chrome.form !== true } : null;
-}
-
-/** `trail` draws the hub title or the crumb (docs/internals/modern-frame.md, "The phone header"). */
-export type Header = { type: 'brand' } | { type: 'place'; scope: ChromeScope } | { type: 'trail' };
+export type Header =
+    | { type: 'brand' }
+    | { type: 'place'; scope: ChromeScope; pressable: boolean }
+    | { type: 'trail'; crumb: TrailCrumb | null };
 
 export interface HeaderPage {
     component: string;
@@ -690,21 +640,28 @@ export interface HeaderPage {
     guest: boolean;
 }
 
+/**
+ * A screen inside no place answers its trail's last item and never home, since "you are at home" on
+ * a settings page would be false. A form takes its trail rather than its scope, and a guest's trail is
+ * text: the bar never carries a link beside unsaved input or into the login wall.
+ */
 export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage): Header {
     if (isHomeComponent(component, home) || isIssueDay(component) || isPlaceTop(component)) {
         return { type: 'brand' };
     }
 
-    if (chrome.scope?.kind === 'group' && chrome.form !== true && !guest) {
-        return { type: 'place', scope: chrome.scope };
+    if (chrome.scope && chrome.form !== true) {
+        return { type: 'place', scope: chrome.scope, pressable: !guest };
     }
 
-    return { type: 'trail' };
+    const last = chrome.context?.[chrome.context.length - 1];
+
+    return { type: 'trail', crumb: last ? { label: last.label, href: last.href, link: chrome.form !== true && !guest } : null };
 }
 
 /** The shell publishes `--modern-place-bar` on exactly the screens PlaceBar draws on. */
 export function hasPlaceBar(chrome: Chrome, page: HeaderPage): boolean {
     const header = headerOf(chrome, page);
 
-    return header.type === 'place' || (header.type === 'trail' && breadcrumbCrumb(chrome, page.guest) !== null);
+    return header.type === 'place' || (header.type === 'trail' && header.crumb !== null);
 }

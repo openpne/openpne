@@ -50,7 +50,7 @@ export default function TimelineShow() {
     const rowsReactions = hint.learnedFrom(reactions);
     const rootReactions = rowReactions(post.id, post.reactions, reactionVocabulary, reactions);
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
-    // already in the crumb above and on the post card below.
+    // already in the header above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
     const counterId = useId();
     const form = useForm({ body: '', mentions: [] as DraftMention[] });

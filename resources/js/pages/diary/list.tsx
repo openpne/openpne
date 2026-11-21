@@ -33,7 +33,7 @@ export default function DiaryList() {
     const page = usePage<ListProps>();
     const { owner, isOwner, diaries, monthlyCounts, keyword, archive } = page.props;
     // The tab title keeps the owner context; the heading (h1) is the generic section label from the
-    // frame — for another member's archive the owner's name is already in the crumb above.
+    // frame — for another member's archive the owner's name is already in the header above.
     const headTitle = isOwner ? t('%Diary%') : t(":name's %diary%", { name: owner.name });
 
     const [keywordInput, setKeywordInput] = useState(keyword);

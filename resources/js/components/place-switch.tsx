@@ -11,13 +11,14 @@ import { useT } from '@/lib/i18n';
 import type { ChromeScope } from '@/lib/member-chrome';
 import { type PlaceSectionItem, placeSections } from '@/lib/place-sections';
 import { cn } from '@/lib/utils';
+import type { PageProps } from '@/types';
 
 type Variant = 'phone' | 'desk';
 
 const deskNow = () => typeof window.matchMedia === 'function' && window.matchMedia(DESK_QUERY).matches;
 
 /** A place's face, decorative: the name beside it is what is read. */
-export function PlaceFace({ scope }: { scope: ChromeScope }) {
+function PlaceFace({ scope }: { scope: ChromeScope }) {
     return scope.kind === 'group' ? (
         <CommunityImage name={scope.name} src={scope.imageUrl} className="size-6" textClassName="text-3xs" decorative />
     ) : (
@@ -52,7 +53,9 @@ function PlaceSections({ items, variant, onPick }: { items: PlaceSectionItem[]; 
                         aria-current={item.current}
                         onClick={(event: MouseEvent) => onPick(event, item)}
                         className={cn(
-                            'flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent motion-reduce:transition-none',
+                            'flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl py-2 text-muted-foreground transition-colors hover:bg-accent motion-reduce:transition-none',
+                            // 11px: five tiles across a 360px phone still fit a six-character name.
+                            variant === 'phone' ? 'text-2xs' : 'px-1 text-xs',
                             item.current && 'bg-accent text-foreground',
                         )}
                     >
@@ -70,12 +73,12 @@ function PlaceSections({ items, variant, onPick }: { items: PlaceSectionItem[]; 
  * its own open state (docs/internals/modern-frame.md, "Place sections").
  */
 export function PlaceSwitch({ scope, variant }: { scope: ChromeScope; variant: Variant }) {
-    const { component } = usePage();
+    const { component, props } = usePage<PageProps>();
     const [open, setOpen] = useState(false);
     // Why the panel is closing, read once by onCloseAutoFocus: focus goes back to the name only when the reader stays here.
     const leaving = useRef<'navigate' | 'resize' | null>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
-    const items = placeSections(scope, String(component));
+    const items = placeSections(scope, String(component), props.enabledFeatures);
     // The phone panel spans the header it hangs from rather than the name.
     const header = useMemo(
         () => ({ current: { getBoundingClientRect: () => (triggerRef.current?.closest('header') ?? document.body).getBoundingClientRect() } }),

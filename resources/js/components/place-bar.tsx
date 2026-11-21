@@ -1,9 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { CrumbText } from '@/components/crumb-text';
-import { PlaceFace, PlaceSwitch } from '@/components/place-switch';
+import { PlaceSwitch } from '@/components/place-switch';
 import { headingVariants } from '@/components/ui/heading';
-import { breadcrumbCrumb, type Chrome, headerOf } from '@/lib/member-chrome';
+import { useT } from '@/lib/i18n';
+import { type Chrome, headerOf } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -18,6 +18,7 @@ const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
  * under it.
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
+    const t = useT();
     const { component, props } = usePage<PageProps>();
     const guest = props.auth.user === null;
     const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
@@ -25,42 +26,36 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     if (header.type === 'place') {
         return (
             <Bar>
-                <PlaceSwitch scope={header.scope} variant="desk" />
+                {header.pressable ? (
+                    <PlaceSwitch scope={header.scope} variant="desk" />
+                ) : (
+                    // No face: it stands for the member's own page, which a guest may not be let into.
+                    <span className={cn(PILL, 'px-3', headingVariants({ variant: 'bar' }))}>
+                        <span className="min-w-0 truncate">{header.scope.name}</span>
+                    </span>
+                )}
             </Bar>
         );
     }
 
-    const crumb = header.type === 'trail' ? breadcrumbCrumb(chrome, guest) : null;
+    const crumb = header.type === 'trail' ? header.crumb : null;
     if (!crumb) {
         return null;
     }
-
-    // The face stands for the member's own page, where a guest's crumb never leads.
-    const scope = guest ? undefined : chrome.scope;
-    // Absent where the place is a section rather than an entity (a tag lens crumbs to its feed), and
-    // on a form, which the registry pins to no scope.
-    const face = scope ? <PlaceFace scope={scope} /> : null;
-    const body = (
-        <>
-            {face}
-            <CrumbText label={crumb.label} />
-        </>
-    );
-    // The face is drawn to the pill's edge; a bare name keeps the pill symmetrical.
-    const padding = face ? 'pr-3 pl-1' : 'px-3';
+    const text = <span className="min-w-0 truncate">{typeof crumb.label === 'string' ? crumb.label : t(crumb.label.key, crumb.label.replacements)}</span>;
 
     return (
         <Bar>
             {crumb.link ? (
                 // The phone pill's fill, unchanged: the same element means the same thing at both
                 // widths, and it is the affordance the bare trail failed to be.
-                <Link href={crumb.href} className={cn(PILL, padding, headingVariants({ variant: 'bar' }), 'bg-accent')}>
-                    {body}
+                <Link href={crumb.href} className={cn(PILL, 'px-3', headingVariants({ variant: 'bar' }), 'bg-accent')}>
+                    {text}
                 </Link>
             ) : (
                 // A form's crumb goes nowhere, so it is painted as text — in the ground color, which
                 // shows as nothing until the form scrolls under it.
-                <span className={cn(PILL, padding, 'bg-background text-sm text-muted-foreground')}>{body}</span>
+                <span className={cn(PILL, 'px-3 bg-background text-sm text-muted-foreground')}>{text}</span>
             )}
         </Bar>
     );
