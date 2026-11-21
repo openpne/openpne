@@ -50,7 +50,8 @@ locked re-read — never against a role snapshot taken before the lock. The grou
 serialization point, so concurrent appoint / demote / drop / transfer / quit and admin withdrawal
 cannot interleave: only one holds the lock at a time, and each sees the others' committed effects.
 That is what keeps "exactly one admin per group" true when two members accept a transfer at once,
-or a transfer is accepted while the old admin withdraws.
+or a transfer is accepted while the old admin withdraws. Approving, declining, deleting the group
+and editing its settings re-run their role check under this lock too.
 
 [`AcceptAdminTransfer`](../../app/Features/Group/Actions/AcceptAdminTransfer.php) promotes the
 nominee from Member or Sub-admin, demotes the incumbent admin to Member and clears the pending
@@ -69,9 +70,6 @@ These edges are accepted rather than closed:
   [`WithdrawMember`](../../app/Features/Member/Actions/WithdrawMember.php) auto-promotes the
   longest-tenured member, and a later accept then demotes that successor — the nominee wins, as in
   OpenPNE 3.
-- An ex-admin's in-flight `DeleteGroup` can complete after a transfer, because its irreversible byte
-  purge runs outside this lock. The harm equals a delete done a moment before the transfer, so the
-  purge is not folded into the lock. OpenPNE 3 behaves the same way.
 - A post's delete — a talk message, a topic, an event or a board comment — checks the deleter's role
   once, before it takes any lock, so a demotion or transfer that commits in between counts as coming
   after the delete; the harm equals a delete done a moment before it. A talk delete takes the group
@@ -89,7 +87,10 @@ member — and a new request silently replaces a different pending nominee.
 touches — File bytes and reactions — across four kinds of content, in one transaction:
 
 1. The group row is X-locked, then every topic and event row under it (teardowns of one group are
-   already serialised by its row, so no order among them is needed).
+   already serialised by its row, so no order among them is needed). Only then does
+   `DeleteGroup::__invoke` check that the actor is still the admin: that read takes the
+   transaction's snapshot, and taken before the boards are held it would miss a board write
+   committed in between.
 2. Under those locks the image Files of the talk, the topics, the events and their comments are
    collected and the reactions on the talk messages, the topics, the events and the board comments are deleted
    (`reactable_id` is polymorphic and carries no foreign key). Every row is reached from the group

@@ -426,7 +426,12 @@ class GroupController extends Controller
     public function delete(Request $request, Group $group, DeleteGroup $action): RedirectResponse
     {
         abort_unless(Gate::allows('delete', $group), 404);
-        $action($this->viewer(), $group);
+
+        try {
+            $action($this->viewer(), $group);
+        } catch (GroupActionException) {
+            abort(404);
+        }
 
         return redirect()->route('group.search')
             ->with('status', __('%Community% deleted.'));

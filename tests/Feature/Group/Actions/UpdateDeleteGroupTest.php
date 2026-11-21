@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Group\Actions;
 
+use App\Features\Group\Actions\AcceptAdminTransfer;
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\Actions\UpdateGroup;
 use App\Features\Group\Data\GroupFormData;
@@ -12,6 +13,7 @@ use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
 use App\Models\GroupCategory;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Group\AssertsGroupFailure;
@@ -108,5 +110,22 @@ class UpdateDeleteGroupTest extends TestCase
 
         $this->assertFailsWith(GroupActionFailure::NotAdmin, fn () => app(DeleteGroup::class)($sub, $group));
         $this->assertDatabaseHas('groups', ['id' => $group->getKey()]);
+    }
+
+    public function test_an_admin_who_has_handed_the_seat_over_can_no_longer_delete(): void
+    {
+        $group = Group::factory()->create();
+        $admin = Member::factory()->create();
+        $nominee = Member::factory()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $nominee->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
+        $group->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        app(AcceptAdminTransfer::class)($nominee, $group);
+
+        $this->assertFailsWith(GroupActionFailure::NotAdmin, fn () => app(DeleteGroup::class)($admin, $group));
+        $this->assertDatabaseHas('groups', ['id' => $group->getKey()]);
+        $this->assertDatabaseHas('group_topics', ['id' => $topic->getKey()]);
     }
 }
