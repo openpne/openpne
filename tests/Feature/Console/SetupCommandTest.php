@@ -120,9 +120,9 @@ class SetupCommandTest extends TestCase
     {
         $this->tools('sqlite3', 'mysqldump');
         putenv('APP_NAME=from the shell');
-        mkdir($this->layout->dataDirectory(), 0o700);
+        mkdir($this->layout->dataDirectory(), 0o755);
         // A copy kept under a name of its own is not a site started over.
-        $copy = new \PDO('sqlite:'.$this->layout->dataDirectory().'/database-old.sqlite');
+        $copy = new \PDO('sqlite:'.$this->layout->dataDirectory().'/database-2026-11-21.sqlite');
         $copy->exec('CREATE TABLE admin_users (id INTEGER PRIMARY KEY); INSERT INTO admin_users VALUES (1);');
         $copy = null;
 

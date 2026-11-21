@@ -319,7 +319,8 @@ class SetupCommand extends Command
         if ($choice === 'sqlite') {
             $path = $this->layout->dataDirectory().'/database.sqlite';
             // A site started over runs on a database-<n>.sqlite beside it.
-            foreach ([$path, ...(glob($this->layout->dataDirectory().'/database-[0-9]*.sqlite') ?: [])] as $file) {
+            $startedOver = preg_grep('/\/database-\d+\.sqlite\z/', glob($this->layout->dataDirectory().'/database-*.sqlite') ?: []);
+            foreach ([$path, ...$startedOver] as $file) {
                 if (is_file($file) && filesize($file) > 0 && $this->holdsSite('sqlite', ['database' => $file])) {
                     $this->say('db_holds_site_sqlite', ['path' => $file, 'base' => $this->layout->base], 'error');
 

@@ -55,7 +55,7 @@ final class HtaccessTest extends TestCase
         $this->assertFalse(SiteLayout::denies(''));
     }
 
-    /** The bytes releases have written to openpne-data/.htaccess: a release changing DENY adds to denies() rather than failing every updated site's openpne:check. */
+    /** The bytes releases have written to openpne-data/.htaccess. */
     public function test_bytes_a_release_has_written_stay_accepted(): void
     {
         $this->assertTrue(SiteLayout::denies(<<<'HTACCESS'
