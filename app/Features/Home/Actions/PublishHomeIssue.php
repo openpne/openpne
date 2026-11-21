@@ -95,7 +95,7 @@ final class PublishHomeIssue
     }
 
     /**
-     * Null is the 休刊 rule ({@see HomeIssuePlan::isBlank()}): a day on which nothing was born gets no
+     * Null is the quiet-day rule ({@see HomeIssuePlan::isBlank()}): a day on which nothing was born gets no
      * issue rather than an empty one.
      */
     public function plan(CarbonImmutable $now, ?SourceRef $pin = null, ?HomeIssueWindow $window = null): ?HomeIssuePlan
@@ -179,7 +179,7 @@ final class PublishHomeIssue
 
     /**
      * Each kind is asked for the whole cap so the merged top-N is exact — asking for a share each
-     * would cap a quiet day's best story out for a busier kind's eighth.
+     * would cap a quiet kind's best story out for a busier kind's eighth.
      *
      * @return list<PlannedItem>
      */

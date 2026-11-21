@@ -63,7 +63,7 @@ test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a
     expect(hubHeadingRow(props)?.className).not.toContain('sr-only');
 });
 
-test('a month of できごと opens on its own band, so its heading is seen at desk width alone', () => {
+test('a month of issues opens on its own band, so its heading is seen at desk width alone', () => {
     arrive('home/issues');
 
     expect(screen.getByRole('heading', { level: 1, name: 'What happened' }).parentElement?.className).toContain('max-lg:sr-only');

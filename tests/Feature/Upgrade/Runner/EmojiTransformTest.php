@@ -75,7 +75,7 @@ class EmojiTransformTest extends UpgradeSqlTestCase
 
         $this->runTransform(['diaries']);
 
-        // [i:999] has no mapping and [i:108] is an iモード carrier logo with no Unicode equivalent;
+        // [i:999] has no mapping and [i:108] is an i-mode carrier logo with no Unicode equivalent;
         // both survive verbatim (so this row matched the REGEXP but was never rewritten).
         $this->assertSame('keep[i:999]', $unmapped->fresh()->title);
         $this->assertSame('logo[i:108]', $unmapped->fresh()->body);

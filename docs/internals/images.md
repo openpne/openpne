@@ -105,8 +105,8 @@ a still at an `_a` URL. Every payload carries the key, so the client reads it un
 
 Only the **hero** takes it — the lone picture of a post, comment or chat row, which `ImageGrid` paints
 by itself. Grid cells are crops, which have no animated form; the photo tiles, the digests and the
-reply chips stay stills. Several single-picture posts in one feed therefore play at once, as feeds
-elsewhere do, and there is no page-wide gate. What stops it, for WCAG 2.2.2 (a moving thing that
+reply chips stay stills. Several single-picture posts in one feed therefore play at once, and there
+is no page-wide gate. What stops it, for WCAG 2.2.2 (a moving thing that
 starts on its own and runs past five seconds needs a way to stop it):
 
 - the member's **Autoplay animated pictures** switch on the config page (`PreferenceKey::AutoplayAnimations`,
