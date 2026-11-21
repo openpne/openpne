@@ -34,12 +34,13 @@ no author), and a message answering another carries a one-line reference to it. 
 `<dialog>` the Classic timeline uses, answered with `{ok: true}` JSON, and the confirm page without
 the script; a Classic POST to store, delete or mute returns to the conversation with a flash where
 the Modern client gets JSON. The screen draws no reactions, no unread divider or digest, and does
-not poll; the route inventory records each
+not poll; the route inventory records the poll
 ([`TimelineRouteParity`](../../app/Compat/Parities/TimelineRouteParity.php), `community`).
 
 The room is a chrome registry **conversation** screen
-([feature-modules.md](feature-modules.md)): below lg it carries no bottom tab bar and its chrome does
-not recede, so the composer is the last thing on the screen at every scroll position.
+([feature-modules.md](feature-modules.md)): below lg its bottom tab bar leaves while the composer is
+engaged and its chrome does not recede, so the composer reaches the foot of the screen at every
+scroll position.
 
 It also places itself when it opens — at the foot, or on the message a `?m=` link named — and
 [`opening-scroll.ts`](../../resources/js/lib/chat/opening-scroll.ts) is what stops Inertia placing it
@@ -156,15 +157,16 @@ Only a page contiguous with what is held is ever merged. **Every window change r
 (`enterHistory` / `enterLatest`), because a list assembled from both stretches would draw the hole
 between them as if it were conversation. Sending from the history window therefore re-reads the
 newest page rather than appending: your own words must not land under a message they do not answer.
-The session's tombstones are the one thing carried across a replacement.
+The session's tombstones and the reactions version are carried across a replacement.
 
 Reads are in flight while that happens — the poll is on the wire when the reader taps the banner, and
 either answer can land first. So the state carries a **generation**: every read is issued against the
 one the list stood at, every window change moves it on, and `applied()` is the single door a response
 comes through. One that arrives against a generation that has passed is dropped rather than merged,
 which is what stops a live row being spliced across the gap (and the next watermark being taken from
-beyond it, where "load newer" would never ask). Two things are deliberately outside it: a deletion,
-which is a fact about the conversation rather than a page of it, and the composer's own message,
+beyond it, where "load newer" would never ask). Three things are deliberately outside it: a deletion,
+which is a fact about the conversation rather than a page of it; a reaction write's answer, for the
+same reason; and the composer's own message,
 which is held to the live window instead — it belongs at the foot of any list that ends at the
 newest, including the one just re-read to get back there.
 
@@ -349,8 +351,9 @@ divider does not.
 ### `?context=` — the page a position sits in
 
 `GroupTalkMessages::around()` returns `CONTEXT` messages up to and including the cursor, then
-everything after it up to `PER_PAGE`, as one contiguous page for the history window. Two callers ask
-for it: the unread jump, over `?context=`, and `show` when a `?m=` link names a message — the same
+everything after it up to `PER_PAGE`, as one contiguous page for the history window. Three callers
+ask for it: the unread jump and a reply's jump to its parent, both over `?context=`, and `show` when a
+`?m=` link names a message — the same
 window, around a cursor taken from that message rather than from the read boundary.
 
 A cursor here is a **position, not a permission** — the same trust `before` and `after` already
@@ -375,13 +378,14 @@ All of them read the same predicate ([`UnreadTalkScope`](../../app/Features/Grou
 newer than the cursor by the tuple, and **`member_id IS NULL OR member_id != viewer`**. That NULL arm
 is load-bearing, not defensive — `member_id != ?` is UNKNOWN for a withdrawn author's row, so without
 it the count would silently skip exactly the messages the page still shows under the `withdrawn_member` term. The
-visible set for counting is the same one the page renders, per the no-per-row-filter contract above.
+visible set for counting is the same one the page renders, per
+[History carries no per-row filter](#history-carries-no-per-row-filter).
 
 ### Mute
 
 `group_members.is_talk_muted`, set through `POST /groups/{group}/talk/mute` with the state to move
-to (not a blind flip, so a double tap settles). Muting takes the group out of the nav badge and
-nothing else: its own per-group count keeps showing, de-emphasized, because the member asked for
+to (not a blind flip, so a double tap settles). Muting takes the group out of the nav badge, but
+its own per-group count keeps showing, de-emphasized, because the member asked for
 quiet rather than to lose track of the conversation. Leaving clears it with the row.
 
 Mentions **pierce mute** — a message addressed to you outranks the room's quiet — see
@@ -390,8 +394,7 @@ Mentions **pierce mute** — a message addressed to you outranks the room's quie
 
 While it is on, the room says so: a line under the toggle (its `aria-describedby`) states that the
 broadcast is off and the room is out of the badge, and that a mention still arrives. It lasts as long
-as the mute does, so muting is its own confirmation; unmuting leaves nothing to read and gets a
-spoken line instead. The member's mutes are also listed together on the notification settings page
+as the mute does, and both muting and unmuting also get a spoken line. The member's mutes are also listed together on the notification settings page
 ([notifications.md](notifications.md#the-per-member-catalog)).
 
 ## The joined-group list is a room list
@@ -428,7 +431,7 @@ the message has pictures, because a message may have nothing else: the preview
 letting the row's "author: " trail into nothing. Whether, not how many — the stand-in never counts
 them. The group page's own talk card previews the same way through
 [`LatestGroupMessage`](../../app/Features/GroupTalk/Queries/LatestGroupMessage.php), and the
-conversation list of direct messages is the third caller of the same helper.
+conversation list of direct messages reads the same helper.
 
 The desktop sidebar draws the head of the same list
 ([`NavTalkRooms`](../../app/Features/GroupTalk/Queries/NavTalkRooms.php)), whose rows open what the
@@ -598,7 +601,8 @@ author on top of it: the reference is what the room draws, the @mention is what 
 
 ## Images
 
-Up to three images per message, numbered `1..N` in the order the sender picked them. The composer
+Up to three attachments per message, pictures and files together ([attachments](attachments.md)),
+numbered `1..N` in the order the sender picked them. The composer
 offers three rather than the timeline's one because a chat is where pictures are sent — three is the
 cap the boards, diaries and direct messages already carry (`PostImages::MAX_IMAGES`), so talk reuses
 [`PostImageRules`](../../app/Http/Requests/Concerns/PostImageRules.php)' `images[]` shape and nothing
@@ -614,7 +618,8 @@ merge its way out of. So `CreateGroupMessage` puts everything else — the messa
 resolution, the cursor advance, the posted event — inside `attach`'s persist callback rather than
 around it.
 
-A refused file — one over the cap, one of the wrong type — is a 422 on `images`/`images.N` that
+A refused file — one over its cap, or a picture only the sidecar reads on a GD site, for example — is a 422 on
+`images`/`images.N` that
 takes the **whole message** down, and the composer keeps the whole draft: body, mention rows and
 every picked file. Nothing is cleared until the message is actually written, so a retry carries what
 the first attempt had.
@@ -663,7 +668,7 @@ purge after:
   message, the `DeleteTimelinePost` shape.
 - [`DeleteGroup::purge()`](../../app/Features/Group/Actions/DeleteGroup.php) — every message in the
   group, before the group row goes. Talk is flat, so there is no parent whose purge would reach the
-  rest; the arm walks them all, beside the existing topic, event and timeline arms.
+  rest; the arm walks them all, beside the existing topic, event and comment arms.
 
 ## Link cards
 
@@ -718,10 +723,11 @@ both keys — a tab predating this, and the direct-message conversation that sha
 reactions. An unparseable value is read as none, as an unparseable cursor is.
 
 Live agreement is the **latest window's** only, like the poll itself: the history window does not
-poll, so it catches up when the reader returns to the newest page. And one write is exempt on
+poll, so it catches up when the reader returns to the newest page. And some writes are exempt on
 purpose — a withdrawing member's rows go by FK cascade, which bumps nothing, so an open tab keeps
-showing them until it is reloaded. Advancing every group's counter on a withdrawal is not worth what
-it buys.
+showing them until it is reloaded; advancing every group's counter on a withdrawal is not worth
+what it buys. Deleting a message or tearing a group down bumps nothing either, since the message a
+client would re-read is gone.
 
 Reactions are invisible to unread. They create no message row, and no unread read looks at a version,
 so cursors, badges and the room list's order cannot move because someone reacted.
@@ -729,6 +735,7 @@ so cursors, badges and the room list's order cannot move because someone reacted
 ### One lock order
 
 Talk's [`ReactionSurface`](reactions.md#one-write-path-one-lock-per-surface) is
+[`TalkReactionSurface`](../../app/Features/GroupTalk/TalkReactionSurface.php), which holds
 [`TalkWriteLock`](../../app/Features/GroupTalk/TalkWriteLock.php): the group's row exclusively, then
 the message re-read under it. A message that is gone is the talk's usual 404.
 
@@ -824,8 +831,9 @@ role once per request and the serializer asks it per row.
    composer's picker, and the MCP reply, where the server itself builds the prefix and its range.
    What a producer may name and what the write will accept are the same set, by construction.
 9. A mention pierces mute; the per-message broadcast does not, and a block stops both. Talk history
-   does neither, and neither do its images. At most one broadcast row per room stands at a time, and
-   reading the room reads it.
+   does neither, and neither do its images. One broadcast row per room stands at a time (two
+   messages landing at once can briefly leave two, which the next settles), and reading the room
+   reads it.
 10. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
 11. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
    would be re-creating the split the cutover removed.
@@ -841,7 +849,8 @@ role once per request and the serializer asks it per row.
 15. The table, the wide key, the vocabulary, the lock order and the SQL-counted chip row are
     [reactions.md](reactions.md#key-invariants); talk's container is the group row.
 16. Every state change through the app bumps the version and a no-op does not, so a watermark only
-    moves for something worth re-reading. The withdrawal cascade is the one exempt write; the client
+    moves for something worth re-reading. The withdrawal cascade, a message's deletion and a group's
+    teardown are the exempt writes; the client
     merges a touched row only over an id it already holds.
 17. Reading a message's reactions is `canView` and writing one is `canPost`, with no per-row filter
     either way and 404 for every refusal — the conversation's own rules.
