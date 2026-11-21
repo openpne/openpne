@@ -158,6 +158,7 @@ class SetupCommandTest extends TestCase
     public function test_a_refused_answer_is_asked_again_and_never_written(): void
     {
         $this->tools('sqlite3');
+        Process::fake(['*' => Process::result('3.28.0 2019-04-16 19:49:53 884b4b7e50')]);
 
         $this->runSetup()
             ->expectsQuestion('The site\'s address', 'https://sns.example.com/sns')
@@ -196,7 +197,7 @@ class SetupCommandTest extends TestCase
         $this->tools('mysqldump');
 
         $this->answerSite($this->runSetup())
-            ->expectsOutputToContain('The database is MySQL')
+            ->expectsOutputToContain('The database is MySQL. SQLite needs pdo_sqlite and the sqlite3 command, 3.28.0 or later, which this host lacks.')
             ->expectsQuestion('MySQL server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
@@ -240,7 +241,7 @@ class SetupCommandTest extends TestCase
 
         $this->answerSite($this->runSetup())
             ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28.0 or later (VACUUM INTO under -readonly)')
-            ->expectsOutputToContain('No database can be backed up on this host')
+            ->expectsOutputToContain('No database can be backed up on this host, so a site here could not be updated. SQLite needs pdo_sqlite and the sqlite3 command, 3.28.0 or later;')
             ->assertFailed();
 
         $this->assertFileDoesNotExist($this->layout->envFile);
