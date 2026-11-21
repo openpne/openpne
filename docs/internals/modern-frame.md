@@ -13,13 +13,14 @@ frame draws from those answers.
 ## The phone header
 
 Below `lg`, [`TopNav`](../../resources/js/components/top-nav.tsx) speaks one grammar on every
-screen class: the site mark, then the name of the part of the site the reader stands in, in the
-middle of the row, with the site color as a 4px line atop the row. Only a place's name can be
-pressed.
+screen class: the site mark, which leads home, then the name of the part of the site the reader
+stands in, with the site color as a 4px line atop the row. Every name, the site's included, stands in
+one column at the middle of the row in one type. Only a place's name can be pressed.
 
 | Screen | The header reads |
 |---|---|
-| Home (the latest issue, or What's new where it is home), a member's page, a group's page | `[mark]` + the site name, left-aligned. A member's and a group's page ARE a place, and name themselves in their own hero directly below |
+| Home (the latest issue, or What's new where it is home) | `[mark]`, then the site name |
+| A member's page, a group's page | `[mark]` alone. These pages ARE a place, and name themselves in their own hero directly below |
 | A screen inside a group or a member's place | `[mark]`, then the place's name, which opens its sections ("Place sections"). A conversation stands in its counterpart's place |
 | A hub, a month of issues and a past day's issue included | `[mark]`, then the hub's name. That copy is hidden from assistive technology, and the page's h1 is kept for it alone below `lg`: the h1 is the one announcement |
 | A screen inside no place, with a context, a form included | `[mark]`, then the context's last item |
@@ -85,7 +86,7 @@ included, and reserves the inset alone where no row stands.
 ## The menu drawer
 
 [`NavDrawer`](../../resources/js/components/nav-drawer.tsx) is the header's mirror: full-bleed
-from the trigger's edge, the color line and the brand holding their exact positions across open
+from the trigger's edge, the color line and the mark holding their exact positions across open
 and shut, and the close control the trigger's labelled twin — the same box in the same seat,
 "close" where "menu" stood, first in the DOM as it is first on screen. Both controls carry their
 word under the glyph, so neither takes a tooltip. The drawer's foot carries the profile and

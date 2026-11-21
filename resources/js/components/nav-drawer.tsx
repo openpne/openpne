@@ -55,8 +55,8 @@ export function NavDrawer() {
                         href="/"
                         {...pressPrefetch('/')}
                         onClick={() => setOpen(false)}
-                        // The bar's brand geometry, restated — same gutter, same row — so the mark and
-                        // the name hold still while the drawer opens and closes under them.
+                        // The bar's mark geometry, restated — same gutter, same row — so the mark holds
+                        // still while the drawer opens and closes under it.
                         className="mb-2 flex min-h-12 shrink-0 items-center gap-2"
                     >
                         <BrandMark size="sm" />

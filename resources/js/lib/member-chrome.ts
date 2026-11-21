@@ -350,7 +350,7 @@ const enabled = (props: Record<string, unknown>, feature: FeatureKey): boolean =
     (props as { enabledFeatures: Record<FeatureKey, boolean> }).enabledFeatures[feature];
 
 const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chrome>> = {
-    // As the home it takes the bare frame, the brand bar already naming the place, so the page
+    // As the home it takes the bare frame, the header already naming the site, so the page
     // carries its own visually hidden h1.
     'dashboard': (props) => {
         const action = enabled(props, 'diary') ? WRITE_DIARY : undefined;
@@ -606,7 +606,6 @@ export function resolveChrome(
 /** The pages that ARE a place, whose own hero names it directly below the header. */
 const PLACE_TOPS = ['group/show', 'member/show'] as const;
 
-/** These pages speak the home grammar in the header: mark and site name, and no name in the middle (docs/internals/modern-frame.md, "The phone header"). */
 export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
@@ -634,8 +633,13 @@ export interface HeaderPage {
  * sections open beside unsaved input.
  */
 export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage): Header {
-    if (isHomeComponent(component, home) || isPlaceTop(component)) {
+    if (isHomeComponent(component, home)) {
         return { type: 'brand' };
+    }
+
+    // Left empty rather than given a hub's name, as the hero below names the place (docs/internals/modern-frame.md, "The phone header").
+    if (isPlaceTop(component)) {
+        return { type: 'none' };
     }
 
     if (chrome.scope && chrome.form !== true) {
