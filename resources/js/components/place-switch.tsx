@@ -146,7 +146,7 @@ export function PlaceSwitch({ scope, variant }: { scope: ChromeScope; variant: V
                         headingVariants({ variant: 'bar' }),
                         variant === 'phone'
                             ? 'min-h-11 justify-center px-1'
-                            : // 32px like every child of the place bar, whose one height the shell publishes as `--modern-place-bar`.
+                            : // 32px, the name's height, like every child of the place bar.
                               'h-8 rounded-full pr-2 pl-1 hover:bg-accent data-[state=open]:bg-accent',
                     )}
                 >
@@ -163,7 +163,8 @@ export function PlaceSwitch({ scope, variant }: { scope: ChromeScope; variant: V
                 side="bottom"
                 align="start"
                 fade
-                {...(variant === 'phone' ? { shape: 'band', sideOffset: 0, collisionPadding: 0 } : { sideOffset: 4 })}
+                // At desk width the card's top meets the place bar's line, 6px below the trigger.
+                {...(variant === 'phone' ? { shape: 'band', sideOffset: 0, collisionPadding: 0 } : { sideOffset: 6 })}
                 onOpenAutoFocus={(event) => {
                     event.preventDefault();
                     const panel = event.currentTarget as HTMLElement;

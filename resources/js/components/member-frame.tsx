@@ -50,7 +50,6 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 // 12px below sm only: the frame is the outermost of three paddings on the same line
                 // (frame → card body → field box) and gives up 4px of the usual 16 to the inner two.
                 'mx-auto px-3 py-8 sm:px-4',
-                // The place bar stands in the flow exactly where it sticks, so it never moves.
                 hasPlaceBar(header) && 'lg:pt-(--modern-top-offset)',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],

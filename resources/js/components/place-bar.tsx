@@ -17,7 +17,6 @@ export function PlaceBar({ header, action }: { header: Header; action?: ReactNod
 }
 
 /**
- * The bar takes its height from `--modern-place-bar`, which what sticks below it reads too.
  * Its row is the sidebar's site row (12px under the color line, 44px tall) and its line that row's foot, so the name is level with the site's.
  */
 function Bar({ children }: { children: ReactNode }) {

@@ -116,6 +116,9 @@ test('the bar stands from the first paint where it sticks, so scrolling never mo
     expect(bar).toContain('h-(--modern-place-bar)');
     expect(bar).toContain('border-border');
     expect(bar.filter((c) => c.includes('transparent'))).toEqual([]);
+    // Content starts as far below the bar as it does below the frame's top on a screen with none.
+    const frame = screen.getByRole('main').className.split(' ').find((c) => c.startsWith('py-'));
+    expect(bar).toContain(`mb-${frame?.slice('py-'.length)}`);
 });
 
 test("a screen with no bar keeps the frame's own top padding at desk width", () => {

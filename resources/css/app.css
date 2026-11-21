@@ -329,10 +329,10 @@
     ::before {
         border-color: var(--color-border);
     }
-    /* Focus scrolls a control out from under a stuck place bar (WCAG 2.2 2.4.11); where no bar stands the
-       variable is unset, the length invalid and the margin 0. */
-    main :focus {
-        scroll-margin-top: calc(var(--modern-top-offset) + var(--modern-place-bar));
+    /* Focus scrolls a control, ring included, out from under a stuck place bar (WCAG 2.2 2.4.11), but not one inside
+       something sticky, which scrolling never moves; where no bar stands the variable is unset and the margin 0. */
+    main :focus:not(.sticky *) {
+        scroll-margin-top: calc(var(--modern-top-offset) + var(--modern-place-bar) + --spacing(2));
     }
 }
 
