@@ -161,8 +161,8 @@ bounded here beyond libcurl's own limits).
 ## Key invariants
 
 - Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy,
-  bounded-response client this app builds; that is a weaker guarantee than the fetcher's, and it is
-  the only path to an address the operator did not choose that is allowed to be. The client is reachable only from the push seam, by test —
+  bounded-response client this app builds; that is a weaker guarantee than the fetcher's, and no
+  other path to an address the operator did not choose may be weaker. The client is reachable only from the push seam, by test —
   the directory allowlist below would not otherwise stop anything in `App\Outbound` from fetching
   on it.
 - `App\Outbound` is the only directory in `app/` that fetches a URL anyone but the operator chose,

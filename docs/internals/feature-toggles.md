@@ -59,7 +59,7 @@ routes stay **registered** —
 [`RouteParityAuditTest`](../../tests/Feature/Compat/RouteParityAuditTest.php) asserts every mapped
 route exists — so the middleware, not the route table, is the gate. It is attached in
 [`routes/web.php`](../../routes/web.php): to each unit's route group, and individually to the
-feature-owned endpoints that live outside their prefix (`member.config.diary`,
+feature-owned endpoints that live outside their prefix (e.g. `member.config.diary`,
 `notifications.center.friendAccept` / `friendReject`), and to the `mcp` OAuth consent screen. The
 rest of `mcp` carries it in [`routes/ai.php`](../../routes/ai.php) instead: on the group wrapping all
 three of the endpoint's methods, and on the OAuth routes.
