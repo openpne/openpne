@@ -31,6 +31,17 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
     // Frame-level gate: hub actions target member-only routes, so a guest (a web-public profile is
     // reachable signed out) sees the frame without the action.
     const action = chrome.action && props.auth.user ? chrome.action : undefined;
+    // A hub's h1 is heard and not seen at every width, so its action stands in the bar that shows its name.
+    const hub = header.type === 'title' && header.hub;
+    const actionLink = action && (
+        <ActionLink href={action.href} size={hub ? 'sm' : undefined} className={hub ? 'min-h-8' : undefined}>
+            <action.icon className="size-4" strokeWidth={2.25} aria-hidden />
+            {label(action.label)}
+        </ActionLink>
+    );
+    const heading = chrome.mode !== 'embedded' && chrome.title && (
+        <PageHeading title={label(chrome.title)} className={hub ? 'sr-only' : undefined} action={hub ? undefined : actionLink} />
+    );
     const tabs = props.auth.user ? chrome.tabs : chrome.tabs?.filter((tab) => tab.openToGuest);
 
     return (
@@ -53,22 +64,10 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 action && 'pb-24 lg:pb-8',
             )}
         >
-            <PlaceBar chrome={chrome} />
-            {chrome.mode !== 'embedded' && chrome.title && (
-                <PageHeading
-                    title={label(chrome.title)}
-                    // Below lg the phone header names a hub, so its h1 is heard and not seen there.
-                    className={header.type === 'title' && header.hub ? 'max-lg:sr-only' : undefined}
-                    action={
-                        action && (
-                            <ActionLink href={action.href}>
-                                <action.icon className="size-4" strokeWidth={2.25} aria-hidden />
-                                {label(action.label)}
-                            </ActionLink>
-                        )
-                    }
-                />
-            )}
+            {/* A hub's unseen h1 comes first, so its name is read before the action in the bar. */}
+            {hub && heading}
+            <PlaceBar header={header} action={hub ? actionLink : undefined} />
+            {!hub && heading}
             {chrome.mode !== 'embedded' && tabs && tabs.length > 0 && (
                 <PageTabs
                     ariaLabel={chrome.tabsLabel ? label(chrome.tabsLabel) : ''}

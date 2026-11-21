@@ -206,8 +206,8 @@ into ([layout-hooks.md](layout-hooks.md)). Per-section defaults live in the chro
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame. What the
 frame draws from it — the phone header, the bottom tabs, the drawer, the desk-width place bar —
-is [modern-frame.md](modern-frame.md). Below `lg` a hub's h1 is read and not drawn, the phone
-header naming the hub instead. The heading row's action button is desktop-only: on
+is [modern-frame.md](modern-frame.md). A hub's h1 is read and not drawn, the phone
+header and the place bar naming the hub instead. The action button is desktop-only: on
 mobile the registry's `action` is the extended FAB
 ([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
 bottom bar, and an `embedded` page, having no heading row, has only the FAB. That mobile chrome recedes as a signed-in member reads: scrolling down

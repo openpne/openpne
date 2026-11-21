@@ -91,7 +91,7 @@ const header = () => document.querySelector('header');
 
 /** The offsets are whole declarations, not merely present: one that stopped clearing the line would otherwise pass as long as some value was there. */
 test('the shell paints the one ground, the color line and the offsets that clear them', () => {
-    const chrome = arrive('dashboard', '/dashboard');
+    const chrome = arrive('home/issue', '/');
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
 
     expect(document.documentElement.classList.contains('member-ground')).toBe(true);
@@ -112,7 +112,9 @@ test.each([
     ['member/show', '/member/9', null],
     // A form inside no place names its context in the bar, and the editor's toolbar stands below that bar.
     ['diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
-    ['dashboard', '/dashboard', null],
+    // A hub names itself in the bar, as the phone header does.
+    ['notifications/index', '/notifications', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['home/issue', '/', null],
 ] as const)('%s publishes the place bar height only where the bar stands', (component, url, expected) => {
     const chrome = arrive(component, url, { group: cyclists, profile: { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false } });
     const { container } = renderWithProviders(<AppShell chrome={chrome}>page</AppShell>);
