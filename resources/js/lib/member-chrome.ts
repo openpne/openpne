@@ -606,7 +606,6 @@ export function resolveChrome(
 /** The pages that ARE a place, whose own hero names it directly below the header. */
 const PLACE_TOPS = ['group/show', 'member/show'] as const;
 
-/** These pages speak the home grammar in the header: mark and site name, and no name in the middle (docs/internals/modern-frame.md, "The phone header"). */
 export function isPlaceTop(component: string): boolean {
     return (PLACE_TOPS as readonly string[]).includes(component);
 }
@@ -634,8 +633,13 @@ export interface HeaderPage {
  * sections open beside unsaved input.
  */
 export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage): Header {
-    if (isHomeComponent(component, home) || isPlaceTop(component)) {
+    if (isHomeComponent(component, home)) {
         return { type: 'brand' };
+    }
+
+    // Left empty rather than given a section's name, as the hero below names the place (docs/internals/modern-frame.md, "The phone header").
+    if (isPlaceTop(component)) {
+        return { type: 'none' };
     }
 
     if (chrome.scope && chrome.form !== true) {

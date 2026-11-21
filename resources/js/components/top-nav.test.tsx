@@ -50,6 +50,14 @@ function arrive(component: string, url: string, props: Record<string, unknown> =
     return resolveChrome(component, inertia.page.props);
 }
 
+/** The bar's middle column, where every screen's name stands. */
+function middle(): Element {
+    const columns = [...(document.querySelector('header > div')?.children ?? [])];
+    expect(columns).toHaveLength(3);
+
+    return columns[1]!;
+}
+
 /** What's new is a hub, so the bar carries its title beside the mark. */
 test("the bar carries the What's new title", () => {
     const chrome = arrive('dashboard', '/dashboard');
@@ -59,15 +67,17 @@ test("the bar carries the What's new title", () => {
     expect(container.textContent?.includes("What's new")).toBe(true);
 });
 
-test("a guest's place top is the home grammar, ending in the way in rather than the menu", () => {
+test("a guest's place top is the mark alone, ending in the way in rather than the menu", () => {
     const chrome = arrive('member/show', '/member/9', { auth: { user: null }, profile: { id: 9, name: 'Owner' } });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
-    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
     expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Owner' })).toBeNull();
+    expect(middle().textContent).toBe('');
+    expect(document.querySelector('header')?.textContent).not.toContain('Owner');
+    expect(document.querySelector('header')?.textContent).not.toContain('Test SNS');
 });
 
 test("a guest inside an author's place is told whose it is, and nothing in the bar opens it", () => {
@@ -92,20 +102,21 @@ test("a guest inside an author's place is told whose it is, and nothing in the b
 });
 
 /**
- * The bar speaks one grammar on every screen class: the site mark, then where you are. Home
- * is the root spelled out — mark plus name, nothing after it — and the bar carries no bell, no
- * account control and no tab pair, the four labelled tabs below having taken the moving about.
+ * The bar carries no bell, no account control and no tab pair, the four labelled tabs below having
+ * taken the moving about.
  */
-test('the home bar is the site mark and its name, and nothing else', () => {
+test('the home bar is the site mark and the site name, and nothing else', () => {
     const chrome = arrive('home/issue', '/', {
         unread: { friendRequests: 0, unreadMessages: 0, notifications: 3, groupTalks: 0 },
     });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
-    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
-    // And named by that alone — a word spelled over a name the reader can see says something else.
-    expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
+    // The name is spoken, since the page's h1 is the issue's and not the site's, but it is no way anywhere.
+    expect(middle().textContent).toBe('Test SNS');
+    expect(middle().closest('[aria-hidden]')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Test SNS' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Notifications' })).toBeNull();
     expect(screen.queryByRole('link', { name: '3 unread notifications' })).toBeNull();
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
@@ -182,20 +193,42 @@ test("a deep page inside another member's place names them, as the way to their 
     expect(document.querySelector('header')?.textContent).not.toContain('›');
 });
 
-test('a place top speaks the home grammar — no name over its own hero', () => {
-    // The three-page symmetry extends to the header: home, a member's page and a group's share one
-    // bar, and the place's hero names it directly below where a pill would have repeated it.
-    const chrome = arrive('group/show', '/groups/7', {
-        group: { id: 7, name: 'Cyclists', imageUrl: null },
+test('a place top leaves the middle empty — no name over its own hero', () => {
+    for (const [component, url, props] of [
+        ['group/show', '/groups/7', { group: { id: 7, name: 'Cyclists', imageUrl: null } }],
+        ['member/show', '/member/9', { profile: { id: 9, name: 'Owner' } }],
+    ] as const) {
+        const chrome = arrive(component, url, props);
+
+        renderWithProviders(<TopNav chrome={chrome} />);
+
+        expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href'), component).toBe('/');
+        expect(middle().textContent, component).toBe('');
+        expect(screen.getByRole('button', { name: 'Menu' }), component).toBeTruthy();
+        // Neither a heading nor a site name stands in for the one the hero gives.
+        expect(document.querySelector('header [role="heading"], header h1, header h2'), component).toBeNull();
+        expect(document.querySelector('header')?.textContent, component).not.toContain('Test SNS');
+        cleanup();
+    }
+});
+
+test("every screen's name stands in the one middle column in the one type, so it does not move between screens", () => {
+    const names = [
+        ['home/issue', '/', {}, 'Test SNS'],
+        ['community/list', '/groups/mine', { owner: user, isOwner: true }, '%Communities%'],
+        ['member/config/email', '/member/config/email', {}, 'Settings'],
+        ['diary/list', '/diary/listMember/9', { auth: { user: null }, owner: { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false }, isOwner: false }, 'Owner'],
+    ] as const;
+    const seen = names.map(([component, url, props, name]) => {
+        renderWithProviders(<TopNav chrome={arrive(component, url, props)} />);
+        const slot = middle();
+        expect(slot.textContent, component).toBe(name);
+        cleanup();
+
+        return slot.className;
     });
 
-    renderWithProviders(<TopNav chrome={chrome} />);
-
-    expect(screen.getByText('Test SNS')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Cyclists' })).toBeNull();
-    // The brand link reads by the visible site name, not a doubled "Home" label.
-    expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
+    expect(new Set(seen).size).toBe(1);
 });
 
 test('a form names where it sits without offering a way out of itself', () => {

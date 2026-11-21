@@ -2,7 +2,6 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { X } from 'lucide-react';
 import { type CSSProperties, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { BrandMark } from '@/components/brand-mark';
-import { BrandName } from '@/components/brand-name';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { PlaceSwitch } from '@/components/place-switch';
@@ -107,11 +106,11 @@ function SheetClose({ target, label }: { target: BackTarget; label: string }) {
 const GUEST_ENTRY = 'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm whitespace-nowrap';
 
 /** Where a member's bar ends in the menu, a guest's ends in the way in. */
-function GuestEntry({ className }: { className?: string }) {
+function GuestEntry() {
     const t = useT();
 
     return (
-        <Link href="/login" className={cn(GUEST_ENTRY, 'text-link transition hover:bg-accent', BAR_ACTION_HIT, className)}>
+        <Link href="/login" className={cn(GUEST_ENTRY, 'text-link transition hover:bg-accent', BAR_ACTION_HIT)}>
             {t('Log In')}
         </Link>
     );
@@ -147,21 +146,8 @@ function HeaderBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const { component, props } = usePage<PageProps>();
     const guest = props.auth.user === null;
     const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
-    const end = guest ? <GuestEntry className="ml-auto" /> : <NavDrawer />;
+    const end = guest ? <GuestEntry /> : <NavDrawer />;
     const name = cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate px-1 text-center');
-
-    if (header.type === 'brand') {
-        return (
-            <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
-                {/* No Tip: the site name beside the mark is the word a reader sees. */}
-                <Link href="/" {...pressPrefetch('/')} className="flex min-h-12 min-w-0 items-center gap-2">
-                    <BrandMark size="sm" />
-                    <BrandName className="truncate" />
-                </Link>
-                {end}
-            </TopBar>
-        );
-    }
 
     return (
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
@@ -171,6 +157,7 @@ function HeaderBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
                     <MarkHome />
                     {guest && <GuestEntryGhost />}
                 </div>
+                {header.type === 'brand' && <span className={name}>{props.name}</span>}
                 {header.type === 'place' &&
                     (header.pressable ? <PlaceSwitch scope={header.scope} variant="phone" /> : <span className={name}>{header.scope.name}</span>)}
                 {header.type === 'title' && (

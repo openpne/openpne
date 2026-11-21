@@ -232,7 +232,7 @@ test('the dashboard action goes with the diary unit', () => {
     assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
 });
 
-test('home takes the mobile brand bar', () => {
+test('home takes the site-name header', () => {
     // What's new is a hub, and so is a dated issue: a page of its month's section.
     assert.ok(isHomeComponent('home/issue', 'issue'));
     assert.ok(!isHomeComponent('home/archive', 'issue'));
@@ -507,14 +507,18 @@ test('a form inside a group is titled by its context rather than opening the pla
     assert.equal(header('group/topic/edit', { group: cyclists, topic: null }).type, 'title');
 });
 
-test("home and a place's top keep the brand header, and stand no place bar", () => {
-    for (const [component, props] of [
-        ['home/issue', {}],
-        ['group/show', { group: cyclists }],
-        ['member/show', { profile: owner }],
+test("home names the site, a place's top names nothing, and neither stands a place bar", () => {
+    for (const [component, props, type] of [
+        ['home/issue', {}, 'brand'],
+        ['dashboard', {}, 'brand'],
+        ['group/show', { group: cyclists }, 'none'],
+        ['member/show', { profile: owner }, 'none'],
     ] as const) {
-        assert.deepEqual(header(component, props), { type: 'brand' }, component);
-        assert.ok(!hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
+        const home = component === 'dashboard' ? 'whats_new' : 'issue';
+        const page = resolveChrome(component, { enabledFeatures: allOn, ...props });
+
+        assert.deepEqual(headerOf(page, { component, home, guest: false }), { type }, component);
+        assert.ok(!hasPlaceBar(page, { component, home, guest: false }), component);
     }
 });
 
@@ -575,17 +579,17 @@ test("a guest's place top, hub and site policy head as a member's do", () => {
     ] as const) {
         assert.deepEqual(header(component, props, true), header(component, props), component);
     }
-    assert.deepEqual(header('member/show', { profile: owner }, true), { type: 'brand' });
+    assert.deepEqual(header('member/show', { profile: owner }, true), { type: 'none' });
 });
 
-test('a page that IS the place answers no name — the header speaks the home grammar there', () => {
+test('a page that IS the place answers no name', () => {
     // The place's own hero names it directly below, so a name in the header would say it twice in 60px.
     for (const [component, props] of [
         ['group/show', { group: cyclists }],
         ['member/show', { profile: owner }],
     ] as const) {
         assert.equal(isPlaceTop(component), true);
-        assert.deepEqual(header(component, props), { type: 'brand' });
+        assert.deepEqual(header(component, props), { type: 'none' });
         assert.ok(NO_CONTEXT_COMPONENTS.includes(component));
         assert.ok(!isHomeComponent(component, 'issue'));
         assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).scope, undefined);
