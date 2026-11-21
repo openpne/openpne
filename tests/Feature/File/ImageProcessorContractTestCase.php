@@ -33,9 +33,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $fixtures = [
             'jpeg-gps-orientation.jpg' => 'image/jpeg',
             'jpeg-postsos-meta.jpg' => 'image/jpeg',
-            'jpeg-truncated.jpg' => 'image/jpeg',
             'png-meta.png' => 'image/png',
-            'png-badcrc.png' => 'image/png',
             'webp-vp8x-meta.webp' => 'image/webp',
         ];
 
@@ -69,7 +67,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
         $this->assertSame($expected, $this->dimensions($canonical->bytes));
     }
 
-    public function test_a_source_the_decoder_recovers_from_is_read_at_its_full_size(): void
+    public function test_a_source_the_decoder_recovers_from_is_read_at_its_full_size_without_its_metadata(): void
     {
         // The decoders read past a failed CRC on an ancillary chunk and fill in a scan cut short, so neither is a refusal.
         $fixtures = [
@@ -82,6 +80,8 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
             $this->assertSame($expected, [$canonical->width, $canonical->height], $fixture);
             $this->assertSame($expected, $this->dimensions($canonical->bytes), $fixture);
+            $this->assertStringNotContainsString(self::GPS_SENTINEL, $canonical->bytes, $fixture);
+            $this->assertStringNotContainsString('LEAK', $canonical->bytes, $fixture);
         }
     }
 
