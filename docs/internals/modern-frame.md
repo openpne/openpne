@@ -120,9 +120,9 @@ The bar is one height on every screen that has one, and the shell publishes it t
 own offset (`top-below-place-*`: a conversation's unread banner and day indicator, and the editor's
 toolbar); an anchor adds it to its scroll margin (`scroll-mt-below-place-*`: a month page's days);
 and a focused control in `<main>` takes it plus 8px as its scroll margin, so keyboard focus and its
-ring are never scrolled under the bar (WCAG 2.2 2.4.11). A control inside anything sticky takes
-none: scrolling never moves it, so a margin could only move the page under it. A screen with no
-place bar leaves the variable unset.
+ring are never scrolled under the bar (WCAG 2.2 2.4.11). A control inside a `sticky` element takes
+none: while that element is stuck, as the bar always is, scrolling does not move it, so a margin
+could only move the page under it. A screen with no place bar leaves the variable unset.
 
 ## Content kinds
 
