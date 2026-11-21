@@ -200,6 +200,8 @@ verify() {
     site=$(unpack "$dir/openpne-$version.$format" "$work/$format")
     check_tree "$site" "$sha"
     cd "$site"
+    # What a host is checked for before a site exists, so it runs before install writes .env.
+    php artisan openpne:check --only=before --lang=en || die "openpne:check --only=before found what the archive lacks"
     install
     php artisan openpne:member:invite first@example.com | grep -E '^http://127\.0\.0\.1:[0-9]+/register/[A-Za-z0-9]{40}$' >/dev/null \
       || die "openpne:member:invite printed no registration link"

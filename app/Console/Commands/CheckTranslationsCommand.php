@@ -41,7 +41,7 @@ class CheckTranslationsCommand extends Command
      * App-authored PHP groups whose keys must carry a real value in BOTH ja and
      * en (structured keys have no "key === English text" omission fallback).
      */
-    private const APP_UI_GROUPS = ['terms'];
+    private const APP_UI_GROUPS = ['terms', 'console'];
 
     /**
      * App-authored PHP groups that tolerate source fallback: boundary and collision checks still
