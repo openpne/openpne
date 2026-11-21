@@ -3,8 +3,10 @@
 Some features need to dereference a URL a member typed. Doing that turns the server into a
 request forwarder for anyone who can post, so every such fetch goes through one seam:
 [`App\Outbound`](../../app/Outbound). Nothing else in `app/` may open an outbound connection —
-the one exception being [`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php), which dials a single
-operator-configured address ([images](images.md), "Processing") — and
+the two exceptions dial addresses an operator configured, never one a member typed:
+[`ImgproxyImageProcessor`](../../app/Files/Imgproxy/ImgproxyImageProcessor.php) a single sidecar
+([images](images.md), "Processing"), and [`SiteFetcher`](../../app/SiteCheck/SiteFetcher.php) the
+site's own `APP_URL`, or the address given to `openpne:check` ([runtime](runtime.md), "Site check") — and
 [`OutboundEgressBoundaryTest`](../../tests/Feature/Architecture/OutboundEgressBoundaryTest.php)
 fails the build if something else does.
 

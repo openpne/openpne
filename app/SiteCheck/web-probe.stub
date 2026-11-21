@@ -1,0 +1,49 @@
+<?php
+// Written into public/ by `php artisan openpne:check` and removed by it within seconds. Kept to the
+// syntax of PHP 5.3, since telling an operator that the web runs an old PHP is what it is for.
+$token = '{{token}}';
+$ownerFile = '{{ownerFile}}';
+
+$sent = isset($_SERVER['HTTP_X_OPENPNE_CHECK']) ? (string) $_SERVER['HTTP_X_OPENPNE_CHECK'] : '';
+$same = function_exists('hash_equals') ? hash_equals($token, $sent) : $sent === $token;
+if (! $same) {
+    header('Content-Type: text/plain', true, 404);
+    exit;
+}
+
+$wrote = @file_put_contents($ownerFile, '') !== false;
+
+$ini = array();
+foreach (array('memory_limit', 'upload_max_filesize', 'post_max_size', 'max_execution_time', 'opcache.enable', 'opcache.file_cache') as $name) {
+    $value = ini_get($name);
+    $ini[$name] = $value === false ? null : (string) $value;
+}
+
+$proxyHeaders = array();
+$names = array(
+    'HTTP_X_FORWARDED_FOR' => 'X-Forwarded-For',
+    'HTTP_X_FORWARDED_PROTO' => 'X-Forwarded-Proto',
+    'HTTP_X_FORWARDED_HOST' => 'X-Forwarded-Host',
+    'HTTP_FORWARDED' => 'Forwarded',
+    'HTTP_X_REAL_IP' => 'X-Real-IP',
+    'HTTP_CF_CONNECTING_IP' => 'CF-Connecting-IP',
+    'HTTP_TRUE_CLIENT_IP' => 'True-Client-IP',
+);
+foreach ($names as $key => $header) {
+    if (isset($_SERVER[$key])) {
+        $proxyHeaders[] = $header;
+    }
+}
+
+header('Cache-Control: no-store');
+header('Content-Type: application/json', true, 200);
+echo json_encode(array(
+    'token' => $token,
+    'version' => PHP_VERSION,
+    'sapi' => PHP_SAPI,
+    'extensions' => array_map('strtolower', get_loaded_extensions()),
+    'ini' => $ini,
+    'wrote' => $wrote,
+    'proxy_headers' => $proxyHeaders,
+    'peer' => isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : null,
+));

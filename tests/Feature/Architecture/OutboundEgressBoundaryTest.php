@@ -13,8 +13,9 @@ use Tests\TestCase;
 /**
  * Pins the seam rule from docs/internals/outbound-http.md: App\Outbound alone may fetch a URL a
  * member supplied, since SSRF defence is only the property that every such fetch went through the
- * guard; App\Files\Imgproxy dials one operator-configured address and nothing else. Stream wrappers
- * and raw sockets are forbidden too, as they dereference a URL just as well.
+ * guard; App\Files\Imgproxy dials one operator-configured address, and App\SiteCheck\SiteFetcher the
+ * site's own, and nothing else. Stream wrappers and raw sockets are forbidden too, as they dereference
+ * a URL just as well.
  */
 class OutboundEgressBoundaryTest extends TestCase
 {
@@ -27,6 +28,7 @@ class OutboundEgressBoundaryTest extends TestCase
     private const EGRESS_ALLOWLIST = [
         'Outbound',
         'Files/Imgproxy/ImgproxyImageProcessor.php',
+        'SiteCheck/SiteFetcher.php',
     ];
 
     /**
@@ -336,6 +338,29 @@ class OutboundEgressBoundaryTest extends TestCase
 
         $this->assertSame([], $offenders, sprintf(
             "These files reach the push client. It validates nothing and pins nothing — send through App\\Outbound\\SafeHttpFetcher instead.\n%s",
+            implode("\n", $offenders),
+        ));
+    }
+
+    /** The fetcher validates no address, so a caller outside the check could hand it a member's URL. */
+    public function test_the_site_fetcher_is_reachable_only_from_the_site_check(): void
+    {
+        $offenders = [];
+
+        foreach ($this->appFiles() as $file) {
+            $relative = str_replace(app_path().'/', '', $file);
+
+            if (in_array($relative, ['SiteCheck/SiteFetcher.php', 'SiteCheck/WebCheck.php'], true)) {
+                continue;
+            }
+
+            if (str_contains((string) file_get_contents($file), 'SiteFetcher')) {
+                $offenders[] = 'app/'.$relative;
+            }
+        }
+
+        $this->assertSame([], $offenders, sprintf(
+            "These files reach SiteFetcher, which fetches whatever it is given. A member's URL goes through App\\Outbound\\SafeHttpFetcher.\n%s",
             implode("\n", $offenders),
         ));
     }
