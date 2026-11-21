@@ -78,6 +78,7 @@ abstract class ImageProcessorContractTestCase extends TestCase
         foreach ($fixtures as $fixture => [$mime, $expected]) {
             $canonical = $this->canonical($this->fixture($fixture), $mime);
 
+            $this->assertSame($mime, $canonical->mime, $fixture);
             $this->assertSame($expected, [$canonical->width, $canonical->height], $fixture);
             $this->assertSame($expected, $this->dimensions($canonical->bytes), $fixture);
             $this->assertStringNotContainsString(self::GPS_SENTINEL, $canonical->bytes, $fixture);

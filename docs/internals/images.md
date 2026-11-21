@@ -368,11 +368,10 @@ sidecar's defaults for those do not matter either, and the app dials nothing but
 | 429, 503, other 5xx; no connection; timeout; a 200 whose bytes are not the format asked for | overloaded, down, or a proxy in front of it | an outage: 503 to the viewer, nothing remembered, an error logged |
 | 403, 404, other 4xx | wrong key or salt, the spool not visible, an option this imgproxy does not know | an outage, logged: the operator's to fix |
 
-libvips is more tolerant than GD: a PNG with garbage pixel data or a failed CRC on a critical chunk
-decodes to *something* under it and is refused by GD. Both read a truncated JPEG and a PNG whose
-ancillary chunk fails its CRC at their full size; the contract test pins what both read and what
-both refuse, and leaves the edges between them to each processor's own test. An outage on the
-upload path is shown to the member as a temporary failure; on a read it is a 503 with `Retry-After: 30`
+libvips is more tolerant than GD: a PNG with garbage pixel data decodes to *something* under it and
+is refused by GD. Both read a truncated JPEG and a PNG whose ancillary chunk fails its CRC at their
+full size, and the contract test pins what both read and what both refuse. An outage on the upload
+path is shown to the member as a temporary failure; on a read it is a 503 with `Retry-After: 30`
 ([`bootstrap/app.php`](../../bootstrap/app.php)), the sidecar's 429 under `IMGPROXY_REQUESTS_QUEUE_SIZE`
 included, and every canonical already made keeps being served. A canonical that keeps its frames can outgrow the source cap where a GD still
 would not, and is then refused like any other over it.
