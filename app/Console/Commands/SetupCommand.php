@@ -20,6 +20,7 @@ use App\SiteCheck\Verdict;
 use Closure;
 use DateTimeZone;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -29,6 +30,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Prompts\Prompt;
 use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Throwable;
 
 use function Laravel\Prompts\confirm;
@@ -162,7 +164,15 @@ class SetupCommand extends Command
             return self::FAILURE;
         }
         $this->say('install');
-        if ($this->call('openpne:install') !== self::SUCCESS) {
+        // Its success ends with "Next: openpne:admin:create", which this command does next itself.
+        $install = new BufferedOutput;
+        $installed = Artisan::call('openpne:install', [], $install);
+        // A command run points Prompts at its own output, which here is the buffer.
+        $this->configurePrompts($this->input);
+        if ($installed !== self::SUCCESS) {
+            $this->output->write($install->fetch());
+            $this->say('install_failed', [], 'error');
+
             return self::FAILURE;
         }
         if (! $hasAdmin) {
