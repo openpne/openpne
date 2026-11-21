@@ -31,6 +31,12 @@ final class OperatorContentConversion
     /** @param  string  $retry  what the oversize error tells the operator to do after shortening the HTML */
     public function __construct(private readonly string $retry = 'run `php artisan openpne:convert-operator-html` again') {}
 
+    /** A stored Markdown value marks it converted, so an admin save leaves a blank one nobody stored absent for this conversion. */
+    public static function savesMarkdown(bool $stored, string $value, string $blank = ''): bool
+    {
+        return $stored || $value !== $blank;
+    }
+
     /**
      * @param  list<string>  $tables  the subset of TABLES to convert
      * @param  bool  $force  rewrite Markdown that is already stored

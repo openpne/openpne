@@ -133,6 +133,50 @@ class OperatorMarkdownAdminTest extends TestCase
         $this->assertNull(Banner::where('name', 'top_after')->value('markdown'));
     }
 
+    public function test_a_stored_footer_set_back_to_the_default_is_saved(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::FooterAfterMarkdown, 'custom');
+
+        Livewire::test(DesignSettings::class)
+            ->fillForm(['footer_after_markdown' => SnsSettingKey::FooterAfterMarkdown->default()])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after_markdown', 'value' => SnsSettingKey::FooterAfterMarkdown->default()]);
+    }
+
+    /** The first two have only the HTML row, as raw-HTML mode leaves them, and their save changes nothing but the order. */
+    public function test_saving_a_gadget_leaves_a_body_nobody_wrote_unconverted(): void
+    {
+        $info = Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 0]);
+        GadgetConfig::create(['gadget_id' => $info->id, 'name' => 'value', 'value' => '<b>info</b>']);
+        $free = Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => 1]);
+        GadgetConfig::create(['gadget_id' => $free->id, 'name' => 'title', 'value' => 'Notice']);
+        GadgetConfig::create(['gadget_id' => $free->id, 'name' => 'value', 'value' => '<b>free</b>']);
+        $emptied = Gadget::create(['context' => 'sidebanner', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 2]);
+        GadgetConfig::create(['gadget_id' => $emptied->id, 'name' => 'value', 'value' => '<b>emptied</b>']);
+        GadgetConfig::create(['gadget_id' => $emptied->id, 'name' => 'value_markdown', 'value' => 'old']);
+
+        foreach ([$info, $free] as $gadget) {
+            Livewire::test(EditGadget::class, ['record' => $gadget->getKey()])
+                ->fillForm(['sort_order' => 20])
+                ->call('save')
+                ->assertHasNoFormErrors();
+        }
+        Livewire::test(EditGadget::class, ['record' => $emptied->getKey()])
+            ->fillForm(['config_value_markdown' => ''])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->artisan('openpne:convert-operator-html')->assertSuccessful();
+
+        $this->assertDatabaseHas('gadget_configs', ['gadget_id' => $info->id, 'name' => 'value_markdown', 'value' => '**info**']);
+        $this->assertDatabaseHas('gadget_configs', ['gadget_id' => $free->id, 'name' => 'value_markdown', 'value' => '**free**']);
+        $this->assertDatabaseHas('gadget_configs', ['gadget_id' => $free->id, 'name' => 'title', 'value' => 'Notice']);
+        $this->assertSame(1, GadgetConfig::where(['gadget_id' => $emptied->id, 'name' => 'value_markdown'])->count());
+        $this->assertSame('', (string) GadgetConfig::where(['gadget_id' => $emptied->id, 'name' => 'value_markdown'])->value('value'));
+    }
+
     public function test_oversized_markdown_is_rejected(): void
     {
         Banner::create(['name' => 'top_after', 'is_use_html' => true]);
