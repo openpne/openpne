@@ -181,6 +181,24 @@ The shipped rules leave responses from `index.php` alone. Compressing a page tha
 token next to reflected input is the BREACH side channel, so whether to compress dynamic responses
 is the operator's decision.
 
+## Apache .htaccess files
+
+The release has two, and they use only directives that `AllowOverride FileInfo` permits, so a host
+that forbids `Options` or `Require` in `.htaccess` still runs the site. The one at the top of the
+tree answers every request with 403, for a document root that is the tree, or holds it, instead of
+being `public/`. `public/.htaccess` has rewrite rules of its own, which Apache applies under
+`public/` in place of the top file's; it sends a request for an existing directory to `index.php`,
+so Apache lists none. Two server settings change that. With `DirectorySlash Off` and `Indexes`,
+mod_rewrite skips a request for the directory of either file that lacks the trailing slash, and
+Apache lists the names in it; by default it leaves out the entries it refuses, so the top one shows
+only `public/`. With `RewriteOptions InheritDown` where the top file is read, `public/` takes its
+rule as well and the whole site answers 403. Neither file sets `RewriteOptions` to get round that, because one set in
+a `.htaccess` replaces the server's, and the server's own rules would then stop reaching `public/`
+unnoticed. A `.htaccess` with rewrite directives anywhere else in
+the tree would lift the 403 for its directory, and the release has none. A server that hands `.php`
+requests to PHP-FPM by `ProxyPassMatch` does so before reading any `.htaccess`, so there the 403
+covers the other files only.
+
 ## Cache reads
 
 Site settings, terms, navigation rows and gadget rows are cached under one key each, and a request
