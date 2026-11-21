@@ -22,12 +22,13 @@ one column at the middle of the row in one type. Only a place's name can be pres
 | Home (the latest issue, or What's new where it is home) | `[mark]`, then the site name |
 | A member's page, a group's page | `[mark]` alone. These pages ARE a place, and name themselves in their own hero directly below |
 | A screen inside a group or a member's place | `[mark]`, then the place's name, which opens its sections ("Place sections"). A conversation stands in its counterpart's place |
-| A hub, a month of issues and a past day's issue included | `[mark]`, then the hub's name. That copy is hidden from assistive technology, and the page's h1 is kept for it alone below `lg`: the h1 is the one announcement |
+| A hub, a month of issues and a past day's issue included | `[mark]`, then the hub's name. That copy is hidden from assistive technology, and the page's h1 is kept for it alone at every width: the h1 is the one announcement |
 | A screen inside no place, with a context, a form included | `[mark]`, then the context's last item |
 | A screen inside nothing, with no context | `[mark]` alone |
 
 [`headerOf`](../../resources/js/lib/member-chrome.ts) makes this choice for both the header and the
-place bar. The header ends in the menu. There is no back control: swipe, the browser and the site
+place bar, and [`HeaderName`](../../resources/js/components/header-name.tsx) draws the name in both.
+The header ends in the menu. There is no back control: swipe, the browser and the site
 mark are the ways out.
 
 Two decisions here are deliberate rather than pending:
@@ -96,17 +97,16 @@ sign-out rows, since the phone bars carry no account menu.
 
 At `lg` and up no header stands. The site-color line is the only full-width element, over the
 sidebar ([`LeftNav`](../../resources/js/components/left-nav.tsx)), and the sidebar plus the
-content column center as one block. With no header to carry it, the h1 a hub keeps off the
-phone's screen is drawn here. A page under `pages/` takes no `lg:` or `max-lg:` class of its own,
+content column center as one block. A page under `pages/` takes no `lg:` or `max-lg:` class of its own,
 apart from the few listed in `eslint.config.js` that held one already: the frame and the shared
 components answer to the width.
 
-On a screen deep enough to be inside somewhere, a sticky place bar
-([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
-column. Inside a place, a form aside, the bar is the place's face and name, which open its sections;
-on a screen inside no place that has a context, it is the context's last item as text. Home, a hub,
-a member's or a group's own page and anything the sidebar's own active row already
-names draw none. The bar is one height on every
+The phone header's middle stands again at the head of the content column as a sticky place bar
+([`PlaceBar`](../../resources/js/components/place-bar.tsx)) wherever it names something other than
+the site — a place, a hub or a context's last item ("The phone header") — with a place's face added.
+Home, a member's or a group's own page and a screen inside nothing with no context draw none. A
+hub's action stands at the end of the bar, as its h1 is not drawn; a screen whose h1 is drawn keeps
+its action beside the h1. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
 banner and day indicator, and the editor's toolbar. A screen with no place bar leaves the

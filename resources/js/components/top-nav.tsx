@@ -3,9 +3,8 @@ import { X } from 'lucide-react';
 import { type CSSProperties, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
+import { HeaderName } from '@/components/header-name';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
-import { PlaceSwitch } from '@/components/place-switch';
-import { headingVariants } from '@/components/ui/heading';
 import { Tip } from '@/components/ui/tooltip';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
@@ -142,12 +141,10 @@ function MarkHome() {
 
 /** The site mark, then where the reader is (docs/internals/modern-frame.md, "The phone header"). */
 function HeaderBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
-    const t = useT();
     const { component, props } = usePage<PageProps>();
     const guest = props.auth.user === null;
     const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
     const end = guest ? <GuestEntry /> : <NavDrawer />;
-    const name = cn(headingVariants({ variant: 'bar' }), 'min-w-0 truncate px-1 text-center');
 
     return (
         <TopBar hidden={hidden} seam={false} line={props.snsLogo.color}>
@@ -157,17 +154,7 @@ function HeaderBar({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
                     <MarkHome />
                     {guest && <GuestEntryGhost />}
                 </div>
-                {header.type === 'brand' && <span className={name}>{props.name}</span>}
-                {header.type === 'place' &&
-                    (header.pressable ? <PlaceSwitch scope={header.scope} variant="phone" /> : <span className={name}>{header.scope.name}</span>)}
-                {header.type === 'title' && (
-                    // A hub's own h1 stays in the page, so the bar's copy of it would be a second
-                    // announcement of the same words.
-                    <span aria-hidden={header.hub || undefined} className={name}>
-                        {typeof header.label === 'string' ? header.label : t(header.label.key, header.label.replacements)}
-                    </span>
-                )}
-                {header.type === 'none' && <span />}
+                {header.type === 'none' ? <span /> : <HeaderName header={header} variant="phone" />}
                 <div className="flex min-w-11 justify-end">{end}</div>
             </div>
         </TopBar>

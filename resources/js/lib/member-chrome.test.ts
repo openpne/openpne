@@ -260,7 +260,7 @@ test('a month of issues and a past day are titled as a hub alike', () => {
             assert.ok(NO_CONTEXT_COMPONENTS.includes(component), component);
             assert.deepEqual(
                 headerOf(chrome, { component, home: modernHome, guest: false }),
-                { type: 'title', label: { key: 'What happened', replacements: undefined }, hub: true, desk: false },
+                { type: 'title', label: { key: 'What happened', replacements: undefined }, hub: true },
                 `${component} ${modernHome}`,
             );
         }
@@ -498,12 +498,12 @@ test('every screen inside a group heads with the group and the section it stands
         // The bar names the group on its own, so the registry keeps no context naming it a second time.
         assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).context, undefined, component);
         assert.ok(!NO_CONTEXT_COMPONENTS.includes(component), component);
-        assert.ok(hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
+        assert.ok(hasPlaceBar(header(component, props)), component);
     }
 });
 
 test('a form inside a group is titled by its context rather than opening the place', () => {
-    assert.deepEqual(header('community/edit', { group: cyclists }), { type: 'title', label: 'Cyclists', hub: false, desk: true });
+    assert.deepEqual(header('community/edit', { group: cyclists }), { type: 'title', label: 'Cyclists', hub: false });
     assert.equal(header('group/topic/edit', { group: cyclists, topic: null }).type, 'title');
 });
 
@@ -518,20 +518,26 @@ test("home names the site, a place's top names nothing, and neither stands a pla
         const page = resolveChrome(component, { enabledFeatures: allOn, modernHome: home, ...props });
 
         assert.deepEqual(headerOf(page, { component, home, guest: false }), { type }, component);
-        assert.ok(!hasPlaceBar(page, { component, home, guest: false }), component);
+        assert.ok(!hasPlaceBar(headerOf(page, { component, home, guest: false })), component);
     }
 });
 
-test('a hub is titled by its own name, kept from assistive technology, and stands no place bar', () => {
+test('a hub is titled by its own name, kept from assistive technology, and stands the place bar too', () => {
     for (const [component, props, key] of [
         ['message/conversations/index', {}, 'Messages'],
         ['notifications/index', {}, 'Notifications'],
         ['home/issues', {}, 'What happened'],
         ['home/archive', { issue: { monthHref: '/home/2026/08' } }, 'What happened'],
         ['dashboard', {}, "What's new"],
+        ['diary/feed', { variant: 'all' }, '%Diaries%'],
+        ['community/search', {}, '%Communities%'],
+        ['timeline/index', {}, '%Activity%'],
+        ['friend/requests', {}, '%Friends%'],
+        ['member/search', {}, 'Search members'],
+        ['member/config', {}, 'Settings'],
     ] as const) {
-        assert.deepEqual(header(component, props), { type: 'title', label: { key, replacements: undefined }, hub: true, desk: false }, component);
-        assert.ok(!hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
+        assert.deepEqual(header(component, props), { type: 'title', label: { key, replacements: undefined }, hub: true }, component);
+        assert.ok(hasPlaceBar(header(component, props)), component);
     }
 });
 
@@ -556,7 +562,7 @@ test("every screen inside another member's place heads with that member and the 
             component,
         );
         assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).context, undefined, component);
-        assert.ok(hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
+        assert.ok(hasPlaceBar(header(component, props)), component);
     }
 });
 
@@ -600,29 +606,29 @@ test('a page that IS the place answers no name', () => {
 
 test('a screen inside no place is titled by the last item of its context instead of claiming home', () => {
     // A header saying "you are at home" on a screen that is inside nothing would be false.
-    const tag = { type: 'title', label: { key: '%Activity%', replacements: undefined }, hub: false, desk: true };
+    const tag = { type: 'title', label: { key: '%Activity%', replacements: undefined }, hub: false };
 
     assert.deepEqual(header('timeline/tag', { tag: 'ride' }), tag);
     assert.deepEqual(header('timeline/tag', { tag: 'ride' }, true), tag);
-    assert.ok(hasPlaceBar(chrome('timeline/tag', { tag: 'ride' }), { component: 'timeline/tag', home: 'issue', guest: false }));
+    assert.ok(hasPlaceBar(header('timeline/tag', { tag: 'ride' })));
 });
 
 test('a form is titled by its context and never opens a place, in the place bar too', () => {
     // The group edit form is the sharp case: the same word as a place, and still not a way into it.
-    assert.deepEqual(header('member/config/email', {}), { type: 'title', label: { key: 'Settings', replacements: undefined }, hub: false, desk: true });
+    assert.deepEqual(header('member/config/email', {}), { type: 'title', label: { key: 'Settings', replacements: undefined }, hub: false });
 
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
         const answer = header(component, props);
         const context = chrome(component, props).context;
 
         assert.equal(answer.type, context ? 'title' : 'none', component);
-        assert.equal(answer.type === 'title' && answer.desk, context !== undefined, component);
+        assert.equal(hasPlaceBar(answer), context !== undefined, component);
     }
 });
 
 test('a screen that is nowhere and has no context leaves the mark standing alone, with no place bar', () => {
     assert.deepEqual(header('policy/show', { kind: 'terms' }), { type: 'none' });
-    assert.ok(!hasPlaceBar(chrome('policy/show', { kind: 'terms' }), { component: 'policy/show', home: 'issue', guest: false }));
+    assert.ok(!hasPlaceBar(header('policy/show', { kind: 'terms' })));
 });
 
 test('the screens with no nav entry of their own name the screen that links to them', () => {

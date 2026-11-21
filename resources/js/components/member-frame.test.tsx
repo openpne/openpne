@@ -58,14 +58,51 @@ function hubHeadingRow(props: Record<string, unknown>): Element | null {
 
 const placeBar = () => screen.queryByTestId('place-bar');
 
-test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a hub keeps its heading for assistive technology alone below lg, for %s', (_who, props) => {
-    expect(hubHeadingRow(props)?.className).toContain('max-lg:sr-only');
+test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a hub keeps its heading for assistive technology alone at every width, for %s', (_who, props) => {
+    const row = hubHeadingRow(props);
+
+    expect(row?.className.split(' ')).toContain('sr-only');
+    expect(row?.className).not.toMatch(/(^|\s)(max-)?lg:/);
 });
 
-test.each(['home/issues', 'home/archive'])('%s is a hub like any other, its heading drawn at desk width alone', (component) => {
+test.each(['home/issues', 'home/archive'])('%s is a hub like any other, named in the bar and heard once', (component) => {
     arrive(component, { issue: { monthHref: '/home/2026/08' } });
 
-    expect(screen.getByRole('heading', { level: 1, name: 'What happened' }).parentElement?.className).toContain('max-lg:sr-only');
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => h.textContent)).toEqual(['What happened']);
+    expect(placeBar()?.textContent).toBe('What happened');
+    expect(placeBar()?.querySelector('[aria-hidden="true"]')?.textContent).toBe('What happened');
+});
+
+test("a hub's action stands at the end of the bar, and nowhere else in the frame", () => {
+    arrive('community/search');
+
+    const create = screen.getByRole('link', { name: 'Create a %community%' });
+    expect(placeBar()?.lastElementChild?.contains(create)).toBe(true);
+    expect(document.querySelectorAll('a[href="/groups/edit"]')).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: '%Communities%' }).parentElement?.querySelector('a')).toBeNull();
+});
+
+test("a guest's hub is named in the bar with no action in it", () => {
+    arrive('diary/feed', { auth: { user: null }, variant: 'recent' });
+
+    expect(placeBar()?.textContent).toBe('%Diaries%');
+    expect(placeBar()?.querySelector('a, button')).toBeNull();
+});
+
+test('home stands no bar and draws its action nowhere in the frame, the FAB answering below lg alone', () => {
+    arrive('dashboard', { modernHome: 'whats_new' });
+
+    expect(placeBar()).toBeNull();
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(document.querySelector('a[href="/diary/new"]')).toBeNull();
+});
+
+test("a screen inside a place keeps its action beside its heading, the bar holding the place's name alone", () => {
+    arrive('group/topic/index', { group: cyclists, canPost: true });
+
+    const create = screen.getByRole('link', { name: 'Create a %topic%' });
+    expect(placeBar()?.contains(create)).toBe(false);
+    expect(screen.getByRole('heading', { level: 1, name: '%Topics%' }).parentElement?.contains(create)).toBe(true);
 });
 
 test('a screen inside a place keeps its heading on screen at both widths', () => {
@@ -122,15 +159,15 @@ test('a form says where it is without offering a way out of it', () => {
     expect(placeBar()?.querySelector('a, button')).toBeNull();
 });
 
-test('a screen inside no place names its section at desk width too, as text', () => {
+test('a screen inside no place names its section at desk width too, as text that is read', () => {
     arrive('timeline/tag', { tag: 'ride' });
 
     expect(placeBar()?.textContent).toBe('%Activity%');
-    expect(placeBar()?.querySelector('a, button')).toBeNull();
+    expect(placeBar()?.querySelector('a, button, [aria-hidden]')).toBeNull();
 });
 
-test.each(['home/archive', 'policy/show'])('%s stands no place bar: the page names itself directly below', (component) => {
-    arrive(component, { issue: { monthHref: '/home/2026/08' }, kind: 'terms' });
+test('a screen inside nothing with no context stands no place bar: the page names itself directly below', () => {
+    arrive('policy/show', { kind: 'terms' });
 
     expect(placeBar()).toBeNull();
 });
@@ -155,13 +192,6 @@ test("a member's place bar on the same entry opens the author's sections, with t
     expect(placeBar()?.querySelector('a')).toBeNull();
 });
 
-test.each(['dashboard', 'notifications/index'])('%s is inside nothing, so no place bar stands over it', (component) => {
-    // The sidebar's brand and its active row already answer for these; a bar repeating them would be
-    // furniture with nothing to say.
-    arrive(component);
-
-    expect(placeBar()).toBeNull();
-});
 
 /**
  * The frame outlives the page under Inertia's persistent layout, so without the key a package's slot

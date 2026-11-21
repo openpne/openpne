@@ -8,7 +8,7 @@ import { LeftNav } from '@/components/left-nav';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
 import { carriesFiles, carriesPick, takesText } from '@/lib/file-drop';
-import { type Chrome, chromeRecedes, hasBottomNav, hasPlaceBar } from '@/lib/member-chrome';
+import { type Chrome, chromeRecedes, hasBottomNav, hasPlaceBar, headerOf } from '@/lib/member-chrome';
 import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -76,7 +76,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         : '[--modern-bottom-offset:env(safe-area-inset-bottom)]';
     // The height place-bar.tsx gives its bar, hairline included, and only where it renders one: a
     // screen with no bar has nothing for a sticky child to stand below.
-    const placeBarOffset = hasPlaceBar(chrome, { component: String(component), home: props.modernHome, guest: !member })
+    const placeBarOffset = hasPlaceBar(headerOf(chrome, { component: String(component), home: props.modernHome, guest: !member }))
         ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]'
         : undefined;
 

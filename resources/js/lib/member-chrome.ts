@@ -612,13 +612,12 @@ export function isPlaceTop(component: string): boolean {
 
 /**
  * A guest's `place` is not pressable, since their sections may sit behind the login wall. A `hub`
- * title is the screen's own h1 again and so is not read aloud, and only a `desk` title stands in the
- * place bar too (docs/internals/modern-frame.md, "The phone header").
+ * title is the screen's own h1 again and so is not read aloud (docs/internals/modern-frame.md, "The phone header").
  */
 export type Header =
     | { type: 'brand' }
     | { type: 'place'; scope: ChromeScope; pressable: boolean }
-    | { type: 'title'; label: ChromeLabel | string; hub: boolean; desk: boolean }
+    | { type: 'title'; label: ChromeLabel | string; hub: boolean }
     | { type: 'none' };
 
 export interface HeaderPage {
@@ -647,17 +646,15 @@ export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage)
     }
 
     if (chrome.mode === 'section' && chrome.title) {
-        return { type: 'title', label: chrome.title, hub: true, desk: false };
+        return { type: 'title', label: chrome.title, hub: true };
     }
 
     const last = chrome.context?.[chrome.context.length - 1];
 
-    return last ? { type: 'title', label: last.label, hub: false, desk: true } : { type: 'none' };
+    return last ? { type: 'title', label: last.label, hub: false } : { type: 'none' };
 }
 
-/** The shell publishes `--modern-place-bar` on exactly the screens PlaceBar draws on. */
-export function hasPlaceBar(chrome: Chrome, page: HeaderPage): boolean {
-    const header = headerOf(chrome, page);
-
-    return header.type === 'place' || (header.type === 'title' && header.desk);
+/** The desk place bar stands wherever the phone header's middle names something other than the site (docs/internals/modern-frame.md, "Desk width"). */
+export function hasPlaceBar(header: Header): header is Extract<Header, { type: 'place' | 'title' }> {
+    return header.type === 'place' || header.type === 'title';
 }
