@@ -6,7 +6,8 @@
     {{-- OpenPNE 3 showSuccess.php renders the event as a listBox whose id is the bare
          "communityEvent" (skins target it), headed "[community] Event", one th/td row per field
          with the body — images and text — as a row of its own; deletion is reached from the edit
-         screen. --}}
+         screen, and a viewer who may delete but not edit (a sub-admin) gets a Delete button in the
+         Edit button's place. --}}
     <x-classic.parts id="communityEvent" name="listBox" :title="'['.$event->group->name.'] '.__('Event')">
         <table>
             <tr>
@@ -71,6 +72,14 @@
             <form action="{{ route('group.events.edit', $event) }}" method="get">
                 <ul class="moreInfo button">
                     <li><input class="input_submit" type="submit" value="{{ __('Edit') }}"></li>
+                </ul>
+            </form>
+        </div>
+    @elseif ($canDelete)
+        <div class="operation">
+            <form action="{{ route('group.events.delete.show', $event) }}" method="get">
+                <ul class="moreInfo button">
+                    <li><input class="input_submit" type="submit" value="{{ __('Delete') }}"></li>
                 </ul>
             </form>
         </div>

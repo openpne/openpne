@@ -114,6 +114,7 @@ class GroupTopicController extends Controller
                     'thread' => $thread,
                     'canComment' => GroupTopicAccess::canComment($found, $viewer),
                     'canEdit' => GroupTopicAccess::canEditTopic($found, $viewer),
+                    'canDelete' => GroupTopicAccess::canDeleteTopic($found, $viewer),
                 ]);
             },
             SurfaceResolver::MODERN => function () use ($request, $found, $viewer, $linkCards, $reactions) {
@@ -129,6 +130,7 @@ class GroupTopicController extends Controller
                     'reactionVocabulary' => ReactionVocabulary::all(),
                     'renderGeneration' => StreamProps::generation(),
                     'canEdit' => GroupTopicAccess::canEditTopic($found, $viewer),
+                    'canDelete' => GroupTopicAccess::canDeleteTopic($found, $viewer),
                     'openSections' => GroupPlace::openSections($found->group, $viewer),
                 ]);
             },

@@ -20,6 +20,28 @@ reads the page's ids first, see [ordering.md](ordering.md) "Counts after the cut
 as the two board tabs of the group hub, each present while its unit is on. `/groups/recent`, the
 dashboard digest's full list, is the head of both sets merged and unpaged, and stays Modern-only.
 
+## Roles
+
+A member of a group is a Member, a Sub-admin or its Admin
+([`GroupRole`](../../app/Features/Group/GroupRole.php)); to manage a group is to be Admin or
+Sub-admin (`GroupRole::canManage()`).
+
+- **Admin only**: deleting the group, transferring the admin seat, appointing and demoting
+  sub-admins, approving and declining join requests (and the pending-request notice), editing
+  another member's topic or event, and posting a topic or event while `topic_post_authority` is
+  admins only.
+- **Admin or sub-admin**: editing the group's settings, both access columns included; the
+  member-management screen and dropping a plain member; deleting anyone's talk message, topic,
+  event or board comment.
+- **Any member**: posting, commenting, reacting and talking; editing and deleting their own topic or
+  event, and deleting the comments on it.
+- **The author, member or not**: deleting their own board comment or talk message, which a member
+  who has left keeps.
+
+A sub-admin deletes another member's post but never edits it. OpenPNE 3 gave a sub-admin no reach
+over the board at all; talk, which OpenPNE 3 did not have, let anyone who manages the group delete,
+and the boards follow it so that one rule covers every post inside a group.
+
 ## The group row is the lock
 
 Every action that changes a member's role or the pending-admin nominee opens a `DB::transaction`,
@@ -41,14 +63,19 @@ touch neither a role nor `pending_admin_member_id`, and
 with a single conditional `UPDATE`, which is its own compare-and-set (zero rows changed means the
 seat was not the actor's), so it takes no lock.
 
-Two edges are accepted rather than closed, and OpenPNE 3 behaves the same way:
+These edges are accepted rather than closed:
 
 - A transfer pending across the old admin's withdrawal survives it.
   [`WithdrawMember`](../../app/Features/Member/Actions/WithdrawMember.php) auto-promotes the
-  longest-tenured member, and a later accept then demotes that successor — the nominee wins.
+  longest-tenured member, and a later accept then demotes that successor — the nominee wins, as in
+  OpenPNE 3.
 - An ex-admin's in-flight `DeleteGroup` can complete after a transfer, because its irreversible byte
   purge runs outside this lock. The harm equals a delete done a moment before the transfer, so the
-  purge is not folded into the lock.
+  purge is not folded into the lock. OpenPNE 3 behaves the same way.
+- A post's delete — a talk message, a topic, an event or a board comment — checks the deleter's role
+  once, before it takes any lock, so a demotion or transfer that commits in between counts as coming
+  after the delete; the harm equals a delete done a moment before it. A talk delete takes the group
+  row only after that check, and a board delete never takes it.
 
 Being the nominee is state, not a role, so accept and reject carry no policy ability and the
 action's `NoTransferPending` check is authoritative. A nominee's role is frozen while the transfer
@@ -113,8 +140,8 @@ A thread's `bumped_at` always equals `COALESCE(MAX(comments.created_at), created
 creation, a comment lifts it, and deleting a comment settles it back to the last surviving one — a
 departure from OpenPNE 3, which left the stamp where the deleted comment put it. Nothing else moves
 it: not a name or body edit (that sets `edited_at`, which the detail serializer exposes as
-`editedAt`), not an RSVP, not a link-card sync; an administrator deleting a comment settles it like
-anyone else. `updated_at` is Laravel's and means nothing to the board, which is why
+`editedAt`), not an RSVP, not a link-card sync; a manager deleting a comment settles it like anyone
+else. `updated_at` is Laravel's and means nothing to the board, which is why
 [`BoardBumpedAt`](../../app/Features/Group/BoardBumpedAt.php) writes through the query builder: a
 model save, even a quiet one, bumps `updated_at`. The column has no default, so a write path that
 forgets it fails rather than storing the engine's clock. Deleting a comment locks its thread first,

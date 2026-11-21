@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\GroupTopic;
 
+use App\Features\Group\Actions\DemoteSubAdmin;
 use App\Features\Group\GroupRole;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\TopicPostAuthority;
@@ -142,5 +143,61 @@ class GroupTopicAccessTest extends TestCase
         $member = $this->joined($group, GroupRole::Member);
 
         $this->assertFalse(GroupTopicAccess::canDeleteComment($comment->fresh(), $member));
+    }
+
+    public function test_a_sub_admin_may_delete_another_members_topic_but_not_edit_it(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $otherMember = $this->joined($group, GroupRole::Member);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->assertTrue(GroupTopicAccess::canDeleteTopic($topic, $subAdmin));
+        $this->assertFalse(GroupTopicAccess::canEditTopic($topic, $subAdmin));
+        $this->assertTrue(GroupTopicAccess::canDeleteTopic($topic, $author));
+        $this->assertFalse(GroupTopicAccess::canDeleteTopic($topic, $otherMember));
+        $this->assertFalse(GroupTopicAccess::canDeleteTopic($topic, Member::factory()->create()));
+    }
+
+    public function test_a_sub_admin_may_delete_another_members_comment(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->assertTrue(GroupTopicAccess::canDeleteComment($comment, $subAdmin));
+    }
+
+    public function test_a_demoted_or_departed_sub_admin_can_no_longer_delete(): void
+    {
+        $group = Group::factory()->create();
+        $admin = $this->joined($group, GroupRole::Admin);
+        $author = $this->joined($group, GroupRole::Member);
+        $demoted = $this->joined($group, GroupRole::SubAdmin);
+        $departed = $this->joined($group, GroupRole::SubAdmin);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey()]);
+
+        app(DemoteSubAdmin::class)($admin, $group, $demoted);
+        GroupMember::query()->where('group_id', $group->getKey())->where('member_id', $departed->getKey())->delete();
+
+        foreach ([$demoted, $departed] as $former) {
+            $this->assertFalse(GroupTopicAccess::canDeleteTopic($topic->fresh(), $former));
+            $this->assertFalse(GroupTopicAccess::canDeleteComment($comment->fresh(), $former));
+        }
+    }
+
+    public function test_an_author_who_left_the_group_can_no_longer_delete_their_topic(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+
+        GroupMember::query()->where('group_id', $group->getKey())->where('member_id', $author->getKey())->delete();
+
+        $this->assertFalse(GroupTopicAccess::canDeleteTopic($topic->fresh(), $author));
     }
 }

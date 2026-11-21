@@ -54,6 +54,22 @@ class GroupEventAccess
             || GroupMembership::isAdmin($group, $member);
     }
 
+    /**
+     * OpenPNE 3 let only the admin, not a sub-admin, delete another member's event
+     * (docs/internals/group-boards.md, "Roles").
+     */
+    public static function canDeleteEvent(GroupEvent $event, Member $member): bool
+    {
+        $group = $event->group;
+
+        if (! GroupMembership::isMember($group, $member)) {
+            return false;
+        }
+
+        return $member->getKey() === $event->member_id
+            || GroupMembership::canManage($group, $member);
+    }
+
     public static function canComment(GroupEvent $event, Member $member): bool
     {
         return GroupMembership::isMember($event->group, $member);
@@ -68,13 +84,13 @@ class GroupEventAccess
         return GroupMembership::isMember($event->group, $member);
     }
 
-    /** Its author may unless withdrawn, or anyone who may edit the event. */
+    /** Its author may unless withdrawn, or anyone who may delete the event. */
     public static function canDeleteComment(GroupEventComment $comment, Member $member): bool
     {
         if ($comment->member_id !== null && $member->getKey() === $comment->member_id) {
             return true;
         }
 
-        return self::canEditEvent($comment->event, $member);
+        return self::canDeleteEvent($comment->event, $member);
     }
 }

@@ -94,6 +94,7 @@ class GroupTopicRoutesTest extends TestCase
                 ->where('thread.comments.0.deletable', true)
                 ->where('canComment', true)
                 ->where('canEdit', true)
+                ->where('canDelete', true)
             );
     }
 
@@ -274,5 +275,28 @@ class GroupTopicRoutesTest extends TestCase
         $this->actingAs($member)
             ->get(route('group.topics.index', $group))
             ->assertInertia(fn ($page) => $page->component('group/topic/index'));
+    }
+
+    public function test_a_sub_admin_is_offered_delete_but_not_edit_and_deletes_another_members_topic(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->actingAs($subAdmin)
+            ->get(route('group.topics.show', $topic))
+            ->assertInertia(fn ($page) => $page
+                ->component('group/topic/show')
+                ->where('canEdit', false)
+                ->where('canDelete', true)
+                ->where('thread.comments.0.deletable', true)
+            );
+
+        $this->actingAs($subAdmin)
+            ->post(route('group.topics.delete', $topic))
+            ->assertRedirect(route('group.show', $group));
+        $this->assertDatabaseMissing('group_topics', ['id' => $topic->getKey()]);
     }
 }

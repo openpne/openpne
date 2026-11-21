@@ -52,18 +52,34 @@ class GroupTopicAccess
             || GroupMembership::isAdmin($group, $member);
     }
 
+    /**
+     * OpenPNE 3 let only the admin, not a sub-admin, delete another member's topic
+     * (docs/internals/group-boards.md, "Roles").
+     */
+    public static function canDeleteTopic(GroupTopic $topic, Member $member): bool
+    {
+        $group = $topic->group;
+
+        if (! GroupMembership::isMember($group, $member)) {
+            return false;
+        }
+
+        return $member->getKey() === $topic->member_id
+            || GroupMembership::canManage($group, $member);
+    }
+
     public static function canComment(GroupTopic $topic, Member $member): bool
     {
         return GroupMembership::isMember($topic->group, $member);
     }
 
-    /** Its author may unless withdrawn, or anyone who may edit the topic (OpenPNE 3 isDeletable). */
+    /** Its author may unless withdrawn, or anyone who may delete the topic (OpenPNE 3 isDeletable). */
     public static function canDeleteComment(GroupTopicComment $comment, Member $member): bool
     {
         if ($comment->member_id !== null && $member->getKey() === $comment->member_id) {
             return true;
         }
 
-        return self::canEditTopic($comment->topic, $member);
+        return self::canDeleteTopic($comment->topic, $member);
     }
 }

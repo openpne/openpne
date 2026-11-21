@@ -18,7 +18,6 @@ class GroupEventPolicy
         return GroupEventAccess::canViewEvent($event, $viewer);
     }
 
-    /** OpenPNE 3's edit privilege covers both editing and deleting an event. */
     public function update(Member $actor, GroupEvent $event): bool
     {
         return GroupEventAccess::canEditEvent($event, $actor);
@@ -26,6 +25,6 @@ class GroupEventPolicy
 
     public function delete(Member $actor, GroupEvent $event): bool
     {
-        return GroupEventAccess::canEditEvent($event, $actor);
+        return GroupEventAccess::canDeleteEvent($event, $actor);
     }
 }

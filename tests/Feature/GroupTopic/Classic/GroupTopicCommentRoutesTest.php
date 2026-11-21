@@ -137,4 +137,19 @@ class GroupTopicCommentRoutesTest extends TestCase
             ->assertRedirect(route('group.topics.show', $topic));
         $this->assertDatabaseMissing('group_topic_comments', ['id' => $comment->getKey()]);
     }
+
+    public function test_a_sub_admin_may_delete_another_members_comment(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->actingAs($subAdmin)->get(route('group.topics.show', $topic))->assertOk()
+            ->assertSee(route('group.topics.comment.delete.show', $comment), false);
+        $this->actingAs($subAdmin)->post(route('group.topics.comment.delete', $comment))
+            ->assertRedirect(route('group.topics.show', $topic));
+        $this->assertDatabaseMissing('group_topic_comments', ['id' => $comment->getKey()]);
+    }
 }

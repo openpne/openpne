@@ -16,8 +16,8 @@ class DeleteEvent
 {
     public function __invoke(Member $actor, GroupEvent $event): void
     {
-        if (! GroupEventAccess::canEditEvent($event, $actor)) {
-            throw new GroupEventActionException(GroupEventActionFailure::CannotEdit);
+        if (! GroupEventAccess::canDeleteEvent($event, $actor)) {
+            throw new GroupEventActionException(GroupEventActionFailure::CannotDelete);
         }
 
         $this->purge($event);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\GroupEvent;
 
+use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -15,11 +16,17 @@ class GroupEventShowQueryBudgetTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @return iterable<string, array{string}> */
+    /**
+     * A sub-admin may delete every comment, so each row renders its delete control; a plain member's rows render none.
+     *
+     * @return iterable<string, array{string, GroupRole}>
+     */
     public static function surfaces(): iterable
     {
-        yield 'classic' => ['classic_default'];
-        yield 'modern' => ['modern_default'];
+        yield 'classic' => ['classic_default', GroupRole::Member];
+        yield 'modern' => ['modern_default', GroupRole::Member];
+        yield 'classic sub-admin' => ['classic_default', GroupRole::SubAdmin];
+        yield 'modern sub-admin' => ['modern_default', GroupRole::SubAdmin];
     }
 
     /**
@@ -27,12 +34,12 @@ class GroupEventShowQueryBudgetTest extends TestCase
      * comments are already examined for link cards: the first view's per-row marking is not a read.
      */
     #[DataProvider('surfaces')]
-    public function test_a_page_of_comments_costs_no_query_per_comment(string $surface): void
+    public function test_a_page_of_comments_costs_no_query_per_comment(string $surface, GroupRole $role): void
     {
         config(['openpne.surface_mode' => $surface]);
         $group = Group::factory()->create();
         $viewer = Member::factory()->create();
-        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey(), 'role' => $role]);
 
         $short = $this->eventWithComments($group, 2);
         $long = $this->eventWithComments($group, 20);
