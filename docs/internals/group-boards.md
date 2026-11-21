@@ -7,8 +7,8 @@ deliberate parallel hierarchy — OpenPNE 3's `communityTopic` and `communityEve
 rather than by a common base class.
 
 Talk is the third thing inside a group and has its own document
-([group-talk.md](group-talk.md)); what all three share is the group's two access columns
-`topic_read_access` and `topic_post_authority`, described there under "Access".
+([group-talk.md](group-talk.md)); what all three share is the group's `topic_read_access`,
+described there under "Access" (`topic_post_authority` gates topics and events only).
 
 ## Site-wide recent lists
 

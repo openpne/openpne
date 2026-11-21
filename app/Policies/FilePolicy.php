@@ -83,7 +83,7 @@ class FilePolicy extends BasePolicy
     /**
      * The feature unit $owner belongs to, or null for the two owners no unit governs: a member's
      * avatar and a banner image. A topic/event owner names its own unit — Feature::enabled() walks
-     * to `community` from there, so switching groups off takes their files too.
+     * to `group` from there, so switching groups off takes their files too.
      */
     private function owningFeature(?Model $owner): ?Feature
     {

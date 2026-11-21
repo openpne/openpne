@@ -6,11 +6,11 @@ every OpenPNE 3 route is checked to be mapped or gapped, and the OpenPNE 3 URLs 
 mappings are checked against this inventory.
 
 `openpne3-module-actions.php` maps an OpenPNE 3 `module/action` (the bare form a navigation row
-may store, e.g. `diary/listMember`) to a route name, split into id-less / id-bearing variants
-because symfony resolved the pair to different routes by context. It is a separate file, not extra
-columns on the inventory, so the inventory stays a faithful `app:routes` dump that can be
-regenerated as-is. `App\Upgrade\Steps\NavigationUpgrade` resolves the route name to its URL through
-the inventory, keeping the URL single-sourced there.
+may store, e.g. `diary/listMember`) to a route name, or to a literal URL for an action OpenPNE 3
+never named, split into id-less / id-bearing variants because symfony resolved the pair to different
+routes by context. It is a separate file, not extra columns on the inventory, so the inventory stays
+an `app:routes` dump plus the hand-kept parts below. `App\Upgrade\Steps\NavigationUpgrade` resolves
+a route name to its URL through the inventory, keeping the URL single-sourced there.
 
 ## Regenerating
 
@@ -23,7 +23,9 @@ php symfony app:routes pc_frontend
 gives each route's name, HTTP methods, and URL pattern, recorded per module as
 `[URL, method]`. `method` is the route's sf_method constraint in the OpenPNE 3 source:
 `POST` where it declares `sf_method => ['post']`, otherwise `ANY` (no constraint, so the
-route is GET-reachable). This drives URL-compatibility scope — only GET-reachable URLs are
+route is GET-reachable). The `message` module's three delete routes are recorded `POST` by hand:
+OpenPNE 3 leaves them unconstrained, but they are CSRF-protected button submits with no GET form.
+This drives URL-compatibility scope — only GET-reachable URLs are
 bookmarked / mailed / linked, so only they must be preserved; POST-only form-submit routes
 are still covered for completeness but sit outside the URL-compatibility contract.
 
@@ -36,3 +38,6 @@ without a named route. A module can disable it — opDiaryPlugin adds `diary_nod
 (`/diary/*` → `default/error`) — which makes the named routes the complete set of
 reachable URLs. Record that per module as `disables_global_fallback`; the audit relies on
 it to know the named-route coverage check is exhaustive.
+
+A regenerated dump lacks the hand-kept parts — the `message` delete routes' `POST`, the `f`
+module and `disables_global_fallback` — so put them back.
