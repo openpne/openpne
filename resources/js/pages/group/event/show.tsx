@@ -36,6 +36,7 @@ interface ShowProps extends PageProps {
     thread: EventThread;
     canComment: boolean;
     canEdit: boolean;
+    canDelete: boolean;
     isParticipant: boolean;
     rosterOpen: boolean; // not closed and not past the deadline
     isFull: boolean;
@@ -47,7 +48,7 @@ interface ShowProps extends PageProps {
 export default function GroupEventShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    const { event, thread, canComment, canEdit, canDelete, isParticipant, rosterOpen, isFull, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
     const eventReactions = useReactions(eventReactionEndpoints, renderGeneration);
@@ -96,7 +97,7 @@ export default function GroupEventShow() {
             <Heading variant="page">{event.name}</Heading>
 
             <Panel bodyClassName="space-y-3">
-                <PostByline author={event.author} at={event.createdAt} edited={Boolean(event.editedAt)} menu={<RowMenu items={canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/events/${event.id}/edit` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteEvent() }] : []} />} />
+                <PostByline author={event.author} at={event.createdAt} edited={Boolean(event.editedAt)} menu={<RowMenu items={[...(canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/events/${event.id}/edit` }] : []), ...(canDelete ? [{ label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteEvent() }] : [])]} />} />
 
                 <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                     <dt className="text-muted-foreground">{t('Open date')}</dt>

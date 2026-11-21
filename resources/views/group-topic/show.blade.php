@@ -5,7 +5,8 @@
 @section('content')
     {{-- OpenPNE 3 showSuccess.php hand-writes the article as a topicDetailBox with no id (the id is
          OpenPNE 4's): one dl whose dt is the stacked datetime and whose dd holds the title, name
-         and body blocks, then the Edit button; deletion is reached from the edit screen. --}}
+         and body blocks, then the Edit button; deletion is reached from the edit screen, and a viewer
+         who may delete but not edit (a sub-admin) gets a Delete button in its place. --}}
     <x-classic.parts id="communityTopic_show" name="topicDetailBox" :hand-written="true" :title="'['.$topic->group->name.'] '.__('%Topic%')">
         <dl>
             <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($topic->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
@@ -39,6 +40,14 @@
                 <form action="{{ route('group.topics.edit', $topic) }}" method="get">
                     <ul class="moreInfo button">
                         <li><input class="input_submit" type="submit" value="{{ __('Edit') }}"></li>
+                    </ul>
+                </form>
+            </div>
+        @elseif ($canDelete)
+            <div class="operation">
+                <form action="{{ route('group.topics.delete.show', $topic) }}" method="get">
+                    <ul class="moreInfo button">
+                        <li><input class="input_submit" type="submit" value="{{ __('Delete') }}"></li>
                     </ul>
                 </form>
             </div>

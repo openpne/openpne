@@ -18,7 +18,6 @@ class GroupTopicPolicy
         return GroupTopicAccess::canViewTopic($topic, $viewer);
     }
 
-    /** OpenPNE 3's edit privilege covers both editing and deleting a topic. */
     public function update(Member $actor, GroupTopic $topic): bool
     {
         return GroupTopicAccess::canEditTopic($topic, $actor);
@@ -26,6 +25,6 @@ class GroupTopicPolicy
 
     public function delete(Member $actor, GroupTopic $topic): bool
     {
-        return GroupTopicAccess::canEditTopic($topic, $actor);
+        return GroupTopicAccess::canDeleteTopic($topic, $actor);
     }
 }

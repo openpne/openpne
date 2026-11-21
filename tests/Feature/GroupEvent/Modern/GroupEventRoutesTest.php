@@ -83,6 +83,7 @@ class GroupEventRoutesTest extends TestCase
                 ->where('isFull', false)
                 ->where('canComment', true)
                 ->where('canEdit', true)
+                ->where('canDelete', true)
             );
     }
 
@@ -281,5 +282,28 @@ class GroupEventRoutesTest extends TestCase
         $this->actingAs($member)
             ->get(route('group.events.index', $group))
             ->assertInertia(fn ($page) => $page->component('group/event/index'));
+    }
+
+    public function test_a_sub_admin_is_offered_delete_but_not_edit_and_deletes_another_members_event(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->actingAs($subAdmin)
+            ->get(route('group.events.show', $event))
+            ->assertInertia(fn ($page) => $page
+                ->component('group/event/show')
+                ->where('canEdit', false)
+                ->where('canDelete', true)
+                ->where('thread.comments.0.deletable', true)
+            );
+
+        $this->actingAs($subAdmin)
+            ->post(route('group.events.delete', $event))
+            ->assertRedirect(route('group.show', $group));
+        $this->assertDatabaseMissing('group_events', ['id' => $event->getKey()]);
     }
 }

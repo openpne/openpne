@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\GroupEvent;
 
+use App\Features\Group\Actions\DemoteSubAdmin;
 use App\Features\Group\GroupRole;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupTopic\TopicPostAuthority;
@@ -144,5 +145,61 @@ class GroupEventAccessTest extends TestCase
         $member = $this->joined($group, GroupRole::Member);
 
         $this->assertFalse(GroupEventAccess::canDeleteComment($comment->fresh(), $member));
+    }
+
+    public function test_a_sub_admin_may_delete_another_members_event_but_not_edit_it(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $otherMember = $this->joined($group, GroupRole::Member);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->assertTrue(GroupEventAccess::canDeleteEvent($event, $subAdmin));
+        $this->assertFalse(GroupEventAccess::canEditEvent($event, $subAdmin));
+        $this->assertTrue(GroupEventAccess::canDeleteEvent($event, $author));
+        $this->assertFalse(GroupEventAccess::canDeleteEvent($event, $otherMember));
+        $this->assertFalse(GroupEventAccess::canDeleteEvent($event, Member::factory()->create()));
+    }
+
+    public function test_a_sub_admin_may_delete_another_members_comment(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->assertTrue(GroupEventAccess::canDeleteComment($comment, $subAdmin));
+    }
+
+    public function test_a_demoted_or_departed_sub_admin_can_no_longer_delete(): void
+    {
+        $group = Group::factory()->create();
+        $admin = $this->joined($group, GroupRole::Admin);
+        $author = $this->joined($group, GroupRole::Member);
+        $demoted = $this->joined($group, GroupRole::SubAdmin);
+        $departed = $this->joined($group, GroupRole::SubAdmin);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'member_id' => $author->getKey()]);
+
+        app(DemoteSubAdmin::class)($admin, $group, $demoted);
+        GroupMember::query()->where('group_id', $group->getKey())->where('member_id', $departed->getKey())->delete();
+
+        foreach ([$demoted, $departed] as $former) {
+            $this->assertFalse(GroupEventAccess::canDeleteEvent($event->fresh(), $former));
+            $this->assertFalse(GroupEventAccess::canDeleteComment($comment->fresh(), $former));
+        }
+    }
+
+    public function test_an_author_who_left_the_group_can_no_longer_delete_their_event(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+
+        GroupMember::query()->where('group_id', $group->getKey())->where('member_id', $author->getKey())->delete();
+
+        $this->assertFalse(GroupEventAccess::canDeleteEvent($event->fresh(), $author));
     }
 }

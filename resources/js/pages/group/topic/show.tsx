@@ -35,6 +35,7 @@ interface ShowProps extends PageProps {
     thread: TopicThread;
     canComment: boolean;
     canEdit: boolean;
+    canDelete: boolean;
     reactionVocabulary: string[];
     /** Fresh per render: a comment posted or deleted re-renders the page under the same URL. */
     renderGeneration: string;
@@ -43,7 +44,7 @@ interface ShowProps extends PageProps {
 export default function GroupTopicShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { topic, thread, canComment, canEdit, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
+    const { topic, thread, canComment, canEdit, canDelete, reactionVocabulary, renderGeneration } = usePage<ShowProps>().props;
     const sheet = useRowSheet();
     const hint = useRowActionsHint();
     const topicReactions = useReactions(topicReactionEndpoints, renderGeneration);
@@ -88,7 +89,7 @@ export default function GroupTopicShow() {
             <Heading variant="page">{topic.name}</Heading>
 
             <Panel bodyClassName="space-y-3">
-                <PostByline author={topic.author} at={topic.createdAt} edited={Boolean(topic.editedAt)} menu={<RowMenu items={canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/topics/${topic.id}/edit` }, { label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteTopic() }] : []} />} />
+                <PostByline author={topic.author} at={topic.createdAt} edited={Boolean(topic.editedAt)} menu={<RowMenu items={[...(canEdit ? [{ label: t('Edit'), icon: Pencil, href: `/topics/${topic.id}/edit` }] : []), ...(canDelete ? [{ label: t('Delete'), icon: Trash2, destructive: true, onSelect: () => void deleteTopic() }] : [])]} />} />
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
                 <LinkCard card={topic.linkCard} />

@@ -16,8 +16,8 @@ class DeleteTopic
 {
     public function __invoke(Member $actor, GroupTopic $topic): void
     {
-        if (! GroupTopicAccess::canEditTopic($topic, $actor)) {
-            throw new GroupTopicActionException(GroupTopicActionFailure::CannotEdit);
+        if (! GroupTopicAccess::canDeleteTopic($topic, $actor)) {
+            throw new GroupTopicActionException(GroupTopicActionFailure::CannotDelete);
         }
 
         $this->purge($topic);

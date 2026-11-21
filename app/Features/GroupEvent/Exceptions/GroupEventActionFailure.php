@@ -6,6 +6,7 @@ enum GroupEventActionFailure: string
 {
     case CannotPost = 'cannot_post';
     case CannotEdit = 'cannot_edit';
+    case CannotDelete = 'cannot_delete';
     case CannotComment = 'cannot_comment';
     case CannotDeleteComment = 'cannot_delete_comment';
     case NotMember = 'not_member';

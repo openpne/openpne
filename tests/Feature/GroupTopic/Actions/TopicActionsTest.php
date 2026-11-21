@@ -203,4 +203,30 @@ class TopicActionsTest extends TestCase
         (new DeleteTopicComment)($commenter, $comment);
         $this->assertDatabaseMissing('group_topic_comments', ['id' => $comment->getKey()]);
     }
+
+    public function test_a_sub_admin_deletes_another_members_topic_and_comment_where_a_plain_member_cannot(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $other = $this->joined($group, GroupRole::Member);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->assertFails(fn () => (new DeleteTopic)($other, $topic), GroupTopicActionFailure::CannotDelete);
+        $this->assertFails(fn () => (new DeleteTopicComment)($other, $comment), GroupTopicActionFailure::CannotDeleteComment);
+        $this->assertDatabaseHas('group_topic_comments', ['id' => $comment->getKey()]);
+        $this->assertDatabaseHas('group_topics', ['id' => $topic->getKey()]);
+
+        $this->assertFails(
+            fn () => app(UpdateTopic::class)($subAdmin, $topic, new GroupTopicFormData('Hijack', 'No.'), ImageEdit::none()),
+            GroupTopicActionFailure::CannotEdit,
+        );
+
+        (new DeleteTopicComment)($subAdmin, $comment);
+        $this->assertDatabaseMissing('group_topic_comments', ['id' => $comment->getKey()]);
+
+        (new DeleteTopic)($subAdmin, $topic);
+        $this->assertDatabaseMissing('group_topics', ['id' => $topic->getKey()]);
+    }
 }

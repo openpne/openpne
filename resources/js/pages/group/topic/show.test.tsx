@@ -48,7 +48,7 @@ const comment = { id: 21, number: 1, body: 'a comment', images: [], files: [], l
 
 const thread: TopicThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canComment: boolean, reactions = topic.reactions, comments: TopicThread['comments'] = [], hint: 'shown' | 'dismissed' = 'dismissed', canEdit = false) {
+function renderShow(canComment: boolean, reactions = topic.reactions, comments: TopicThread['comments'] = [], hint: 'shown' | 'dismissed' = 'dismissed', canEdit = false, canDelete = canEdit) {
     inertia.page = {
         component: 'group/topic/show',
         url: '/topics/11',
@@ -58,6 +58,7 @@ function renderShow(canComment: boolean, reactions = topic.reactions, comments: 
             thread: { ...thread, comments, total: comments.length },
             canComment,
             canEdit,
+            canDelete,
             reactionVocabulary: ['\u{1F44D}'],
             renderGeneration: 'g1',
             auth: { user: { id: 3 } },
@@ -143,6 +144,13 @@ test('a member who may not react here is told nothing, however many comments the
     renderShow(false, topic.reactions, [comment], 'shown');
 
     expect(screen.queryByText('Hover to react and more.')).toBeNull();
+});
+
+test('a sub-admin, who may delete the topic but not edit it, gets Delete alone in the kebab', () => {
+    renderShow(true, topic.reactions, [], 'dismissed', false, true);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
 });
 
 test('an editor edits and deletes the topic from the kebab in its header; a member who may not has no kebab', () => {

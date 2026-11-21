@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\GroupTopic\Classic;
 
+use App\Features\Group\Actions\DemoteSubAdmin;
 use App\Features\Group\GroupRole;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
@@ -229,5 +230,45 @@ class GroupTopicRoutesTest extends TestCase
         $this->actingAs(Member::factory()->create())->get(route('group.show', $group))
             ->assertOk()
             ->assertDontSee('Box thread');
+    }
+
+    public function test_a_sub_admin_deletes_another_members_topic_from_a_delete_button_in_place_of_edit(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $editForm = '<form action="'.route('group.topics.edit', $topic).'" method="get">';
+        $deleteForm = '<form action="'.route('group.topics.delete.show', $topic).'" method="get">';
+
+        $this->actingAs($subAdmin)->get(route('group.topics.show', $topic))->assertOk()
+            ->assertSee($deleteForm, false)
+            ->assertDontSee($editForm, false);
+        // The author keeps OpenPNE 3's block: Edit, with deletion behind the edit screen.
+        $this->actingAs($author)->get(route('group.topics.show', $topic))->assertOk()
+            ->assertSee($editForm, false)
+            ->assertDontSee($deleteForm, false);
+
+        $this->actingAs($subAdmin)->get(route('group.topics.edit', $topic))->assertNotFound();
+        $this->actingAs($subAdmin)->get(route('group.topics.delete.show', $topic))->assertOk();
+        $this->actingAs($subAdmin)->post(route('group.topics.delete', $topic))
+            ->assertRedirect(route('group.show', $group));
+        $this->assertDatabaseMissing('group_topics', ['id' => $topic->getKey()]);
+    }
+
+    public function test_a_demoted_sub_admin_is_offered_no_delete_and_gets_404_on_it(): void
+    {
+        $group = Group::factory()->create();
+        $admin = $this->joined($group, GroupRole::Admin);
+        $author = $this->joined($group);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+
+        app(DemoteSubAdmin::class)($admin, $group, $subAdmin);
+
+        $this->actingAs($subAdmin)->get(route('group.topics.show', $topic))->assertOk()
+            ->assertDontSee(route('group.topics.delete.show', $topic), false);
+        $this->actingAs($subAdmin)->post(route('group.topics.delete', $topic))->assertNotFound();
+        $this->assertDatabaseHas('group_topics', ['id' => $topic->getKey()]);
     }
 }

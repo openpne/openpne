@@ -778,8 +778,8 @@ different geometry.
   any member could read does not lose that audience when its history becomes talk.
 - **Post = membership**, and `topic_post_authority` is deliberately not consulted: an admins-only
   board must not also silence the group's chat. Open to read, joined to speak.
-- **Delete = the author, or anyone who manages the group** (admin or sub-admin) — a linear chat needs
-  the moderation reach the boards already give. Deletion is physical.
+- **Delete = the author, or anyone who manages the group** (admin or sub-admin), the rule the boards
+  share ([group-boards.md](group-boards.md#roles)). Deletion is physical.
 
 A refusal is always 404, so whether a group has a conversation is not observable.
 

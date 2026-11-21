@@ -54,7 +54,7 @@ const comment = { id: 22, number: 1, body: 'a comment', images: [], files: [], l
 
 const thread: EventThread = { comments: [], total: 0, page: 1, lastPage: 1, ascending: true, hasOlder: false, hasNewer: false, olderPage: null, newerPage: null };
 
-function renderShow(canComment: boolean, reactions = event.reactions, comments: EventThread['comments'] = [], canEdit = false) {
+function renderShow(canComment: boolean, reactions = event.reactions, comments: EventThread['comments'] = [], canEdit = false, canDelete = canEdit) {
     inertia.page = {
         component: 'group/event/show',
         url: '/events/12',
@@ -64,6 +64,7 @@ function renderShow(canComment: boolean, reactions = event.reactions, comments: 
             thread: { ...thread, comments, total: comments.length },
             canComment,
             canEdit,
+            canDelete,
             isParticipant: false,
             rosterOpen: true,
             isFull: false,
@@ -130,6 +131,13 @@ test('a non-member\'s held comment raises a sheet without the reactor item', () 
     });
     expect(screen.getByRole('button', { name: 'Select text' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'See who reacted' })).toBeNull();
+});
+
+test('a sub-admin, who may delete the event but not edit it, gets Delete alone in the kebab', () => {
+    renderShow(true, event.reactions, [], false, true);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions' }), { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
 });
 
 test('an editor edits and deletes the event from the kebab in its header; a member who may not has no kebab', () => {

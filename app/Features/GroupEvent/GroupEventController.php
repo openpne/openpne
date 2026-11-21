@@ -116,6 +116,7 @@ class GroupEventController extends Controller
                     'thread' => $thread,
                     'canComment' => GroupEventAccess::canComment($found, $viewer),
                     'canEdit' => GroupEventAccess::canEditEvent($found, $viewer),
+                    'canDelete' => GroupEventAccess::canDeleteEvent($found, $viewer),
                     'isParticipant' => $found->isParticipant($viewer),
                     'isClosed' => $found->isClosed(),
                     'isExpired' => $found->isExpired(),
@@ -135,6 +136,7 @@ class GroupEventController extends Controller
                     'reactionVocabulary' => ReactionVocabulary::all(),
                     'renderGeneration' => StreamProps::generation(),
                     'canEdit' => GroupEventAccess::canEditEvent($found, $viewer),
+                    'canDelete' => GroupEventAccess::canDeleteEvent($found, $viewer),
                     // RSVP button state: OpenPNE 3 shows participate/cancel only while the roster is
                     // open, keyed on the viewer's membership and the capacity/time guards.
                     'isParticipant' => $found->isParticipant($viewer),

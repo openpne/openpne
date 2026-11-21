@@ -333,4 +333,25 @@ class EventActionsTest extends TestCase
             GroupEventActionFailure::NotMember,
         );
     }
+
+    public function test_a_sub_admin_deletes_another_members_event_and_comment_where_a_plain_member_cannot(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $other = $this->joined($group, GroupRole::Member);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->assertFails(fn () => (new DeleteEvent)($other, $event), GroupEventActionFailure::CannotDelete);
+        $this->assertFails(fn () => (new DeleteEventComment)($other, $comment), GroupEventActionFailure::CannotDeleteComment);
+        $this->assertDatabaseHas('group_event_comments', ['id' => $comment->getKey()]);
+        $this->assertDatabaseHas('group_events', ['id' => $event->getKey()]);
+
+        (new DeleteEventComment)($subAdmin, $comment);
+        $this->assertDatabaseMissing('group_event_comments', ['id' => $comment->getKey()]);
+
+        (new DeleteEvent)($subAdmin, $event);
+        $this->assertDatabaseMissing('group_events', ['id' => $event->getKey()]);
+    }
 }

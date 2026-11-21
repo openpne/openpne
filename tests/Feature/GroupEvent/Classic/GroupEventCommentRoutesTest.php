@@ -201,4 +201,19 @@ class GroupEventCommentRoutesTest extends TestCase
             ->assertRedirect(route('group.events.show', $event));
         $this->assertDatabaseMissing('group_event_comments', ['id' => $comment->getKey()]);
     }
+
+    public function test_a_sub_admin_may_delete_another_members_comment(): void
+    {
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->actingAs($subAdmin)->get(route('group.events.show', $event))->assertOk()
+            ->assertSee(route('group.events.comment.delete.show', $comment), false);
+        $this->actingAs($subAdmin)->post(route('group.events.comment.delete', $comment))
+            ->assertRedirect(route('group.events.show', $event));
+        $this->assertDatabaseMissing('group_event_comments', ['id' => $comment->getKey()]);
+    }
 }
