@@ -28,10 +28,10 @@ final class SetupLock
         if ($handle === false) {
             throw new RuntimeException("{$path} cannot be written to.");
         }
-        if (! flock($handle, LOCK_EX | LOCK_NB)) {
+        if (! flock($handle, LOCK_EX | LOCK_NB, $wouldBlock)) {
             fclose($handle);
 
-            return null;
+            return $wouldBlock ? null : throw new RuntimeException("{$path} cannot be locked.");
         }
 
         return new self($handle);

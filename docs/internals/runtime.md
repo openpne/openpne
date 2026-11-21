@@ -376,7 +376,7 @@ unchanged, waiting on `openpne:check`'s web part in between. It runs only on a t
 it goes on from the first step not yet done: `openpne-data/`, `.env`, the MySQL option file,
 `APP_KEY`, an administrator, the web check. `openpne:install` runs every time, being a no-op on an
 installed site, except where an administrator exists and a migration has not run, which is a new
-version unpacked over a live site and stops the command.
+version unpacked over a live site and stops the command; a failed `openpne:install` stops it too.
 
 Key invariants:
 
@@ -388,23 +388,26 @@ Key invariants:
    reads every answer back. An answer `Env` or Dotenv would read otherwise (`true`, a quoted value,
    `${`, a control character, `"` with `\` or `'`, a lone `"` right after `=`) is refused before it
    is written. The later writes are `APP_KEY` and `TRUSTED_PROXIES`, each only while `.env` holds it
-   empty and through the same file beside it, the second typed by the operator and never taken from
-   what the web check saw; every other key must read back unchanged. A `.env` without `APP_URL` and
-   `DB_CONNECTION` is not gone on with, and a database that holds an administrator already is not
-   given a new `.env`.
+   empty and through the same file beside it, the first never over a database that holds an
+   administrator and the second typed by the operator, never taken from what the web check saw;
+   every other key must read back unchanged. A `.env` without `APP_URL` or `DB_CONNECTION` is not
+   gone on with, and a database that holds an administrator already is not given a new `.env`.
 3. **The process that wrote `.env` does not go on with it**: it runs the command again through
    `proc_open`, its environment stripped of the keys `.env` holds, and where `proc_open` is disabled
    asks to be run again. Where the environment gives `APP_KEY`, `DB_URL` or a `DB_` connection key
    otherwise than `.env`, which the web reads alone, it stops before the database is touched.
 4. **`openpne-data/`** is made beside the release, and on every run set to 0700 and given the
-   release's top `.htaccess` (through a file beside it) before anything goes in; the SQLite database,
+   release's top `.htaccess` (through a file beside it, kept where the top one was removed) before
+   anything goes in; the SQLite database,
    the MySQL option file (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it
    prints writes `backup.sqlite` (`VACUUM INTO`) or `backup.sql` beside a `.new` copy moved over the
    last, and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
-   allows, the same dump is made once into a 0600 file there, judged by a table read back from it,
+   allows, the same tool writes once into a 0600 file there, judged by a table read back from it,
    and removed.
-5. **A migration stopped midway is not migrated over**: where the first migration not yet recorded
-   makes a table that is there, it stops before `openpne:install`, saying how to start the database
-   over only where it holds neither a member nor an administrator. It empties no database itself.
+5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway
+   included, as what it made is in the way of the next. Only where the database holds neither a
+   member nor an administrator does it say how to start over: removing the SQLite file where it is
+   the one in `openpne-data/`, otherwise a new, empty MySQL database, as one given may hold another
+   application's tables. It empties no database itself.
 6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
    the web's PHP running as this account.

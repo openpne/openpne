@@ -23,7 +23,6 @@ use Closure;
 use DateTimeZone;
 use Illuminate\Console\Command;
 use Illuminate\Database\Connection;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Support\Env;
@@ -196,7 +195,13 @@ class SetupCommand extends Command
             return self::FAILURE;
         }
 
+        $hasAdmin = Schema::hasTable('admin_users') && DB::table('admin_users')->exists();
         if (! filled(config('app.key'))) {
+            if ($hasAdmin) {
+                $this->say('key_missing', ['path' => $this->layout->envFile], 'error');
+
+                return self::FAILURE;
+            }
             $key = self::newKey();
             if (EnvFile::set($this->layout->envFile, 'APP_KEY', $key) !== null) {
                 $this->say('key_refused', ['path' => $this->layout->envFile], 'error');
@@ -207,33 +212,39 @@ class SetupCommand extends Command
             $this->say('key_written');
         }
 
-        $hasAdmin = Schema::hasTable('admin_users') && DB::table('admin_users')->exists();
         // An unpacked new version run here would otherwise migrate a live site outside maintenance mode.
         if ($hasAdmin && $this->pendingMigrations() > 0) {
             $this->say('pending_migrations', [], 'error');
 
             return self::FAILURE;
         }
-        $stopped = $hasAdmin ? null : $this->stoppedMigration();
-        if ($stopped !== null) {
-            $this->say('install_stopped', ['table' => $stopped], 'error');
-            $this->say(match (true) {
-                ! $this->nobodyYet() => 'install_keep',
-                $driver === 'sqlite' => 'install_restart_sqlite',
-                default => 'install_restart_mysql',
-            }, ['path' => (string) ($settings['database'] ?? ''), 'database' => (string) ($settings['database'] ?? '')]);
-
-            return self::FAILURE;
-        }
         $this->say('install');
         // Its success ends with "Next: openpne:admin:create", which this command does next itself.
         $install = new BufferedOutput;
-        $installed = Artisan::call('openpne:install', [], $install);
-        // A command run points Prompts at its own output, which here is the buffer.
-        $this->configurePrompts($this->input);
+        try {
+            $installed = Artisan::call('openpne:install', [], $install);
+        } catch (Throwable $e) {
+            $installed = self::FAILURE;
+            $install->writeln(OutputFormatter::escape($e->getMessage()));
+        } finally {
+            // A command run points Prompts at its own output, which here is the buffer.
+            $this->configurePrompts($this->input);
+        }
         if ($installed !== self::SUCCESS) {
             $this->output->write($install->fetch());
             $this->say('install_failed', [], 'error');
+            $nobody = $this->nobodyYet();
+            // Removing is said only of the file this command made: a database given may hold another application's tables.
+            $guide = match (true) {
+                $nobody === null => null,
+                ! $nobody => 'install_keep',
+                $driver !== 'sqlite' => 'install_restart_mysql',
+                ($settings['database'] ?? null) === $this->layout->dataDirectory().'/database.sqlite' => 'install_restart_sqlite',
+                default => null,
+            };
+            if ($guide !== null) {
+                $this->say($guide, ['path' => (string) ($settings['database'] ?? '')]);
+            }
 
             return self::FAILURE;
         }
@@ -483,6 +494,10 @@ class SetupCommand extends Command
 
         $htaccess = $directory.'/.htaccess';
         $top = $this->layout->base.'/.htaccess';
+        // A release whose top copy was removed, its docroot being public/, keeps the one made from it.
+        if (! is_file($top) && is_file($htaccess) && filesize($htaccess) > 0) {
+            return;
+        }
         $temp = null;
         try {
             $deny = File::get($top);
@@ -543,37 +558,17 @@ class SetupCommand extends Command
         return count(array_diff(array_keys($files), $migrator->getRepository()->getRan()));
     }
 
-    /** A table the first migration not yet recorded makes, there already: a run stopped inside that migration. */
-    private function stoppedMigration(): ?string
+    /** Null where the database cannot say, which is never taken for nobody. */
+    private function nobodyYet(): ?bool
     {
-        $migrator = $this->laravel->make('migrator');
-        $files = $migrator->getMigrationFiles([database_path('migrations'), ...$migrator->paths()]);
-        $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
-        $file = array_values(array_diff_key($files, array_flip($ran)))[0] ?? null;
-
         try {
-            $migration = $file === null ? null : File::getRequire($file);
-            if (! $migration instanceof Migration) {
-                return null;
-            }
-            foreach (DB::connection()->pretend(fn () => $migration->up()) as $query) {
-                if (preg_match('/\Acreate table [`"]?([^`"\s(]+)/i', (string) $query['query'], $match) === 1 && Schema::hasTable($match[1])) {
-                    return $match[1];
+            foreach (['members', 'admin_users'] as $table) {
+                if (Schema::hasTable($table) && DB::table($table)->exists()) {
+                    return false;
                 }
             }
         } catch (Throwable) {
             return null;
-        }
-
-        return null;
-    }
-
-    private function nobodyYet(): bool
-    {
-        foreach (['members', 'admin_users'] as $table) {
-            if (Schema::hasTable($table) && DB::table($table)->exists()) {
-                return false;
-            }
         }
 
         return true;
@@ -761,7 +756,7 @@ class SetupCommand extends Command
             if (! $write->successful()) {
                 return self::firstLine($write->errorOutput());
             }
-            $read = Process::timeout(60)->run([$tool, '-readonly', $copy, 'SELECT count(*) FROM migrations']);
+            $read = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', $copy, 'SELECT count(*) FROM migrations']);
             if (! $read->successful()) {
                 return self::firstLine($read->errorOutput().$read->output());
             }

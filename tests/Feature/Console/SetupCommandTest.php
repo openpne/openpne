@@ -12,7 +12,9 @@ use App\Setup\SetupLock;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\WebCheck;
+use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
@@ -23,7 +25,9 @@ use Illuminate\Support\Env;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\PendingCommand;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SetupCommandTest extends TestCase
@@ -378,7 +382,7 @@ class SetupCommandTest extends TestCase
         array_map(touch(...), [...$left, $kept]);
 
         $this->runSetup()
-            ->expectsOutputToContain('empty or without APP_URL and DB_CONNECTION')
+            ->expectsOutputToContain('empty or without APP_URL or DB_CONNECTION')
             ->doesntExpectOutputToContain('Creating the tables')
             ->assertFailed();
 
@@ -404,19 +408,33 @@ class SetupCommandTest extends TestCase
         $this->shellEnv('APP_KEY', '');
         $this->withEnv();
         config(['app.key' => '']);
-        $this->fakeWeb();
-        $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        $this->hostState['hide'] = false;
 
         $this->runSetup()
             ->expectsOutputToContain('Set APP_KEY in .env.')
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->assertSuccessful();
+            ->expectsQuestion('The first administrator\'s user name', 'admin')
+            ->expectsConfirmation('Go on, with the password showing as you type?', 'no')
+            ->assertFailed();
 
         $key = (string) EnvFile::read((string) file_get_contents($this->layout->envFile))['APP_KEY'];
         $this->assertStringStartsWith('base64:', $key);
         $this->assertSame($key, config('app.key'));
         $this->assertSame([], glob($this->layout->base.'/.env.*') ?: []);
+    }
+
+    public function test_an_empty_app_key_over_a_database_holding_a_site_is_not_replaced(): void
+    {
+        $this->shellEnv('APP_KEY', '');
+        $before = $this->withEnv();
+        config(['app.key' => '']);
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+
+        $this->runSetup()
+            ->expectsOutputToContain('has no APP_KEY, but the database holds a site already')
+            ->doesntExpectOutputToContain('Set APP_KEY in .env.')
+            ->assertFailed();
+
+        $this->assertSame($before, file_get_contents($this->layout->envFile));
     }
 
     public function test_an_open_data_directory_and_an_empty_htaccess_are_put_right(): void
@@ -436,26 +454,83 @@ class SetupCommandTest extends TestCase
         $this->assertSame(self::HTACCESS, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
     }
 
-    public function test_a_migration_stopped_midway_is_said_with_how_to_start_over_while_nobody_has_registered(): void
+    public function test_a_data_directory_htaccess_is_kept_where_the_top_one_was_removed(): void
     {
         $this->withEnv();
-        $this->stoppedMigration();
+        $this->fakeWeb();
+        $this->fakeTools();
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        mkdir($this->layout->dataDirectory(), 0o700);
+        file_put_contents($this->layout->dataDirectory().'/.htaccess', self::HTACCESS);
+        unlink($this->layout->base.'/.htaccess');
 
         $this->runSetup()
-            ->expectsOutputToContain('stopped while making the tables: members is there')
-            ->expectsOutputToContain('Nobody has registered yet')
-            ->doesntExpectOutputToContain('Creating the tables')
+            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->assertSuccessful();
+
+        $this->assertSame(self::HTACCESS, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
+    }
+
+    /** @return array<string, array{Closure(Blueprint): mixed, string}> */
+    public static function stoppedMigrations(): array
+    {
+        return [
+            'inside a create' => [fn (Blueprint $t) => null, "Schema::create('setup_test_items', fn (\$t) => \$t->id());"],
+            'inside an alter' => [fn (Blueprint $t) => $t->string('label')->nullable(), "Schema::table('setup_test_items', fn (\$t) => \$t->string('label')->nullable());"],
+            'inside an index' => [function (Blueprint $t) {
+                $t->string('label')->nullable();
+                $t->index('label', 'setup_test_items_label');
+            }, "Schema::table('setup_test_items', fn (\$t) => \$t->index('label', 'setup_test_items_label'));"],
+        ];
+    }
+
+    /**
+     * @param  Closure(Blueprint): mixed  $made
+     */
+    #[DataProvider('stoppedMigrations')]
+    public function test_a_migration_stopped_midway_is_said_with_how_to_start_over_while_nobody_has_registered(Closure $made, string $up): void
+    {
+        $this->withEnv();
+        // What the migration makes is there and the migration unrecorded, as a run killed after its statement leaves it.
+        Schema::create('setup_test_items', function (Blueprint $t) use ($made) {
+            $t->id();
+            $made($t);
+        });
+        $this->migration($up);
+
+        try {
+            $this->runSetup()
+                ->expectsOutputToContain('Creating them failed')
+                ->expectsOutputToContain('Nobody has registered yet')
+                ->assertFailed();
+        } finally {
+            // MySQL commits a table made inside the test's transaction.
+            Schema::dropIfExists('setup_test_items');
+        }
+    }
+
+    public function test_a_sqlite_file_this_command_did_not_make_is_never_said_to_be_removed(): void
+    {
+        $this->withEnv();
+        if (config('database.connections.'.$this->connection.'.driver') !== 'sqlite') {
+            $this->markTestSkipped('The file is the SQLite database\'s.');
+        }
+        config(['database.connections.'.$this->connection.'.database' => $this->root.'/elsewhere.sqlite']);
+        $this->migration("throw new RuntimeException('stopped');");
+
+        $this->runSetup()
+            ->expectsOutputToContain('Creating them failed')
+            ->doesntExpectOutputToContain('Nobody has registered yet')
             ->assertFailed();
     }
 
-    public function test_a_migration_stopped_midway_with_members_in_is_not_offered_a_start_over(): void
+    public function test_a_failed_install_with_members_in_is_not_offered_a_start_over(): void
     {
         $this->withEnv();
-        $this->stoppedMigration();
         Member::factory()->create();
+        $this->migration("throw new RuntimeException('stopped');");
 
         $this->runSetup()
-            ->expectsOutputToContain('stopped while making the tables')
             ->expectsOutputToContain('do not remove it')
             ->doesntExpectOutputToContain('Nobody has registered yet')
             ->assertFailed();
@@ -807,13 +882,13 @@ class SetupCommandTest extends TestCase
         putenv("{$key}={$value}");
     }
 
-    /** A migration not yet recorded whose table is there, as a run killed inside it leaves it. */
-    private function stoppedMigration(): void
+    /** A migration not yet recorded, run by openpne:install before the site's own. */
+    private function migration(string $up): void
     {
         $migrations = $this->root.'/migrations';
         mkdir($migrations);
-        file_put_contents($migrations.'/2999_01_01_000000_setup_test_members.php',
-            "<?php\nuse Illuminate\\Database\\Migrations\\Migration;\nuse Illuminate\\Support\\Facades\\Schema;\nreturn new class extends Migration { public function up(): void { Schema::create('members', fn (\$t) => \$t->id()); } };\n");
+        file_put_contents($migrations.'/2999_01_01_000000_setup_test.php',
+            "<?php\nuse Illuminate\\Database\\Migrations\\Migration;\nuse Illuminate\\Support\\Facades\\Schema;\nreturn new class extends Migration { public function up(): void { {$up} } };\n");
         $this->app->make('migrator')->path($migrations);
     }
 

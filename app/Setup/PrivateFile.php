@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class PrivateFile
 {
-    /** A new file of a random name in $directory, created unreadable to others and set to $mode before $contents go in; renamed into place by the caller. */
+    /** A new file of a random name in $directory, created unreadable to others and set to $mode before $contents go in; renamed into place, or removed, by the caller. */
     public static function temp(string $directory, string $prefix, string $contents, int $mode): string
     {
         $path = $directory.'/'.$prefix.bin2hex(random_bytes(8));
