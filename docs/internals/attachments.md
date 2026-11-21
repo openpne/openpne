@@ -25,7 +25,7 @@ is a picture, anything else a file. Three readers exist for that split and no fo
 checks. The timeline's
 single `image` field is the same slot under another wire (`PostImageRules::singleUpload()`).
 `PictureReadersTest` keeps the string forms of the slot-relation counts and single-relation
-`withExists` out of `app/` and the views, lets any other slot existence check stand only as the "has
+`withExists` out of `app/`, lets any other slot existence check stand only as the "has
 files" half beside a pictures read, and keeps `images` serializers partitioning; a reader built another way is reviewed, not caught.
 
 A message with files and no pictures previews as "File" where one with pictures previews as
