@@ -515,7 +515,7 @@ test("home names the site, a place's top names nothing, and neither stands a pla
         ['member/show', { profile: owner }, 'none'],
     ] as const) {
         const home = component === 'dashboard' ? 'whats_new' : 'issue';
-        const page = resolveChrome(component, { enabledFeatures: allOn, ...props });
+        const page = resolveChrome(component, { enabledFeatures: allOn, modernHome: home, ...props });
 
         assert.deepEqual(headerOf(page, { component, home, guest: false }), { type }, component);
         assert.ok(!hasPlaceBar(page, { component, home, guest: false }), component);

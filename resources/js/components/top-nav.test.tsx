@@ -2,6 +2,7 @@ import { cleanup, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { TopNav } from './top-nav';
+import { headingVariants } from '@/components/ui/heading';
 import { fakeT } from '@/lib/test-i18n';
 import { renderWithProviders } from '@/lib/test-render';
 import { type Chrome, resolveChrome } from '@/lib/member-chrome';
@@ -113,7 +114,7 @@ test('the home bar is the site mark and the site name, and nothing else', () => 
     renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
-    // The name is spoken, since the page's h1 is the issue's and not the site's, but it is no way anywhere.
+    // Spoken, since the page's h1 is the issue's rather than the site's, but not a link.
     expect(middle().textContent).toBe('Test SNS');
     expect(middle().closest('[aria-hidden]')).toBeNull();
     expect(screen.queryByRole('link', { name: 'Test SNS' })).toBeNull();
@@ -212,12 +213,13 @@ test('a place top leaves the middle empty — no name over its own hero', () => 
     }
 });
 
-test("every screen's name stands in the one middle column in the one type, so it does not move between screens", () => {
+test("every screen's name stands in the one middle column, in the bar's heading type", () => {
+    const owner = { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false };
     const names = [
         ['home/issue', '/', {}, 'Test SNS'],
         ['community/list', '/groups/mine', { owner: user, isOwner: true }, '%Communities%'],
         ['member/config/email', '/member/config/email', {}, 'Settings'],
-        ['diary/list', '/diary/listMember/9', { auth: { user: null }, owner: { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false }, isOwner: false }, 'Owner'],
+        ['diary/list', '/diary/listMember/9', { auth: { user: null }, owner, isOwner: false }, 'Owner'],
     ] as const;
     const seen = names.map(([component, url, props, name]) => {
         renderWithProviders(<TopNav chrome={arrive(component, url, props)} />);
@@ -228,7 +230,16 @@ test("every screen's name stands in the one middle column in the one type, so it
         return slot.className;
     });
 
+    // Text names are one element in one class; a place a member may press is its own button, which
+    // centers with its chevron, in the same type.
     expect(new Set(seen).size).toBe(1);
+    renderWithProviders(<TopNav chrome={arrive('diary/list', '/diary/listMember/9', { owner, isOwner: false })} />);
+    const place = middle();
+    expect(place).toBe(screen.getByRole('button', { name: 'Owner' }));
+    for (const type of headingVariants({ variant: 'bar' }).split(' ')) {
+        expect(seen[0]!.split(' ')).toContain(type);
+        expect(place.className.split(' ')).toContain(type);
+    }
 });
 
 test('a form names where it sits without offering a way out of itself', () => {

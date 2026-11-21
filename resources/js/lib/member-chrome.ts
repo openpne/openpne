@@ -350,7 +350,7 @@ const enabled = (props: Record<string, unknown>, feature: FeatureKey): boolean =
     (props as { enabledFeatures: Record<FeatureKey, boolean> }).enabledFeatures[feature];
 
 const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chrome>> = {
-    // As the home it takes the bare frame, the brand bar already naming the place, so the page
+    // As the home it takes the bare frame, the header already naming the site, so the page
     // carries its own visually hidden h1.
     'dashboard': (props) => {
         const action = enabled(props, 'diary') ? WRITE_DIARY : undefined;
@@ -637,7 +637,7 @@ export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage)
         return { type: 'brand' };
     }
 
-    // Left empty rather than given a section's name, as the hero below names the place (docs/internals/modern-frame.md, "The phone header").
+    // Left empty rather than given a hub's name, as the hero below names the place (docs/internals/modern-frame.md, "The phone header").
     if (isPlaceTop(component)) {
         return { type: 'none' };
     }
