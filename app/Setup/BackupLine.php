@@ -18,8 +18,7 @@ final class BackupLine
     public const SQLITE_MINIMUM = '3.28.0';
 
     /**
-     * The sqlite3 shell does not wait on a lock unless told to. A minute is what pdo_sqlite waits by
-     * default, as the site's connection does.
+     * The sqlite3 shell does not wait on a lock unless told to. A minute is pdo_sqlite's default wait.
      */
     public const SQLITE_WAIT = '.timeout 60000';
 

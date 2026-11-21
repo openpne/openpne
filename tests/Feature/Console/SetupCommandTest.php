@@ -233,13 +233,13 @@ class SetupCommandTest extends TestCase
         $this->assertSame(['mysql', (string) $settings['database']], [$env['DB_CONNECTION'], $env['DB_DATABASE']]);
     }
 
-    public function test_a_sqlite3_too_old_for_vacuum_into_cannot_be_chosen(): void
+    public function test_a_sqlite3_too_old_for_the_backup_cannot_be_chosen(): void
     {
         $this->tools('sqlite3');
         Process::fake(['*' => Process::result('3.27.2 2019-02-25 16:06:06 bd49a8271d')]);
 
         $this->answerSite($this->runSetup())
-            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28 or later')
+            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28.0 or later (VACUUM INTO under -readonly)')
             ->expectsOutputToContain('No database can be backed up on this host')
             ->assertFailed();
 
@@ -821,7 +821,7 @@ class SetupCommandTest extends TestCase
         $this->assertSame([], glob($this->layout->dataDirectory().'/openpne-setup-*') ?: []);
     }
 
-    public function test_a_rerun_with_a_sqlite3_too_old_for_vacuum_into_shows_no_line(): void
+    public function test_a_rerun_with_a_sqlite3_too_old_for_the_backup_shows_no_line(): void
     {
         if (! $this->sqlite()) {
             $this->markTestSkipped('The version is the sqlite3 command\'s.');
@@ -833,7 +833,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28 or later (VACUUM INTO). Ask the host for a newer sqlite3.')
+            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28.0 or later (VACUUM INTO under -readonly). Ask the host for a newer sqlite3.')
             ->doesntExpectOutputToContain($this->backupLineStart())
             ->assertSuccessful();
 
@@ -966,7 +966,7 @@ class SetupCommandTest extends TestCase
     }
 
     /** @param 'works'|'empty'|'fails' $backup */
-    private function fakeTools(string $backup = 'works', string $version = '3.46.1 2024-08-13 09:16:08 c9c2ab54ba'): void
+    private function fakeTools(string $backup = 'works', string $version = '3.28.0 2019-04-16 19:49:53 884b4b7e50'): void
     {
         Process::fake(function (PendingProcess $process) use ($backup, $version) {
             $command = is_array($process->command) ? $process->command : [$process->command];
