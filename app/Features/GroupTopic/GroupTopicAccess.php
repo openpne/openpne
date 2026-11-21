@@ -53,8 +53,8 @@ class GroupTopicAccess
     }
 
     /**
-     * The author, or anyone who manages the group, while still a member — OpenPNE 3 let a sub-admin
-     * do neither (docs/internals/group-boards.md, "Roles").
+     * OpenPNE 3 let only the admin, not a sub-admin, delete another member's topic
+     * (docs/internals/group-boards.md, "Roles").
      */
     public static function canDeleteTopic(GroupTopic $topic, Member $member): bool
     {

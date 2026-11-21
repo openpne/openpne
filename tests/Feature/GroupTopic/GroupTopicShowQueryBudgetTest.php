@@ -17,7 +17,7 @@ class GroupTopicShowQueryBudgetTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * A sub-admin takes the manager arm of each comment's delete gate, which a plain member never reaches.
+     * A sub-admin may delete every comment, so each row renders its delete control; a plain member's rows render none.
      *
      * @return iterable<string, array{string, GroupRole}>
      */

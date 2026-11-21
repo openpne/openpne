@@ -437,6 +437,9 @@ change from a problem when you go through it.
   talk read up to its latest message, so nothing arrives marked unread. Messages the old
   community timeline showed to friends only, to their author alone or to everyone on the web, and
   the timelines of communities already deleted, are not carried (the dry run counts them).
+- **Sub-admins** — a community's sub-admins can delete anyone's topic, event or comment in their
+  group, which OpenPNE 3 left to the admin alone. Editing another member's topic or event is still
+  the admin's.
 - **Messages** — every OpenPNE 3 message arrives in the inbox with its subject and body, each
   recipient keeping their own read and trash state: personal messages, community messages (a letter
   to a community's members), and the letters a member wrote with a friend request, a join request,

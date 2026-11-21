@@ -33,8 +33,10 @@ Sub-admin (`GroupRole::canManage()`).
 - **Admin or sub-admin**: editing the group's settings, both access columns included; the
   member-management screen and dropping a plain member; deleting anyone's talk message, topic,
   event or board comment.
-- **Any member**: posting, commenting, reacting and talking; editing and deleting their own posts;
-  deleting the comments on their own topic or event.
+- **Any member**: posting, commenting, reacting and talking; editing and deleting their own topic or
+  event, and deleting the comments on it.
+- **The author, member or not**: deleting their own board comment or talk message, which a member
+  who has left keeps.
 
 A sub-admin deletes another member's post but never edits it. OpenPNE 3 gave a sub-admin no reach
 over the board at all; talk, which OpenPNE 3 did not have, let anyone who manages the group delete,
@@ -138,8 +140,8 @@ A thread's `bumped_at` always equals `COALESCE(MAX(comments.created_at), created
 creation, a comment lifts it, and deleting a comment settles it back to the last surviving one — a
 departure from OpenPNE 3, which left the stamp where the deleted comment put it. Nothing else moves
 it: not a name or body edit (that sets `edited_at`, which the detail serializer exposes as
-`editedAt`), not an RSVP, not a link-card sync; an administrator deleting a comment settles it like
-anyone else. `updated_at` is Laravel's and means nothing to the board, which is why
+`editedAt`), not an RSVP, not a link-card sync; a manager deleting a comment settles it like anyone
+else. `updated_at` is Laravel's and means nothing to the board, which is why
 [`BoardBumpedAt`](../../app/Features/Group/BoardBumpedAt.php) writes through the query builder: a
 model save, even a quiet one, bumps `updated_at`. The column has no default, so a write path that
 forgets it fails rather than storing the engine's clock. Deleting a comment locks its thread first,
