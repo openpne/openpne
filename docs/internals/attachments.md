@@ -15,7 +15,7 @@ is a picture, anything else a file. Three readers exist for that split and no fo
   is the relation to count or test in SQL — `withCount('pictures')`, `pictures_exists`,
   `whereHas('pictures')` — wherever a list means "has photos"; a slot query built outside the
   relation (the talk digest) filters by `PostAttachments::pictureFileIds()`. Its complement
-  `nonPictures()` exists where a list counts the files in SQL (the MCP diary wire's `fileCount`).
+  `nonPictures()` counts the files the same way, on the models whose files a list counts in SQL.
 - `PostAttachments::partition()` splits loaded slot rows for display; a serializer that ships
   `files` beside `images` takes both from the same call, each file in the
   [`AttachmentShape`](../../app/Files/AttachmentShape.php) (`id`, `url`, `name`, `byteSize`,

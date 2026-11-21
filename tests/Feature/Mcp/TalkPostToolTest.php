@@ -37,6 +37,7 @@ class TalkPostToolTest extends TalkToolsTestCase
                 ->where('message.authorIsAi', false)
                 ->where('message.hasImages', false)
                 ->where('message.imageCount', 0)
+                ->where('message.fileCount', 0)
                 ->where('message.mentions', [])
                 ->has('message.id')
                 ->has('message.createdAt')

@@ -316,8 +316,8 @@ itself counts what is actually read, which for a thumbnail is the canonical the 
 a re-encode that can be larger than the stored bytes.
 
 **A slot holding no picture is refused when `number` names it, and passed over when it does not** —
-the refusal rule above, applied inside a message: being told "that one is empty" would let the slots
-be walked to count what a message carries. A slot is not a picture: nothing in the schema keeps
+the refusal rule above, applied inside a message: a slot holding a file answers as an empty one does,
+the counts being all the wire says about files. A slot is not a picture: nothing in the schema keeps
 `(message, number)` unique, so every picture is reported with the `id` of its attachment row as
 well, and `image_id` names one exactly where `number` names the slot. A row in a named slot that is
 not a picture is passed over as it is in an unnamed answer; only a slot with nothing left to draw
@@ -361,8 +361,8 @@ pre-selects, not a constant.
 [mail uses](body-text.md#excerpts-and-mail-text), so a Markdown entry does not arrive as literal
 `**bold**` and a migrated one carries no `<op:*>` tags; `list-diaries` carries the one-line excerpt
 instead. Attachments are counts, as talk's are — `imageCount` and `fileCount` on an entry and on
-each of its comments — and a picture's bytes come from `read-diary-images`. A body is capped at **65,535 bytes** — the TEXT column's own size,
-and the cap the compose form applies. Bytes, not the code points talk counts: the two numbers do not
+each of its comments — and a picture's bytes come from `read-diary-images`. A body is capped at
+**65,535 bytes** — the TEXT column's own size, and the cap the compose form applies. Bytes, not the code points talk counts: the two numbers do not
 compare. The web comment form has no cap of its own and leaves an oversized comment to the column;
 the tool caps it here rather than answering a database error.
 

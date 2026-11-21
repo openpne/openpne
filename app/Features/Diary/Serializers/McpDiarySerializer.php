@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Features\Diary\Serializers;
 
 use App\Features\Member\Serializers\MemberRefSerializer;
-use App\Mcp\Tools\ReadDiaryImagesTool;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Support\BodyRenderer;
@@ -59,8 +58,7 @@ class McpDiarySerializer
 
     /**
      * A comment carries no format column — OpenPNE 3 has none either — so its body is already the
-     * plain text it is stored as. Its attachments are counted here, and its pictures read by naming
-     * the comment ({@see ReadDiaryImagesTool}).
+     * plain text it is stored as.
      *
      * @return array{id: int, number: int, body: string, imageCount: int, fileCount: int, authorId: int|null, authorName: string|null, authorIsAi: bool|null, createdAt: string}
      */
@@ -97,8 +95,8 @@ class McpDiarySerializer
     }
 
     /**
-     * The feed eager-loads every count; a single freshly written entry has none, and loads them
-     * rather than reporting a silent zero.
+     * A page's caller loads every count on its rows; a single freshly written entry has none, and
+     * loads them rather than reporting a silent zero.
      *
      * @return array{commentCount: int, imageCount: int, fileCount: int}
      */
