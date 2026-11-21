@@ -188,8 +188,12 @@ that forbids `Options` or `Require` in `.htaccess` still runs the site. The one 
 tree answers every request with 403, for a document root that is the tree, or holds it, instead of
 being `public/`. `public/.htaccess` has rewrite rules of its own, which Apache applies under
 `public/` in place of the top file's; it sends a request for an existing directory to `index.php`,
-so Apache lists none. A `.htaccess` with rewrite directives anywhere else in the tree would lift the
-403 for its directory, and the release has none.
+so Apache lists none. Both files set `RewriteOptions AllowNoSlash`: without it mod_rewrite skips a
+request for their own directory that lacks the trailing slash, which a server with
+`DirectorySlash Off` and `Indexes` then lists. A `.htaccess` with rewrite directives anywhere else in
+the tree would lift the 403 for its directory, and the release has none. A server that hands `.php`
+requests to PHP-FPM by `ProxyPassMatch` does so before reading any `.htaccess`, so there the 403
+covers the other files only.
 
 ## Cache reads
 
