@@ -8,6 +8,7 @@ use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Filament\Concerns\PhoneSurfaceSubheading;
 use App\Services\SnsSettingService;
 use App\Support\OperatorContent;
+use App\Support\OperatorContentConversion;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
@@ -107,8 +108,8 @@ class DesignSettings extends Page
             foreach ($this->keys() as $key) {
                 $value = $key->coerce($data[$key->value] ?? '');
 
-                // A Markdown row means "converted": one left at its default stays absent, so the conversion can still fill it from the HTML.
-                if ($key->isOperatorMarkdown() && $value === $key->default() && ! DB::table('sns_settings')->where('key', $key->value)->exists()) {
+                // The form shows the default for an absent row, so a value left at it counts as blank.
+                if ($key->isOperatorMarkdown() && ! OperatorContentConversion::savesMarkdown(DB::table('sns_settings')->where('key', $key->value)->exists(), (string) $value, (string) $key->default())) {
                     continue;
                 }
 
