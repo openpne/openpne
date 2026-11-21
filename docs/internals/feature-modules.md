@@ -276,9 +276,11 @@ gates on the acting member therefore splits in two: `__invoke(Member $actor, …
 keeps the frontend's author/actor check, and an author-less `purge(…)` core holds
 the actual deletion + cleanup. Member adapters call `__invoke`; the Filament
 Resource calls `purge` directly (its guard is the authorization). The cleanup
-lives once, in `purge`. Member withdrawal is the same shape: `WithdrawMember` has
-no per-actor check, and each caller — the panel (its guard authorizes) and the
-member-facing withdrawal flow — is its own adapter.
+lives once, in `purge` — or in a private core both call, when the actor check
+must run under the cleanup's own lock (`DeleteGroup`). Member withdrawal is the
+same shape: `WithdrawMember` has no per-actor check, and each caller — the panel
+(its guard authorizes) and the member-facing withdrawal flow — is its own
+adapter.
 
 ## When to use this contract
 
@@ -395,4 +397,5 @@ invariant.
    resolved per request (`RouteSpaceGuardTest`).
 7. A `Delete*` Action that checks the acting member MUST keep the deletion +
    cleanup in an author-less `purge(…)` the admin panel calls; `__invoke` only
-   adds the member-actor check. The cleanup is not duplicated in the Resource.
+   adds the member-actor check, inside the cleanup's transaction when it must run
+   under its lock. The cleanup is not duplicated in the Resource.

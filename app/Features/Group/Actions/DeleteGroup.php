@@ -44,8 +44,7 @@ class DeleteGroup
 
             BoardSweep::holdBoards($groupId);
 
-            // Re-checked under the group row so a transfer cannot interleave, and after holdBoards
-            // because this read takes the snapshot (docs/internals/group-boards.md, "Tearing a group down").
+            // After holdBoards, because this read takes the snapshot (docs/internals/group-boards.md, "Tearing a group down").
             if ($admin !== null && ! GroupMembership::isAdmin($locked, $admin)) {
                 throw new GroupActionException(GroupActionFailure::NotAdmin);
             }
@@ -55,7 +54,6 @@ class DeleteGroup
             $topicComments = DB::table('group_topic_comments')->whereIn('group_topic_id', $topics)->select('id');
             $eventComments = DB::table('group_event_comments')->whereIn('group_event_id', $events)->select('id');
 
-            // Under the locks above, as the snapshot must be (BoardSweep::holdBoards).
             $fileIds = DB::table('files')
                 ->whereIn('id', DB::table('group_message_images')
                     ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
