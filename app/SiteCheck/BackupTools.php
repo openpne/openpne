@@ -17,7 +17,6 @@ final class BackupTools
         return self::locate('mysqldump') ?? self::locate('mariadb-dump');
     }
 
-    /** The tool for a connection driver, or null when it has none or none is installed. */
     public static function forDriver(string $driver): ?string
     {
         return match ($driver) {

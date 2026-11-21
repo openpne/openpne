@@ -342,20 +342,23 @@ class OutboundEgressBoundaryTest extends TestCase
         ));
     }
 
-    /** The fetcher validates no address, so a caller outside the check could hand it a member's URL. */
-    public function test_the_site_fetcher_is_reachable_only_from_the_site_check(): void
+    /** Neither checks an address beyond its scheme, so a caller outside the command could hand one a member's URL. */
+    public function test_the_site_fetcher_is_reachable_only_from_the_site_check_command(): void
     {
         $offenders = [];
+        $allowed = [
+            'SiteFetcher' => ['SiteCheck/SiteFetcher.php', 'SiteCheck/WebCheck.php'],
+            'WebCheck' => ['SiteCheck/WebCheck.php', 'Console/Commands/CheckCommand.php'],
+        ];
 
         foreach ($this->appFiles() as $file) {
             $relative = str_replace(app_path().'/', '', $file);
+            $source = (string) file_get_contents($file);
 
-            if (in_array($relative, ['SiteCheck/SiteFetcher.php', 'SiteCheck/WebCheck.php'], true)) {
-                continue;
-            }
-
-            if (str_contains((string) file_get_contents($file), 'SiteFetcher')) {
-                $offenders[] = 'app/'.$relative;
+            foreach ($allowed as $name => $files) {
+                if (! in_array($relative, $files, true) && str_contains($source, $name)) {
+                    $offenders[] = 'app/'.$relative.' ('.$name.')';
+                }
             }
         }
 

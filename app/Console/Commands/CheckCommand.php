@@ -48,7 +48,7 @@ class CheckCommand extends Command
         $findings = [];
 
         if ($only === null || $only === 'before') {
-            $findings = [...$findings, ...$this->part('heading_before', [], (new BeforeInstallCheck($layout))->run($installed))];
+            $findings = [...$findings, ...$this->part('heading_before', [], fn (): array => (new BeforeInstallCheck($layout))->run($installed))];
         }
         if ($only !== 'before' && ! $installed) {
             $this->newLine();
@@ -59,12 +59,21 @@ class CheckCommand extends Command
         } else {
             if ($only === null || $only === 'installed') {
                 $check = new InstalledCheck($layout, $this->laravel->make('migrator'));
-                $findings = [...$findings, ...$this->part('heading_installed', [], $check->run())];
+                $findings = [...$findings, ...$this->part('heading_installed', [], $check->run(...))];
             }
             if ($only === null || $only === 'web') {
-                $check = $this->laravel->make(WebCheck::class, ['layout' => $layout]);
-                $url = (string) config('app.url');
-                $findings = [...$findings, ...$this->part('heading_web', ['url' => $url], $check->run($this->option('parent-url')))];
+                $web = $this->laravel->make(WebCheck::class, ['layout' => $layout]);
+                // Signals are named in a closure, as their constants exist only where pcntl is loaded.
+                $this->trap(fn (): array => [SIGINT, SIGTERM, SIGHUP], function (int $signal) use ($web): never {
+                    $web->cleanUp();
+                    exit(128 + $signal);
+                });
+                $findings = [...$findings, ...$this->part(
+                    'heading_web',
+                    ['url' => InstalledCheck::shownUrl((string) config('app.url'))],
+                    fn (): array => $web->run($this->option('parent-url')),
+                )];
+                $this->untrap();
             }
         }
 
@@ -79,7 +88,6 @@ class CheckCommand extends Command
         return $count(Verdict::Fail) === 0 ? self::SUCCESS : self::FAILURE;
     }
 
-    /** The language the shell's LANG names, if Japanese or English. */
     public static function shellLocale(): ?string
     {
         $lang = (string) getenv('LANG');
@@ -93,13 +101,14 @@ class CheckCommand extends Command
 
     /**
      * @param  array<string, string|int>  $replace
-     * @param  list<Finding>  $findings
+     * @param  callable(): list<Finding>  $run
      * @return list<Finding>
      */
-    private function part(string $heading, array $replace, array $findings): array
+    private function part(string $heading, array $replace, callable $run): array
     {
         $this->newLine();
         $this->line('<options=bold>'.OutputFormatter::escape($this->say($heading, $replace)).'</>');
+        $findings = $run();
         foreach ($findings as $finding) {
             $tag = match ($finding->verdict) {
                 Verdict::Ok => '<info>[ OK ]</info>',

@@ -317,16 +317,20 @@ anything does; a warning or a line it could not check does not count. It has thr
 be known before installing runs without `.env` (`--only=before`, which the release archive's check
 runs). The installed site reads `.env`, the database and the files beside the release. The web part
 fetches the site from `APP_URL`, through [`SiteFetcher`](../../app/SiteCheck/SiteFetcher.php), the
-outbound seam's second exception ([outbound-http.md](outbound-http.md)): no redirect is followed.
+outbound seam's second exception ([outbound-http.md](outbound-http.md)): no redirect is followed, and
+no more than 64 KiB of a response is read.
 
 The web part writes files into the site's own directories for the length of the check, named
-`openpne-check-` and 32 hex digits, and removes them in a `finally`:
+`openpne-check-` and 32 hex digits, and removes them in a `finally`, and on SIGINT, SIGTERM or SIGHUP
+where pcntl is loaded:
 
 - a text file of one name, each holding its own token, in `public/`, in the release's top directory
   and in `storage/` when that is the release's own. Fetched at `APP_URL/<name>`, the right document
-  root answers with the `public/` file's token; any other token is a file of the release being served.
-  With `--parent-url`, the address that shows the directory holding the release, a file in that
-  directory proves the address, and the release's and `openpne-data/`'s files must not answer through it.
+  root answers with the `public/` file's token; any other token is a file of the release being served,
+  and until the `public/` file answers, the release is not judged unserved. With `--parent-url`, the
+  address that shows the directory holding the release, a file in that directory proves the address,
+  and the release's and `openpne-data/`'s files must not answer through it; with either of the first
+  two unwritten, that address is not checked.
 - a PHP file in `public/` that does not boot the app, so that it answers when `.env` cannot be read,
   and that parses on old PHP, since naming an old web PHP is what it is for. It answers only a request
   carrying its token, with the PHP version, SAPI, extensions, a few ini values, the names of the proxy
@@ -337,12 +341,11 @@ The web part writes files into the site's own directories for the length of the 
   differ from a member's.
 
 One web check runs at a time: an exclusive lock on `storage/framework/openpne-check.lock`, not waited
-for, and a second check reports the web part as not checked. Under that lock a killed run's files are
-removed, only when over ten minutes old, so a running check's files are never taken for a
-misconfiguration.
+for, and a second check reports the web part as not checked. Under that lock the files of a killed
+run, or the owner file of a probe that outlived its fetch's timeout, are removed only when over ten
+minutes old, so a running check's files are never taken for a misconfiguration.
 
-`openpne-data/`, beside the release, holds what must stay unserved even where a host serves the
-release's parent: an SQLite database, backups and the option file MySQL's dump reads
-(`mysql-backup.cnf`). Its `.htaccess`, a copy of the release's top one, refuses every request. When
-the directory exists the check requires that file and mode 0700, and for MySQL the option file at
-0600 and a schema-only dump through it that still succeeds.
+Where `openpne-data/` exists beside the release, the check takes it for a directory that must stay
+unserved even where a host serves the release's parent, and requires a copy of the release's top
+`.htaccess` in it, mode 0700, and for MySQL the option file its dump reads, `mysql-backup.cnf`, at
+0600, with a schema-only dump through it that still succeeds.

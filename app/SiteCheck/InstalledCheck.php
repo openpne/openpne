@@ -74,8 +74,13 @@ final class InstalledCheck
             return Finding::ok('app.url', 'app_url', ['url' => $url]);
         }
 
-        // A URL with a user in it may carry a password, so only a URL without one is repeated.
-        return Finding::fail('app.url', 'app_url_unusable', ['url' => parse_url($url, PHP_URL_USER) === null ? $url : '…']);
+        return Finding::fail('app.url', 'app_url_unusable', ['url' => self::shownUrl($url)]);
+    }
+
+    /** A URL with a user in it may carry a password, so only a URL without one is repeated. */
+    public static function shownUrl(string $url): string
+    {
+        return parse_url($url, PHP_URL_USER) === null ? $url : '…';
     }
 
     /** @return list<Finding> */

@@ -1,6 +1,5 @@
 <?php
-// Written into public/ by `php artisan openpne:check` and removed by it within seconds. Kept to the
-// syntax of PHP 5.3, since telling an operator that the web runs an old PHP is what it is for.
+// Kept to syntax old PHP parses, since naming an old web PHP is what it is for.
 $token = '{{token}}';
 $ownerFile = '{{ownerFile}}';
 

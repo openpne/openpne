@@ -55,6 +55,7 @@ class CheckCommandTest extends TestCase
         $this->connection = (string) config('database.default');
         $this->path = getenv('PATH');
         $this->tool('sqlite3');
+        $this->tool('mysqldump');
         putenv('PATH='.$base.'/tools');
 
         config([
@@ -118,6 +119,7 @@ class CheckCommandTest extends TestCase
     public function test_backup_tools_are_found_on_path_without_being_run(): void
     {
         $tools = $this->layout->base.'/tools';
+        unlink($tools.'/mysqldump');
         $this->tool('mariadb-dump');
 
         $this->assertSame($tools.'/sqlite3', BackupTools::sqlite());
@@ -136,6 +138,7 @@ class CheckCommandTest extends TestCase
     public function test_a_host_with_no_backup_tool_fails_before_install(): void
     {
         unlink($this->layout->base.'/tools/sqlite3');
+        unlink($this->layout->base.'/tools/mysqldump');
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
             ->expectsOutputToContain('No database can be backed up here')
@@ -152,7 +155,7 @@ class CheckCommandTest extends TestCase
         $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
             ->expectsOutputToContain('[ OK ] Every migration has run.')
             ->expectsOutputToContain('[ OK ] The initial data is there.')
-            ->expectsOutputToContain('[ OK ] The database is backed up with '.$this->layout->base.'/tools/sqlite3.')
+            ->expectsOutputToContain('[ OK ] The database is backed up with '.$this->layout->base.'/tools/')
             ->doesntExpectOutputToContain('[FAIL]')
             ->assertSuccessful();
     }
@@ -162,6 +165,7 @@ class CheckCommandTest extends TestCase
         $this->installEnv(0o644);
         unlink($this->layout->base.'/.htaccess');
         unlink($this->layout->base.'/tools/sqlite3');
+        unlink($this->layout->base.'/tools/mysqldump');
         config(['app.env' => 'local', 'app.debug' => true, 'app.key' => '', 'app.url' => 'http://sns.example.com/sub']);
 
         $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
@@ -170,7 +174,7 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('APP_DEBUG is on')
             ->expectsOutputToContain('APP_KEY is empty')
             ->expectsOutputToContain('APP_URL is http://sns.example.com/sub:')
-            ->expectsOutputToContain('The sqlite3 command is not on PATH')
+            ->expectsOutputToContain('on PATH, and the backup of')
             ->expectsOutputToContain('The initial data is missing')
             ->expectsOutputToContain($this->layout->base.'/.htaccess is missing')
             ->assertFailed();
@@ -206,6 +210,10 @@ class CheckCommandTest extends TestCase
 
         copy($this->layout->base.'/.htaccess', $this->layout->dataDirectory().'/.htaccess');
         chmod($this->layout->dataDirectory(), 0o700);
+        // On the MySQL lane the option file is judged too, and its dump is not run.
+        file_put_contents($this->layout->mysqlOptionFile(), "[client]\n");
+        chmod($this->layout->mysqlOptionFile(), 0o600);
+        Process::fake();
         $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])->assertSuccessful();
     }
 
@@ -349,7 +357,7 @@ class CheckCommandTest extends TestCase
         $this->fakeHost(['root' => 'release']);
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
             ->expectsOutputToContain('[FAIL] The document root is '.$this->layout->base.', the site\'s own directory')
-            ->expectsOutputToContain('[ OK ] The site\'s own files cannot be read from the web.')
+            ->expectsOutputToContain('[ ?? ] Whether the site\'s own files can be read from the web is checked once the document root is right.')
             ->expectsOutputToContain('[ ?? ] The web\'s PHP is checked once the document root is right.')
             ->assertFailed();
 
@@ -390,6 +398,7 @@ class CheckCommandTest extends TestCase
         $this->fakeHost(['status' => 'unreachable']);
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
             ->expectsOutputToContain(self::URL.' cannot be reached: cURL error 6: Could not resolve host: sns.example.com. The domain')
+            ->expectsOutputToContain('[ ?? ] Whether the site\'s own files can be read from the web is checked once the document root is right.')
             ->assertFailed();
 
         $this->fakeHost(['status' => 301]);
@@ -402,12 +411,12 @@ class CheckCommandTest extends TestCase
     public function test_what_the_web_php_answers_is_judged(): void
     {
         $this->installEnv();
-        $this->fakeHost(['php' => ['version' => '8.2.29', 'sapi' => 'cgi-fcgi', 'missing' => ['intl', 'pdo_sqlite'],
+        $this->fakeHost(['php' => ['version' => '8.2.29', 'sapi' => 'cgi-fcgi', 'missing' => ['intl', 'pdo_sqlite', 'pdo_mysql'],
             'ini' => ['memory_limit' => '128M', 'upload_max_filesize' => '2M', 'post_max_size' => '8M', 'opcache.file_cache' => '']]]);
 
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
             ->expectsOutputToContain('[FAIL] The web runs PHP 8.2.29 (the command line runs '.PHP_VERSION.')')
-            ->expectsOutputToContain('[FAIL] PHP extensions missing on the web: intl, pdo_sqlite.')
+            ->expectsOutputToContain('[FAIL] PHP extensions missing on the web: intl, pdo_')
             ->expectsOutputToContain('[WARN] memory_limit on the web is 128M')
             ->expectsOutputToContain('[WARN] Upload sizes on the web are too small (upload_max_filesize 2M, post_max_size 8M): set them to at least 10M and 31M')
             ->expectsOutputToContain('[WARN] The web runs PHP as CGI (cgi-fcgi)')
@@ -424,6 +433,29 @@ class CheckCommandTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_the_web_heading_does_not_repeat_a_url_with_a_user_in_it(): void
+    {
+        $this->installEnv();
+        config(['app.url' => 'https://site:sentinel-Pa55word@sns.example.com']);
+
+        $output = $this->runCheck(['--only' => 'web']);
+
+        $this->assertStringContainsString('From the web (…)', $output);
+        $this->assertStringNotContainsString('sentinel-Pa55word', $output);
+    }
+
+    public function test_a_web_php_running_as_another_user_fails(): void
+    {
+        $this->installEnv();
+        $this->assertNotSame(fileowner($this->layout->envFile), fileowner('/'));
+        $this->fakeHost(['php' => ['wrote' => 'another user']]);
+
+        $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
+            ->expectsOutputToContain('[FAIL] The web runs PHP as another user than this account.')
+            ->assertFailed();
+        $this->assertSame([], $this->probeFiles());
+    }
+
     public function test_a_web_php_that_cannot_write_or_is_not_run_fails(): void
     {
         $this->installEnv();
@@ -432,9 +464,16 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('[FAIL] The web\'s PHP cannot write to '.$this->layout->storage.'/framework')
             ->assertFailed();
 
-        $this->fakeHost(['php' => 'source']);
+        $this->fakeHost(['php' => 'source', 'up' => [200, "<?php\n\nrequire __DIR__.'/../vendor/autoload.php';\n"]]);
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
+            ->expectsOutputToContain('[FAIL] /up came back as the source of index.php')
             ->expectsOutputToContain('[FAIL] PHP is not run for .php files')
+            ->assertFailed();
+
+        // A warning printed before the answer is PHP that ran, not its source come back.
+        $this->fakeHost(['php' => ['prefix' => "Warning: something on line 1\n"]]);
+        $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
+            ->expectsOutputToContain('[FAIL] The web\'s PHP could not be asked (200)')
             ->assertFailed();
 
         $this->fakeHost(['up' => [500, 'Composer detected issues in your platform: Your Composer dependencies require a PHP version ">= 8.3.0".']]);
@@ -459,6 +498,14 @@ class CheckCommandTest extends TestCase
 
         config(['trustedproxy.proxies' => '198.51.100.0/24, 203.0.113.0/24']);
         $this->assertStringContainsString('[ OK ] The proxy in front is in TRUSTED_PROXIES.', $this->runCheck(['--only' => 'web']));
+
+        foreach (['**', 'REMOTE_ADDR', '198.51.100.0/24,REMOTE_ADDR'] as $proxies) {
+            config(['trustedproxy.proxies' => $proxies]);
+            $this->assertStringContainsString('[ OK ] The proxy in front is in TRUSTED_PROXIES.', $this->runCheck(['--only' => 'web']), $proxies);
+        }
+        $this->fakeHost(['php' => ['proxy_headers' => ['X-Forwarded-For'], 'peer' => '10.0.0.5']]);
+        config(['trustedproxy.proxies' => 'PRIVATE_SUBNETS']);
+        $this->assertStringContainsString('[ OK ] The proxy in front is in TRUSTED_PROXIES.', $this->runCheck(['--only' => 'web']));
     }
 
     public function test_the_parent_address_is_proved_before_it_is_trusted_with_a_verdict(): void
@@ -481,6 +528,22 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('[ ?? ] '.self::PARENT_URL.' does not show the directory holding the site (404)')
             ->assertSuccessful();
         $this->assertSame([], $this->probeFiles());
+    }
+
+    public function test_the_parent_address_is_not_judged_without_its_proof(): void
+    {
+        $this->installEnv();
+        $this->fakeHost(['parent' => 'deny']);
+        chmod($this->layout->parent(), 0o555);
+
+        try {
+            $this->artisan('openpne:check', ['--only' => 'web', '--parent-url' => self::PARENT_URL, '--lang' => 'en'])
+                ->expectsOutputToContain('[ ?? ] Not checked: '.$this->layout->parent().' cannot be written to.')
+                ->doesntExpectOutputToContain('the site\'s own files cannot be read.')
+                ->assertSuccessful();
+        } finally {
+            chmod($this->layout->parent(), 0o755);
+        }
     }
 
     public function test_the_probe_files_go_even_when_the_check_breaks_off(): void
@@ -530,14 +593,27 @@ class CheckCommandTest extends TestCase
         $this->assertFileExists($leftover);
     }
 
+    public function test_a_lock_file_this_account_cannot_open_is_named(): void
+    {
+        $this->installEnv();
+        $lock = $this->layout->storage.'/framework/'.WebCheck::LOCK_FILE;
+        touch($lock);
+        chmod($lock, 0o444);
+
+        $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
+            ->expectsOutputToContain('[ ?? ] Not checked: '.$lock.' cannot be written to.')
+            ->assertSuccessful();
+    }
+
     public function test_only_leftovers_older_than_ten_minutes_are_removed(): void
     {
         $this->installEnv();
         $this->fakeHost();
         $old = $this->layout->base.'/openpne-check-'.str_repeat('b', 32).'.txt';
+        $oldInParent = $this->layout->parent().'/openpne-check-'.str_repeat('e', 32).'.txt';
         $recent = $this->layout->public.'/openpne-check-'.str_repeat('c', 32).'.php';
         $foreign = $this->layout->public.'/openpne-check-notours.txt';
-        foreach ([$old, $recent, $foreign] as $file) {
+        foreach ([$old, $oldInParent, $recent, $foreign] as $file) {
             file_put_contents($file, '');
             touch($file, time() - WebCheck::LEFTOVER_SECONDS - 60);
         }
@@ -546,6 +622,7 @@ class CheckCommandTest extends TestCase
         $this->runCheck(['--only' => 'web']);
 
         $this->assertFileDoesNotExist($old);
+        $this->assertFileDoesNotExist($oldInParent);
         $this->assertFileExists($recent);
         $this->assertFileExists($foreign);
     }
@@ -717,18 +794,21 @@ class CheckCommandTest extends TestCase
             return Http::response('', 404);
         }
 
-        $php += ['version' => '8.3.30', 'sapi' => 'fpm-fcgi', 'missing' => [], 'ini' => [], 'wrote' => true, 'proxy_headers' => [], 'peer' => '127.0.0.1'];
-        if ($php['wrote']) {
+        $php += ['version' => '8.3.30', 'sapi' => 'fpm-fcgi', 'missing' => [], 'ini' => [], 'wrote' => true, 'proxy_headers' => [], 'peer' => '127.0.0.1', 'prefix' => ''];
+        if ($php['wrote'] === 'another user') {
+            // fileowner() follows the link to root's directory, and unlink() removes the link alone.
+            symlink('/', $owner[1]);
+        } elseif ($php['wrote']) {
             touch($owner[1]);
         }
 
-        return Http::response(json_encode([
+        return Http::response($php['prefix'].json_encode([
             'token' => $token[1],
             'version' => $php['version'],
             'sapi' => $php['sapi'],
             'extensions' => array_values(array_diff([...BeforeInstallCheck::EXTENSIONS, 'pdo_sqlite', 'pdo_mysql'], $php['missing'])),
             'ini' => $php['ini'] + ['memory_limit' => '256M', 'upload_max_filesize' => '16M', 'post_max_size' => '32M', 'max_execution_time' => '30', 'opcache.enable' => '1', 'opcache.file_cache' => ''],
-            'wrote' => $php['wrote'],
+            'wrote' => (bool) $php['wrote'],
             'proxy_headers' => $php['proxy_headers'],
             'peer' => $php['peer'],
         ]), 200);

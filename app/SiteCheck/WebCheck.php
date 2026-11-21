@@ -22,6 +22,10 @@ final class WebCheck
 
     public const NAME_PATTERN = '/^openpne-check-[0-9a-f]{32}\.(?:txt|php|owner)$/';
 
+    public const LOCK_FILE = 'openpne-check.lock';
+
+    private ?LockableFile $lock = null;
+
     /** @var list<string> */
     private array $written = [];
 
@@ -44,10 +48,11 @@ final class WebCheck
             return [Finding::unknown('web', 'web_parent_url_unusable')];
         }
 
+        $lockFile = $this->layout->storage.'/framework/'.self::LOCK_FILE;
         try {
-            $lock = new LockableFile($this->layout->storage.'/framework/openpne-check.lock', 'c');
+            $lock = new LockableFile($lockFile, 'c');
         } catch (Throwable) {
-            return [Finding::unknown('web', 'web_cannot_write', ['path' => $this->layout->storage.'/framework'])];
+            return [Finding::unknown('web', 'web_cannot_write', ['path' => $lockFile])];
         }
         try {
             $lock->getExclusiveLock();
@@ -56,23 +61,30 @@ final class WebCheck
 
             return [Finding::unknown('web', 'web_busy')];
         }
+        $this->lock = $lock;
 
         try {
             $this->removeLeftovers();
 
             return $this->probe($url, $parentUrl === null ? null : rtrim($parentUrl, '/'));
         } finally {
-            foreach ($this->written as $path) {
-                @unlink($path);
-            }
-            $this->written = [];
-            $this->tokens = [];
-            $lock->releaseLock();
-            $lock->close();
+            $this->cleanUp();
         }
     }
 
-    /** The PHP probe for a token, writing its owner file at $ownerFile. */
+    /** Safe to call twice, and from a signal handler while a fetch is under way. */
+    public function cleanUp(): void
+    {
+        foreach ($this->written as $path) {
+            @unlink($path);
+        }
+        $this->written = [];
+        $this->tokens = [];
+        $this->lock?->releaseLock();
+        $this->lock?->close();
+        $this->lock = null;
+    }
+
     public static function probeSource(string $token, string $ownerFile): string
     {
         return strtr(File::get(__DIR__.'/web-probe.stub'), [
@@ -104,9 +116,12 @@ final class WebCheck
         }
         $findings = [
             $root,
-            $served === []
-                ? Finding::ok('web.tree', 'web_tree')
-                : Finding::fail('web.tree', 'web_tree_served', ['list' => implode(', ', $served), 'public' => $this->layout->public]),
+            match (true) {
+                $served !== [] => Finding::fail('web.tree', 'web_tree_served', ['list' => implode(', ', $served), 'public' => $this->layout->public]),
+                // Only a fetch that reached public/ shows where the rest of the site sits from APP_URL.
+                $root->verdict === Verdict::Ok => Finding::ok('web.tree', 'web_tree'),
+                default => Finding::unknown('web.tree', 'web_tree_unchecked'),
+            },
         ];
 
         if ($root->verdict === Verdict::Ok) {
@@ -157,6 +172,7 @@ final class WebCheck
         $page = $this->fetcher->get("{$url}/up");
 
         return match (true) {
+            str_contains($page->body, '<?php') => Finding::fail('web.up', 'web_up_source'),
             $page->status === 200 => Finding::ok('web.up', 'web_up'),
             // The words of vendor/composer/platform_check.php, which runs before the app can answer.
             str_contains($page->body, 'Composer detected issues in your platform') => Finding::fail('web.up', 'web_up_platform'),
@@ -178,7 +194,7 @@ final class WebCheck
         $page = $this->fetcher->get("{$url}/{$name}.php", [self::HEADER => $token]);
         $data = $page->status === 200 ? json_decode($page->body, true) : null;
         if (! is_array($data) || ($data['token'] ?? null) !== $token) {
-            return [str_contains($page->body, $token)
+            return [str_contains($page->body, '<?php')
                 ? Finding::fail('web.php', 'web_php_not_run')
                 : Finding::fail('web.php', 'web_php_failed', ['status' => $page->status ?? $page->reason()])];
         }
@@ -271,7 +287,15 @@ final class WebCheck
                 ? Finding::ok('web.proxy', 'web_proxy_none')
                 : Finding::warn('web.proxy', 'web_proxy_untrusted', ['list' => implode(', ', $headers)]);
         }
-        if (in_array('*', $trusted, true) || ($peer !== null && IpUtils::checkIp($peer, $trusted))) {
+        // The keywords TrustProxies and Symfony's Request read in place of addresses.
+        if (array_intersect(['*', '**', 'REMOTE_ADDR'], $trusted) !== []) {
+            return Finding::ok('web.proxy', 'web_proxy_trusted');
+        }
+        $ranges = array_merge(...array_map(
+            fn (string $entry): array => in_array($entry, ['PRIVATE_SUBNETS', 'private_ranges'], true) ? IpUtils::PRIVATE_SUBNETS : [$entry],
+            array_map('strval', $trusted),
+        ));
+        if ($peer !== null && IpUtils::checkIp($peer, $ranges)) {
             return Finding::ok('web.proxy', 'web_proxy_trusted');
         }
 
@@ -281,16 +305,18 @@ final class WebCheck
     private function parent(string $parentUrl, string $name): Finding
     {
         $calibration = $this->write($this->layout->parent(), $name.'.txt');
-        if ($calibration !== null) {
-            $page = $this->fetcher->get("{$parentUrl}/{$name}.txt");
-            if (! $page->answered($calibration)) {
-                return Finding::unknown('web.parent', 'web_parent_not_shown', ['url' => $parentUrl, 'status' => $page->status ?? $page->reason()]);
-            }
+        $releaseToken = $this->tokenAt($this->layout->base, $name);
+        if ($calibration === null || $releaseToken === null) {
+            return Finding::unknown('web.parent', 'web_cannot_write', ['path' => $calibration === null ? $this->layout->parent() : $this->layout->base]);
+        }
+        $page = $this->fetcher->get("{$parentUrl}/{$name}.txt");
+        if (! $page->answered($calibration)) {
+            return Finding::unknown('web.parent', 'web_parent_not_shown', ['url' => $parentUrl, 'status' => $page->status ?? $page->reason()]);
         }
 
         $release = rawurlencode(basename($this->layout->base));
         $probes = [
-            $this->layout->base => ["{$parentUrl}/{$release}/{$name}.txt", $this->tokenAt($this->layout->base, $name)],
+            $this->layout->base => ["{$parentUrl}/{$release}/{$name}.txt", $releaseToken],
         ];
         if ($this->layout->storageInTree()) {
             $probes[$this->layout->storage] = ["{$parentUrl}/{$release}/storage/{$name}.txt", $this->tokenAt($this->layout->storage, $name)];
