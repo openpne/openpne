@@ -19,11 +19,7 @@ class DeleteGroup
 {
     public function __invoke(Member $actor, Group $group): void
     {
-        if (! GroupMembership::isAdmin($group, $actor)) {
-            throw new GroupActionException(GroupActionFailure::NotAdmin);
-        }
-
-        $this->purge($group);
+        $this->sweep($group, $actor);
     }
 
     /**
@@ -34,7 +30,12 @@ class DeleteGroup
      */
     public function purge(Group $group): void
     {
-        $fileIds = DB::transaction(function () use ($group): array {
+        $this->sweep($group, null);
+    }
+
+    private function sweep(Group $group, ?Member $admin): void
+    {
+        $fileIds = DB::transaction(function () use ($group, $admin): array {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->first();
             if ($locked === null) {
                 return []; // already deleted by a concurrent request
@@ -43,12 +44,16 @@ class DeleteGroup
 
             BoardSweep::holdBoards($groupId);
 
+            // After holdBoards, because this read takes the snapshot (docs/internals/group-boards.md, "Tearing a group down").
+            if ($admin !== null && ! GroupMembership::isAdmin($locked, $admin)) {
+                throw new GroupActionException(GroupActionFailure::NotAdmin);
+            }
+
             $topics = DB::table('group_topics')->where('group_id', $groupId)->select('id');
             $events = DB::table('group_events')->where('group_id', $groupId)->select('id');
             $topicComments = DB::table('group_topic_comments')->whereIn('group_topic_id', $topics)->select('id');
             $eventComments = DB::table('group_event_comments')->whereIn('group_event_id', $events)->select('id');
 
-            // The transaction's first consistent read, so its snapshot is taken under the locks above.
             $fileIds = DB::table('files')
                 ->whereIn('id', DB::table('group_message_images')
                     ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
