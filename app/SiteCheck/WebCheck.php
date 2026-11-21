@@ -72,7 +72,7 @@ final class WebCheck
         }
     }
 
-    /** Safe to call twice, and from a signal handler between two steps of a run. */
+    /** Safe to call again, and from a signal handler at any point of a run or of this call. */
     public function cleanUp(): void
     {
         foreach ($this->written as $path) {
@@ -80,9 +80,10 @@ final class WebCheck
         }
         $this->written = [];
         $this->tokens = [];
-        $this->lock?->releaseLock();
-        $this->lock?->close();
+        $lock = $this->lock;
         $this->lock = null;
+        $lock?->releaseLock();
+        $lock?->close();
     }
 
     public static function probeSource(string $token, string $ownerFile): string
@@ -343,10 +344,11 @@ final class WebCheck
     {
         $path = $directory.'/'.$file;
         $token = $contents === null ? bin2hex(random_bytes(16)) : '';
+        // Listed before it exists, so a signal landing just after the write still has it removed.
+        $this->written[] = $path;
         if (! is_dir($directory) || @file_put_contents($path, $contents ?? $token, LOCK_EX) === false) {
             return null;
         }
-        $this->written[] = $path;
         $this->tokens[$path] = $token;
 
         return $token;
