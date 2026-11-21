@@ -364,6 +364,52 @@ run, or the owner file of a probe that outlived its fetch's timeout, are removed
 minutes old, so a running check's files are never taken for a misconfiguration.
 
 Where `openpne-data/` exists beside the release, the check takes it for a directory that must stay
-unserved even where a host serves the release's parent, and requires an `.htaccess` in it (its
-contents are not compared), mode 0700, and for MySQL the option file its dump reads, `mysql-backup.cnf`, at
-0600, with a schema-only dump through it that still succeeds.
+unserved even where a host serves the release's parent, and requires in it an `.htaccess` that is the
+release's top one byte for byte (what `openpne:setup` writes there), mode 0700, and for MySQL the option
+file its dump reads, `mysql-backup.cnf`, at 0600, with a schema-only dump through it that still succeeds.
+
+## Site setup
+
+`php artisan openpne:setup` is the questions-and-answers way in for a shared host: it writes a new
+site's `.env`, then runs `openpne:install`, `openpne:admin:create` and `openpne:member:invite`
+unchanged, waiting on `openpne:check`'s web part in between. It runs only on a terminal. Run again,
+it goes on from the first step not yet done: `openpne-data/`, `.env`, the MySQL option file,
+`APP_KEY`, an administrator, the web check. `openpne:install` runs every time, being a no-op on an
+installed site, except where an administrator exists and a migration has not run, which is a new
+version unpacked over a live site and stops the command; a failed `openpne:install` stops it too.
+
+Key invariants:
+
+1. **One run at a time for a site**: a lock on `storage/framework/openpne-setup.lock` is taken before
+   anything is read, and the run that wrote `.env` hands it to the run it starts on descriptor 3.
+   Once it is held, what a killed run left beside `.env` and in `openpne-data/` is removed.
+2. **`.env` is written only where none exists**, from `.env.example` with the answers and a new
+   `APP_KEY` set, through a file beside it at 0600 that is renamed into place once `Dotenv::parse`
+   reads every answer back. An answer `Env` or Dotenv would read otherwise (`true`, a quoted value,
+   `${`, a control character, `"` with `\` or `'`, a lone `"` right after `=`) is refused before it
+   is written. The later writes are `APP_KEY` and `TRUSTED_PROXIES`, each only while `.env` holds it
+   empty and through the same file beside it, the first never over a database that holds an
+   administrator and the second typed by the operator, never taken from what the web check saw;
+   every other key must read back unchanged. A `.env` without `APP_URL` or `DB_CONNECTION` is not
+   gone on with, and a database that holds an administrator already, a `database-<n>.sqlite` in
+   `openpne-data/` included, is not given a new `.env`.
+3. **The process that wrote `.env` does not go on with it**: it runs the command again through
+   `proc_open`, its environment stripped of the keys `.env` holds, and where `proc_open` is disabled
+   asks to be run again. Where the environment gives `APP_KEY`, `DB_URL` or a `DB_` connection key
+   otherwise than `.env`, which the web reads alone, it stops before the database is touched.
+4. **`openpne-data/`** is made beside the release, and on every run set to 0700 and given the
+   release's top `.htaccess` as the code holds it (through a file beside it), before anything goes
+   in, in place of any other and whether or not the top one is still in the
+   release; the SQLite database (made only where nothing has its name, a broken link included), the
+   MySQL option file (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it prints
+   writes `backup.sqlite` (`VACUUM INTO`) or `backup.sql` beside a `.new` copy moved over the last,
+   and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
+   allows, the same tool writes once into a 0600 file there, judged by a table read back from it,
+   and removed.
+5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway
+   included, as what it made is in the way of the next. Only where the database holds neither a
+   member nor an administrator does it say how to start over: in a new, empty database (for SQLite an
+   unused file name in `openpne-data/`), the one given left as it is. It never says to remove one, as
+   one given may hold another application's tables, and empties none itself.
+6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
+   the web's PHP running as this account.

@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\RunsWebCheck;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\Finding;
 use App\SiteCheck\InstalledCheck;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\Verdict;
-use App\SiteCheck\WebCheck;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /** See docs/internals/runtime.md, "Site check". */
 class CheckCommand extends Command
 {
+    use RunsWebCheck;
+
     protected $signature = 'openpne:check
         {--only= : before, installed or web}
         {--parent-url= : The address that shows the directory holding this site\'s directory}
@@ -62,20 +64,11 @@ class CheckCommand extends Command
                 $findings = [...$findings, ...$this->part('heading_installed', [], $check->run(...))];
             }
             if ($only === null || $only === 'web') {
-                $web = $this->laravel->make(WebCheck::class, ['layout' => $layout]);
-                // Laravel traps wherever pcntl is loaded, and fails where disable_functions holds what its trap calls.
-                if (function_exists('pcntl_signal') && function_exists('pcntl_signal_get_handler') && function_exists('pcntl_async_signals')) {
-                    $this->trap(fn (): array => [SIGINT, SIGTERM, SIGHUP], function (int $signal) use ($web): never {
-                        $web->cleanUp();
-                        exit(128 + $signal);
-                    });
-                }
                 $findings = [...$findings, ...$this->part(
                     'heading_web',
                     ['url' => InstalledCheck::shownUrl((string) config('app.url'))],
-                    fn (): array => $web->run($this->option('parent-url')),
+                    fn (): array => $this->runWebCheck($layout, $this->option('parent-url')),
                 )];
-                $this->untrap();
             }
         }
 
@@ -112,31 +105,44 @@ class CheckCommand extends Command
         $this->line('<options=bold>'.OutputFormatter::escape($this->say($heading, $replace)).'</>');
         $findings = $run();
         foreach ($findings as $finding) {
-            $tag = match ($finding->verdict) {
-                Verdict::Ok => '<info>[ OK ]</info>',
-                Verdict::Fail => '<error>[FAIL]</error>',
-                Verdict::Warn => '<comment>[WARN]</comment>',
-                Verdict::Unknown => '[ ?? ]',
-            };
-            $this->line('  '.$tag.' '.OutputFormatter::escape($this->say($finding->message, $finding->replace)));
+            $this->line('  '.self::render($finding, $this->locale));
         }
 
         return $findings;
     }
 
+    /** A finding's line, tagged and escaped for the console. */
+    public static function render(Finding $finding, string $locale): string
+    {
+        $tag = match ($finding->verdict) {
+            Verdict::Ok => '<info>[ OK ]</info>',
+            Verdict::Fail => '<error>[FAIL]</error>',
+            Verdict::Warn => '<comment>[WARN]</comment>',
+            Verdict::Unknown => '[ ?? ]',
+        };
+
+        return $tag.' '.OutputFormatter::escape(self::translate('check.'.$finding->message, $finding->replace, $locale));
+    }
+
     /**
-     * Placeholders are filled here rather than by the translator, whose term substitution would read
-     * the database for any `%` a path brings, before a site has one.
+     * A line of lang/{locale}/console.php. Placeholders are filled here rather than by the translator,
+     * whose term substitution would read the database for any `%` a path brings, before a site has one.
      *
      * @param  array<string, string|int>  $replace
      */
-    private function say(string $key, array $replace = []): string
+    public static function translate(string $key, array $replace, string $locale): string
     {
         $pairs = [];
         foreach ($replace as $name => $value) {
             $pairs[':'.$name] = (string) $value;
         }
 
-        return strtr((string) __('console.check.'.$key, [], $this->locale), $pairs);
+        return strtr((string) __('console.'.$key, [], $locale), $pairs);
+    }
+
+    /** @param array<string, string|int> $replace */
+    private function say(string $key, array $replace = []): string
+    {
+        return self::translate('check.'.$key, $replace, $this->locale);
     }
 }

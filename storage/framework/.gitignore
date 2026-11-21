@@ -5,6 +5,7 @@ events.scanned.php
 image-fast-path.json*
 maintenance.php
 openpne-check.lock
+openpne-setup.lock
 routes.php
 routes.scanned.php
 schedule-*
