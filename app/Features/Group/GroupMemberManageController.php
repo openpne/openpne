@@ -59,6 +59,7 @@ class GroupMemberManageController extends Controller
                 'members' => GroupSerializer::memberPaginator($members),
                 'viewerRole' => $role?->slug(),
                 'pendingAdminId' => $found->pending_admin_member_id,
+                'openSections' => GroupPlace::openSections($found, $this->viewer()),
             ]),
         ]);
     }

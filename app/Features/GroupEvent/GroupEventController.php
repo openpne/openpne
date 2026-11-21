@@ -3,6 +3,7 @@
 namespace App\Features\GroupEvent;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Group\GroupPlace;
 use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\GroupEvent\Actions\CreateEvent;
 use App\Features\GroupEvent\Actions\DeleteEvent;
@@ -85,6 +86,7 @@ class GroupEventController extends Controller
                 'group' => GroupSerializer::summary($group),
                 'events' => GroupEventSerializer::paginator($events),
                 'canPost' => $canPost,
+                'openSections' => GroupPlace::openSections($group, $viewer),
             ]),
         ]);
     }
@@ -138,6 +140,7 @@ class GroupEventController extends Controller
                     'isParticipant' => $found->isParticipant($viewer),
                     'rosterOpen' => ! $found->isClosed() && ! $found->isExpired(),
                     'isFull' => $found->isFull(),
+                    'openSections' => GroupPlace::openSections($found->group, $viewer),
                 ]);
             },
         ]);
@@ -263,6 +266,7 @@ class GroupEventController extends Controller
                     'group' => GroupSerializer::summary($event->group),
                     'event' => GroupEventSerializer::detail($event, $viewer, []),
                     'participants' => GroupEventSerializer::participantPaginator($participants),
+                    'openSections' => GroupPlace::openSections($event->group, $viewer),
                 ]);
             },
         ]);

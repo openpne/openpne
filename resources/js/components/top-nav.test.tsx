@@ -21,7 +21,7 @@ vi.mock('@inertiajs/react', () => ({
             {children}
         </a>
     ),
-    router: { visit: () => {} },
+    router: { visit: () => {}, on: () => () => {} },
 }));
 
 afterEach(cleanup);
@@ -147,7 +147,7 @@ test('a hub is the mark and the section it stands on', () => {
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
 });
 
-test('a deep page carries the place it is inside, as something to press', () => {
+test("a deep page inside a group names the group, as the way to the group's sections", () => {
     const chrome = arrive('group/topic/show', '/topics/3', {
         group: { id: 7, name: 'Cyclists', imageUrl: null },
     });
@@ -155,10 +155,14 @@ test('a deep page carries the place it is inside, as something to press', () => 
     renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
-    expect(screen.getByRole('link', { name: 'Cyclists' }).getAttribute('href')).toBe('/groups/7');
+    expect(screen.getByRole('button', { name: 'Cyclists' }).getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
+    // Nothing sits between the mark and the name.
+    expect(document.querySelector('header')?.textContent).not.toContain('›');
     // No back control: swipe, the browser and the mark are the ways out.
     expect(screen.queryByRole('link', { name: 'Back' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });
 
 test('a place top speaks the home grammar — no crumb over its own hero', () => {
@@ -172,6 +176,7 @@ test('a place top speaks the home grammar — no crumb over its own hero', () =>
 
     expect(screen.getByText('Test SNS')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Cyclists' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cyclists' })).toBeNull();
     // The brand link reads by the visible site name, not a doubled "Home" label.
     expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
 });

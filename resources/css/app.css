@@ -141,6 +141,30 @@
     }
 }
 
+/* PopoverContent's `fade`. Radix holds the panel mounted until the exit ends. */
+@theme {
+    --animate-fade-in: fade-in 0.15s ease-out;
+    --animate-fade-out: fade-out 0.1s ease-in forwards;
+
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes fade-out {
+        from {
+            opacity: 1;
+        }
+        to {
+            opacity: 0;
+        }
+    }
+}
+
 /* Every utility below is registered in lib/utils.ts, so cn() merges it like the built-in one it extends. */
 @utility pt-safe {
     padding-top: env(safe-area-inset-top);

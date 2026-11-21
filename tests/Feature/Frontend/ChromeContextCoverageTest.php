@@ -9,8 +9,8 @@ use Tests\TestCase;
 
 /**
  * Every Modern component routed from app/ (Inertia::render or the slash-form screen() helper) must
- * either build a context crumb in its member-chrome.ts entry or be listed in NO_CONTEXT_COMPONENTS.
- * auth/* pages render outside MemberFrame and are exempt.
+ * either say where it stands in its member-chrome.ts entry (a context trail or a place scope) or be
+ * listed in NO_CONTEXT_COMPONENTS. auth/* pages render outside MemberFrame and are exempt.
  */
 class ChromeContextCoverageTest extends TestCase
 {
@@ -33,7 +33,7 @@ class ChromeContextCoverageTest extends TestCase
         $this->assertSame(
             [],
             $unclassified,
-            'Component(s) with no crumb classification — add a `context:` entry to '
+            'Component(s) that say nowhere they stand — add a `context:` or `scope:` entry to '
             .'member-chrome.ts (directly or via a *Context( helper) or list in NO_CONTEXT_COMPONENTS: '
             .implode(', ', $unclassified),
         );
@@ -107,13 +107,13 @@ class ChromeContextCoverageTest extends TestCase
         return $literals[1];
     }
 
-    /** The component's registry entry (HUB_CHROME or STATIC_CHROME) builds a context crumb. */
+    /** The component's registry entry (HUB_CHROME or STATIC_CHROME) builds a context trail or a place scope. */
     private function hasContext(string $chrome, string $component): bool
     {
         $slice = $this->entrySlice($chrome, $component);
 
         return $slice !== null
-            && (str_contains($slice, 'context:') || preg_match('/\bContext\(/', $slice) === 1 || str_contains($slice, 'CONFIG_CONTEXT'));
+            && (str_contains($slice, 'context:') || str_contains($slice, 'scope:') || preg_match('/\bContext\(/', $slice) === 1 || str_contains($slice, 'CONFIG_CONTEXT'));
     }
 
     /**

@@ -5,6 +5,8 @@ import {
     breadcrumbCrumb,
     chromeRecedes,
     hasBottomNav,
+    hasPlaceBar,
+    headerOf,
     isHomeComponent,
     isIssueDay,
     isPlaceTop,
@@ -159,6 +161,8 @@ test('the diary hub drops the friend tab while friends are off', () => {
 
 const owner = { id: 1, name: 'Owner', imageUrl: '/f/1', avatarColor: '#123456', isAi: false };
 
+const cyclists = { id: 7, name: 'Cyclists', imageUrl: null };
+
 test("the owner's diary archive carries the same tab strip", () => {
     const props = { owner, isOwner: true };
 
@@ -273,17 +277,27 @@ test('a month of issues is titled as a hub, its h1 seen at desk width alone', ()
     assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issues'));
 });
 
-test('a community-scoped page is scoped to the group', () => {
+test('a community-scoped page is scoped to the group, in the section it stands in', () => {
     const group = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
+    const openSections = { talk: true, topic: true, event: false };
 
-    assert.deepEqual(chrome('group/topic/index', { group, canPost: true }).scope, {
+    assert.deepEqual(chrome('group/topic/index', { group, canPost: true, openSections }).scope, {
         kind: 'group',
         id: 7,
         name: 'Cyclists',
         imageUrl: '/f/7',
+        section: 'topic',
+        open: openSections,
     });
     // The image is optional data, not an optional field: a group without one still scopes.
     assert.equal(chrome('community/members', { group: { ...group, imageUrl: null } }).scope?.imageUrl, null);
+});
+
+test('a page that does not say which boards are open offers none of them', () => {
+    const scope = chrome('community/members', { group: cyclists }).scope;
+
+    assert.equal(scope?.kind, 'group');
+    assert.deepEqual(scope?.kind === 'group' ? scope.open : null, { talk: false, topic: false, event: false });
 });
 
 test("another member's list is scoped to that member", () => {
@@ -304,8 +318,6 @@ test("the viewer's own hub has no scope", () => {
     assert.equal(hub.mode, 'section');
     assert.equal(hub.scope, undefined);
 });
-
-const cyclists = { id: 7, name: 'Cyclists', imageUrl: null };
 
 /**
  * Every screen the registry classifies as a form. The flag is a behavior contract — chrome that
@@ -467,24 +479,58 @@ test('the Messages hub starts a message the way every other hub starts its own t
     assert.equal(hub.tabs, undefined);
 });
 
-const CYCLISTS_PLACE = { label: 'Cyclists', href: '/groups/7' };
 const OWNER_PLACE = { label: 'Owner', href: '/member/1' };
 
 /**
  * Where the header says a member is standing, enumerated rather than sampled: a screen resolving to
  * the wrong place would carry the reader out of the space they are in.
  */
+const GROUP_PLACES: { component: string; props: Record<string, unknown>; section: string }[] = [
+    { component: 'group/talk/index', props: { group: cyclists }, section: 'talk' },
+    { component: 'group/topic/index', props: { group: cyclists, canPost: false }, section: 'topic' },
+    { component: 'group/topic/show', props: { group: cyclists }, section: 'topic' },
+    { component: 'group/event/index', props: { group: cyclists, canPost: false }, section: 'event' },
+    { component: 'group/event/show', props: { group: cyclists }, section: 'event' },
+    { component: 'group/event/members', props: { group: cyclists, event: { id: 3, name: 'Ride' } }, section: 'event' },
+    { component: 'community/members', props: { group: cyclists }, section: 'members' },
+    { component: 'community/manage', props: { group: cyclists }, section: 'members' },
+    { component: 'community/pending', props: { group: cyclists }, section: 'members' },
+];
+
+const header = (component: string, props: Record<string, unknown>, guest = false) =>
+    headerOf(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest });
+
+test('every screen inside a group heads with the group and the section it stands in', () => {
+    for (const { component, props, section } of GROUP_PLACES) {
+        const answer = header(component, props);
+
+        assert.equal(answer.type, 'place', component);
+        assert.equal(answer.type === 'place' && answer.scope.kind === 'group' ? `${answer.scope.id}:${answer.scope.section}` : null, `7:${section}`, component);
+        // The bar names the group on its own, so the registry keeps no trail of its name to say it twice.
+        assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).context, undefined, component);
+        assert.ok(!NO_CONTEXT_COMPONENTS.includes(component), component);
+        assert.ok(hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
+    }
+});
+
+test('a form inside a group keeps its static trail rather than the place header', () => {
+    assert.equal(header('community/edit', { group: cyclists }).type, 'trail');
+    assert.equal(header('group/topic/edit', { group: cyclists, topic: null }).type, 'trail');
+});
+
+test("home, a day's issue and a place's top keep the brand header, and stand no place bar", () => {
+    for (const [component, props] of [
+        ['home/issue', {}],
+        ['home/archive', { issue: { monthHref: '/home/2026/08' } }],
+        ['group/show', { group: cyclists }],
+        ['member/show', { profile: owner }],
+    ] as const) {
+        assert.deepEqual(header(component, props), { type: 'brand' }, component);
+        assert.ok(!hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
+    }
+});
+
 const PLACE_FIXTURES: { component: string; props: Record<string, unknown>; place: { label: string; href: string } }[] = [
-    // Scoped to the group: everything under a group top.
-    { component: 'group/talk/index', props: { group: cyclists }, place: CYCLISTS_PLACE },
-    { component: 'group/topic/index', props: { group: cyclists, canPost: false }, place: CYCLISTS_PLACE },
-    { component: 'group/topic/show', props: { group: cyclists }, place: CYCLISTS_PLACE },
-    { component: 'group/event/index', props: { group: cyclists, canPost: false }, place: CYCLISTS_PLACE },
-    { component: 'group/event/show', props: { group: cyclists }, place: CYCLISTS_PLACE },
-    { component: 'group/event/members', props: { group: cyclists, event: { id: 3, name: 'Ride' } }, place: CYCLISTS_PLACE },
-    { component: 'community/members', props: { group: cyclists }, place: CYCLISTS_PLACE },
-    { component: 'community/manage', props: { group: cyclists }, place: CYCLISTS_PLACE },
-    { component: 'community/pending', props: { group: cyclists }, place: CYCLISTS_PLACE },
     // Scoped to a member: a page about somebody else.
     { component: 'diary/show', props: { diary: { author: owner } }, place: OWNER_PLACE },
     { component: 'diary/list', props: { owner, isOwner: false }, place: OWNER_PLACE },
@@ -508,7 +554,6 @@ test('every screen inside a place crumbs to that place', () => {
 });
 
 test('the breadcrumb claims the place a screen is inside, and it is pressable', () => {
-    assert.deepEqual(crumb('group/talk/index', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: true });
     assert.deepEqual(crumb('diary/show', { diary: { author: owner } }), { label: 'Owner', href: '/member/1', link: true });
 });
 

@@ -25,6 +25,7 @@ Object.defineProperty(window, 'scrollY', { configurable: true, get: () => y });
 
 afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
     y = 0;
     inertia.url = '/a';
     inertia.listeners = {};
@@ -126,3 +127,22 @@ test('a reload landing while the reader is down the page keeps their travel', as
     expect(direction()).toBe('up');
 });
 
+test('crossing lg brings the chrome back under the gate, wherever the reader had scrolled it', async () => {
+    const desk = { listeners: [] as Array<() => void> };
+    vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: false,
+        media: query,
+        addEventListener: (_type: string, listener: () => void) => desk.listeners.push(listener),
+        removeEventListener: (_type: string, listener: () => void) => {
+            desk.listeners = desk.listeners.filter((each) => each !== listener);
+        },
+    }));
+    render(<Probe />);
+    await touched();
+    await scrolled(400);
+    expect(direction()).toBe('down');
+
+    await act(() => desk.listeners.forEach((listener) => listener()));
+
+    expect(direction()).toBe('up');
+});

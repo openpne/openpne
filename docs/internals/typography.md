@@ -45,7 +45,7 @@ a missed migration.
 | `section` | 16px | a block within the content flow: a form section, a settings sub-section, a dialog title |
 | `minor` | 14px | a card's title band, a heading nested inside a section |
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
-| `bar` | 16px | the phone header's hub title and place pill, and the place bar's (chrome, outside the content ranks) |
+| `bar` | 16px | the phone header's hub title, place pill and group name, and the place bar's (chrome, outside the content ranks) |
 
 Two axes cross the ranks: `tone="destructive"` colors a danger page's title and group, and
 `divided` underlines a heading that opens a block — a settings section.

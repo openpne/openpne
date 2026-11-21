@@ -12,6 +12,7 @@ import {
     type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { DESK_QUERY } from '@/lib/desk-query';
 
 /**
  * The header's action slot is a portal rather than chrome data, because the button carries page
@@ -120,10 +121,10 @@ export function useComposeExitState(compose: boolean): ComposeExitState {
                 return;
             }
             // The same three conditions the class does (`max-lg:motion-safe:` on a compose column),
-            // asked of the platform rather than restated: 64rem is Tailwind's lg.
+            // asked of the platform rather than restated.
             const slides =
                 compose &&
-                !window.matchMedia('(min-width: 64rem)').matches &&
+                !window.matchMedia(DESK_QUERY).matches &&
                 !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
             if (!slides) {

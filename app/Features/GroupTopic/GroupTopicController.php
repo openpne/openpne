@@ -3,6 +3,7 @@
 namespace App\Features\GroupTopic;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Group\GroupPlace;
 use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\GroupTopic\Actions\CreateTopic;
 use App\Features\GroupTopic\Actions\DeleteTopic;
@@ -81,6 +82,7 @@ class GroupTopicController extends Controller
                 'group' => GroupSerializer::summary($group),
                 'topics' => GroupTopicSerializer::paginator($topics),
                 'canPost' => $canPost,
+                'openSections' => GroupPlace::openSections($group, $viewer),
             ]),
         ]);
     }
@@ -127,6 +129,7 @@ class GroupTopicController extends Controller
                     'reactionVocabulary' => ReactionVocabulary::all(),
                     'renderGeneration' => StreamProps::generation(),
                     'canEdit' => GroupTopicAccess::canEditTopic($found, $viewer),
+                    'openSections' => GroupPlace::openSections($found->group, $viewer),
                 ]);
             },
         ]);
