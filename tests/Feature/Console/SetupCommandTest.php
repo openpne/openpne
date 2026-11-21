@@ -36,8 +36,6 @@ class SetupCommandTest extends TestCase
 
     private const URL = 'https://sns.example.com';
 
-    private const HTACCESS = "RewriteEngine On\nRewriteRule ^ - [F]\n";
-
     private string $root;
 
     private SiteLayout $layout;
@@ -142,7 +140,7 @@ class SetupCommandTest extends TestCase
         $this->assertSame(32, strlen((string) base64_decode(substr((string) $env['APP_KEY'], strlen('base64:')), true)));
         $this->assertSame(0o600, fileperms($this->layout->envFile) & 0o777);
         $this->assertSame(0o700, fileperms($data) & 0o777);
-        $this->assertSame(self::HTACCESS, file_get_contents($data.'/.htaccess'));
+        $this->assertSame(SiteLayout::DENY, file_get_contents($data.'/.htaccess'));
 
         $this->assertCount(1, $this->hostState['spawned']);
         [$command, $environment, $lock] = $this->hostState['spawned'][0];
@@ -451,24 +449,24 @@ class SetupCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(0o700, fileperms($this->layout->dataDirectory()) & 0o777);
-        $this->assertSame(self::HTACCESS, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
+        $this->assertSame(SiteLayout::DENY, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
     }
 
-    public function test_a_data_directory_htaccess_is_kept_where_the_top_one_was_removed(): void
+    public function test_a_data_directory_htaccess_that_does_not_deny_is_replaced_where_the_top_one_was_removed(): void
     {
         $this->withEnv();
         $this->fakeWeb();
         $this->fakeTools();
         AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
         mkdir($this->layout->dataDirectory(), 0o700);
-        file_put_contents($this->layout->dataDirectory().'/.htaccess', self::HTACCESS);
+        file_put_contents($this->layout->dataDirectory().'/.htaccess', "RewriteEngine On\n");
         unlink($this->layout->base.'/.htaccess');
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->assertSuccessful();
 
-        $this->assertSame(self::HTACCESS, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
+        $this->assertSame(SiteLayout::DENY, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
     }
 
     /** @return array<string, array{Closure(Blueprint): mixed, string}> */
@@ -502,6 +500,7 @@ class SetupCommandTest extends TestCase
             $this->runSetup()
                 ->expectsOutputToContain('Creating them failed')
                 ->expectsOutputToContain('Nobody has registered yet')
+                ->doesntExpectOutputToContain('remove')
                 ->assertFailed();
         } finally {
             // MySQL commits a table made inside the test's transaction.
@@ -509,18 +508,19 @@ class SetupCommandTest extends TestCase
         }
     }
 
-    public function test_a_sqlite_file_this_command_did_not_make_is_never_said_to_be_removed(): void
+    public function test_a_sqlite_start_over_is_into_an_unused_file_with_the_one_given_left_as_it_is(): void
     {
         $this->withEnv();
         if (config('database.connections.'.$this->connection.'.driver') !== 'sqlite') {
             $this->markTestSkipped('The file is the SQLite database\'s.');
         }
-        config(['database.connections.'.$this->connection.'.database' => $this->root.'/elsewhere.sqlite']);
+        mkdir($this->layout->dataDirectory(), 0o700);
+        touch($this->layout->dataDirectory().'/database-2.sqlite');
         $this->migration("throw new RuntimeException('stopped');");
 
         $this->runSetup()
-            ->expectsOutputToContain('Creating them failed')
-            ->doesntExpectOutputToContain('Nobody has registered yet')
+            ->expectsOutputToContain('put '.$this->layout->dataDirectory().'/database-3.sqlite in .env as DB_DATABASE, then run this command again. '.$this->layout->dataDirectory().'/database.sqlite is left as it is.')
+            ->doesntExpectOutputToContain('remove')
             ->assertFailed();
     }
 
@@ -836,7 +836,7 @@ class SetupCommandTest extends TestCase
             'storage/framework/sessions', 'storage/framework/views', 'storage/logs', 'tools'] as $directory) {
             mkdir($base.'/'.$directory, 0o755, true);
         }
-        file_put_contents($base.'/.htaccess', self::HTACCESS);
+        file_put_contents($base.'/.htaccess', SiteLayout::DENY);
         $this->layout = new SiteLayout($base, $base.'/public', $base.'/storage', $base.'/bootstrap/cache', $base.'/.env');
         $this->app->instance(SiteLayout::class, $this->layout);
     }
@@ -882,7 +882,7 @@ class SetupCommandTest extends TestCase
         putenv("{$key}={$value}");
     }
 
-    /** A migration not yet recorded, run by openpne:install before the site's own. */
+    /** A migration named after the site's own, left the one openpne:install has to run. */
     private function migration(string $up): void
     {
         $migrations = $this->root.'/migrations';

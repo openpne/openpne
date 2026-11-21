@@ -7,6 +7,7 @@ namespace App\SiteCheck;
 use Database\Seeders\InstallSeeder;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -136,9 +137,9 @@ final class InstalledCheck
 
         $mode = fileperms($directory) & 0o777;
         $findings = [
-            file_exists($directory.'/.htaccess')
+            is_file($directory.'/.htaccess') && is_readable($directory.'/.htaccess') && File::get($directory.'/.htaccess') === SiteLayout::DENY
                 ? Finding::ok('data.htaccess', 'data_htaccess')
-                : Finding::fail('data.htaccess', 'data_htaccess_missing', ['path' => $directory, 'base' => $this->layout->base]),
+                : Finding::fail('data.htaccess', 'data_htaccess_missing', ['path' => $directory]),
             ($mode & 0o077) === 0
                 ? Finding::ok('data.mode', 'data_mode')
                 : Finding::fail('data.mode', 'data_mode_open', ['mode' => sprintf('%o', $mode), 'path' => $directory]),

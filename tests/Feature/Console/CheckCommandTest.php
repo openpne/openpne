@@ -209,6 +209,11 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain($this->layout->dataDirectory().' is mode 755')
             ->assertFailed();
 
+        file_put_contents($this->layout->dataDirectory().'/.htaccess', "RewriteEngine On\n");
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain($this->layout->dataDirectory().'/.htaccess is missing or not the release\'s top .htaccess')
+            ->assertFailed();
+
         copy($this->layout->base.'/.htaccess', $this->layout->dataDirectory().'/.htaccess');
         chmod($this->layout->dataDirectory(), 0o700);
         // On the MySQL lane the option file is judged too, and its dump is not run.
@@ -681,7 +686,7 @@ class CheckCommandTest extends TestCase
     {
         file_put_contents($this->layout->envFile, "APP_ENV=production\n");
         chmod($this->layout->envFile, $mode);
-        file_put_contents($this->layout->base.'/.htaccess', "RewriteEngine On\nRewriteRule ^ - [F]\n");
+        file_put_contents($this->layout->base.'/.htaccess', SiteLayout::DENY);
     }
 
     /** An executable that leaves a mark if anything runs it. */

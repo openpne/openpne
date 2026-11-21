@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\SiteCheck\SiteLayout;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -37,6 +38,11 @@ final class HtaccessTest extends TestCase
     public function test_the_top_file_refuses_every_request_outside_any_if_module(): void
     {
         $this->assertSame(['RewriteEngine On', 'RewriteRule ^ - [F]'], $this->lines('.htaccess'));
+    }
+
+    public function test_openpne_data_is_given_the_top_file_as_it_is(): void
+    {
+        $this->assertSame(file_get_contents(dirname(__DIR__, 2).'/.htaccess'), SiteLayout::DENY);
     }
 
     public function test_public_sends_a_request_for_an_existing_directory_to_index_php(): void

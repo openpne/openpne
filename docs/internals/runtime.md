@@ -364,9 +364,9 @@ run, or the owner file of a probe that outlived its fetch's timeout, are removed
 minutes old, so a running check's files are never taken for a misconfiguration.
 
 Where `openpne-data/` exists beside the release, the check takes it for a directory that must stay
-unserved even where a host serves the release's parent, and requires an `.htaccess` in it (its
-contents are not compared; `openpne:setup` copies the release's top one there), mode 0700, and for MySQL the option file its dump reads, `mysql-backup.cnf`, at
-0600, with a schema-only dump through it that still succeeds.
+unserved even where a host serves the release's parent, and requires in it an `.htaccess` that is the
+release's top one as it is (what `openpne:setup` writes there), mode 0700, and for MySQL the option
+file its dump reads, `mysql-backup.cnf`, at 0600, with a schema-only dump through it that still succeeds.
 
 ## Site setup
 
@@ -397,17 +397,16 @@ Key invariants:
    asks to be run again. Where the environment gives `APP_KEY`, `DB_URL` or a `DB_` connection key
    otherwise than `.env`, which the web reads alone, it stops before the database is touched.
 4. **`openpne-data/`** is made beside the release, and on every run set to 0700 and given the
-   release's top `.htaccess` (through a file beside it, kept where the top one was removed) before
-   anything goes in; the SQLite database,
-   the MySQL option file (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it
-   prints writes `backup.sqlite` (`VACUUM INTO`) or `backup.sql` beside a `.new` copy moved over the
+   release's top `.htaccess` as the code holds it, in place of whatever else is there and whether or
+   not the top one is still in the release (through a file beside it), before anything goes in; the SQLite database, the MySQL option file
+   (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it prints writes `backup.sqlite` (`VACUUM INTO`) or `backup.sql` beside a `.new` copy moved over the
    last, and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
    allows, the same tool writes once into a 0600 file there, judged by a table read back from it,
    and removed.
 5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway
    included, as what it made is in the way of the next. Only where the database holds neither a
-   member nor an administrator does it say how to start over: removing the SQLite file where it is
-   the one in `openpne-data/`, otherwise a new, empty MySQL database, as one given may hold another
-   application's tables. It empties no database itself.
+   member nor an administrator does it say how to start over: in a new, empty database (for SQLite an
+   unused file name in `openpne-data/`), the one given left as it is. It never says to remove one, as
+   one given may hold another application's tables, and empties none itself.
 6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
    the web's PHP running as this account.

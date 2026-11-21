@@ -13,6 +13,15 @@ final class SiteLayout
 
     public const MYSQL_OPTION_FILE = 'mysql-backup.cnf';
 
+    public const DENY = <<<'HTACCESS'
+        # Refuses every request when a document root is this directory, or holds it, rather than being public/
+        # (docs/internals/runtime.md, "Apache .htaccess files").
+        # Not wrapped in <IfModule>: without mod_rewrite Apache answers 500 rather than handing out the files.
+        RewriteEngine On
+        RewriteRule ^ - [F]
+
+        HTACCESS;
+
     public function __construct(
         public readonly string $base,
         public readonly string $public,

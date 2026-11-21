@@ -234,16 +234,15 @@ class SetupCommand extends Command
             $this->output->write($install->fetch());
             $this->say('install_failed', [], 'error');
             $nobody = $this->nobodyYet();
-            // Removing is said only of the file this command made: a database given may hold another application's tables.
+            // Never to remove one: a database given may hold another application's tables.
             $guide = match (true) {
                 $nobody === null => null,
                 ! $nobody => 'install_keep',
-                $driver !== 'sqlite' => 'install_restart_mysql',
-                ($settings['database'] ?? null) === $this->layout->dataDirectory().'/database.sqlite' => 'install_restart_sqlite',
-                default => null,
+                $driver === 'sqlite' => 'install_restart_sqlite',
+                default => 'install_restart_mysql',
             };
             if ($guide !== null) {
-                $this->say($guide, ['path' => (string) ($settings['database'] ?? '')]);
+                $this->say($guide, ['path' => (string) ($settings['database'] ?? ''), 'new' => $driver === 'sqlite' ? $this->unusedSqliteFile() : '']);
             }
 
             return self::FAILURE;
@@ -493,21 +492,15 @@ class SetupCommand extends Command
         }
 
         $htaccess = $directory.'/.htaccess';
-        $top = $this->layout->base.'/.htaccess';
-        // A release whose top copy was removed, its docroot being public/, keeps the one made from it.
-        if (! is_file($top) && is_file($htaccess) && filesize($htaccess) > 0) {
-            return;
-        }
         $temp = null;
         try {
-            $deny = File::get($top);
-            if (is_file($htaccess) && File::get($htaccess) === $deny) {
+            if (is_file($htaccess) && File::get($htaccess) === SiteLayout::DENY) {
                 return;
             }
-            $temp = PrivateFile::temp($directory, '.htaccess.', $deny, 0o644);
+            $temp = PrivateFile::temp($directory, '.htaccess.', SiteLayout::DENY, 0o644);
             PrivateFile::rename($temp, $htaccess);
         } catch (Throwable) {
-            $this->say('data_htaccess_failed', ['path' => $htaccess, 'top' => $top], 'error');
+            $this->say('data_htaccess_failed', ['path' => $htaccess], 'error');
 
             throw new StopSetup;
         } finally {
@@ -545,6 +538,16 @@ class SetupCommand extends Command
             throw new StopSetup;
         }
         chmod($path, 0o600);
+    }
+
+    private function unusedSqliteFile(): string
+    {
+        $n = 2;
+        while (file_exists($this->layout->dataDirectory()."/database-{$n}.sqlite")) {
+            $n++;
+        }
+
+        return $this->layout->dataDirectory()."/database-{$n}.sqlite";
     }
 
     private function pendingMigrations(): int
