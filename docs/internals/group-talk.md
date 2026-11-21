@@ -543,14 +543,20 @@ Three asymmetries are deliberate:
   once and the gate sees only reads that landed before the post ([runtime.md](runtime.md#queue)).
 
 **One feed row per room.** The broadcast writes the room's row, not the message's: once the new row is
-written, [`KeepOneGroupTalkRoomRow`](../../app/Listeners/GroupTalk/KeepOneGroupTalkRoomRow.php) deletes
-the room's other rows of that kind, read ones included, so the feed holds one line per conversation
-however much is said in it while the device is still nudged for each message (push follows the
-`database` send). Reading the room marks that row read — every path through
+written, [`KeepOneGroupTalkRoomRow`](../../app/Listeners/GroupTalk/KeepOneGroupTalkRoomRow.php) keeps
+the row of the room's newest message and deletes the rest of that kind, read ones included, so the
+feed holds one line per conversation however much is said in it while the device is still nudged for
+each message (push follows the `database` send). Reading the room marks that row read — every path through
 [`MarkTalkRead`](../../app/Features/GroupTalk/Actions/MarkTalkRead.php), the page's report, the digest
 catch-up and MCP alike, plus posting into the room — so on an `all` site the bell and the rooms badge
 light and clear together. Deleting only after the insert is what makes a lost listener or a vetoed
-send harmless; two messages landing at once can briefly leave two rows, and the next one settles it.
+send harmless. The rank is read off the rows alone — the message id each carries, then the row's
+own id — never off which delivery is running: two workers delivering to one member at once can each
+see both rows, and each keeping its own would delete the other's and leave none. With one rank every
+delivery spares the same row, even one whose own row loses, so an older message delivered late adds
+nothing. The message id stands in for posting time because only messages posted on this install are
+broadcast; a row's `created_at` is when it was delivered, and its random id would settle a same-second
+tie by chance.
 
 An author who withdraws before delivery takes the queued notification with them
 (`deleteWhenMissingModels`): "Withdrawn member mentioned you" is a notification nobody can act on.
@@ -831,8 +837,8 @@ role once per request and the serializer asks it per row.
    composer's picker, and the MCP reply, where the server itself builds the prefix and its range.
    What a producer may name and what the write will accept are the same set, by construction.
 9. A mention pierces mute; the per-message broadcast does not, and a block stops both. Talk history
-   does neither, and neither do its images. One broadcast row per room stands at a time (two
-   messages landing at once can briefly leave two, which the next settles), and reading the room
+   does neither, and neither do its images. One broadcast row per room stands once its deliveries
+   finish — the newest message's, by a rank every delivery computes alike — and reading the room
    reads it.
 10. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
 11. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one

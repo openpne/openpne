@@ -389,6 +389,28 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         $this->assertSame('three', GroupMessage::find($rows->first()->data['message_id'])->body);
     }
 
+    /** Delivered in reverse, as a second worker can: the late row is written and then gives way. */
+    public function test_an_older_message_delivered_late_leaves_the_newer_messages_row(): void
+    {
+        $this->notifyEveryMessage();
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $reader = $this->joined($group);
+        $older = $this->message($group, $author, 'older');
+        $newer = $this->message($group, $author, 'newer');
+
+        $written = 0;
+        DatabaseNotification::created(function () use (&$written): void {
+            $written++;
+        });
+
+        $this->broadcast($newer);
+        $this->broadcast($older);
+
+        $this->assertSame(2, $written);
+        $this->assertSame('newer', GroupMessage::find($this->roomRows($reader, $group)->sole()->data['message_id'])->body);
+    }
+
     public function test_a_second_room_keeps_its_own_row(): void
     {
         $this->notifyEveryMessage();
@@ -512,7 +534,7 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         $rows = app(GroupTalkRoomNotificationRows::class);
         $this->app->instance(GroupTalkRoomNotificationRows::class, new class extends GroupTalkRoomNotificationRows
         {
-            public function deleteOthers(int $memberId, int $groupId, string $keepId): void
+            public function keepNewest(int $memberId, int $groupId): void
             {
                 throw new RuntimeException('the feed is unavailable');
             }

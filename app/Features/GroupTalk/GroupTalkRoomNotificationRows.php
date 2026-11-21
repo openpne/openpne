@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 /**
  * `data` is a TEXT column and no index covers `type`, so the SQL narrows by the notifiable index and
  * the group is matched in PHP. `markRead()` runs in a request, and inside the posting transaction,
- * so it reads only unread rows; `deleteOthers()` needs the read ones too and runs in the queued job.
+ * so it reads only unread rows; `keepNewest()` needs the read ones too and runs in the queued job.
  */
 class GroupTalkRoomNotificationRows
 {
@@ -30,13 +30,20 @@ class GroupTalkRoomNotificationRows
     }
 
     /**
-     * Run after the new row is written, so a lost listener or a vetoed send can never leave the
-     * member with nothing.
+     * Run after the new row is written, so a lost listener or a vetoed send can never leave the member
+     * with nothing. The rank is read off the rows alone, so racing deliveries all spare the same one
+     * (docs/internals/group-talk.md, "What talk notifies").
      */
-    public function deleteOthers(int $memberId, int $groupId, string $keepId): void
+    public function keepNewest(int $memberId, int $groupId): void
     {
-        $ids = $this->rowsFor($memberId, $groupId)
-            ->reject(static fn (DatabaseNotification $row): bool => $row->getKey() === $keepId)
+        $rows = $this->rowsFor($memberId, $groupId);
+        $newest = $rows
+            ->sort(static fn (DatabaseNotification $a, DatabaseNotification $b): int => self::messageId($a) <=> self::messageId($b)
+                ?: strcmp($a->getKey(), $b->getKey()))
+            ->last();
+
+        $ids = $rows
+            ->reject(static fn (DatabaseNotification $row): bool => $row->is($newest))
             ->map(static fn (DatabaseNotification $row): string => $row->getKey())
             ->all();
 
@@ -54,5 +61,10 @@ class GroupTalkRoomNotificationRows
         if ($ids !== []) {
             DatabaseNotification::query()->whereKey($ids)->update(['read_at' => now()]);
         }
+    }
+
+    private static function messageId(DatabaseNotification $row): int
+    {
+        return (int) ($row->data['message_id'] ?? 0);
     }
 }
