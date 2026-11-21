@@ -70,26 +70,25 @@ test("a guest's place top is the home grammar, ending in the way in rather than 
     expect(screen.queryByRole('link', { name: 'Owner' })).toBeNull();
 });
 
-test("a guest's entry page crumbs to the author's entries, never to the author's page", () => {
+test("a guest inside an author's place is told whose it is, and nothing in the bar opens it", () => {
     const author = { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false };
-    const chrome = arrive('diary/show', '/diary/3', { auth: { user: null }, diary: { author } });
 
-    renderWithProviders(<TopNav chrome={chrome} />);
+    for (const [component, url, props] of [
+        ['diary/show', '/diary/3', { diary: { author } }],
+        ['diary/list', '/diary/listMember/9', { owner: author, isOwner: false }],
+    ] as const) {
+        const chrome = arrive(component, url, { auth: { user: null }, ...props });
 
-    expect(screen.getByRole('link', { name: "Owner's %diary%" }).getAttribute('href')).toBe('/diary/listMember/9');
-    expect(document.querySelector('a[href="/member/9"]')).toBeNull();
-    expect(screen.getByRole('link', { name: 'Log In' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
-});
+        renderWithProviders(<TopNav chrome={chrome} />);
 
-test("a guest's crumb to a page behind the login wall is text", () => {
-    const owner = { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false };
-    const chrome = arrive('diary/list', '/diary/listMember/9', { auth: { user: null }, owner, isOwner: false });
-
-    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
-
-    expect(container.textContent).toContain('Owner');
-    expect(screen.queryByRole('link', { name: 'Owner' })).toBeNull();
+        expect(document.querySelector('header')?.textContent, component).toContain('Owner');
+        expect(screen.queryByRole('button', { name: 'Owner' }), component).toBeNull();
+        expect(document.querySelector('header a[href*="9"]'), component).toBeNull();
+        // The way in is drawn once more, unseen, to hold the column across from it; only one is a link.
+        expect(screen.getAllByRole('link', { name: 'Log In' }), component).toHaveLength(1);
+        expect(screen.queryByRole('button', { name: 'Menu' }), component).toBeNull();
+        cleanup();
+    }
 });
 
 /**
@@ -163,6 +162,17 @@ test("a deep page inside a group names the group, as the way to the group's sect
     expect(screen.queryByRole('link', { name: 'Back' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
+});
+
+test("a deep page inside another member's place names them, as the way to their sections", () => {
+    const author = { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false };
+    const chrome = arrive('diary/show', '/diary/3', { diary: { author } });
+
+    renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(screen.getByRole('button', { name: 'Owner' }).getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelector('header a[href="/member/9"]')).toBeNull();
+    expect(document.querySelector('header')?.textContent).not.toContain('›');
 });
 
 test('a place top speaks the home grammar — no crumb over its own hero', () => {

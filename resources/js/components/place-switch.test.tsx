@@ -10,14 +10,17 @@ vi.mock('@/lib/i18n', () => ({ useT: () => fakeT }));
 
 // The tiles are the router's links; the stand-in keeps the anchor and lets a test see whether the
 // click was let through as a visit.
+const ALL_ON = { diary: true, directMessage: true, timeline: true, group: true, groupTopic: true, groupEvent: true, groupTalk: true, friend: true, mcp: true };
+
 const inertia = vi.hoisted(() => ({
     component: 'group/talk/index',
+    enabledFeatures: {} as Record<string, boolean>,
     navigate: [] as (() => void)[],
     visits: [] as string[],
 }));
 
 vi.mock('@inertiajs/react', () => ({
-    usePage: () => ({ component: inertia.component, props: {} }),
+    usePage: () => ({ component: inertia.component, props: { enabledFeatures: inertia.enabledFeatures } }),
     Link: ({ href, children, onClick, ...rest }: { href: string; children?: ReactNode; onClick?: MouseEventHandler<HTMLAnchorElement> }) => (
         <a
             href={href}
@@ -51,6 +54,7 @@ const desk = vi.hoisted(() => ({ matches: false, listeners: [] as (() => void)[]
 
 beforeEach(() => {
     inertia.component = 'group/talk/index';
+    inertia.enabledFeatures = ALL_ON;
     inertia.visits = [];
     desk.matches = false;
     desk.listeners = [];
@@ -218,6 +222,24 @@ test('a board the viewer may not open is not offered', () => {
     renderWithProviders(<PlaceSwitch scope={cyclists('members', { talk: false, topic: false, event: false })} variant="phone" />);
 
     expect(within(openOn()).getAllByRole('link').map((link) => link.textContent)).toEqual(['Top page', 'Members']);
+});
+
+test("a member's sections follow the site's switches, and the screen marks the one it stands in", () => {
+    inertia.component = 'diary/show';
+    inertia.enabledFeatures = { ...ALL_ON, friend: false };
+    const owner: ChromeScope = { kind: 'member', id: 4, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false, section: 'diary' };
+    renderWithProviders(<PlaceSwitch scope={owner} variant="phone" />);
+
+    fireEvent.click(trigger());
+    const sections = screen.getByRole('dialog', { name: 'Owner' });
+
+    expect(within(sections).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+        '/member/4',
+        '/diary/listMember/4',
+        '/member/4/timeline',
+        '/groups/mine?id=4',
+    ]);
+    expect(within(sections).getByRole('link', { name: '%Diaries%' }).getAttribute('aria-current')).toBe('true');
 });
 
 test('the phone name and the desk name open apart: opening one leaves the other shut', () => {

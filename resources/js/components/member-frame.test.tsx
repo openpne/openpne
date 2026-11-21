@@ -120,24 +120,23 @@ test('a form says where it is without offering a way out of it', () => {
 });
 
 /** A guest's crumb is the phone bar's rule again at desk width: the author's entries, and no face standing for a page behind the login wall. */
-test("a guest's place bar leads to the author's entries, faceless", () => {
+test("a guest's place bar names the author, faceless and with nothing to press", () => {
     const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
     arrive('diary/show', { auth: { user: null }, diary: { author } });
 
-    const pill = screen.getByRole('link', { name: "Owner's %diary%" });
-    expect(placeBar()?.contains(pill)).toBe(true);
-    expect(pill.getAttribute('href')).toBe('/diary/listMember/9');
-    expect(placeBar()?.querySelector('img')).toBeNull();
-    expect(document.querySelector('a[href="/member/9"]')).toBeNull();
+    expect(placeBar()?.textContent).toBe('Owner');
+    expect(placeBar()?.querySelector('a, button, img')).toBeNull();
 });
 
-test("a member's place bar on the same entry is the author's page, with the face", () => {
+test("a member's place bar on the same entry opens the author's sections, with the face", () => {
     const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
     arrive('diary/show', { diary: { author } });
 
-    const pill = placeBar()?.querySelector('a');
-    expect(pill?.getAttribute('href')).toBe('/member/9');
-    expect(pill?.querySelector('img')?.getAttribute('src')).toBe('/img/owner.png');
+    const trigger = placeBar()?.querySelector('button');
+    expect(trigger?.textContent).toBe('Owner');
+    expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger?.querySelector('img')?.getAttribute('src')).toBe('/img/owner.png');
+    expect(placeBar()?.querySelector('a')).toBeNull();
 });
 
 test.each(['dashboard', 'notifications/index'])('%s is inside nothing, so no place bar stands over it', (component) => {

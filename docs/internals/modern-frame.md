@@ -22,8 +22,7 @@ the row.
 | A day's issue, latest or past | `[mark]` + the site name. Its band names the day and steps to the days either side, and its foot leads to the month, so a crumb above it would be a third way to the same places |
 | A hub | `[mark] › section`. The bar's copy of the title is hidden from assistive technology; the page's own h1 stays on screen and is its one announcement |
 | A month of issues | `[mark] › What happened`, as a hub reads, with no crumb: its band steps to the months either side and each day leads to its own page. The page opens on that band, so its h1 is kept for assistive technology and not drawn (`Chrome.deskHeading`) |
-| A screen inside a group | `[mark]`, then the group's name in the middle of the row, which opens the group's sections ("Place sections") |
-| A screen inside a member's place | `[mark] › place`, the place a pill that leads to its top |
+| A screen inside a group or a member's place | `[mark]`, then the place's name in the middle of the row, which opens its sections ("Place sections"). A conversation stands in its counterpart's place |
 | A screen inside no place, with a trail | `[mark] › trail`, the trail's last item a pill that leads to it |
 | A form | `[mark] › trail`, as static text |
 | A screen inside nothing, with no trail | `[mark]` alone |
@@ -42,9 +41,9 @@ Two decisions here are deliberate rather than pending:
 
 ## Place sections
 
-A group's sections are listed in [`lib/place-sections.ts`](../../resources/js/lib/place-sections.ts),
-and the registry entry of every screen inside a group, its forms aside, names the group and the
-section it stands in; the page itself declares nothing. Pressing the group's name opens its sections as tiles, the
+A group's and a member's sections are listed in [`lib/place-sections.ts`](../../resources/js/lib/place-sections.ts),
+and the registry entry of every screen inside a place, its forms aside, names the place and the
+section it stands in; the page itself declares nothing. Pressing the place's name opens its sections as tiles, the
 current one marked: `aria-current="page"` on the section's own list, `"true"` on a screen deeper
 inside it. The panel is modal: pressing outside it only closes it, even on a control the page
 keeps pressable over its content, and while it is open Tab stays inside and the page does not
@@ -59,6 +58,9 @@ scroll.
   the viewer may open them with their unit on (`GroupPlace::openSections`, the same answer the
   group page's own boxes take); the top and the members list always appear. A screen whose
   props say nothing lists no board.
+- **A member's sections follow the site's switches.** Diary, activity, groups and friends each
+  appear while their unit is on, and the top always does. A conversation stands in the
+  counterpart's place but in none of its sections, so no tile is marked.
 - **A screen with no section of its own** marks the nearest: the pending and management lists
   mark Members, an event's participants mark Events. The participants page leads to its event
   from the head of its body, the one level above it that the tiles do not offer.
@@ -100,8 +102,8 @@ off the phone's screen is drawn here.
 
 On a screen deep enough to be inside somewhere, a sticky place bar
 ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
-column: the phone header's crumb in the same pill, carrying the place's face. Inside a group, a form
-aside, the bar is the group's face and name, which open its sections. Home, a hub, a member's or a group's own
+column. Inside a place, a form aside, the bar is the place's face and name, which open its sections;
+elsewhere it is the phone header's crumb in the same pill. Home, a hub, a member's or a group's own
 page and anything the sidebar's own active row already names draw none. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
@@ -127,13 +129,11 @@ A guest gets the same frame with the member-only parts left out:
   the phone header, and in the sidebar at desk width.
 - A hub keeps its heading and drops its write action and every tab a guest cannot open. The
   diary hub keeps All, the way back from a search.
-- The crumb never takes the place tier, whose target is a member's page that may sit behind the
-  login wall. It is the trail's last item, and it is a link only where that target is open to a
-  guest (an entry's crumb to its author's entries, which lists the web-public ones); anywhere
-  else it is text. The place bar draws no face for a guest. Out of room, the crumb cuts the
-  name rather than the words around it, which say where it leads.
-- No link points at a member's page. An entry's byline leads to the author's entries, as its
-  crumb does, and a commenter's name is text.
+- Inside a place the header and the place bar name it as text, with no face and no sections to
+  open, since most of a member's sections, and their page unless it is web-public, sit behind
+  the login wall. A crumb anywhere else is text too.
+- No link points at a member's page. An entry's byline leads to the author's entries, and a
+  commenter's name is text.
 - A web-public profile is the member page with the heading and the profile fields alone
   ([member-profile.md](member-profile.md), "Key invariants").
 
