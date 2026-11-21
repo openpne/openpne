@@ -99,9 +99,10 @@ Differences from the admin posture, all deliberate:
   across several requests (enable, scan, confirm), so it verifies the password
   once and opens a short window (below) rather than re-asking per step. The
   admin's set-up is a single modal, so it demands the password **and** a code
-  inline with no window. Disabling and regenerating match the admin posture
-  directly: the account password **and** a second-factor proof, inline, every time — or,
-  for disabling, a passkey ("Member re-authentication").
+  inline with no window. Disabling and regenerating are inline every time, as the
+  admin's are: disabling takes the account password **and** a second-factor proof, or a
+  passkey; regenerating takes the password or a passkey, plus a current TOTP code
+  ("Member re-authentication").
 - **No "remember me" either.** A member stays signed in through the session
   itself ("Session lifetime"), which exists only after the challenge succeeds;
   the `member` guard issues and reads no recaller cookie.
@@ -311,7 +312,7 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   Moving a site to another domain orphans its passkeys (authenticators stop
   offering them; the rows stay and the password still works). The opaque user
   handle is an HMAC under `fortify.passkeys.user_handle_secret`, which is
-  `PASSKEYS_USER_HANDLE_SECRET`, or `APP_KEY` when that is unset; rotating the key
+  `PASSKEYS_USER_HANDLE_SECRET`, or `APP_KEY` when that is unset; rotating that secret
   leaves existing passkeys valid and only changes the handle new ones carry.
 - `credential_id` is stored at 512 characters under a binary collation on
   MySQL (base64url is case-sensitive). The WebAuthn maximum of 1023 bytes would
@@ -628,8 +629,8 @@ flows, password reset, and the email-change and MFA-reset landings — carries
 the baseline already withholds the path cross-origin, so what `no-referrer`
 closes is the same-origin channel — the landing's own subresources and
 follow-up requests, and `document.referrer`. It covers the responses the route
-returns; an abort (a 429 from the throttle) unwinds past it and ships
-the baseline.
+returns, an abort inside it included; a 429 from the throttle, which the middleware priority runs
+ahead of it, never reaches it and ships the baseline.
 
 Deliberately not set:
 
@@ -685,13 +686,14 @@ OpenPNE 3 never met them, so the GD processor reads the header first and rejects
 a source over [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php) —
 `OPENPNE_IMAGE_MAX_SOURCE_KB` bytes, a declared side over `max_upload_dimension`,
 or more declared pixels than `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` — without
-allocating anything. Left blank, both follow the upload rules (the larger of 20480 KB and the upload
-cap, and the per-side limit squared: 25 MP at the shipped 5000), so raising an upload limit
-raises them too. What this bounds is one decode at `max_source_pixels × 4` bytes,
+allocating anything. Left blank, the byte cap is the larger of 20480 KB and the upload cap, and the
+pixel cap is the per-side limit squared (25 MP at the shipped 5000), so neither falls below what an
+upload may be. What this bounds is one decode at `max_source_pixels × 4` bytes,
 100 MB at the shipped default; a host sized below that sets the pixel cap lower,
-and a stored image over it then yields no variant (a 404, or the generated icon —
-a verdict the cache disk keeps until the file is replaced or `openpne:image-cache warm
---retry-failed` / `rebuild` asks again);
+and a stored image over it then yields no variant (a 404, or the generated icon). The cache disk
+keeps a refused canonical, with the icons refused for it, until the file is replaced or
+`openpne:image-cache warm --retry-failed` / `rebuild` asks again, and an icon refused from a
+canonical that stands until the file is replaced or `rebuild`;
 an upload over it is refused as an upload, since its canonical is produced before
 the row is saved. An out-of-memory kill is not catchable, so
 this header check is the whole defence in the GD process; nothing serialises
