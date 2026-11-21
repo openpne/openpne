@@ -4,11 +4,7 @@ import { type Header, hasPlaceBar } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 
-/**
- * The phone header's middle again at desk width, standing only where that middle names something
- * other than the site (docs/internals/modern-frame.md, "Desk width"). It is a surface rather than a
- * pill floating on nothing — left transparent it took the clicks of everything that scrolled under it.
- */
+/** A surface rather than a pill floating on nothing, since left transparent it took the clicks of everything that scrolled under it. */
 export function PlaceBar({ header, action }: { header: Header; action?: ReactNode }) {
     if (!hasPlaceBar(header)) {
         return null;

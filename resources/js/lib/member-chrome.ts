@@ -654,7 +654,7 @@ export function headerOf(chrome: Chrome, { component, home, guest }: HeaderPage)
     return last ? { type: 'title', label: last.label, hub: false } : { type: 'none' };
 }
 
-/** The desk place bar stands wherever the phone header's middle names something other than the site (docs/internals/modern-frame.md, "Desk width"). */
+/** The desk place bar stands wherever `headerOf` names something other than the site, a compose sheet included though its phone header is its own (docs/internals/modern-frame.md, "Desk width"). */
 export function hasPlaceBar(header: Header): header is Extract<Header, { type: 'place' | 'title' }> {
     return header.type === 'place' || header.type === 'title';
 }

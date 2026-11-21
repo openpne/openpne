@@ -198,7 +198,6 @@ test("a member's place bar on the same entry opens the author's sections, with t
     expect(placeBar()?.querySelector('a')).toBeNull();
 });
 
-
 /**
  * The frame outlives the page under Inertia's persistent layout, so without the key a package's slot
  * would be written once per full load, not once per page as the OpenPNE 3 layout drew it.

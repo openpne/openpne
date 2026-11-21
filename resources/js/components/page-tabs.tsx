@@ -12,11 +12,7 @@ export type TabItem = {
     countLabel?: string;
 };
 
-/**
- * Navigation rather than a primary action, so it sits below the page heading and never in the
- * heading's action slot. 44px tall to match the heading row, so switching tabs does not shift the
- * layout.
- */
+/** Navigation rather than a primary action, so it never takes the action slot beside a heading or at the end of the place bar. */
 export function PageTabs({ ariaLabel, items }: { ariaLabel: string; items: TabItem[] }) {
     return (
         <nav className="flex gap-1 overflow-x-auto border-b border-border" aria-label={ariaLabel}>

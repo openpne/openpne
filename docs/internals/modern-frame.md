@@ -101,9 +101,10 @@ content column center as one block. A page under `pages/` takes no `lg:` or `max
 apart from the few listed in `eslint.config.js` that held one already: the frame and the shared
 components answer to the width.
 
-The phone header's middle stands again at the head of the content column as a sticky place bar
-([`PlaceBar`](../../resources/js/components/place-bar.tsx)) wherever it names something other than
-the site — a place, a hub or a context's last item ("The phone header") — with a place's face added.
+The name the phone header's middle draws stands again at the head of the content column as a sticky
+place bar ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) wherever `headerOf` names
+something other than the site — a place, a hub or a context's last item ("The phone header") — a
+compose sheet included, though its phone header is its own. A place a member can open adds its face.
 Home, a member's or a group's own page and a screen inside nothing with no context draw none. A
 hub's action stands at the end of the bar, as its h1 is not drawn; a screen whose h1 is drawn keeps
 its action beside the h1. The bar is one height on every

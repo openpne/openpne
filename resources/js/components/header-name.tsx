@@ -6,7 +6,6 @@ import type { Header } from '@/lib/member-chrome';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
-/** The phone header's middle and the desk place bar draw the name of where the reader is through this alone (docs/internals/modern-frame.md, "The phone header"). */
 export function HeaderName({ header, variant }: { header: Exclude<Header, { type: 'none' }>; variant: 'phone' | 'desk' }) {
     const t = useT();
     const { props } = usePage<PageProps>();
