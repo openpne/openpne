@@ -162,10 +162,11 @@ diary or comment twice (OpenPNE 4 keeps one 👍 per member), or a date column h
 (or a zero month or day) on a row the upgrade copies — MySQL's strict mode, which OpenPNE 4 runs
 under, refuses the value, so the line names the table, the column, the count and the first ids;
 set a real time there (or NULL where the column allows it). Fix the source and dry-run again.
-Two are about the OpenPNE 4 side instead: a `navigations`, `gadgets`, `profiles`, `banners` or
+Some are about the OpenPNE 4 side instead. A `navigations`, `gadgets`, `profiles`, `banners` or
 `admin_users` table that already holds rows, from `openpne:install`, `openpne:admin:create` or a visit
-to the admin Banner page; and, under `--source-prefix` or `--source-database`, an OpenPNE 4 `file_bin`
-that already holds rows. Restore the empty schema, or rerun with `--force-restart`.
+to the admin Banner page: restore the empty schema, or rerun with `--force-restart`. Under
+`--source-prefix` or `--source-database`, an OpenPNE 4 `file_bin` that already holds rows:
+`--force-restart` leaves `file_bin` alone, so start again from a fresh database (stages 1 and 2).
 
 **`WARN` never stops the run**; its code says what happened to the row. Each line is
 `WARN <code>: …`, and the JSON entry carries the `code`, its `category` and a `count` in the
@@ -510,7 +511,8 @@ actually keep using:
 4. Restore the final dump in the same layout you rehearsed with (stage 2). With `--source-database`,
    that means a fresh database for the source too — the rehearsal moved the last one's `file_bin`
    away.
-5. Repeat stages 3 through 5 against it, with the same option you rehearsed with.
+5. Repeat stages 3 through 5 against it, giving `openpne:upgrade-from-3` and
+   `openpne:verify-upgrade` the same option you rehearsed with.
 6. Reapply anything you had fixed only inside OpenPNE 4 during the rehearsal. This site is built from
    a different dump into a different database, so none of it is here. Mail templates are the usual
    case — the editor re-renders each one as you save it, so a fix that no longer works is refused

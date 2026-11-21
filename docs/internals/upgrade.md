@@ -125,8 +125,9 @@ fills the same slot on both sides; `post_activity` is the posting button's label
 OpenPNE 3 install), so OpenPNE 4 must not spend it in a noun slot ("%activity% post" is the noun;
 `I18nTermLiteralTest` pins `lang/ja.json` to that). The mobile application's rows (half-width kana)
 and unrecognised names are not migrated, the latter reported by the unknown-name scan. A value is
-carried as `/admin/term-settings` would save it (`TermValue`: both ends trimmed of the characters PHP's
-`trim()` strips, NUL aside, by regular expression so the source collation has no say), and one with nothing else
+carried as `/admin/term-settings` would save it but for a NUL at either end, which it keeps
+(`TermValue`: both ends trimmed of the other characters PHP's `trim()` strips, by regular expression
+so the source collation has no say), and one with nothing else
 in it, or NULL, is not carried at all: OpenPNE 3 rendered it as nothing, but the admin page cannot hold
 it (a blank field means the default), so the default stands in. `lang` folds to the locale
 slug by `SourceLocale::foldExpr()`, shared with the mail templates; a row whose lang folds to
