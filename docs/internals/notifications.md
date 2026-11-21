@@ -35,8 +35,8 @@ document covers the delivery model around it.
    conversation is not reading what sits above where the reader stopped. A landing page is a GET, so
    **a GET writes `read_at`** here — unlike the row-open and the auth screens, which are POSTs so
    that no prefetch can spend them. What a prefetch spends here is a bell number: the domain state
-   the row is about is untouched. A row that is no longer there — the talk broadcast replaces a
-   room's row with each message — returns to the feed rather than erroring; only a row that exists
+   the row is about is untouched. A row that is no longer there — the talk broadcast keeps only the
+   row of a room's newest message — returns to the feed rather than erroring; only a row that exists
    but belongs to a switched-off unit is refused. **Returning to the feed re-reads it**: a restore
    hands back the page as it was left — Inertia's stored page state on a popstate, the whole
    document from the back/forward cache — which is the state before the row the member just opened

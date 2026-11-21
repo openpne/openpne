@@ -12,8 +12,8 @@ use Throwable;
 
 /**
  * On `NotificationSent` rather than before the send, so the deletion can never outrun the insert.
- * Everything past the filters is wrapped in a `try`/`report()`: this runs inside the queued job that
- * wrote the row, and an escaping exception would retry it and duplicate the row.
+ * Everything past the filters is wrapped in a `try`/`report()`: the row is already written, so an
+ * escaping exception would only fail a send that has happened.
  */
 final class KeepOneGroupTalkRoomRow
 {

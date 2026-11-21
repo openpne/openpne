@@ -550,7 +550,8 @@ each message (push follows the `database` send). Reading the room marks that row
 [`MarkTalkRead`](../../app/Features/GroupTalk/Actions/MarkTalkRead.php), the page's report, the digest
 catch-up and MCP alike, plus posting into the room — so on an `all` site the bell and the rooms badge
 light and clear together. Deleting only after the insert is what makes a lost listener or a vetoed
-send harmless. The rank is read off the rows alone — the message id each carries, then the row's
+send harmless, and a cleanup that fails is reported, not retried, leaving its extra row for the next
+delivery to settle. The rank is read off the rows alone — the message id each carries, then the row's
 own id — never off which delivery is running: two workers delivering to one member at once can each
 see both rows, and each keeping its own would delete the other's and leave none. With one rank every
 delivery spares the same row, even one whose own row loses, so an older message delivered late adds
@@ -838,8 +839,8 @@ role once per request and the serializer asks it per row.
    What a producer may name and what the write will accept are the same set, by construction.
 9. A mention pierces mute; the per-message broadcast does not, and a block stops both. Talk history
    does neither, and neither do its images. One broadcast row per room stands once its deliveries
-   finish — the newest message's, by a rank every delivery computes alike — and reading the room
-   reads it.
+   finish — the newest message's, by a rank every delivery computes alike; a failed cleanup leaves
+   an extra one for the next delivery — and reading the room reads it.
 10. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
 11. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
    would be re-creating the split the cutover removed.

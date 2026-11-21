@@ -14,7 +14,9 @@ rule; the feature documents record how each list applies it.
 | Other | relevance or an aggregate | the score, then `id` | home-issue candidates, groups by member count |
 
 A list on the posting-time axis never orders by `id` alone: migrated rows carry OpenPNE 3 ids that
-are not monotonic in time, and an id stands in for time only until the first backdated row.
+are not monotonic in time, and an id stands in for time only until the first backdated row. Which
+talk broadcast row a room keeps is not a list, and ranks by message id
+([group-talk.md](group-talk.md#what-talk-notifies)).
 
 An attachment's `number` is not unique within its parent, so every read that orders attachments by
 it orders by `(number, id)`.
