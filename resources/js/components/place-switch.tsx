@@ -54,7 +54,7 @@ function PlaceSections({ items, variant, onPick }: { items: PlaceSectionItem[]; 
                         onClick={(event: MouseEvent) => onPick(event, item)}
                         className={cn(
                             'flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl py-2 text-muted-foreground transition-colors hover:bg-accent motion-reduce:transition-none',
-                            // The bottom tabs' label size, at which five tiles across a 360px phone still fit a six-character name.
+                            // 11px: five tiles across a 360px phone still fit a six-character name.
                             variant === 'phone' ? 'text-2xs' : 'px-1 text-xs',
                             item.current && 'bg-accent text-foreground',
                         )}

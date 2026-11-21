@@ -119,7 +119,7 @@ test('a form says where it is without offering a way out of it', () => {
     expect(placeBar()?.querySelector('a')).toBeNull();
 });
 
-/** A guest's crumb is the phone bar's rule again at desk width: the author's entries, and no face standing for a page behind the login wall. */
+/** The phone bar's rule again at desk width: no face standing for a page behind the login wall. */
 test("a guest's place bar names the author, faceless and with nothing to press", () => {
     const author = { id: 9, name: 'Owner', imageUrl: '/img/owner.png', avatarColor: null, isAi: false };
     arrive('diary/show', { auth: { user: null }, diary: { author } });

@@ -519,8 +519,8 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: friendTabs('requests'),
     }),
     'message/conversations/index': () => ({ mode: 'section', title: MESSAGES, action: NEW_MESSAGE }),
-    // A withdrawn counterpart has no member page for a scope to link to and no name for the bar to
-    // carry, so the room falls back to a heading.
+    // A withdrawn counterpart has no place to open and no name for the bar to carry, so the room
+    // falls back to a heading.
     'message/conversation/index': (props) => {
         const { counterpart } = props as unknown as { counterpart: MemberRef | null };
 

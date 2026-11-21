@@ -1,8 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { CrumbText } from '@/components/crumb-text';
 import { PlaceSwitch } from '@/components/place-switch';
 import { headingVariants } from '@/components/ui/heading';
+import { useT } from '@/lib/i18n';
 import { type Chrome, headerOf } from '@/lib/member-chrome';
 import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ const PILL = 'inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full';
  * under it.
  */
 export function PlaceBar({ chrome }: { chrome: Chrome }) {
+    const t = useT();
     const { component, props } = usePage<PageProps>();
     const guest = props.auth.user === null;
     const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest });
@@ -41,6 +42,7 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
     if (!crumb) {
         return null;
     }
+    const text = <span className="min-w-0 truncate">{typeof crumb.label === 'string' ? crumb.label : t(crumb.label.key, crumb.label.replacements)}</span>;
 
     return (
         <Bar>
@@ -48,14 +50,12 @@ export function PlaceBar({ chrome }: { chrome: Chrome }) {
                 // The phone pill's fill, unchanged: the same element means the same thing at both
                 // widths, and it is the affordance the bare trail failed to be.
                 <Link href={crumb.href} className={cn(PILL, 'px-3', headingVariants({ variant: 'bar' }), 'bg-accent')}>
-                    <CrumbText label={crumb.label} />
+                    {text}
                 </Link>
             ) : (
                 // A form's crumb goes nowhere, so it is painted as text — in the ground color, which
                 // shows as nothing until the form scrolls under it.
-                <span className={cn(PILL, 'px-3 bg-background text-sm text-muted-foreground')}>
-                    <CrumbText label={crumb.label} />
-                </span>
+                <span className={cn(PILL, 'px-3 bg-background text-sm text-muted-foreground')}>{text}</span>
             )}
         </Bar>
     );
