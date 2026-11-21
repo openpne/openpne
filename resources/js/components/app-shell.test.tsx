@@ -107,13 +107,13 @@ test('the shell paints the one ground, the color line and the offsets that clear
 });
 
 test.each([
-    ['group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(3.5rem+1px)]'],
     ['group/show', '/groups/7', null],
     ['member/show', '/member/9', null],
     // A form inside no place names its context in the bar, and the editor's toolbar stands below that bar.
-    ['diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(3.5rem+1px)]'],
     // A hub names itself in the bar, as the phone header does.
-    ['notifications/index', '/notifications', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
+    ['notifications/index', '/notifications', 'lg:[--modern-place-bar:calc(3.5rem+1px)]'],
     ['home/issue', '/', null],
 ] as const)('%s publishes the place bar height only where the bar stands', (component, url, expected) => {
     const chrome = arrive(component, url, { group: cyclists, profile: { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false } });

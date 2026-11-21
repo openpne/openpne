@@ -74,10 +74,10 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     const bottomOffset = bottomNav
         ? '[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]'
         : '[--modern-bottom-offset:env(safe-area-inset-bottom)]';
-    // The height place-bar.tsx gives its bar, hairline included, and only where it renders one: a
-    // screen with no bar has nothing for a sticky child to stand below.
+    // The place bar's height, hairline included, and only where it renders one: a screen with no bar
+    // has nothing for a sticky child to stand below.
     const placeBarOffset = hasPlaceBar(headerOf(chrome, { component: String(component), home: props.modernHome, guest: !member }))
-        ? 'lg:[--modern-place-bar:calc(2.75rem+1px)]'
+        ? 'lg:[--modern-place-bar:calc(3.5rem+1px)]'
         : undefined;
 
     return (

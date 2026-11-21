@@ -107,11 +107,20 @@ something other than the site — a place, a hub or a context's last item ("The 
 compose sheet included, though its phone header is its own. A place a member can open adds its face.
 Home, a member's or a group's own page and a screen inside nothing with no context draw none. A
 hub's action stands at the end of the bar, as its h1 is not drawn; a screen whose h1 is drawn keeps
-its action beside the h1. The bar is one height on every
-screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
-sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
-banner and day indicator, and the editor's toolbar. A screen with no place bar leaves the
-variable unset.
+its action beside the h1.
+
+The bar stands right under the site-color line from the first paint, which is where it sticks, so
+scrolling never moves it, and it always draws its hairline. Its row stands where the sidebar's site
+row does and its hairline runs along that row's foot, so the name, at the `bar` size on every
+screen, is level with the site's name. Content starts 32px below the bar on every screen that has
+one; a screen with none keeps the frame's own 32px above its content.
+
+The bar is one height on every screen that has one, and the shell publishes it there as
+`--modern-place-bar`. The bar takes its height from it; whatever sticks below the bar adds it to its
+own offset (`top-below-place-*`: a conversation's unread banner and day indicator, and the editor's
+toolbar); an anchor adds it to its scroll margin (`scroll-mt-below-place-*`: a month page's days);
+and a focused control in `<main>` takes it as its scroll margin, so keyboard focus is never scrolled
+under the bar (WCAG 2.2 2.4.11). A screen with no place bar leaves the variable unset.
 
 ## Content kinds
 

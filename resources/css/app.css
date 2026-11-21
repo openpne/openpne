@@ -221,6 +221,9 @@
 @utility top-below-place-* {
     top: calc(--spacing(--value(number)) + var(--modern-top-offset) + var(--modern-place-bar, 0px));
 }
+@utility scroll-mt-below-place-* {
+    scroll-margin-top: calc(--spacing(--value(number)) + var(--modern-top-offset) + var(--modern-place-bar, 0px));
+}
 @utility bottom-offset-* {
     bottom: calc(--spacing(--value(number)) + var(--modern-bottom-offset));
 }
@@ -325,6 +328,11 @@
     ::after,
     ::before {
         border-color: var(--color-border);
+    }
+    /* Focus scrolls a control out from under a stuck place bar (WCAG 2.2 2.4.11); where no bar stands the
+       variable is unset, the length invalid and the margin 0. */
+    main :focus {
+        scroll-margin-top: calc(var(--modern-top-offset) + var(--modern-place-bar));
     }
 }
 

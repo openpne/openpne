@@ -79,7 +79,7 @@ test("a hub's action stands at the end of the bar, and nowhere else in the frame
     const create = screen.getByRole('link', { name: 'Create a %community%' });
     expect(placeBar()?.lastElementChild?.contains(create)).toBe(true);
     expect(document.querySelectorAll('a[href="/groups/edit"]')).toHaveLength(1);
-    // The bar's 32px row: the small button's own 36px would make this bar taller than every other.
+    // Every child of the bar is the name's 32px: the small button's own 36px would stand taller than the name beside it.
     expect(create.className.split(' ')).toContain('min-h-8');
     expect(create.className.split(' ')).not.toContain('min-h-9');
     // The name is heard first, then what can be done there.
@@ -101,6 +101,28 @@ test('home stands no bar and draws its action nowhere in the frame, the FAB answ
     expect(placeBar()).toBeNull();
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
     expect(document.querySelector('a[href="/diary/new"]')).toBeNull();
+});
+
+const deskTopPadding = () => screen.getByRole('main').className.split(' ').filter((c) => /^lg:p[ty]?-/.test(c));
+
+test('the bar stands from the first paint where it sticks, so scrolling never moves it, and always draws its line', () => {
+    arrive('group/topic/index', { group: cyclists });
+
+    const bar = placeBar()?.className.split(' ') ?? [];
+    const stuck = bar.find((c) => c.startsWith('top-'));
+    expect(stuck).toBe('top-(--modern-top-offset)');
+    expect(deskTopPadding()).toEqual([`lg:pt-${stuck?.slice('top-'.length)}`]);
+    // One height wherever it stands, the one what sticks below it reads.
+    expect(bar).toContain('h-(--modern-place-bar)');
+    expect(bar).toContain('border-border');
+    expect(bar.filter((c) => c.includes('transparent'))).toEqual([]);
+});
+
+test("a screen with no bar keeps the frame's own top padding at desk width", () => {
+    arrive('dashboard', { modernHome: 'whats_new' });
+
+    expect(placeBar()).toBeNull();
+    expect(deskTopPadding()).toEqual([]);
 });
 
 test("a screen inside a place keeps its action beside its heading, the bar holding the place's name alone", () => {

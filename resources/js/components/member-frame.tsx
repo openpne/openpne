@@ -6,7 +6,7 @@ import { PageHeading } from '@/components/page-heading';
 import { PageTabs } from '@/components/page-tabs';
 import { PlaceBar } from '@/components/place-bar';
 import { ActionLink } from '@/components/ui/action-link';
-import { headerOf } from '@/lib/member-chrome';
+import { hasPlaceBar, headerOf } from '@/lib/member-chrome';
 import type { Chrome, ChromeLabel } from '@/lib/member-chrome';
 import { badgePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
@@ -50,6 +50,8 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 // 12px below sm only: the frame is the outermost of three paddings on the same line
                 // (frame → card body → field box) and gives up 4px of the usual 16 to the inner two.
                 'mx-auto px-3 py-8 sm:px-4',
+                // The place bar stands in the flow exactly where it sticks, so it never moves.
+                hasPlaceBar(header) && 'lg:pt-(--modern-top-offset)',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
                 // The sheet's heading takes more air above than below it, so proximity groups it
