@@ -8,9 +8,9 @@ Chat is a **second reading of the same rows** — no new table, no new column. A
 pair *viewer ⟷ counterpart*, and both directions of it are composed back out of the storage on every
 read: `/messages` lists them, `/messages/{member}` renders one, and `/messages/{member}/messages`
 serves the pages after the first. Under Modern this reading replaces the boxes outright —
-[Modern reads the store as chat](#modern-reads-the-store-as-chat) — while the trash and the draft
-form stay the mailbox's, and a message written on either surface appears on the other because there
-is only one store.
+[Modern reads the store as chat](#modern-reads-the-store-as-chat) — while the draft form stays the
+mailbox's and the trash is Classic's alone, and a message written on either surface appears on the
+other because there is only one store.
 
 ## A conversation is two arms over one table
 
@@ -97,7 +97,7 @@ has needs an answer here.
 | null `body` | serialized as the empty string; a subject-only message is still a message. |
 | empty `body` | what a chat send writes when the message is pictures alone. Indistinguishable from the row above on the screen, and deliberately so — both draw no paragraph. |
 | draft | never in a conversation: a draft has no receipt, so neither arm reaches it — and the scope still states `is_draft = false` as a belt against a stray receipt. It stays the drafts box's. |
-| `sender_deleted_at` / `recipient_deleted_at` (trash) | hidden from that side's conversation only. Restoring is the mailbox's trash screen. |
+| `sender_deleted_at` / `recipient_deleted_at` (trash) | hidden from that side's conversation only. Restoring is the trash screen, which only Classic draws. |
 | `sender_purged_at` / `recipient_purged_at` | the same, permanently — the row survives for the other side. |
 | `parent_id` / `thread_id` | lineage the reply flow writes; a conversation is linear and neither reads nor writes it. |
 | withdrawn member | the bucket above, with `author` serialized as null and drawn as the `withdrawn_member` term. |
@@ -125,8 +125,8 @@ whole draft, body and picked files alike.
 
 [`StoreChatMessageRequest`](../../app/Http/Requests/DirectMessage/StoreChatMessageRequest.php) caps the
 body at 5,000 code points and normalizes CRLF to LF before measuring it, exactly as talk's bar does.
-**The cap is this screen's alone**: the mailbox's compose and draft forms are OpenPNE 3 screens with
-no length limit and keep it. The reply is the message in the paging endpoint's own shape, so the
+**The cap is the chat sends' alone** (this screen's and the MCP tool's): the mailbox's compose and
+draft forms are OpenPNE 3 screens with no length limit and keep it. The reply is the message in the paging endpoint's own shape, so the
 composer appends what it wrote instead of re-reading the page.
 
 It also takes words **or** at least one attachment, and refuses only a message with neither —
@@ -162,7 +162,7 @@ conversation, on that message ([Modern reads the store as chat](#modern-reads-th
 
 There is no read cursor. A conversation is composed at read time out of rows the mailbox owns, and
 the only read state in the store is `read_at` on each receipt — which the mailbox sets one message at
-a time, from any box, in any order. So the boundary is **the first unread message**, not a
+a time, from the inbox, in any order. So the boundary is **the first unread message**, not a
 read-through position: an older message left unread under newer read ones is an ordinary state here,
 and a "you have read up to here" line would be a lie the moment it met one of those holes.
 
@@ -203,7 +203,7 @@ window. Three rules:
   boundary backwards.
 
 A trashed receipt is deliberately left alone. It is not on the chat screen, so nobody has read it,
-and restoring it from the mailbox's trash has to hand back a message that has never been opened.
+and restoring it from the Classic trash has to hand back a message that has never been opened.
 
 An accepted report asks the shell to re-read its badge counts
 ([`lib/unread-refresh.ts`](../../resources/js/lib/unread-refresh.ts)).
@@ -261,7 +261,7 @@ unchanged.
 |---|---|
 | `/message`, `/message/index`, and the four boxes | `/messages` — the drafts box is a section of it |
 | `/message/read/{id}`, `/check/{id}`, `/checkDelete/{id}` | the conversation the message is in, `?m={id}` |
-| `/message/deleteConfirm/{id}` | the same conversation (Modern confirms a purge inline) |
+| `/message/deleteConfirm/{id}` | the same conversation, with no anchor |
 | `/message/reply/{id}` | the same conversation, with no anchor — answering is writing in it |
 | `/message/sendToFriend?id={member}` | that member's conversation, or `/messages` when the id names none |
 | `/message/chain/{member}`, `/message/smtChain?id={member}` (the OpenPNE 3 smartphone thread) | the same as `sendToFriend`, which they redirect to on either surface |
@@ -318,8 +318,9 @@ published content, and a private message is not that.
    and only a live receipt has any at all.
 8. Marking read moves `read_at` from null to a time and never the other way, so every report is
    idempotent and order between reports does not matter.
-9. A message written as chat carries no subject and no lineage, and every send — from either screen
-   or the MCP tool — goes through `SendDirectMessage`.
+9. A message written as chat carries no subject and no lineage. A new message — from either screen
+   or the MCP tool — is sent through `SendDirectMessage`, a draft through `UpdateDraft`, with the
+   same check, rate limit and notification.
 10. No mailbox URL moves. What a Modern viewer gets from one is a redirect into the chat reading, and
     only ever for a message they are a party to.
 11. Deleting a conversation writes no record of itself. It moves the viewer's own side of the rows

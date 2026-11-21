@@ -368,9 +368,9 @@ the tool caps it here rather than answering a database error.
 **Whoever may read an entry may comment on it**, which is the gate the web surface reuses too.
 
 **Pictures are read by naming the entry**, or a comment of it, under the same discipline talk's are
-([above](#what-the-wire-carries)): thumbnails by default, 8 MB measured twice, no partial answer, and
-a `number` holding no picture refused when named and passed over when not — the shared
-[`AnswersWithImages`](../../app/Mcp/Tools/Concerns/AnswersWithImages.php). What `number` means
+([above](#what-the-wire-carries)): thumbnails by default, 8 MB measured twice and no partial answer,
+the shared [`AnswersWithImages`](../../app/Mcp/Tools/Concerns/AnswersWithImages.php), and a `number`
+holding no picture refused when named and passed over when not. What `number` means
 differs: on an entry it is the stored slot; on a comment, whose images have no slot column (OpenPNE 3
 has none), it is the position in that comment's own pictures — counted over every row before any of
 them is judged, and never a row id. The `id` reported beside it is the attachment row, which
@@ -407,7 +407,7 @@ with write access into a room is trusting the agent's own handling of untrusted 
 
 `mcp` is an ordinary feature unit ([feature-toggles.md](feature-toggles.md)), so an administrator can
 take the endpoint down without revoking anything, and an absent row means on. **It is not the
-security boundary** — that is `auth:sanctum` plus the ability gate, both of which answer before the
+security boundary** — that is `auth:sanctum,oauth` plus the ability gate, both of which answer before the
 flag is read. Switching `groupTalk`, `directMessage` or `diary` off is separate and removes that
 feature's tools rather than the endpoint: they stop being registered, so they are not listed and
 calling one by name is answered as a tool that does not exist.
