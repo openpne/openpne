@@ -79,7 +79,13 @@ test("a hub's action stands at the end of the bar, and nowhere else in the frame
     const create = screen.getByRole('link', { name: 'Create a %community%' });
     expect(placeBar()?.lastElementChild?.contains(create)).toBe(true);
     expect(document.querySelectorAll('a[href="/groups/edit"]')).toHaveLength(1);
-    expect(screen.getByRole('heading', { level: 1, name: '%Communities%' }).parentElement?.querySelector('a')).toBeNull();
+    // The bar's 32px row: the small button's own 36px would make this bar taller than every other.
+    expect(create.className.split(' ')).toContain('min-h-8');
+    expect(create.className.split(' ')).not.toContain('min-h-9');
+    // The name is heard first, then what can be done there.
+    const h1 = screen.getByRole('heading', { level: 1, name: '%Communities%' });
+    expect(h1.parentElement?.querySelector('a')).toBeNull();
+    expect(h1.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 test("a guest's hub is named in the bar with no action in it", () => {

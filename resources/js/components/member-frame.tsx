@@ -39,6 +39,9 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {label(action.label)}
         </ActionLink>
     );
+    const heading = chrome.mode !== 'embedded' && chrome.title && (
+        <PageHeading title={label(chrome.title)} className={hub ? 'sr-only' : undefined} action={hub ? undefined : actionLink} />
+    );
     const tabs = props.auth.user ? chrome.tabs : chrome.tabs?.filter((tab) => tab.openToGuest);
 
     return (
@@ -61,10 +64,10 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 action && 'pb-24 lg:pb-8',
             )}
         >
+            {/* A hub's unseen h1 comes first, so its name is read before the action in the bar. */}
+            {hub && heading}
             <PlaceBar header={header} action={hub ? actionLink : undefined} />
-            {chrome.mode !== 'embedded' && chrome.title && (
-                <PageHeading title={label(chrome.title)} className={hub ? 'sr-only' : undefined} action={hub ? undefined : actionLink} />
-            )}
+            {!hub && heading}
             {chrome.mode !== 'embedded' && tabs && tabs.length > 0 && (
                 <PageTabs
                     ariaLabel={chrome.tabsLabel ? label(chrome.tabsLabel) : ''}
