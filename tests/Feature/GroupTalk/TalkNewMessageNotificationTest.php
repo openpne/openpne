@@ -389,6 +389,51 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         $this->assertSame('three', GroupMessage::find($rows->first()->data['message_id'])->body);
     }
 
+    /** Delivered in reverse, as a second worker can: the late row is written and then gives way. */
+    public function test_an_older_message_delivered_late_leaves_the_newer_messages_row(): void
+    {
+        $this->notifyEveryMessage();
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $reader = $this->joined($group);
+        $older = $this->message($group, $author, 'older');
+        $newer = $this->message($group, $author, 'newer');
+
+        $written = 0;
+        DatabaseNotification::created(function () use (&$written): void {
+            $written++;
+        });
+
+        $this->broadcast($newer);
+        // A second apart, so a rank by delivery time would keep the late row.
+        $this->travel(1)->seconds();
+        $this->broadcast($older);
+
+        $this->assertSame(2, $written);
+        $this->assertSame('newer', GroupMessage::find($this->roomRows($reader, $group)->sole()->data['message_id'])->body);
+    }
+
+    /** Written higher id first, so on SQLite the order the query returns them in would spare the other one. */
+    public function test_two_rows_for_one_message_keep_the_higher_row_id(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $reader = $this->joined($group);
+        $message = $this->message($group, $author);
+        $higher = 'ffffffff-0000-4000-8000-000000000000';
+        foreach ([$higher, '00000000-0000-4000-8000-000000000000'] as $id) {
+            $reader->notifications()->create([
+                'id' => $id,
+                'type' => GroupTalkMessagePostedNotification::class,
+                'data' => ['group_id' => $group->getKey(), 'message_id' => $message->getKey()],
+            ]);
+        }
+
+        app(GroupTalkRoomNotificationRows::class)->keepNewest((int) $reader->getKey(), (int) $group->getKey());
+
+        $this->assertSame($higher, $this->roomRows($reader, $group)->sole()->getKey());
+    }
+
     public function test_a_second_room_keeps_its_own_row(): void
     {
         $this->notifyEveryMessage();
@@ -500,7 +545,6 @@ class TalkNewMessageNotificationTest extends TalkTestCase
             ->assertRedirect(route('notifications.index'));
     }
 
-    /** Rethrowing would retry the job and duplicate the row the replace exists to deduplicate. */
     public function test_a_failing_replace_is_reported_and_leaves_the_new_row_intact(): void
     {
         Exceptions::fake();
@@ -512,7 +556,7 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         $rows = app(GroupTalkRoomNotificationRows::class);
         $this->app->instance(GroupTalkRoomNotificationRows::class, new class extends GroupTalkRoomNotificationRows
         {
-            public function deleteOthers(int $memberId, int $groupId, string $keepId): void
+            public function keepNewest(int $memberId, int $groupId): void
             {
                 throw new RuntimeException('the feed is unavailable');
             }

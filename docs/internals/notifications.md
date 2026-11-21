@@ -35,8 +35,8 @@ document covers the delivery model around it.
    conversation is not reading what sits above where the reader stopped. A landing page is a GET, so
    **a GET writes `read_at`** here — unlike the row-open and the auth screens, which are POSTs so
    that no prefetch can spend them. What a prefetch spends here is a bell number: the domain state
-   the row is about is untouched. A row that is no longer there — the talk broadcast replaces a
-   room's row with each message — returns to the feed rather than erroring; only a row that exists
+   the row is about is untouched. A row that is no longer there — the talk broadcast keeps only the
+   row of a room's newest message — returns to the feed rather than erroring; only a row that exists
    but belongs to a switched-off unit is refused. **Returning to the feed re-reads it**: a restore
    hands back the page as it was left — Inertia's stored page state on a popstate, the whole
    document from the back/forward cache — which is the state before the row the member just opened
@@ -274,9 +274,10 @@ web + mail, and the **web** opt-in gates both the row and the push. The nudge se
 `WebPushChannel`, so it cannot re-enter the filter.
 
 The listener runs inside the queued job that wrote the row, so everything past its two pure filters
-is wrapped in a `try`/`report()`: an exception escaping it would retry that job and **duplicate the
-feed row**. Its guards are ordered config → subscription probe → member toggle, since most members
-have no device and the probe is what keeps a member-wide fan-out at one query per recipient.
+is wrapped in a `try`/`report()`: an exception escaping it would skip the event's later listeners
+and fail the delivery after its row is written — on `sync`, along with whatever sent it. Its guards
+are ordered config → subscription probe → member toggle, since most members have no device and the
+probe is what keeps a member-wide fan-out at one query per recipient.
 
 The payload ([`WebPushNudge`](../../app/Notifications/Push/WebPushNudge.php)) carries as its title
 the same sentence the feed row renders (`NotificationKindLabel`, so there is no second wording list),
