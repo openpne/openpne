@@ -324,16 +324,24 @@ class SetupCommandTest extends TestCase
             ->assertFailed();
     }
 
-    public function test_a_sqlite_database_holding_a_site_is_not_set_up_over(): void
+    /** @return array<string, array{string}> */
+    public static function sqliteSites(): array
+    {
+        return ['the first' => ['database.sqlite'], 'one started over' => ['database-2.sqlite']];
+    }
+
+    #[DataProvider('sqliteSites')]
+    public function test_a_sqlite_database_holding_a_site_is_not_set_up_over(string $name): void
     {
         $this->tools('sqlite3');
         mkdir($this->layout->dataDirectory(), 0o700);
-        $database = new \PDO('sqlite:'.$this->sqlitePath());
+        touch($this->sqlitePath());
+        $database = new \PDO('sqlite:'.$this->layout->dataDirectory().'/'.$name);
         $database->exec('CREATE TABLE admin_users (id INTEGER PRIMARY KEY); INSERT INTO admin_users VALUES (1);');
         $database = null;
 
         $this->answerSite($this->runSetup())
-            ->expectsOutputToContain('holds a site already')
+            ->expectsOutputToContain($this->layout->dataDirectory().'/'.$name.' holds a site already')
             ->assertFailed();
 
         $this->assertFileDoesNotExist($this->layout->envFile);
@@ -515,13 +523,32 @@ class SetupCommandTest extends TestCase
             $this->markTestSkipped('The file is the SQLite database\'s.');
         }
         mkdir($this->layout->dataDirectory(), 0o700);
-        touch($this->layout->dataDirectory().'/database-2.sqlite');
+        symlink($this->layout->base.'/public/leaked.sqlite', $this->layout->dataDirectory().'/database-2.sqlite');
+        touch($this->layout->dataDirectory().'/database-3.sqlite');
         $this->migration("throw new RuntimeException('stopped');");
 
         $this->runSetup()
-            ->expectsOutputToContain('put '.$this->layout->dataDirectory().'/database-3.sqlite in .env as DB_DATABASE, then run this command again. '.$this->layout->dataDirectory().'/database.sqlite is left as it is.')
+            ->expectsOutputToContain('put '.$this->layout->dataDirectory().'/database-4.sqlite in .env as DB_DATABASE, then run this command again. '.$this->layout->dataDirectory().'/database.sqlite is left as it is.')
             ->doesntExpectOutputToContain('remove')
             ->assertFailed();
+    }
+
+    public function test_a_broken_link_named_as_the_sqlite_database_is_never_followed(): void
+    {
+        $this->withEnv();
+        if (! $this->sqlite()) {
+            $this->markTestSkipped('The file is the SQLite database\'s.');
+        }
+        mkdir($this->layout->dataDirectory(), 0o700);
+        $link = $this->layout->dataDirectory().'/database-2.sqlite';
+        symlink($this->layout->base.'/public/leaked.sqlite', $link);
+        config(['database.connections.'.$this->connection.'.database' => $link]);
+
+        $this->runSetup()
+            ->expectsOutputToContain($link.' could not be made')
+            ->assertFailed();
+
+        $this->assertFileDoesNotExist($this->layout->base.'/public/leaked.sqlite');
     }
 
     public function test_a_failed_install_with_members_in_is_not_offered_a_start_over(): void
@@ -882,7 +909,7 @@ class SetupCommandTest extends TestCase
         putenv("{$key}={$value}");
     }
 
-    /** A migration named after the site's own, left the one openpne:install has to run. */
+    /** A migration ordered after the site's own, so the one openpne:install has left to run. */
     private function migration(string $up): void
     {
         $migrations = $this->root.'/migrations';

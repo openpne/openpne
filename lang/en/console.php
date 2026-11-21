@@ -140,6 +140,7 @@ return [
         'mysql_refused' => 'MySQL refused: :reason. Check the server, the database name, the user name and the password the host\'s control panel shows.',
         'mysql_again' => 'Enter them again?',
         'mail_later_note' => 'No mail is sent until mail is set up, and with LOG_LEVEL=warning none is kept in the log either. Resetting a password and registering by email need it: set up SMTP in .env later (docs/installing.md, step 7).',
+        'sqlite_unmade' => ':path could not be made: something has that name already (a broken link, say), or this account cannot write in the directory holding it. Put it right, then run this command again.',
         'data_unwritable' => ':path cannot be written to. Make the directory holding the site writable by this account.',
         'data_made' => 'Made :path, this account\'s alone, for the database and its backups.',
         'data_open' => ':path can be read by other accounts, and could not be closed. Make it this account\'s alone (chmod 700), then run this command again.',

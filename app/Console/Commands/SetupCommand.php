@@ -109,7 +109,7 @@ class SetupCommand extends Command
         }
         $this->lock = $lock;
         PrivateFile::removeStale($this->layout->base, EnvFile::TEMP_PREFIX);
-        foreach ([self::TRIAL_PREFIX, '.htaccess.', basename($this->layout->mysqlOptionFile()).'.'] as $prefix) {
+        foreach ([self::TRIAL_PREFIX, PrivateFile::CREATE_PREFIX, '.htaccess.', basename($this->layout->mysqlOptionFile()).'.'] as $prefix) {
             PrivateFile::removeStale($this->layout->dataDirectory(), $prefix);
         }
 
@@ -318,10 +318,13 @@ class SetupCommand extends Command
 
         if ($choice === 'sqlite') {
             $path = $this->layout->dataDirectory().'/database.sqlite';
-            if (is_file($path) && filesize($path) > 0 && $this->holdsSite('sqlite', ['database' => $path])) {
-                $this->say('db_holds_site_sqlite', ['path' => $path, 'base' => $this->layout->base], 'error');
+            // A site started over runs on a database-<n>.sqlite beside it.
+            foreach ([$path, ...(glob($this->layout->dataDirectory().'/database-*.sqlite') ?: [])] as $file) {
+                if (is_file($file) && filesize($file) > 0 && $this->holdsSite('sqlite', ['database' => $file])) {
+                    $this->say('db_holds_site_sqlite', ['path' => $file, 'base' => $this->layout->base], 'error');
 
-                throw new StopSetup;
+                    throw new StopSetup;
+                }
             }
 
             return [
@@ -494,7 +497,7 @@ class SetupCommand extends Command
         $htaccess = $directory.'/.htaccess';
         $temp = null;
         try {
-            if (is_file($htaccess) && File::get($htaccess) === SiteLayout::DENY) {
+            if (is_file($htaccess) && SiteLayout::denies(File::get($htaccess))) {
                 return;
             }
             $temp = PrivateFile::temp($directory, '.htaccess.', SiteLayout::DENY, 0o644);
@@ -532,18 +535,17 @@ class SetupCommand extends Command
         if ($path === '' || $path === ':memory:' || file_exists($path)) {
             return;
         }
-        if (! @touch($path)) {
-            $this->say('data_unwritable', ['path' => dirname($path)], 'error');
+        if (! PrivateFile::create($path, '', 0o600)) {
+            $this->say('sqlite_unmade', ['path' => $path], 'error');
 
             throw new StopSetup;
         }
-        chmod($path, 0o600);
     }
 
     private function unusedSqliteFile(): string
     {
         $n = 2;
-        while (file_exists($this->layout->dataDirectory()."/database-{$n}.sqlite")) {
+        while (file_exists($this->layout->dataDirectory()."/database-{$n}.sqlite") || is_link($this->layout->dataDirectory()."/database-{$n}.sqlite")) {
             $n++;
         }
 

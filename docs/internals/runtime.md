@@ -364,8 +364,8 @@ run, or the owner file of a probe that outlived its fetch's timeout, are removed
 minutes old, so a running check's files are never taken for a misconfiguration.
 
 Where `openpne-data/` exists beside the release, the check takes it for a directory that must stay
-unserved even where a host serves the release's parent, and requires in it an `.htaccess` that is the
-release's top one as it is (what `openpne:setup` writes there), mode 0700, and for MySQL the option
+unserved even where a host serves the release's parent, and requires in it an `.htaccess` with the
+directives of the release's top one (what `openpne:setup` writes there), mode 0700, and for MySQL the option
 file its dump reads, `mysql-backup.cnf`, at 0600, with a schema-only dump through it that still succeeds.
 
 ## Site setup
@@ -391,16 +391,18 @@ Key invariants:
    empty and through the same file beside it, the first never over a database that holds an
    administrator and the second typed by the operator, never taken from what the web check saw;
    every other key must read back unchanged. A `.env` without `APP_URL` or `DB_CONNECTION` is not
-   gone on with, and a database that holds an administrator already is not given a new `.env`.
+   gone on with, and a database that holds an administrator already, any SQLite one in
+   `openpne-data/` included, is not given a new `.env`.
 3. **The process that wrote `.env` does not go on with it**: it runs the command again through
    `proc_open`, its environment stripped of the keys `.env` holds, and where `proc_open` is disabled
    asks to be run again. Where the environment gives `APP_KEY`, `DB_URL` or a `DB_` connection key
    otherwise than `.env`, which the web reads alone, it stops before the database is touched.
 4. **`openpne-data/`** is made beside the release, and on every run set to 0700 and given the
-   release's top `.htaccess` as the code holds it, in place of whatever else is there and whether or
-   not the top one is still in the release (through a file beside it), before anything goes in; the SQLite database, the MySQL option file
-   (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it prints writes `backup.sqlite` (`VACUUM INTO`) or `backup.sql` beside a `.new` copy moved over the
-   last, and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
+   release's top `.htaccess` as the code holds it (through a file beside it), before anything goes
+   in, in place of one whose directives differ and whether or not the top one is still in the
+   release; the SQLite database (made only where nothing has its name, a broken link included), the
+   MySQL option file (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it prints writes `backup.sqlite` (`VACUUM INTO`) or `backup.sql` beside a
+   `.new` copy moved over the last, and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
    allows, the same tool writes once into a 0600 file there, judged by a table read back from it,
    and removed.
 5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway

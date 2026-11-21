@@ -137,7 +137,7 @@ final class InstalledCheck
 
         $mode = fileperms($directory) & 0o777;
         $findings = [
-            is_file($directory.'/.htaccess') && is_readable($directory.'/.htaccess') && File::get($directory.'/.htaccess') === SiteLayout::DENY
+            is_file($directory.'/.htaccess') && is_readable($directory.'/.htaccess') && SiteLayout::denies(File::get($directory.'/.htaccess'))
                 ? Finding::ok('data.htaccess', 'data_htaccess')
                 : Finding::fail('data.htaccess', 'data_htaccess_missing', ['path' => $directory]),
             ($mode & 0o077) === 0

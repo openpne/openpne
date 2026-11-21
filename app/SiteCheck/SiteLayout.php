@@ -22,6 +22,21 @@ final class SiteLayout
 
         HTACCESS;
 
+    /** Comments, blank lines and line endings aside, so a release changing only those keeps existing copies good. */
+    public static function denies(string $contents): bool
+    {
+        return self::directives($contents) === self::directives(self::DENY);
+    }
+
+    /** @return list<string> */
+    private static function directives(string $contents): array
+    {
+        return array_values(array_filter(
+            array_map(trim(...), preg_split('/\r\n|\r|\n/', $contents) ?: []),
+            fn (string $line): bool => $line !== '' && ! str_starts_with($line, '#'),
+        ));
+    }
+
     public function __construct(
         public readonly string $base,
         public readonly string $public,

@@ -45,6 +45,13 @@ final class HtaccessTest extends TestCase
         $this->assertSame(file_get_contents(dirname(__DIR__, 2).'/.htaccess'), SiteLayout::DENY);
     }
 
+    public function test_a_copy_denies_whatever_its_comments_and_line_endings(): void
+    {
+        $this->assertTrue(SiteLayout::denies("# An older comment\r\nRewriteEngine On\r\n\r\nRewriteRule ^ - [F]"));
+        $this->assertFalse(SiteLayout::denies("RewriteEngine On\n# RewriteRule ^ - [F]\n"));
+        $this->assertFalse(SiteLayout::denies(''));
+    }
+
     public function test_public_sends_a_request_for_an_existing_directory_to_index_php(): void
     {
         $lines = $this->lines('public/.htaccess');

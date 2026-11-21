@@ -8,11 +8,13 @@ use RuntimeException;
 
 final class PrivateFile
 {
-    /** A new file of a random name in $directory, created unreadable to others and set to $mode before $contents go in; renamed into place, or removed, by the caller. */
+    public const CREATE_PREFIX = '.openpne-new.';
+
+    /** A new file of a random name in $directory, made at $mode or narrower and written through its own handle; renamed into place, or removed, by the caller. */
     public static function temp(string $directory, string $prefix, string $contents, int $mode): string
     {
         $path = $directory.'/'.$prefix.bin2hex(random_bytes(8));
-        $umask = umask(0o077);
+        $umask = umask(~$mode & 0o777);
         try {
             $handle = @fopen($path, 'x');
         } finally {
@@ -21,14 +23,32 @@ final class PrivateFile
         if ($handle === false) {
             throw new RuntimeException("{$directory} cannot be written to.");
         }
-        fclose($handle);
-        chmod($path, $mode);
-        if (file_put_contents($path, $contents) !== strlen($contents)) {
+        try {
+            $written = fwrite($handle, $contents);
+        } finally {
+            fclose($handle);
+        }
+        if ($written !== strlen($contents)) {
             @unlink($path);
             throw new RuntimeException("{$path} could not be written.");
         }
 
         return $path;
+    }
+
+    /** False where anything has the name, a broken link included: PHP's fopen() x follows such a link, a hard link never does. */
+    public static function create(string $path, string $contents, int $mode): bool
+    {
+        try {
+            $temp = self::temp(dirname($path), self::CREATE_PREFIX, $contents, $mode);
+        } catch (RuntimeException) {
+            return false;
+        }
+        try {
+            return @link($temp, $path);
+        } finally {
+            @unlink($temp);
+        }
     }
 
     /** Removes what temp() left with $prefix in $directory; the caller holds SetupLock, so no run is writing one. */
