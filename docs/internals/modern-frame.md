@@ -13,28 +13,27 @@ frame draws from those answers.
 ## The phone header
 
 Below `lg`, [`TopNav`](../../resources/js/components/top-nav.tsx) speaks one grammar on every
-screen class: the site mark, then where the reader is, with the site color as a 4px line atop
-the row.
+screen class: the site mark, then the name of the part of the site the reader stands in, in the
+middle of the row, with the site color as a 4px line atop the row. Only a place's name can be
+pressed.
 
 | Screen | The header reads |
 |---|---|
-| Home, a member's page, a group's page | `[mark]` + the site name. These pages ARE a place: a member's and a group's name themselves in their own hero directly below |
-| A day's issue, latest or past | `[mark]` + the site name. Its band names the day and steps to the days either side, and its foot leads to the month, so a crumb above it would be a third way to the same places |
-| A hub | `[mark] › section`. The bar's copy of the title is hidden from assistive technology; the page's own h1 stays on screen and is its one announcement |
-| A month of issues | `[mark] › What happened`, as a hub reads, with no crumb: its band steps to the months either side and each day leads to its own page. The page opens on that band, so its h1 is kept for assistive technology and not drawn (`Chrome.deskHeading`) |
-| A screen inside a group or a member's place | `[mark]`, then the place's name in the middle of the row, which opens its sections ("Place sections"). A conversation stands in its counterpart's place |
-| A screen inside no place, with a trail | `[mark] › trail`, the trail's last item a pill that leads to it |
-| A form | `[mark] › trail`, as static text |
-| A screen inside nothing, with no trail | `[mark]` alone |
+| Home (the latest issue, or What's new where it is home), a member's page, a group's page | `[mark]` + the site name, left-aligned. A member's and a group's page ARE a place, and name themselves in their own hero directly below |
+| A screen inside a group or a member's place | `[mark]`, then the place's name, which opens its sections ("Place sections"). A conversation stands in its counterpart's place |
+| A hub, a month of issues included | `[mark]`, then the hub's name. That copy is hidden from assistive technology, and the page's h1 is kept for it alone below `lg`: the h1 is the one announcement |
+| A past day's issue | `[mark]`, then What happened, read aloud: the day's h1 is its date |
+| A screen inside no place, with a context, a form included | `[mark]`, then the context's last item |
+| A screen inside nothing, with no context | `[mark]` alone |
 
-The header ends in the menu. There is no back control: swipe, the browser and the site mark are
-the ways out.
+[`headerOf`](../../resources/js/lib/member-chrome.ts) makes this choice for both the header and the
+place bar. The header ends in the menu. There is no back control: swipe, the browser and the site
+mark are the ways out.
 
 Two decisions here are deliberate rather than pending:
 
-- **A form carries no way back.** The crumb beside an unsaved form is static text, not a pill. A
-  pressable-looking crumb that navigates away from half-typed input is the thing being avoided,
-  and painting one that does not navigate would lie instead.
+- **A form's name opens nothing.** Even inside a group, the middle of a form's header is text, so
+  no section list opens beside unsaved input.
 - **A compose sheet keeps its own header.** A sheet is a mode rather than a screen class: its
   header is the ✕ that leaves it plus the page's own actions, and it draws no bottom tabs
   ([feature-modules.md](feature-modules.md), "Surface responsibilities").
@@ -97,14 +96,17 @@ sign-out rows, since the phone bars carry no account menu.
 
 At `lg` and up no header stands. The site-color line is the only full-width element, over the
 sidebar ([`LeftNav`](../../resources/js/components/left-nav.tsx)), and the sidebar plus the
-content column center as one block. With no header to carry it, the h1 a month of issues keeps
-off the phone's screen is drawn here.
+content column center as one block. With no header to carry it, the h1 a hub keeps off the
+phone's screen is drawn here. A page under `pages/` takes no `lg:` or `max-lg:` class of its own,
+apart from the few listed in `eslint.config.js` that held one already: the frame and the shared
+components answer to the width.
 
 On a screen deep enough to be inside somewhere, a sticky place bar
 ([`PlaceBar`](../../resources/js/components/place-bar.tsx)) stands at the head of the content
 column. Inside a place, a form aside, the bar is the place's face and name, which open its sections;
-elsewhere it is the phone header's crumb in the same pill. Home, a hub, a member's or a group's own
-page and anything the sidebar's own active row already names draw none. The bar is one height on every
+on a screen inside no place that has a context, it is the context's last item as text. Home, a hub,
+a day's issue, a member's or a group's own page and anything the sidebar's own active row already
+names draw none. The bar is one height on every
 screen that has one, and the shell publishes it there as `--modern-place-bar`, which whatever
 sticks below the bar adds to its own offset (`top-below-place-*`): a conversation's unread
 banner and day indicator, and the editor's toolbar. A screen with no place bar leaves the
@@ -127,11 +129,11 @@ A guest gets the same frame with the member-only parts left out:
 
 - No bottom tabs and no menu. The way in to `/login` stands where the menu does: at the end of
   the phone header, and in the sidebar at desk width.
-- A hub keeps its heading and drops its write action and every tab a guest cannot open. The
-  diary hub keeps All, the way back from a search.
+- A hub drops its write action and every tab a guest cannot open. The diary hub keeps All, the
+  way back from a search.
 - Inside a place the header and the place bar name it as text, with no face and no sections to
   open, since most of a member's sections, and their page unless it is web-public, sit behind
-  the login wall. A crumb anywhere else is text too.
+  the login wall.
 - No link points at a member's page. An entry's byline leads to the author's entries, and a
   commenter's name is text.
 - A web-public profile is the member page with the heading and the profile fields alone

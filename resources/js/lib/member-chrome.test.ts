@@ -136,10 +136,10 @@ test('a site whose home is the digest keeps the issue in the nav and the digest 
     assert.ok(!isHomeComponent('home/archive', 'whats_new'));
 });
 
-test('the crumb above the group digest follows the home setting', () => {
-    const crumb = (component: string, modernHome?: string) => resolveChrome(component, { enabledFeatures: allOn, modernHome }).context?.[0]?.href;
-    assert.equal(crumb('community/recent'), '/dashboard');
-    assert.equal(crumb('community/recent', 'whats_new'), '/');
+test('the context of the group digest follows the home setting', () => {
+    const parent = (component: string, modernHome?: string) => resolveChrome(component, { enabledFeatures: allOn, modernHome }).context?.[0]?.href;
+    assert.equal(parent('community/recent'), '/dashboard');
+    assert.equal(parent('community/recent', 'whats_new'), '/');
 });
 
 test('the comment history lights none of the diary hub tabs', () => {
@@ -189,7 +189,7 @@ test("the mixed activity page is the digest's full list, not a hub tab", () => {
 
     assert.equal(recent.mode, 'contextual');
     assert.equal(recent.tabs, undefined);
-    assert.deepEqual(recent.context?.map((crumb) => crumb.href), ['/dashboard']);
+    assert.deepEqual(recent.context?.map((item) => item.href), ['/dashboard']);
 });
 
 const chrome = (component: string, props: Record<string, unknown>) =>
@@ -249,9 +249,7 @@ test('the current issue takes the bare frame: its masthead is the page', () => {
     assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issue'));
 });
 
-test('a past day takes the bare frame and the brand bar, as the latest does', () => {
-    // Its band steps to the days either side and its foot to the month, so a crumb above it would be a
-    // third way to the same places.
+test('a past day takes the bare frame, as the latest does', () => {
     assert.deepEqual(resolveChrome('home/archive', { issue: { monthHref: '/home/2026/08' } }), {
         mode: 'embedded',
         width: 'standard',
@@ -263,14 +261,13 @@ test('a past day takes the bare frame and the brand bar, as the latest does', ()
     assert.ok(!isIssueDay('home/issues'));
 });
 
-test('a month of issues is titled as a hub, its h1 seen at desk width alone', () => {
+test('a month of issues is titled as a hub', () => {
     for (const modernHome of ['issue', 'whats_new']) {
         const month = resolveChrome('home/issues', { enabledFeatures: allOn, modernHome });
 
         assert.equal(month.mode, 'section');
         assert.deepEqual(month.title, { key: 'What happened', replacements: undefined });
-        assert.equal(month.deskHeading, true);
-        // Its band steps to the months either side and its days lead to their own pages, so it has no crumb.
+        // Its band steps to the months either side and its days lead to their own pages, so it has no context.
         assert.equal(month.context, undefined);
     }
     assert.ok(NO_CONTEXT_COMPONENTS.includes('home/issues'));
@@ -424,7 +421,7 @@ test('a compose screen is a form with no floating action', () => {
 
 test('a form outside the compose set keeps the ordinary bar', () => {
     // community/edit is the near miss: the create/edit form shares its component with group
-    // settings, which is a settings screen and stays on the static-trail bar.
+    // settings, which is a settings screen and keeps the ordinary header.
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
         if (component in COMPOSE_SCREENS) {
             continue;
@@ -434,13 +431,13 @@ test('a form outside the compose set keeps the ordinary bar', () => {
 });
 
 test('a form keeps its context but takes no scope', () => {
-    // The bar's contract: a form has nothing to be inside, so its trail stays static text.
+    // A form opens no sections, so its header names its context as text.
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
         const form = chrome(component, props);
 
         assert.equal(form.form, true, component);
         assert.equal(form.scope, undefined, component);
-        // The entry points classified as crumbless have no trail to keep; every other form does.
+        // The entry points classified as having no context name nothing; every other form names its context.
         if (!NO_CONTEXT_COMPONENTS.includes(component)) {
             assert.ok((form.context?.length ?? 0) > 0, component);
         }
@@ -460,7 +457,7 @@ test('the messages entry counts conversations and lands where they are listed', 
     assert.deepEqual(messages?.match, ['/message']);
 });
 
-test('a message-scoped screen crumbs back to the conversation list', () => {
+test('a message-scoped screen names the conversation list as its context', () => {
     // The four boxes are gone from Modern, leaving one parent for the draft form and the withdrawn
     // bucket to return to.
     assert.deepEqual(chrome('message/edit', {}).context, [{ href: '/messages', label: MESSAGES_LABEL }]);
@@ -504,26 +501,47 @@ test('every screen inside a group heads with the group and the section it stands
 
         assert.equal(answer.type, 'place', component);
         assert.equal(answer.type === 'place' && answer.scope.kind === 'group' ? `${answer.scope.id}:${answer.scope.section}` : null, `7:${section}`, component);
-        // The bar names the group on its own, so the registry keeps no trail of its name to say it twice.
+        // The bar names the group on its own, so the registry keeps no context naming it a second time.
         assert.equal(resolveChrome(component, { enabledFeatures: allOn, ...props }).context, undefined, component);
         assert.ok(!NO_CONTEXT_COMPONENTS.includes(component), component);
         assert.ok(hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
     }
 });
 
-test('a form inside a group keeps its static trail rather than the place header', () => {
-    assert.equal(header('community/edit', { group: cyclists }).type, 'trail');
-    assert.equal(header('group/topic/edit', { group: cyclists, topic: null }).type, 'trail');
+test('a form inside a group is titled by its context rather than opening the place', () => {
+    assert.deepEqual(header('community/edit', { group: cyclists }), { type: 'title', label: 'Cyclists', hub: false, desk: true });
+    assert.equal(header('group/topic/edit', { group: cyclists, topic: null }).type, 'title');
 });
 
-test("home, a day's issue and a place's top keep the brand header, and stand no place bar", () => {
+test("home and a place's top keep the brand header, and stand no place bar", () => {
     for (const [component, props] of [
         ['home/issue', {}],
-        ['home/archive', { issue: { monthHref: '/home/2026/08' } }],
         ['group/show', { group: cyclists }],
         ['member/show', { profile: owner }],
     ] as const) {
         assert.deepEqual(header(component, props), { type: 'brand' }, component);
+        assert.ok(!hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
+    }
+});
+
+test('a past day is titled What happened, read aloud since its h1 is the date, and stands no place bar', () => {
+    for (const home of ['issue', 'whats_new'] as const) {
+        const page = { component: 'home/archive', home, guest: false };
+        const chrome = resolveChrome('home/archive', { enabledFeatures: allOn, issue: { monthHref: '/home/2026/08' } });
+
+        assert.deepEqual(headerOf(chrome, page), { type: 'title', label: { key: 'What happened', replacements: undefined }, hub: false, desk: false }, home);
+        assert.ok(!hasPlaceBar(chrome, page), home);
+    }
+});
+
+test('a hub is titled by its own name, kept from assistive technology, and stands no place bar', () => {
+    for (const [component, props, key] of [
+        ['message/conversations/index', {}, 'Messages'],
+        ['notifications/index', {}, 'Notifications'],
+        ['home/issues', {}, 'What happened'],
+        ['dashboard', {}, "What's new"],
+    ] as const) {
+        assert.deepEqual(header(component, props), { type: 'title', label: { key, replacements: undefined }, hub: true, desk: false }, component);
         assert.ok(!hasPlaceBar(resolveChrome(component, { enabledFeatures: allOn, ...props }), { component, home: 'issue', guest: false }), component);
     }
 });
@@ -565,20 +583,18 @@ test('a guest is told whose place it is and given nothing to press', () => {
 });
 
 test("a guest's place top, hub and site policy head as a member's do", () => {
+    for (const [component, props] of [
+        ['member/show', { profile: owner }],
+        ['diary/feed', { variant: 'all' }],
+        ['policy/show', { kind: 'terms' }],
+    ] as const) {
+        assert.deepEqual(header(component, props, true), header(component, props), component);
+    }
     assert.deepEqual(header('member/show', { profile: owner }, true), { type: 'brand' });
-    assert.deepEqual(header('diary/feed', { variant: 'all' }, true), { type: 'trail', crumb: null });
-    // The page's own heading names a policy directly below the bar.
-    assert.deepEqual(header('policy/show', { kind: 'terms' }, true), { type: 'trail', crumb: null });
 });
 
-const trail = (component: string, props: Record<string, unknown>, guest = false) => {
-    const answer = header(component, props, guest);
-
-    return answer.type === 'trail' ? answer.crumb : undefined;
-};
-
-test('a page that IS the place answers no crumb — the header speaks the home grammar there', () => {
-    // The place's own hero names it directly below, so a crumb would name it twice in 60px.
+test('a page that IS the place answers no name — the header speaks the home grammar there', () => {
+    // The place's own hero names it directly below, so a name in the header would say it twice in 60px.
     for (const [component, props] of [
         ['group/show', { group: cyclists }],
         ['member/show', { profile: owner }],
@@ -593,37 +609,34 @@ test('a page that IS the place answers no crumb — the header speaks the home g
     assert.equal(isPlaceTop('dashboard'), false);
 });
 
-test('a screen inside no place takes the last crumb of its trail instead of claiming home', () => {
-    // A breadcrumb saying "you are at home" on a screen that is inside nothing would be false.
-    assert.deepEqual(trail('timeline/tag', { tag: 'ride' }), {
-        label: { key: '%Activity%', replacements: undefined },
-        href: '/timeline',
-        link: true,
-    });
-    // A guest's trail may lead behind the login wall, so it is named and not offered.
-    assert.equal(trail('timeline/tag', { tag: 'ride' }, true)?.link, false);
+test('a screen inside no place is titled by the last item of its context instead of claiming home', () => {
+    // A header saying "you are at home" on a screen that is inside nothing would be false.
+    const tag = { type: 'title', label: { key: '%Activity%', replacements: undefined }, hub: false, desk: true };
+
+    assert.deepEqual(header('timeline/tag', { tag: 'ride' }), tag);
+    assert.deepEqual(header('timeline/tag', { tag: 'ride' }, true), tag);
+    assert.ok(hasPlaceBar(chrome('timeline/tag', { tag: 'ride' }), { component: 'timeline/tag', home: 'issue', guest: false }));
 });
 
-test("a form's crumb is static text, whatever it would otherwise have been", () => {
-    // The group edit form is the sharp case: the same word as a place, and still not a way out of
-    // it.
-    assert.deepEqual(trail('member/config/email', {}), {
-        label: { key: 'Settings', replacements: undefined },
-        href: '/member/config',
-        link: false,
-    });
-    assert.deepEqual(trail('community/edit', { group: cyclists }), { label: 'Cyclists', href: '/groups/7', link: false });
+test('a form is titled by its context and never opens a place, in the place bar too', () => {
+    // The group edit form is the sharp case: the same word as a place, and still not a way into it.
+    assert.deepEqual(header('member/config/email', {}), { type: 'title', label: { key: 'Settings', replacements: undefined }, hub: false, desk: true });
 
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
-        assert.equal(trail(component, props)?.link ?? false, false, component);
+        const answer = header(component, props);
+        const context = chrome(component, props).context;
+
+        assert.equal(answer.type, context ? 'title' : 'none', component);
+        assert.equal(answer.type === 'title' && answer.desk, context !== undefined, component);
     }
 });
 
-test('a screen that is nowhere and crumbs to nothing leaves the mark standing alone', () => {
-    assert.equal(trail('policy/show', { kind: 'terms' }), null);
+test('a screen that is nowhere and has no context leaves the mark standing alone, with no place bar', () => {
+    assert.deepEqual(header('policy/show', { kind: 'terms' }), { type: 'none' });
+    assert.ok(!hasPlaceBar(chrome('policy/show', { kind: 'terms' }), { component: 'policy/show', home: 'issue', guest: false }));
 });
 
-test('the screens with no nav entry of their own crumb back to the screen that links to them', () => {
+test('the screens with no nav entry of their own name the screen that links to them', () => {
     assert.deepEqual(chrome('block/list', {}).context, [{ href: '/member/config', label: { key: 'Settings', replacements: undefined } }]);
     assert.deepEqual(chrome('member/invite', {}).context, [
         { href: '/member/search', label: { key: 'Search members', replacements: undefined } },

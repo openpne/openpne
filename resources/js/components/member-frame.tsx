@@ -6,6 +6,7 @@ import { PageHeading } from '@/components/page-heading';
 import { PageTabs } from '@/components/page-tabs';
 import { PlaceBar } from '@/components/place-bar';
 import { ActionLink } from '@/components/ui/action-link';
+import { headerOf } from '@/lib/member-chrome';
 import type { Chrome, ChromeLabel } from '@/lib/member-chrome';
 import { badgePhrase } from '@/lib/count-phrase';
 import { useT } from '@/lib/i18n';
@@ -24,7 +25,8 @@ const GAP: Record<Chrome['gap'], string> = {
  */
 export function MemberFrame({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     const t = useT();
-    const { props, url } = usePage<PageProps>();
+    const { component, props, url } = usePage<PageProps>();
+    const header = headerOf(chrome, { component: String(component), home: props.modernHome, guest: !props.auth.user });
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
     // Frame-level gate: hub actions target member-only routes, so a guest (a web-public profile is
     // reachable signed out) sees the frame without the action.
@@ -55,7 +57,8 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
-                    className={chrome.deskHeading ? 'max-lg:sr-only' : undefined}
+                    // Below lg the phone header names a hub, so its h1 is heard and not seen there.
+                    className={header.type === 'title' && header.hub ? 'max-lg:sr-only' : undefined}
                     action={
                         action && (
                             <ActionLink href={action.href}>

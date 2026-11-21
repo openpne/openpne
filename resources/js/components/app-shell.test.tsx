@@ -110,7 +110,7 @@ test.each([
     ['group/talk/index', '/groups/7/talk', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
     ['group/show', '/groups/7', null],
     ['member/show', '/member/9', null],
-    // A form's crumb is plain text with no scope, and the editor's toolbar stands below its bar.
+    // A form inside no place names its context in the bar, and the editor's toolbar stands below that bar.
     ['diary/new', '/diary/new', 'lg:[--modern-place-bar:calc(2.75rem+1px)]'],
     ['dashboard', '/dashboard', null],
 ] as const)('%s publishes the place bar height only where the bar stands', (component, url, expected) => {
@@ -147,7 +147,7 @@ test('the desktop line is the site color, and only desktop draws it', () => {
     // The color is per-site data, so it travels as a custom property the class reads.
     expect(line.style.getPropertyValue('--site-color')).toBe('#336699');
     expect(line.className).toContain('bg-(--site-color)');
-    // The phone's copy is the breadcrumb bar's own foot, which is why this one is hidden below lg.
+    // The phone's copy is the phone header's own foot, which is why this one is hidden below lg.
     expect(line.className).toContain('hidden');
     expect(line.className).toContain('lg:block');
 });

@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 /**
  * Every Modern component routed from app/ (Inertia::render or the slash-form screen() helper) must
- * either say where it stands in its member-chrome.ts entry (a context trail or a place scope) or be
+ * either say where it stands in its member-chrome.ts entry (a context or a place scope) or be
  * listed in NO_CONTEXT_COMPONENTS. auth/* pages render outside MemberFrame and are exempt.
  */
 class ChromeContextCoverageTest extends TestCase
@@ -107,7 +107,7 @@ class ChromeContextCoverageTest extends TestCase
         return $literals[1];
     }
 
-    /** The component's registry entry (HUB_CHROME or STATIC_CHROME) builds a context trail or a place scope. */
+    /** The component's registry entry (HUB_CHROME or STATIC_CHROME) builds a context or a place scope. */
     private function hasContext(string $chrome, string $component): bool
     {
         $slice = $this->entrySlice($chrome, $component);

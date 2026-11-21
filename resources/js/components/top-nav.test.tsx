@@ -114,23 +114,26 @@ test('the home bar is the site mark and its name, and nothing else', () => {
     expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });
 
-test("a past day's issue takes the same bar as the latest, with no crumb above it", () => {
+test("a past day's issue names the section it stands in, and offers no way there", () => {
     const chrome = arrive('home/archive', '/home/2026/08/20', { issue: { monthHref: '/home/2026/08' } });
 
     renderWithProviders(<TopNav chrome={chrome} />);
 
-    expect(screen.getByRole('link', { name: 'Test SNS' }).getAttribute('href')).toBe('/');
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
+    expect(screen.queryByRole('link', { name: 'Test SNS' })).toBeNull();
+    expect(screen.getByText('What happened').closest('[aria-hidden]')).toBeNull();
     expect(screen.queryByRole('link', { name: 'What happened' })).toBeNull();
 });
 
-test('a month of issues is the mark and the page it is, with no crumb above it', () => {
+test('a month of issues is the mark and its name, unspoken beside the h1 that says it', () => {
     const chrome = arrive('home/issues', '/home/2026/08');
 
-    const { container } = renderWithProviders(<TopNav chrome={chrome} />);
+    renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
-    expect(container.textContent).toContain('What happened');
+    expect(screen.getByText('What happened').getAttribute('aria-hidden')).toBe('true');
     expect(screen.queryByRole('link', { name: 'What happened' })).toBeNull();
+    expect(document.querySelector('header')?.textContent).not.toContain('›');
 });
 
 test('a hub is the mark and the section it stands on', () => {
@@ -144,6 +147,17 @@ test('a hub is the mark and the section it stands on', () => {
     expect(container.textContent).toContain('%Communities%');
     // The section title is a label, not a way to somewhere: the hub is the page being read.
     expect(screen.queryByRole('link', { name: '%Communities%' })).toBeNull();
+    expect(document.querySelector('header')?.textContent).not.toContain('›');
+});
+
+test('a screen inside no place names its section as text, for a member too', () => {
+    const chrome = arrive('timeline/tag', '/timeline/tag/ride', { tag: 'ride' });
+
+    renderWithProviders(<TopNav chrome={chrome} />);
+
+    expect(screen.getByText('%Activity%').closest('[aria-hidden]')).toBeNull();
+    expect(screen.queryByRole('link', { name: '%Activity%' })).toBeNull();
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/']);
 });
 
 test("a deep page inside a group names the group, as the way to the group's sections", () => {
@@ -175,7 +189,7 @@ test("a deep page inside another member's place names them, as the way to their 
     expect(document.querySelector('header')?.textContent).not.toContain('›');
 });
 
-test('a place top speaks the home grammar — no crumb over its own hero', () => {
+test('a place top speaks the home grammar — no name over its own hero', () => {
     // The three-page symmetry extends to the header: home, a member's page and a group's share one
     // bar, and the place's hero names it directly below where a pill would have repeated it.
     const chrome = arrive('group/show', '/groups/7', {
@@ -197,7 +211,7 @@ test('a form names where it sits without offering a way out of itself', () => {
     const { container } = renderWithProviders(<TopNav chrome={chrome} />);
 
     expect(container.textContent).toContain('Settings');
-    // The invariant the pill must not reverse: no link stands beside an unsaved form.
+    // No link stands beside an unsaved form.
     expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/']);
 });

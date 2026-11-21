@@ -187,3 +187,38 @@ test('a suppressed file keeps its count of restyles and is reported whole when i
     assert.equal((await lint(1)).length, 0);
     assert.equal((await lint(2)).length, 2);
 });
+
+const WIDTH = 'A page under pages/ takes no lg: or max-lg: class of its own';
+
+test('a new page is refused an lg: or max-lg: class in every spelling, and keeps the rules its block restates', async () => {
+    const spellings = [
+        'const a = <div className="lg:hidden" />;',
+        'const a = <div className="flex max-lg:pb-0" />;',
+        "const a = cn('px-3', 'dark:lg:flex');",
+        'const a = `gap-2 ${x} lg:gap-4`;',
+    ];
+
+    for (const spelling of spellings) {
+        const found = await messages(spelling, 'resources/js/pages/diary/list.tsx');
+        assert.ok(found.some((m) => m.startsWith(WIDTH)), spelling);
+    }
+
+    const kept = await messages(
+        "new Intl.DateTimeFormat();\nconst j = <b>\n// drawn on screen\n</b>;\nimport.meta.glob('./x/*.tsx');\nconst c = t(':count members', { count: n });\n",
+        'resources/js/pages/diary/list.tsx',
+    );
+    assert.ok(kept.some((m) => m.startsWith('Format dates through')));
+    assert.ok(kept.some((m) => m.startsWith('This is a JSX text node')));
+    assert.ok(kept.some((m) => m.startsWith('A glob over modules here')));
+    assert.ok(kept.some((m) => m.startsWith('Say one in the singular')));
+
+    const prose = await messages('const a = <div className="block sm:flex" title="Help: large" />;', 'resources/js/pages/diary/list.tsx');
+    assert.deepEqual(prose.filter((m) => m.startsWith(WIDTH)), []);
+});
+
+test('the pages that held an lg branch already keep it, and a component outside pages/ is not asked', async () => {
+    for (const file of ['resources/js/pages/group/talk/index.tsx', 'resources/js/pages/message/conversation/index.tsx', 'resources/js/components/x.tsx', 'resources/js/pages/diary/list.test.tsx']) {
+        const found = await messages('const a = <div className="lg:hidden max-lg:pb-0" />;', file);
+        assert.deepEqual(found.filter((m) => m.startsWith(WIDTH)), [], file);
+    }
+});

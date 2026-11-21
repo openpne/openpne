@@ -121,7 +121,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 <UnreadSync />
                 <ActionFab chrome={chrome} extended={!hidden} />
                 {(bottomNav || conversationBar) && <BottomNav hidden={hidden || engaged} />}
-                {/* Desk width only: the phone's copy of the line lives inside the breadcrumb bar,
+                {/* Desk width only: the phone's copy of the line lives inside the phone header,
                     whose height counts it. */}
                 <div
                     aria-hidden

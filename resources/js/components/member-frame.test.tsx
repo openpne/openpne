@@ -58,15 +58,20 @@ function hubHeadingRow(props: Record<string, unknown>): Element | null {
 
 const placeBar = () => screen.queryByTestId('place-bar');
 
-/** The phone header's copy of a hub's name is hidden from assistive technology, so the page's own heading must stay on screen. */
-test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a hub keeps its heading on screen for %s', (_who, props) => {
-    expect(hubHeadingRow(props)?.className).not.toContain('sr-only');
+test.each([['a member', {}], ['a guest', { auth: { user: null } }]] as const)('a hub keeps its heading for assistive technology alone below lg, for %s', (_who, props) => {
+    expect(hubHeadingRow(props)?.className).toContain('max-lg:sr-only');
 });
 
-test('a month of issues opens on its own band, so its heading is seen at desk width alone', () => {
+test('a month of issues is a hub like any other, its heading drawn at desk width alone', () => {
     arrive('home/issues');
 
     expect(screen.getByRole('heading', { level: 1, name: 'What happened' }).parentElement?.className).toContain('max-lg:sr-only');
+});
+
+test('a screen inside a place keeps its heading on screen at both widths', () => {
+    arrive('diary/list', { owner: { id: 9, name: 'Owner', imageUrl: null, avatarColor: null, isAi: false }, isOwner: false });
+
+    expect(screen.getByRole('heading', { level: 1, name: '%Diaries%' }).parentElement?.className).not.toContain('sr-only');
 });
 
 test.each([
@@ -111,12 +116,23 @@ test("a group's top stands no place bar: its hero names the group", () => {
 });
 
 test('a form says where it is without offering a way out of it', () => {
-    // The rule the phone header states at its own crumb, kept at desk width: a pressable-looking
-    // crumb beside unsaved input is what neither bar may paint.
     arrive('community/edit', { group: cyclists });
 
     expect(placeBar()?.textContent).toBe('Cyclists');
-    expect(placeBar()?.querySelector('a')).toBeNull();
+    expect(placeBar()?.querySelector('a, button')).toBeNull();
+});
+
+test('a screen inside no place names its section at desk width too, as text', () => {
+    arrive('timeline/tag', { tag: 'ride' });
+
+    expect(placeBar()?.textContent).toBe('%Activity%');
+    expect(placeBar()?.querySelector('a, button')).toBeNull();
+});
+
+test.each(['home/archive', 'policy/show'])('%s stands no place bar: the page names itself directly below', (component) => {
+    arrive(component, { issue: { monthHref: '/home/2026/08' }, kind: 'terms' });
+
+    expect(placeBar()).toBeNull();
 });
 
 /** The phone bar's rule again at desk width: no face standing for a page behind the login wall. */
