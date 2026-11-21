@@ -36,20 +36,21 @@ final class PrivateFile
         return $path;
     }
 
-    /** False where anything has the name, a broken link included: PHP's fopen() x follows such a link, a hard link never does. */
+    /** False where anything has the name, a broken link included, which PHP's fopen() x would follow. */
     public static function create(string $path, string $contents, int $mode): bool
     {
-        if (is_link($path) || file_exists($path)) {
-            return false;
-        }
         try {
             $temp = self::temp(dirname($path), self::CREATE_PREFIX, $contents, $mode);
         } catch (RuntimeException) {
             return false;
         }
         try {
-            // Where disable_functions holds link(), rename() still never follows a link, though it replaces one made since the check.
-            return function_exists('link') ? @link($temp, $path) : @rename($temp, $path);
+            if (function_exists('link') && @link($temp, $path)) {
+                return true;
+            }
+
+            // Where disable_functions holds link() or the filesystem has no hard links: rename() never follows a link either, though it replaces one made since this check.
+            return ! is_link($path) && ! file_exists($path) && @rename($temp, $path);
         } finally {
             @unlink($temp);
         }

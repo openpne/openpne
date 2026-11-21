@@ -49,10 +49,23 @@ final class HtaccessTest extends TestCase
     {
         $this->assertTrue(SiteLayout::denies(SiteLayout::DENY));
         // Apache serves the directory under both: a backslash ends the comment line into the next, and CR alone ends no line.
-        $this->assertFalse(SiteLayout::denies("# Kept out \\\n".SiteLayout::DENY));
+        $this->assertFalse(SiteLayout::denies("# Kept out \\\nRewriteEngine On\nRewriteRule ^ - [F]\n"));
         $this->assertFalse(SiteLayout::denies(str_replace("\n", "\r", SiteLayout::DENY)));
         $this->assertFalse(SiteLayout::denies("\0".SiteLayout::DENY));
         $this->assertFalse(SiteLayout::denies(''));
+    }
+
+    /** The bytes releases have written to openpne-data/.htaccess: a release changing DENY adds to denies() rather than failing every updated site's openpne:check. */
+    public function test_bytes_a_release_has_written_stay_accepted(): void
+    {
+        $this->assertTrue(SiteLayout::denies(<<<'HTACCESS'
+        # Refuses every request when a document root is this directory, or holds it, rather than being public/
+        # (docs/internals/runtime.md, "Apache .htaccess files").
+        # Not wrapped in <IfModule>: without mod_rewrite Apache answers 500 rather than handing out the files.
+        RewriteEngine On
+        RewriteRule ^ - [F]
+
+        HTACCESS));
     }
 
     public function test_public_sends_a_request_for_an_existing_directory_to_index_php(): void

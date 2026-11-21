@@ -22,7 +22,7 @@ final class SiteLayout
 
         HTACCESS;
 
-    /** Byte for byte, as Apache reads lines its own way (a comment ending in a backslash takes the next line); a release changing DENY keeps its earlier bytes accepted here, or every updated site fails openpne:check. */
+    /** Byte for byte, as Apache reads lines its own way (a comment ending in a backslash takes the next line). */
     public static function denies(string $contents): bool
     {
         return $contents === self::DENY;

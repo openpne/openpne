@@ -6,6 +6,7 @@ namespace Tests\Unit\Setup;
 
 use App\Setup\PrivateFile;
 use Illuminate\Filesystem\Filesystem;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 final class PrivateFileTest extends TestCase
@@ -44,6 +45,20 @@ final class PrivateFileTest extends TestCase
 
         $this->assertFalse(PrivateFile::create($this->directory.'/made', 'secret', 0o600));
         $this->assertFileDoesNotExist($this->directory.'/elsewhere');
+    }
+
+    public function test_where_link_is_disabled_a_file_is_made_and_a_broken_link_never_followed(): void
+    {
+        symlink($this->directory.'/elsewhere', $this->directory.'/linked');
+        $process = new Process([PHP_BINARY, '-d', 'disable_functions=link', '-r',
+            'require $argv[1]; echo json_encode([App\Setup\PrivateFile::create($argv[2], "", 0600), App\Setup\PrivateFile::create($argv[3], "", 0600)]);',
+            base_path('vendor/autoload.php'), $this->directory.'/linked', $this->directory.'/made']);
+        $process->mustRun();
+
+        $this->assertSame('[false,true]', $process->getOutput());
+        $this->assertFileDoesNotExist($this->directory.'/elsewhere');
+        $this->assertTrue(is_link($this->directory.'/linked'));
+        $this->assertSame(0o600, fileperms($this->directory.'/made') & 0o777);
     }
 
     public function test_a_file_of_the_name_is_left_as_it_is(): void
