@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\SiteCheck;
 
 use App\Outbound\CappedStream;
+use GuzzleHttp\Exception\NetworkException;
 use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -48,14 +49,15 @@ final class SiteFetcher
             $sink = new CappedStream(Utils::streamFor(''), self::MAX_BYTES);
             $options[RequestOptions::SINK] = $sink;
 
-            return $next($request, $options)->otherwise(static function (mixed $reason) use ($sink): mixed {
+            return $next($request, $options)->otherwise(static function (mixed $reason) use ($request, $sink): mixed {
                 if ($reason instanceof ResponseException && $sink->wasCapped()) {
                     $sink->rewind();
 
                     return $reason->getResponse()->withBody($sink);
                 }
 
-                return Create::rejectionFor($reason);
+                // Laravel throws a cut 4xx or 5xx carrying its response as a RequestException, not a ConnectionException.
+                return Create::rejectionFor($reason instanceof ResponseException ? new NetworkException($reason->getMessage(), $request, $reason) : $reason);
             });
         };
     }

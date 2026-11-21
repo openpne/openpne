@@ -346,6 +346,6 @@ run, or the owner file of a probe that outlived its fetch's timeout, are removed
 minutes old, so a running check's files are never taken for a misconfiguration.
 
 Where `openpne-data/` exists beside the release, the check takes it for a directory that must stay
-unserved even where a host serves the release's parent, and requires a copy of the release's top
-`.htaccess` in it, mode 0700, and for MySQL the option file its dump reads, `mysql-backup.cnf`, at
+unserved even where a host serves the release's parent, and requires an `.htaccess` in it (its
+contents are not compared), mode 0700, and for MySQL the option file its dump reads, `mysql-backup.cnf`, at
 0600, with a schema-only dump through it that still succeeds.

@@ -7,6 +7,7 @@ namespace Tests\Feature\SiteCheck;
 use App\Outbound\CappedStream;
 use App\SiteCheck\SiteFetcher;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\NetworkException;
 use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Exception\ResponseTransferException;
 use GuzzleHttp\HandlerStack;
@@ -16,6 +17,7 @@ use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RequestOptions;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Http\Message\RequestInterface;
 use Tests\TestCase;
 
@@ -57,15 +59,18 @@ class SiteFetcherTest extends TestCase
         }
     }
 
-    public function test_a_transfer_cut_short_for_any_other_reason_stays_a_failure(): void
+    /** A 4xx or 5xx is the case that matters: Laravel's fake throws rather than rejects, so only a handler stack reaches it. */
+    #[DataProvider('statuses')]
+    public function test_a_transfer_cut_short_for_any_other_reason_stays_a_failure(int $status): void
     {
         $handler = fn (RequestInterface $request): PromiseInterface => Create::rejectionFor(
-            new ResponseTransferException('cURL error 18: transfer closed with outstanding read data remaining', $request, new Response(200)),
+            new ResponseTransferException('cURL error 18: transfer closed with outstanding read data remaining', $request, new Response($status)),
         );
         $stack = HandlerStack::create($handler);
         $stack->push(SiteFetcher::cappedBody());
 
-        $this->expectException(ResponseTransferException::class);
+        $this->expectException(NetworkException::class);
+        $this->expectExceptionMessage('cURL error 18');
         (new Client(['handler' => $stack, 'http_errors' => false]))->get('https://sns.example.com/');
     }
 
@@ -79,5 +84,11 @@ class SiteFetcherTest extends TestCase
 
         $this->assertNull($page->status);
         $this->assertStringContainsString('cURL error 18', $page->reason());
+    }
+
+    /** @return array<string, array{int}> */
+    public static function statuses(): array
+    {
+        return ['status 200' => [200], 'status 403' => [403], 'status 500' => [500]];
     }
 }

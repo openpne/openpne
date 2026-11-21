@@ -13,8 +13,8 @@ use Tests\TestCase;
 /**
  * Pins the seam rule from docs/internals/outbound-http.md: App\Outbound alone may fetch a URL a
  * member supplied, since SSRF defence is only the property that every such fetch went through the
- * guard; App\Files\Imgproxy dials one operator-configured address, and App\SiteCheck\SiteFetcher the
- * site's own, and nothing else. Stream wrappers and raw sockets are forbidden too, as they dereference
+ * guard; App\Files\Imgproxy dials one operator-configured address, and App\SiteCheck\SiteFetcher those
+ * openpne:check is given, and nothing else. Stream wrappers and raw sockets are forbidden too, as they dereference
  * a URL just as well.
  */
 class OutboundEgressBoundaryTest extends TestCase

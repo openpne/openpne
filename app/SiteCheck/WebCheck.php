@@ -312,7 +312,7 @@ final class WebCheck
         }
         $page = $this->fetcher->get("{$parentUrl}/{$name}.txt");
         if (! $page->answered($calibration)) {
-            return Finding::unknown('web.parent', 'web_parent_not_shown', ['url' => $parentUrl, 'status' => $page->status ?? $page->reason()]);
+            return Finding::unknown('web.parent', 'web_parent_not_shown', ['url' => InstalledCheck::shownUrl($parentUrl), 'status' => $page->status ?? $page->reason()]);
         }
 
         $release = rawurlencode(basename($this->layout->base));
@@ -335,8 +335,8 @@ final class WebCheck
         }
 
         return $served === []
-            ? Finding::ok('web.parent', 'web_parent', ['url' => $parentUrl])
-            : Finding::fail('web.parent', 'web_parent_served', ['url' => $parentUrl, 'list' => implode(', ', $served)]);
+            ? Finding::ok('web.parent', 'web_parent', ['url' => InstalledCheck::shownUrl($parentUrl)])
+            : Finding::fail('web.parent', 'web_parent_served', ['url' => InstalledCheck::shownUrl($parentUrl), 'list' => implode(', ', $served)]);
     }
 
     /** A file this run wrote, with a random token unless the contents are given; null when it cannot be written. */

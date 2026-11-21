@@ -6,6 +6,7 @@ namespace Tests\Feature\Console;
 
 use App\SiteCheck\BackupTools;
 use App\SiteCheck\BeforeInstallCheck;
+use App\SiteCheck\InstalledCheck;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\WebCheck;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -263,7 +264,7 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('No job has waited in the queue longer than ten minutes.')
             ->assertSuccessful();
 
-        DB::table('jobs')->insert([...$job, 'available_at' => time() - WebCheck::LEFTOVER_SECONDS - 60]);
+        DB::table('jobs')->insert([...$job, 'available_at' => time() - InstalledCheck::STALE_JOB_SECONDS - 60]);
         $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
             ->expectsOutputToContain('waited in the queue longer than ten minutes: 1.')
             ->assertFailed();
@@ -441,6 +442,17 @@ class CheckCommandTest extends TestCase
         $output = $this->runCheck(['--only' => 'web']);
 
         $this->assertStringContainsString('From the web (…)', $output);
+        $this->assertStringNotContainsString('sentinel-Pa55word', $output);
+    }
+
+    public function test_the_parent_address_is_not_repeated_with_a_user_in_it(): void
+    {
+        $this->installEnv();
+        $this->fakeHost([]);
+
+        $output = $this->runCheck(['--only' => 'web', '--parent-url' => 'https://site:sentinel-Pa55word@account.example.net/holder']);
+
+        $this->assertStringContainsString('[ ?? ] … does not show the directory holding the site', $output);
         $this->assertStringNotContainsString('sentinel-Pa55word', $output);
     }
 
