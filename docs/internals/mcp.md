@@ -362,9 +362,10 @@ pre-selects, not a constant.
 `**bold**` and a migrated one carries no `<op:*>` tags; `list-diaries` carries the one-line excerpt
 instead. Attachments are counts, as talk's are — `imageCount` and `fileCount` on an entry and on
 each of its comments — and a picture's bytes come from `read-diary-images`. A body is capped at
-**65,535 bytes** — the TEXT column's own size, and the cap the compose form applies. Bytes, not the code points talk counts: the two numbers do not
-compare. The web comment form has no cap of its own and leaves an oversized comment to the column;
-the tool caps it here rather than answering a database error.
+**65,535 bytes** — the TEXT column's own size, and the cap the compose form applies. Bytes, not the
+code points talk counts: the two numbers do not compare. The web comment form has no cap of its own
+and leaves an oversized comment to the column; the tool caps it here rather than answering a
+database error.
 
 **Whoever may read an entry may comment on it**, which is the gate the web surface reuses too.
 
