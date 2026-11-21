@@ -274,8 +274,8 @@ web + mail, and the **web** opt-in gates both the row and the push. The nudge se
 `WebPushChannel`, so it cannot re-enter the filter.
 
 The listener runs inside the queued job that wrote the row, so everything past its two pure filters
-is wrapped in a `try`/`report()`: an exception escaping it would retry that job and **duplicate the
-feed row**. Its guards are ordered config → subscription probe → member toggle, since most members
+is wrapped in a `try`/`report()`: an exception escaping it would skip the event's later listeners
+and fail the delivery after its row is written — on `sync`, along with whatever sent it. Its guards are ordered config → subscription probe → member toggle, since most members
 have no device and the probe is what keeps a member-wide fan-out at one query per recipient.
 
 The payload ([`WebPushNudge`](../../app/Notifications/Push/WebPushNudge.php)) carries as its title

@@ -413,7 +413,7 @@ class TalkNewMessageNotificationTest extends TalkTestCase
         $this->assertSame('newer', GroupMessage::find($this->roomRows($reader, $group)->sole()->data['message_id'])->body);
     }
 
-    /** Written higher id first, so the order the query returns them in would spare the other one. */
+    /** Written higher id first, so on SQLite the order the query returns them in would spare the other one. */
     public function test_two_rows_for_one_message_keep_the_higher_row_id(): void
     {
         $group = $this->group();

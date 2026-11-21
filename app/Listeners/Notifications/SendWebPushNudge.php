@@ -14,8 +14,8 @@ use Illuminate\Notifications\Events\NotificationSent;
 use Throwable;
 
 /**
- * Everything past the two pure filters is wrapped: this runs inside the queued job that wrote the
- * feed row, and an escaping exception would retry it and duplicate the row
+ * Everything past the two pure filters is wrapped: an escaping exception would skip the event's later
+ * listeners and fail the delivery after its row is written, on `sync` along with whatever sent it
  * (docs/internals/notifications.md, "Web push").
  */
 final class SendWebPushNudge
