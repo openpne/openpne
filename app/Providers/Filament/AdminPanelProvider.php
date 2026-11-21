@@ -64,7 +64,7 @@ class AdminPanelProvider extends PanelProvider
                     ->icon(Heroicon::OutlinedShieldCheck)
                     ->url(fn (): string => SecuritySettings::getUrl()),
             ])
-            // Deliberately not brand_color(): the member surface follows the per-site brand
+            // Deliberately not brand_color(): the member realm follows the per-site brand
             // color, while the admin panel keeps a fixed accent of its own — one more cue,
             // besides the brand-name suffix, that separates the two realms at a glance.
             ->colors([
