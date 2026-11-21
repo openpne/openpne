@@ -119,6 +119,21 @@ class FetchLinkCardTest extends TestCase
 
         $this->assertCount(1, $this->outboundRequests);
         $this->assertSame(LinkCardStatus::Ok, $card->fresh()?->status);
+        // The fake fetcher's 8-second request timeout fits inside the 20-second default, not inside a 1-second fallback.
+        $this->assertSame(8, $this->outboundOptions[0]['timeout']);
+    }
+
+    public function test_a_positive_job_timeout_bounds_the_request(): void
+    {
+        config()->set('openpne.outbound.job_timeout', 2);
+        $card = $this->card('https://example.com/article');
+        $this->queueHtml('<html><head><meta property="og:title" content="An article"></head></html>');
+
+        $this->runJob($card);
+
+        $timeout = $this->outboundOptions[0]['timeout'];
+        $this->assertGreaterThan(1, $timeout);
+        $this->assertLessThanOrEqual(2, $timeout);
     }
 
     /** @return array<string, array{mixed}> */

@@ -32,6 +32,9 @@ trait FakesOutboundTransport
     /** @var list<RequestInterface> */
     protected array $outboundRequests = [];
 
+    /** @var list<array<string, mixed>> */
+    protected array $outboundOptions = [];
+
     /** Answer $host with $addresses. A host with no entry does not resolve, and the fetch fails. */
     protected function resolvesTo(string $host, array $addresses): void
     {
@@ -63,6 +66,7 @@ trait FakesOutboundTransport
     {
         $handler = function (RequestInterface $request, array $options) {
             $this->outboundRequests[] = $request;
+            $this->outboundOptions[] = $options;
 
             [$response, $connectedTo] = array_shift($this->fakeResponses) ?? [new Response(404, [], ''), null];
 
