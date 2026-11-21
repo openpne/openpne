@@ -50,6 +50,12 @@ class DiaryComment extends Model
         return PostAttachments::pictures($this->images());
     }
 
+    /** @return HasMany<DiaryCommentImage, $this> */
+    public function nonPictures(): HasMany
+    {
+        return PostAttachments::nonPictures($this->images());
+    }
+
     /**
      * OpenPNE 3 lets the comment author or the diary author delete a comment; a withdrawn author
      * (member_id null) can no longer act. A guest never can, though the thread is readable on a

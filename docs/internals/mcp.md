@@ -285,9 +285,10 @@ first page — and then reads that conversation `after` the last cursor it holds
 Text, plus picture bytes when a call asks for them.
 [`McpTalkSerializer`](../../app/Features/GroupTalk/Serializers/McpTalkSerializer.php) is a separate
 shape from the Modern surface's, not a reuse of it: those carry `/file` and `/cache/img` URLs, which
-are session-guarded and so unfetchable by a bearer client. An attachment is reported as a count
-instead, so a reader knows a message is not only what it says, and the bytes are fetched by naming
-the message — `read-talk-message-images`, which reads them through
+are session-guarded and so unfetchable by a bearer client. Attachments are reported as counts
+instead — `imageCount` for pictures and `fileCount` for any other file, as on direct messages — so a
+reader knows a message is not only what it says. No tool fetches a file's bytes; a picture's are
+fetched by naming the message — `read-talk-message-images`, which reads them through
 [`ImageCache`](../../app/Files/ImageCache.php), the generator the web routes already use. Both
 geometries it offers go through `ImageTransform::fromGeometry()`, so the size whitelist that stops a
 URL driving arbitrary thumbnail generation ([images.md](images.md#adding-a-size)) binds this caller
@@ -359,8 +360,8 @@ pre-selects, not a constant.
 **Bodies go out flattened**, by the same `BodyRenderer::plainText` that
 [mail uses](body-text.md#excerpts-and-mail-text), so a Markdown entry does not arrive as literal
 `**bold**` and a migrated one carries no `<op:*>` tags; `list-diaries` carries the one-line excerpt
-instead. Pictures are a count, as talk's are — on an entry and on each of its comments — and the
-bytes come from `read-diary-images`. A body is capped at **65,535 bytes** — the TEXT column's own size,
+instead. Attachments are counts, as talk's are — `imageCount` and `fileCount` on an entry and on
+each of its comments — and a picture's bytes come from `read-diary-images`. A body is capped at **65,535 bytes** — the TEXT column's own size,
 and the cap the compose form applies. Bytes, not the code points talk counts: the two numbers do not
 compare. The web comment form has no cap of its own and leaves an oversized comment to the column;
 the tool caps it here rather than answering a database error.

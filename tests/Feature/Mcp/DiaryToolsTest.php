@@ -14,6 +14,9 @@ use App\Mcp\Tools\PostDiaryTool;
 use App\Mcp\Tools\ReadDiaryTool;
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DiaryCommentImage;
+use App\Models\DiaryImage;
+use App\Models\File;
 use App\Models\Member;
 use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Support\BodyFormat;
@@ -48,6 +51,16 @@ class DiaryToolsTest extends McpTestCase
             'visibility' => $visibility,
             ...$attributes,
         ]);
+    }
+
+    private function attach(Diary|DiaryComment $post, string ...$types): void
+    {
+        foreach ($types as $i => $type) {
+            $file = File::factory()->create(['type' => $type]);
+            $post instanceof Diary
+                ? DiaryImage::factory()->create(['diary_id' => $post->getKey(), 'file_id' => $file->getKey(), 'number' => $i + 1])
+                : DiaryCommentImage::factory()->create(['diary_comment_id' => $post->getKey(), 'file_id' => $file->getKey()]);
+        }
     }
 
     private function befriend(Member $a, Member $b): void
@@ -93,6 +106,44 @@ class DiaryToolsTest extends McpTestCase
                 ->where('hasOlder', false)
                 ->where('olderCursor', null)
                 ->etc());
+    }
+
+    public function test_the_feed_counts_files_apart_from_the_pictures(): void
+    {
+        $author = Member::factory()->create();
+        $mixed = $this->diary($author, attributes: ['created_at' => now()->subMinute()]);
+        $this->attach($mixed, 'image/png', 'application/pdf');
+        $fileOnly = $this->diary($author);
+        $this->attach($fileOnly, 'application/pdf');
+
+        $this->acting(Member::factory()->create());
+
+        OpenPneServer::tool(ListDiariesTool::class)
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('diaries.0.diaryId', $fileOnly->getKey())
+                ->where('diaries.0.imageCount', 0)
+                ->where('diaries.0.fileCount', 1)
+                ->where('diaries.1.diaryId', $mixed->getKey())
+                ->where('diaries.1.imageCount', 1)
+                ->where('diaries.1.fileCount', 1)
+                ->etc());
+    }
+
+    public function test_the_feed_counts_files_without_a_query_per_entry(): void
+    {
+        $author = Member::factory()->create();
+        $this->acting(Member::factory()->create());
+        $queries = fn (): int => $this->countApplicationQueries(fn () => OpenPneServer::tool(ListDiariesTool::class)->assertOk());
+
+        $this->attach($this->diary($author), 'application/pdf');
+        $queries(); // warm the process-wide caches
+        $one = $queries();
+        foreach (range(1, 3) as $_) {
+            $this->attach($this->diary($author), 'application/pdf');
+        }
+
+        $this->assertSame($one, $queries());
     }
 
     public function test_the_feed_leaves_out_the_callers_own_narrower_entries_which_read_diary_still_reads(): void
@@ -249,6 +300,45 @@ class DiaryToolsTest extends McpTestCase
                 ->where('diary.comments.2.authorName', $ai->name)
                 ->where('diary.comments.2.authorIsAi', true)
                 ->etc());
+    }
+
+    public function test_an_entry_and_each_comment_count_files_apart_from_the_pictures(): void
+    {
+        $diary = $this->diary(Member::factory()->create());
+        $this->attach($diary, 'image/png', 'application/pdf');
+        $this->attach(DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]), 'application/pdf');
+        $this->attach(DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'number' => 2]), 'image/png', 'application/pdf', 'application/zip');
+
+        $this->acting(Member::factory()->create());
+
+        OpenPneServer::tool(ReadDiaryTool::class, ['diary_id' => $diary->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('diary.imageCount', 1)
+                ->where('diary.fileCount', 1)
+                ->where('diary.comments.0.imageCount', 0)
+                ->where('diary.comments.0.fileCount', 1)
+                ->where('diary.comments.1.imageCount', 1)
+                ->where('diary.comments.1.fileCount', 2)
+                ->etc());
+    }
+
+    public function test_a_thread_counts_files_without_a_query_per_comment(): void
+    {
+        $diary = $this->diary(Member::factory()->create());
+        $commenter = Member::factory()->create();
+        $comment = fn (int $number) => $this->attach(DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => $commenter->getKey(), 'number' => $number]), 'application/pdf');
+        $this->acting(Member::factory()->create());
+        $queries = fn (): int => $this->countApplicationQueries(fn () => OpenPneServer::tool(ReadDiaryTool::class, ['diary_id' => $diary->getKey()])->assertOk());
+
+        $comment(1);
+        $queries(); // warm the process-wide caches
+        $one = $queries();
+        foreach (range(2, 4) as $number) {
+            $comment($number);
+        }
+
+        $this->assertSame($one, $queries());
     }
 
     /** The body order alone holds without the id clause on both engines; the SQL pin is the assertion with teeth. */

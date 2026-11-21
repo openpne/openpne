@@ -55,4 +55,10 @@ class Diary extends Model
     {
         return PostAttachments::pictures($this->images());
     }
+
+    /** @return HasMany<DiaryImage, $this> */
+    public function nonPictures(): HasMany
+    {
+        return PostAttachments::nonPictures($this->images());
+    }
 }
