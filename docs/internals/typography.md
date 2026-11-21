@@ -45,7 +45,11 @@ a missed migration.
 | `section` | 16px | a block within the content flow: a form section, a settings sub-section, a dialog title |
 | `minor` | 14px | a card's title band, a heading nested inside a section |
 | `label` | 12px, muted | a group label inside a compact widget — a menu's, a grid's |
-| `bar` | 16px | the name in the middle of the phone header, and the same name in the place bar (chrome, outside the content ranks) |
+| `bar` | 16px | the name in the middle of the phone header, and the same name in the place bar on every screen (chrome, outside the content ranks) |
+
+`bar` is not compared with the content ranks: the name is 16px at both widths, and the ranks from
+`display` to `label` start below the bar's line, so a page title or a settings group drawn larger
+than the name above it is not an inverted rank.
 
 Two axes cross the ranks: `tone="destructive"` colors a danger page's title and group, and
 `divided` underlines a heading that opens a block — a settings section.

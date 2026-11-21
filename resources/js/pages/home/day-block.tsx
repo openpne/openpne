@@ -140,7 +140,7 @@ export function DayBlock({ day }: { day: DaySummary }) {
     const single = day.bornDays.from === day.bornDays.to;
 
     return (
-        <li id={dayAnchor(day.date)} className="scroll-mt-16 space-y-1 px-4 py-4 sm:px-5">
+        <li id={dayAnchor(day.date)} className="scroll-mt-below-place-3 space-y-1 px-4 py-4 sm:px-5">
             <Heading as="h3" variant="minor">
                 <Link href={day.href} className={cn(INLINE_LINK, 'gap-1')}>
                     {single ? <time dateTime={day.bornDays.from}>{daysCovered(t, date, day.bornDays)}</time> : daysCovered(t, date, day.bornDays)}
