@@ -30,7 +30,14 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
     public function test_the_canonical_carries_no_source_metadata(): void
     {
-        foreach (['jpeg-gps-orientation.jpg' => 'image/jpeg', 'png-meta.png' => 'image/png', 'webp-vp8x-meta.webp' => 'image/webp'] as $fixture => $mime) {
+        $fixtures = [
+            'jpeg-gps-orientation.jpg' => 'image/jpeg',
+            'jpeg-postsos-meta.jpg' => 'image/jpeg',
+            'png-meta.png' => 'image/png',
+            'webp-vp8x-meta.webp' => 'image/webp',
+        ];
+
+        foreach ($fixtures as $fixture => $mime) {
             $canonical = $this->canonical($this->fixture($fixture), $mime);
 
             $this->assertStringNotContainsString(self::GPS_SENTINEL, $canonical->bytes, $fixture);
@@ -58,6 +65,25 @@ abstract class ImageProcessorContractTestCase extends TestCase
 
         $this->assertSame($expected, [$canonical->width, $canonical->height]);
         $this->assertSame($expected, $this->dimensions($canonical->bytes));
+    }
+
+    public function test_a_source_the_decoder_recovers_from_is_read_at_its_full_size_without_its_metadata(): void
+    {
+        // The decoders read past a failed CRC on an ancillary chunk and fill in a scan cut short, so neither is a refusal.
+        $fixtures = [
+            'png-badcrc.png' => ['image/png', [8, 8]],
+            'jpeg-truncated.jpg' => ['image/jpeg', $this->appliesOrientation() ? [6, 12] : [12, 6]],
+        ];
+
+        foreach ($fixtures as $fixture => [$mime, $expected]) {
+            $canonical = $this->canonical($this->fixture($fixture), $mime);
+
+            $this->assertSame($mime, $canonical->mime, $fixture);
+            $this->assertSame($expected, [$canonical->width, $canonical->height], $fixture);
+            $this->assertSame($expected, $this->dimensions($canonical->bytes), $fixture);
+            $this->assertStringNotContainsString(self::GPS_SENTINEL, $canonical->bytes, $fixture);
+            $this->assertStringNotContainsString('LEAK', $canonical->bytes, $fixture);
+        }
     }
 
     public function test_a_variant_of_an_animation_is_a_single_frame(): void

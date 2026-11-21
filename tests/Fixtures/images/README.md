@@ -1,23 +1,24 @@
 # Image fixtures
 
-Byte images for the image-processor contract and canonical-delivery tests. The ones with metadata
-carry a searchable sentinel (`LEAK`, a date, or a named marker), so a byte that survives a re-encode
-fails an assertion. Those of them not written by imgproxy began as a clean baseline image GD wrote,
-into which a throwaway generator spliced hand-built EXIF / XMP / comment / APP2 segments (a real GPS
-IFD plus Orientation):
+Byte images for the image tests: the image-processor contract
+(`tests/Feature/File/ImageProcessorContractTestCase.php`) and the tests that upload, deliver, fetch
+or inspect a picture. The ones with metadata carry a searchable sentinel (`LEAK`, a date, or a named
+marker), so a byte that survives a re-encode fails an assertion. Those of them not written by
+imgproxy began as a clean baseline image GD wrote, into which a throwaway generator spliced
+hand-built EXIF / XMP / comment / APP2 segments (a real GPS IFD plus Orientation):
 
 | file | contents |
 |---|---|
 | `jpeg-gps-orientation.jpg` | APP1 EXIF with a GPS IFD (`GPSDateStamp` "2021:07:04") + Orientation 6; base image 12x6 landscape |
-| `jpeg-postsos-meta.jpg` | progressive JPEG with a COM + EXIF (GPS) placed after the last SOS |
+| `jpeg-postsos-meta.jpg` | progressive 16x8 JPEG with a COM (`post-sos-comment-LEAK`) + EXIF (GPS) placed after the last SOS |
 | `jpeg-app2-mixed.jpg` | a non-ICC APP2 (`MPFDROPME`) and a real `ICC_PROFILE` APP2 (`ICCKEEPME`) |
 | `jpeg-copyright.jpg` | APP1 EXIF whose only tag is Copyright (`COPYRIGHT-LEAK-2021`) + a COM segment (`COMMENT-LEAK`); base image 12x6. Backends that strip metadata tend to keep copyright by default |
 | `png-meta.png` | `eXIf` (GPS) + `tEXt` (`png-text-LEAK`) after IHDR |
-| `png-badcrc.png` | `png-meta.png` with one chunk's CRC flipped (GD decodes it regardless) |
+| `png-badcrc.png` | `png-meta.png` with the `tEXt` chunk's CRC flipped; both processors read it regardless |
 | `webp-vp8x-meta.webp` | VP8X (flags EXIF + XMP) + GD's VP8 image + an odd-length EXIF whose only tag is Copyright (`exif-LEAK 2021:07:04`) + `XMP ` (`xmp-LEAK`); a valid container, so libwebp reads it too |
 | `apng-2frames.png` | a 4x4 APNG of two frames (`acTL` + `fcTL`/`fdAT`), red then blue; both processors read the first frame only |
 | `tiny.gif` | plain GIF, no metadata |
-| `jpeg-truncated.jpg` | a JPEG cut short. Not a processor-refusal case: libjpeg recovers and GD decodes it to a partial picture |
+| `jpeg-truncated.jpg` | `jpeg-gps-orientation.jpg` cut off a few bytes into its scan data. Not a refusal case: both processors decode what is there and write the canonical at its full upright size |
 | `webp-animated-3frames.webp` | a 64x64 animated WebP of three frames, made by imgproxy v4.0.14 from a three-frame GIF (`rt:fit/w:64/h:64/maf:10`, `@webp`); libgd reads no animated WebP, which pins the link-card refusal under GD |
 | `heic-gps-orientation.heic` | `jpeg-gps-orientation.jpg` written by imgproxy v4.0.14 as HEIC with its metadata kept (`sm:0/kcr:1/ar:0`, `@heic`): 12x6 declaring Orientation 6, GPS sentinel intact; read by the sidecar only |
 | `avif-copyright.avif` | `jpeg-copyright.jpg` filled to 32x16 (AVIF cannot be written under 16px) and written by imgproxy as AVIF with its metadata kept (`rt:fill/w:32/h:16/el:1/sm:0/kcr:1`, `@avif`): `COPYRIGHT-LEAK` intact; read by the sidecar only |
