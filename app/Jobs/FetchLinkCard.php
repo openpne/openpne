@@ -14,6 +14,7 @@ use App\LinkCard\OembedClient;
 use App\Models\File;
 use App\Models\LinkCard;
 use App\Outbound\OutboundException;
+use App\Outbound\OutboundTimeout;
 use App\Outbound\SafeHttpFetcher;
 use App\Support\LinkCardStatus;
 use Carbon\CarbonImmutable;
@@ -89,7 +90,7 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
             return; // Another worker holds it.
         }
 
-        $deadline = microtime(true) + (float) config('openpne.outbound.job_timeout');
+        $deadline = microtime(true) + OutboundTimeout::seconds('job_timeout', 20);
         $imported = null;
 
         try {

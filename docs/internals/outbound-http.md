@@ -90,8 +90,9 @@ happens to be exactly cap-sized is not a truncated one.
 Three deadlines nest, all in `config/openpne.php` under `outbound`: one request, one fetch
 (a request plus its redirects), and a whole job. Without the outer two a chain of individually-legal
 slow hops adds up to an unbounded job. They are enforced by handing the remaining budget to the
-per-request timeout, so a configured `0` — which means "no limit" to both Guzzle and libcurl — would
-remove the bound rather than tighten it; a non-positive value therefore falls back to the default.
+per-request timeout. A configured `0` would lift the request and connect timeouts — it means "no
+limit" to both Guzzle and libcurl — and would spend the fetch and job deadlines before the first
+request, so a non-positive value falls back to the default.
 
 The bound is not total: name resolution happens before the request and blocks on the system
 resolver's own timeout, outside the budget.
