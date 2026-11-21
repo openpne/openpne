@@ -14,7 +14,8 @@ is a picture, anything else a file. Three readers exist for that split and no fo
 - `pictures()` on every slot-bearing model ([`PostAttachments::pictures`](../../app/Files/PostAttachments.php))
   is the relation to count or test in SQL — `withCount('pictures')`, `pictures_exists`,
   `whereHas('pictures')` — wherever a list means "has photos"; a slot query built outside the
-  relation (the talk digest) filters by `PostAttachments::pictureFileIds()`.
+  relation (the talk digest) filters by `PostAttachments::pictureFileIds()`. Its complement
+  `nonPictures()` counts the files the same way, on the models whose files a list counts in SQL.
 - `PostAttachments::partition()` splits loaded slot rows for display; a serializer that ships
   `files` beside `images` takes both from the same call, each file in the
   [`AttachmentShape`](../../app/Files/AttachmentShape.php) (`id`, `url`, `name`, `byteSize`,
@@ -42,7 +43,7 @@ default). There is no extension or type allow list: the browser never interprets
 bytes (below), an allow list blocks the spreadsheets and archives people share, and a deny list is
 undone by renaming. The picture cap stays smaller than the file cap because it bounds a decode, not
 only storage. The MCP post tools keep the picture-only rules (`PostImageRules::imagesOnly()`), as
-their readers show pictures and nothing else.
+their readers fetch pictures and only count files.
 
 ## Delivery
 

@@ -11,6 +11,7 @@ use App\Mcp\Tools\ReadTalkMessagesTool;
 use App\Models\File;
 use App\Models\GroupMember;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageImage;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
@@ -184,6 +185,37 @@ class TalkReadToolTest extends TalkToolsTestCase
             ->assertStructuredContent(fn ($json) => $json
                 ->where('messages.0.hasImages', true)
                 ->where('messages.0.imageCount', 1)
+                ->where('messages.0.fileCount', 0)
+                ->etc());
+    }
+
+    /** A message may carry a file and no words (the web composer allows it), so without the count it would read as empty. */
+    public function test_a_file_is_counted_apart_from_the_pictures(): void
+    {
+        $group = $this->group();
+        $member = $this->memberOf($group);
+        $fileOnly = $this->say($group, $member, '');
+        $mixed = $this->say($group, $member, 'both');
+        foreach ([[$fileOnly, 'application/pdf'], [$mixed, 'image/png'], [$mixed, 'application/pdf']] as $i => [$message, $type]) {
+            GroupMessageImage::factory()->create([
+                'group_message_id' => $message->getKey(),
+                'file_id' => File::factory()->create(['type' => $type]),
+                'number' => $i + 1,
+            ]);
+        }
+
+        $this->acting($member);
+
+        OpenPneServer::tool(ReadTalkMessagesTool::class, ['group_id' => $group->getKey()])
+            ->assertOk()
+            ->assertStructuredContent(fn ($json) => $json
+                ->where('messages.0.body', '')
+                ->where('messages.0.hasImages', false)
+                ->where('messages.0.imageCount', 0)
+                ->where('messages.0.fileCount', 1)
+                ->where('messages.1.hasImages', true)
+                ->where('messages.1.imageCount', 1)
+                ->where('messages.1.fileCount', 1)
                 ->etc());
     }
 

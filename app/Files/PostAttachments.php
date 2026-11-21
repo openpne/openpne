@@ -30,6 +30,18 @@ final class PostAttachments
     }
 
     /**
+     * @template TRelated of Model
+     * @template TDeclaring of Model
+     *
+     * @param  HasMany<TRelated, TDeclaring>  $slots
+     * @return HasMany<TRelated, TDeclaring>
+     */
+    public static function nonPictures(HasMany $slots): HasMany
+    {
+        return $slots->whereIn('file_id', File::query()->select('id')->whereNotIn('type', ImageSpec::rasterMimes()));
+    }
+
+    /**
      * The `file_id` subquery behind pictures(), for a slot query built outside the relation.
      *
      * @return Builder<File>

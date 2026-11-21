@@ -34,7 +34,7 @@ class DiaryImagePostToolTest extends DiaryImageToolsTestCase
 
         $this->postDiary(['images' => [$this->encodedImage(40, 30), $this->encodedImage(20, 20)]])
             ->assertOk()
-            ->assertStructuredContent(fn ($json) => $json->where('diary.imageCount', 2)->etc());
+            ->assertStructuredContent(fn ($json) => $json->where('diary.imageCount', 2)->where('diary.fileCount', 0)->etc());
 
         $diary = Diary::query()->sole();
         $this->assertSame([1, 2], $diary->images()->pluck('number')->all());
@@ -73,7 +73,7 @@ class DiaryImagePostToolTest extends DiaryImageToolsTestCase
             'images' => [$this->encodedImage(40, 30)],
         ])
             ->assertOk()
-            ->assertStructuredContent(fn ($json) => $json->where('comment.imageCount', 1)->etc());
+            ->assertStructuredContent(fn ($json) => $json->where('comment.imageCount', 1)->where('comment.fileCount', 0)->etc());
 
         $comment = DiaryComment::query()->sole();
         $file = $comment->images()->with('file')->sole()->file;

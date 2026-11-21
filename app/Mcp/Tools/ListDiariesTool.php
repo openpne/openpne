@@ -36,7 +36,10 @@ class ListDiariesTool extends DiaryTool
             }
         }
 
-        return Response::structured(McpDiarySerializer::diaries($recent($this->member($request), $before)));
+        $page = $recent($this->member($request), $before);
+        $page->rows->loadCount('nonPictures');
+
+        return Response::structured(McpDiarySerializer::diaries($page));
     }
 
     /**

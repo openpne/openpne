@@ -16,19 +16,20 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 /**
  * A separate shape from the Modern surface's ({@see GroupMessageSerializer}, {@see TalkRoomSerializer})
  * rather than a reuse of it: those carry `/file` and `/cache/img` URLs, which a bearer client cannot
- * fetch because the file routes are session-guarded. Pictures are therefore reported as a count, and
- * their bytes are fetched by naming the message.
+ * fetch because the file routes are session-guarded. Attachments are therefore reported as counts, and
+ * a picture's bytes are fetched by naming the message.
  */
 class McpTalkSerializer
 {
     /**
      * @param  array<int, GroupMessage>  $parents
      * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions
-     * @return array{id: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, mentions: list<int>, inReplyTo: array{id: int, authorId: int|null}|null, reactions: list<array{emoji: string, count: int, mine: bool}>}
+     * @return array{id: int, body: string, authorId: int|null, authorName: string|null, authorIsAi: bool, createdAt: string, cursor: string, hasImages: bool, imageCount: int, fileCount: int, mentions: list<int>, inReplyTo: array{id: int, authorId: int|null}|null, reactions: list<array{emoji: string, count: int, mine: bool}>}
      */
     public static function message(GroupMessage $message, array $parents, array $reactions = []): array
     {
-        $images = PostAttachments::partition($message->images)['images']->count();
+        $attachments = PostAttachments::partition($message->images);
+        $images = $attachments['images']->count();
 
         return [
             'id' => (int) $message->getKey(),
@@ -40,6 +41,7 @@ class McpTalkSerializer
             'cursor' => (string) GroupTalkCursor::of($message),
             'hasImages' => $images > 0,
             'imageCount' => $images,
+            'fileCount' => $attachments['files']->count(),
             'mentions' => $message->mentions
                 ->map(fn (GroupMessageMention $mention): int => (int) $mention->member_id)
                 ->values()
