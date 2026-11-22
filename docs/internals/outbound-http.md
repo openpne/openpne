@@ -195,5 +195,6 @@ bounded here beyond libcurl's own limits).
   as a previous exception. Guzzle 8 redacts the URI in its own messages, but the wording is
   upstream's to change (Guzzle 7 appended the full request URI), so it is not relied on. A pasted
   URL carries its secrets in the query, and an exception from a queued job reaches the log verbatim.
-  The failed-push log is the one place that quotes a Guzzle message, and only after cutting the
-  endpoint's path and query wherever they appear, so it does not rely on the wording either.
+  Of the paths to an address the operator did not choose, the failed-push log is the one that quotes
+  a Guzzle message, and only after cutting the endpoint's path and query wherever they are quoted as
+  sent, so it relies on the path being quoted unaltered rather than on where or whether it is.

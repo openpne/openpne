@@ -47,7 +47,7 @@ final class LogWebPushFailure
         }
     }
 
-    /** The endpoint's path and query are cut wherever they appear and every URL keeps only its origin, so the capability stays out whatever wording upstream gives the reason (docs/internals/outbound-http.md, "Key invariants"). */
+    /** The endpoint's path and query are cut wherever quoted as sent, and every URL keeps only its origin (docs/internals/outbound-http.md, "Key invariants"). */
     private static function clean(string $text, UriInterface $endpoint): string
     {
         $text = str_replace(array_values(array_filter([

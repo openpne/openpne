@@ -64,6 +64,7 @@ class WebPushFailureLogTest extends TestCase
         $this->assertArrayNotHasKey('status', $line->context);
         $this->assertStringContainsString('https://127.0.0.1:1', $line->context['reason']);
         $this->assertStringNotContainsString('capability-token', $line->context['reason']);
+        $this->assertStringNotContainsString('libcurl-errors', $line->context['reason']);
     }
 
     /** A reason Guzzle did not write, since the library already escapes the control characters in its own. */
