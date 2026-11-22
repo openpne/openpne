@@ -13,9 +13,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // SQLite up to 3.31.1 refuses ADD COLUMN with a non-constant default even on an empty table and 3.32.1 is the first release seen to take it; the rebuild behind change() works on either side.
+        // SQLite before 3.32.0 refuses ADD COLUMN with a non-constant default even on an empty table, which the rebuild behind change() avoids.
         $rebuild = DB::connection()->getDriverName() === 'sqlite'
-            && version_compare(DB::connection()->getServerVersion(), '3.32.1', '<');
+            && version_compare(DB::connection()->getServerVersion(), '3.32.0', '<');
 
         Schema::table('group_members', function (Blueprint $table) use ($rebuild): void {
             $readAt = $table->dateTime('talk_read_at');
