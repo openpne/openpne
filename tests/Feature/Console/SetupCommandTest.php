@@ -202,7 +202,7 @@ class SetupCommandTest extends TestCase
         $this->answerSite($this->runSetup())
             ->expectsConfirmation('Go on with MySQL?', 'yes')
             ->expectsOutputToContain('SQLite cannot be used here: the sqlite3 command, which the backup uses, is not on PATH.')
-            ->expectsOutputToContain('The database is MySQL, which needs a database on the host\'s MySQL server, 8.0.17 or later and not MariaDB.')
+            ->expectsOutputToContain('The database is MySQL, as SQLite cannot be used here (the check above says why). It needs a database on the host\'s MySQL server, 8.0.17 or later and not MariaDB.')
             ->expectsQuestion('MySQL server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
@@ -291,7 +291,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsOutputToContain('SQLite cannot be used here: '.$this->layout->base.'/tools/sqlite3 is SQLite 3.27.2, and the backup needs 3.28.0 or later')
-            ->expectsOutputToContain('No database can be backed up here')
+            ->expectsOutputToContain('No database can be used here')
             ->expectsOutputToContain('Put right what is marked [FAIL] above')
             ->assertFailed();
 
@@ -329,9 +329,9 @@ class SetupCommandTest extends TestCase
             $setup->doesntExpectOutputToContain($line);
         }
         $this->answerSite($setup)
-            ->expectsOutputToContain('The database is MySQL, which needs a database on the host\'s MySQL server')
+            ->expectsOutputToContain('The database is MySQL, as SQLite cannot be used here')
             ->expectsConfirmation('Go on with MySQL?', 'no')
-            ->expectsOutputToContain('Nothing has been written.')
+            ->expectsOutputToContain('.env has not been written.')
             ->assertFailed();
 
         $this->assertFileDoesNotExist($this->layout->envFile);
@@ -1026,9 +1026,12 @@ class SetupCommandTest extends TestCase
 
     private function libraryVersion(string $version): void
     {
-        $this->app->instance(SqliteSupport::class, new class($version) extends SqliteSupport
+        $this->app->instance(SqliteSupport::class, new class($version, $this->app->make(SetupHost::class)) extends SqliteSupport
         {
-            public function __construct(private readonly string $version) {}
+            public function __construct(private readonly string $version, SetupHost $host)
+            {
+                parent::__construct($host);
+            }
 
             public function libraryVersion(): string
             {

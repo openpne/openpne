@@ -322,11 +322,7 @@ class SetupCommand extends Command
     /** @return array<string, string> */
     private function askDatabase(): array
     {
-        $lacks = $this->sqlite->lacks();
-        foreach ($lacks as $lack) {
-            $this->line(OutputFormatter::escape(CheckCommand::translate('check.'.$lack->message, $lack->replace, $this->locale)));
-        }
-        $sqlite = $lacks === [] ? BackupTools::sqlite() : null;
+        $sqlite = $this->sqlite->lacks() === [] ? BackupTools::sqlite() : null;
         $mysql = extension_loaded('pdo_mysql') ? BackupTools::mysql() : null;
         $options = array_filter(['sqlite' => $sqlite !== null ? $this->text('db_sqlite') : null, 'mysql' => $mysql !== null ? $this->text('db_mysql') : null]);
         if ($options === []) {

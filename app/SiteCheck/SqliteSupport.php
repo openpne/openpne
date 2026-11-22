@@ -5,26 +5,24 @@ declare(strict_types=1);
 namespace App\SiteCheck;
 
 use App\Setup\BackupLine;
-use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use App\Setup\SetupHost;
 use Illuminate\Support\Facades\Process;
 use PDO;
 use Throwable;
 
-/** Whether this host's SQLite can hold a site: the one judgment openpne:check and openpne:setup share. */
 class SqliteSupport
 {
-    /**
-     * Below it, a migration's ADD COLUMN defaulting to CURRENT_TIMESTAMP fails, and so does a statement
-     * binding more than 999 values, which the app's batches of 1000 do.
-     */
+    /** Below it, SQLite refuses a statement binding more than 999 values, which the app's batches of 1000 bind. */
     public const LIBRARY_MINIMUM = '3.32.0';
+
+    public function __construct(private readonly SetupHost $host) {}
 
     public function hasPdo(): bool
     {
         return extension_loaded('pdo_sqlite');
     }
 
-    /** The SQLite pdo_sqlite runs on, or null without pdo_sqlite. */
+    /** The SQLite pdo_sqlite runs on, or null where it cannot be read. */
     public function libraryVersion(): ?string
     {
         if (! $this->hasPdo()) {
@@ -42,12 +40,12 @@ class SqliteSupport
     /** The sqlite3 command's version, or null where it cannot be run or does not say. */
     public function commandVersion(string $tool): ?string
     {
-        if (! function_exists('proc_open')) {
+        if (! $this->host->canSpawn()) {
             return null;
         }
         try {
             $result = Process::timeout(30)->run([$tool, '-version']);
-        } catch (ProcessTimedOutException) {
+        } catch (Throwable) {
             return null;
         }
 

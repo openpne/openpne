@@ -81,7 +81,7 @@ final class BeforeInstallCheck
         $sqlite = $lacks === [] ? BackupTools::sqlite() : null;
         $mysql = extension_loaded('pdo_mysql') ? BackupTools::mysql() : null;
         $needs = ['library' => SqliteSupport::LIBRARY_MINIMUM, 'command' => BackupLine::SQLITE_MINIMUM];
-        $why = $this->sqlite->partlyThere() ? $lacks : [];
+        $why = ! $installed && $this->sqlite->partlyThere() ? $lacks : [];
 
         if ($sqlite !== null && $mysql !== null) {
             return [Finding::ok('cli.databases', 'cli_databases_both', ['sqlite' => $sqlite, 'mysql' => $mysql])];
