@@ -299,18 +299,18 @@ class SetupCommand extends Command
     {
         $sqlite = extension_loaded('pdo_sqlite') ? BackupTools::sqlite() : null;
         if ($sqlite !== null && ($version = $this->sqliteVersion($sqlite)) !== null && version_compare($version, BackupLine::SQLITE_MINIMUM, '<')) {
-            $this->say('sqlite_old', ['path' => $sqlite, 'version' => $version]);
+            $this->say('sqlite_old', ['path' => $sqlite, 'version' => $version, 'minimum' => BackupLine::SQLITE_MINIMUM]);
             $sqlite = null;
         }
         $mysql = extension_loaded('pdo_mysql') ? BackupTools::mysql() : null;
         $options = array_filter(['sqlite' => $sqlite !== null ? $this->text('db_sqlite') : null, 'mysql' => $mysql !== null ? $this->text('db_mysql') : null]);
         if ($options === []) {
-            $this->say('db_none', [], 'error');
+            $this->say('db_none', ['minimum' => BackupLine::SQLITE_MINIMUM], 'error');
 
             throw new StopSetup;
         }
         if (count($options) === 1) {
-            $this->say($sqlite !== null ? 'db_only_sqlite' : 'db_only_mysql');
+            $this->say($sqlite !== null ? 'db_only_sqlite' : 'db_only_mysql', ['minimum' => BackupLine::SQLITE_MINIMUM]);
             $choice = (string) array_key_first($options);
         } else {
             $choice = (string) select($this->text('db'), $options, 'sqlite');
@@ -719,7 +719,7 @@ class SetupCommand extends Command
         if ($driver === 'sqlite') {
             $version = $this->sqliteVersion($tool);
             if ($version !== null && version_compare($version, BackupLine::SQLITE_MINIMUM, '<')) {
-                $this->say('backup_sqlite_old', ['path' => $tool, 'version' => $version], 'error');
+                $this->say('backup_sqlite_old', ['path' => $tool, 'version' => $version, 'minimum' => BackupLine::SQLITE_MINIMUM], 'error');
 
                 return;
             }
@@ -758,7 +758,7 @@ class SetupCommand extends Command
         $copy = PrivateFile::temp($data, self::TRIAL_PREFIX, '', 0o600);
 
         try {
-            $write = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', $database, "VACUUM INTO '{$copy}'"]);
+            $write = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', '-cmd', BackupLine::SQLITE_WAIT, $database, "VACUUM INTO '{$copy}'"]);
             if (! $write->successful()) {
                 return self::firstLine($write->errorOutput());
             }

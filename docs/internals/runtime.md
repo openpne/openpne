@@ -402,8 +402,9 @@ Key invariants:
    in, in place of any other and whether or not the top one is still in the
    release; the SQLite database (made only where nothing has its name, a broken link included), the
    MySQL option file (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it prints
-   writes `backup.sqlite` (`VACUUM INTO`) or `backup.sql` beside a `.new` copy moved over the last,
-   and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
+   writes `backup.sqlite` (`VACUUM INTO` under `-readonly`, which needs SQLite 3.28.0 or later,
+   waiting up to a minute for the site's locks) or `backup.sql` beside a `.new` copy moved over the
+   last, and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
    allows, the same tool writes once into a 0600 file there, judged by a table read back from it,
    and removed.
 5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway

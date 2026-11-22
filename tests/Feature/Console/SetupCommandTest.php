@@ -158,6 +158,7 @@ class SetupCommandTest extends TestCase
     public function test_a_refused_answer_is_asked_again_and_never_written(): void
     {
         $this->tools('sqlite3');
+        Process::fake(['*' => Process::result('3.28.0 2019-04-16 19:49:53 884b4b7e50')]);
 
         $this->runSetup()
             ->expectsQuestion('The site\'s address', 'https://sns.example.com/sns')
@@ -196,7 +197,7 @@ class SetupCommandTest extends TestCase
         $this->tools('mysqldump');
 
         $this->answerSite($this->runSetup())
-            ->expectsOutputToContain('The database is MySQL')
+            ->expectsOutputToContain('The database is MySQL. SQLite needs pdo_sqlite and the sqlite3 command, 3.28.0 or later, which this host lacks.')
             ->expectsQuestion('MySQL server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
@@ -233,14 +234,14 @@ class SetupCommandTest extends TestCase
         $this->assertSame(['mysql', (string) $settings['database']], [$env['DB_CONNECTION'], $env['DB_DATABASE']]);
     }
 
-    public function test_a_sqlite3_too_old_for_vacuum_into_cannot_be_chosen(): void
+    public function test_a_sqlite3_too_old_for_the_backup_cannot_be_chosen(): void
     {
         $this->tools('sqlite3');
-        Process::fake(['*' => Process::result('3.26.0 2018-12-01 12:34:55 bf8c1b2b7a')]);
+        Process::fake(['*' => Process::result('3.27.2 2019-02-25 16:06:06 bd49a8271d')]);
 
         $this->answerSite($this->runSetup())
-            ->expectsOutputToContain('SQLite 3.26.0, and the backup needs 3.27 or later')
-            ->expectsOutputToContain('No database can be backed up on this host')
+            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28.0 or later (VACUUM INTO under -readonly)')
+            ->expectsOutputToContain('No database can be backed up on this host, so a site here could not be updated. SQLite needs pdo_sqlite and the sqlite3 command, 3.28.0 or later;')
             ->assertFailed();
 
         $this->assertFileDoesNotExist($this->layout->envFile);
@@ -596,7 +597,9 @@ class SetupCommandTest extends TestCase
         $this->assertSame([], glob($this->layout->dataDirectory().'/openpne-setup-*') ?: []);
         if ($this->sqlite()) {
             $this->assertSame(0o600, fileperms($this->sqlitePath()) & 0o777);
-            Process::assertRan(fn (PendingProcess $p): bool => is_array($p->command) && str_starts_with((string) ($p->command[3] ?? ''), 'VACUUM INTO '));
+            Process::assertRan(fn (PendingProcess $p): bool => is_array($p->command)
+                && array_slice($p->command, 1, 4) === ['-readonly', '-cmd', '.timeout 60000', $this->sqlitePath()]
+                && str_starts_with((string) ($p->command[5] ?? ''), 'VACUUM INTO '));
         }
     }
 
@@ -819,6 +822,25 @@ class SetupCommandTest extends TestCase
         $this->assertSame([], glob($this->layout->dataDirectory().'/openpne-setup-*') ?: []);
     }
 
+    public function test_a_rerun_with_a_sqlite3_too_old_for_the_backup_shows_no_line(): void
+    {
+        if (! $this->sqlite()) {
+            $this->markTestSkipped('The version is the sqlite3 command\'s.');
+        }
+        $this->withEnv();
+        $this->fakeWeb();
+        $this->fakeTools(version: '3.27.2 2019-02-25 16:06:06 bd49a8271d');
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+
+        $this->runSetup()
+            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28.0 or later (VACUUM INTO under -readonly). Ask the host for a newer sqlite3.')
+            ->doesntExpectOutputToContain($this->backupLineStart())
+            ->assertSuccessful();
+
+        Process::assertDidntRun(fn (PendingProcess $p): bool => is_array($p->command) && str_starts_with((string) end($p->command), 'VACUUM INTO '));
+    }
+
     public function test_a_path_a_shell_would_read_shows_no_line(): void
     {
         (new Filesystem)->deleteDirectory($this->root);
@@ -940,14 +962,14 @@ class SetupCommandTest extends TestCase
         $tools = $this->layout->base.'/tools';
 
         return $this->sqlite()
-            ? "rm -f '{$data}/backup.sqlite.new' && '{$tools}/sqlite3' -readonly '{$this->sqlitePath()}'"
+            ? "rm -f '{$data}/backup.sqlite.new' && '{$tools}/sqlite3' -readonly -cmd \".timeout 60000\" '{$this->sqlitePath()}'"
             : "rm -f '{$data}/backup.sql.new' && '{$tools}/mysqldump' --defaults-extra-file='{$this->layout->mysqlOptionFile()}'";
     }
 
     /** @param 'works'|'empty'|'fails' $backup */
-    private function fakeTools(string $backup = 'works'): void
+    private function fakeTools(string $backup = 'works', string $version = '3.28.0 2019-04-16 19:49:53 884b4b7e50'): void
     {
-        Process::fake(function (PendingProcess $process) use ($backup) {
+        Process::fake(function (PendingProcess $process) use ($backup, $version) {
             $command = is_array($process->command) ? $process->command : [$process->command];
             $last = (string) end($command);
             $copy = preg_grep('/\A--result-file=/', $command);
@@ -956,7 +978,7 @@ class SetupCommandTest extends TestCase
             }
 
             return match (true) {
-                $last === '-version' => Process::result('3.46.1 2024-08-13 09:16:08 c9c2ab54ba'),
+                $last === '-version' => Process::result($version),
                 str_ends_with((string) $command[0], 'mysqldump') => $backup !== 'fails'
                     ? Process::result()
                     : Process::result('', "mysqldump: Got error: 1044: Access denied for user 'site'@'%' to database 'site_db'\n", 2),

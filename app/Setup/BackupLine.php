@@ -11,8 +11,16 @@ final class BackupLine
 
     public const MYSQL_FILE = 'backup.sql';
 
-    /** VACUUM INTO, which copies in one read transaction where `.backup` restarts on every write. */
-    public const SQLITE_MINIMUM = '3.27.0';
+    /**
+     * VACUUM INTO copies in one read transaction where `.backup` restarts on every write. SQLite
+     * takes it under `-readonly` from 3.28.0.
+     */
+    public const SQLITE_MINIMUM = '3.28.0';
+
+    /**
+     * The sqlite3 shell does not wait on a lock unless told to. A minute is pdo_sqlite's default wait.
+     */
+    public const SQLITE_WAIT = '.timeout 60000';
 
     /**
      * Whether every part can go inside single quotes in both shells and in cron: none of these closes
@@ -34,7 +42,7 @@ final class BackupLine
     {
         $copy = $dataDirectory.'/'.self::SQLITE_FILE;
 
-        return self::rotate($copy, self::quote($tool).' -readonly '.self::quote($database).' "VACUUM INTO \''.$copy.'.new\'"');
+        return self::rotate($copy, self::quote($tool).' -readonly -cmd "'.self::SQLITE_WAIT.'" '.self::quote($database).' "VACUUM INTO \''.$copy.'.new\'"');
     }
 
     public static function mysql(string $tool, string $optionFile, string $database, string $dataDirectory): string
