@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\Models\Member;
+use App\Notifications\Push\WebPushNudge;
 use App\Providers\WebPushServiceProvider;
 use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\HttpAsyncClientDiscovery;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\VAPID;
 use Minishlink\WebPush\WebPush;
@@ -31,6 +36,8 @@ use Throwable;
  */
 class WebPushUpstreamAssumptionsTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * Narrowing it to private is the quiet break: the parent would then call its own copy and leave the
      * override a method that merely exists.
@@ -140,6 +147,38 @@ class WebPushUpstreamAssumptionsTest extends TestCase
         iterator_to_array($reports);
 
         $this->assertSame(3, $recorder->requests);
+    }
+
+    /**
+     * Sent through this app's own provider and client factory, because FakeWebPush records the options
+     * but never builds the request the header is written into.
+     */
+    public function test_a_nudge_reaches_the_push_service_marked_high_urgency(): void
+    {
+        $vapid = VAPID::createVapidKeys();
+        $mock = new MockHandler([new Response(201)]);
+        config([
+            'webpush.vapid.subject' => 'https://sns.example.com',
+            'webpush.vapid.public_key' => $vapid['publicKey'],
+            'webpush.vapid.private_key' => $vapid['privateKey'],
+            'webpush.client_options' => ['handler' => HandlerStack::create($mock)],
+        ]);
+        $this->app->register(new WebPushServiceProvider($this->app), true);
+        $member = Member::factory()->create();
+        $member->updatePushSubscription(
+            'https://push.example.com/device',
+            VAPID::createVapidKeys()['publicKey'],
+            rtrim(strtr(base64_encode(random_bytes(16)), '+/', '-_'), '='),
+            'aes128gcm',
+        );
+
+        $member->notify(new WebPushNudge(['kind' => 'direct_message_received'], null));
+
+        $this->assertSame(
+            'high',
+            $mock->getLastRequest()?->getHeaderLine('Urgency'),
+            'A nudge reached the push service without Urgency: high. Either the channel no longer hands the message\'s options() to queueNotification(), or minishlink/web-push no longer writes the urgency option as the header; set it wherever the library now takes it.',
+        );
     }
 
     /**

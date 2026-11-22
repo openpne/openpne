@@ -284,8 +284,9 @@ the same sentence the feed row renders (`NotificationKindLabel`, so there is no 
 as its body a preview of what the row is about
 ([`NotificationPreview`](../../app/Features/Notifications/NotificationPreview.php): a post's title
 and excerpt, a message's or comment's first line, the image stand-in for a message of pictures only,
-nothing for a kind with no content such as a `%friend%` request), a fixed tag so a new nudge collapses
-the previous one on the device, and the unread count read at send time for the app badge. The site's
+nothing for a kind with no content such as a `%friend%` request), a fixed tag so a new nudge replaces
+the previous one on a device that honours the tag (one that ignores it lists every nudge on its own),
+and the unread count read at send time for the app badge. The site's
 name is not in the title: the device prints its own attribution line — the manifest name on an
 installed web app, the origin in a plain browser. It is constructed from scalars, not models: an
 actor who withdraws between the row and the send degrades to the withdrawn-member label instead of
@@ -328,6 +329,10 @@ Three switches, at three scopes:
   is the subscription's identity and is unique globally, so re-registering it under another member
   moves the row. The store is capped at 10 devices per member, oldest pruned. An endpoint the push
   service reports as 404/410 is deleted by the package's report handler, so expiry needs no wiring.
+  Any other failed send — a refusal status, or a transport failure such as a timeout — is not
+  retried; [`LogWebPushFailure`](../../app/Listeners/Notifications/LogWebPushFailure.php) logs it as
+  a warning with the member id, the status, the reason, the push service's answer and the endpoint's
+  host (never the endpoint, which is the device's capability), and logs an expiry at info.
 
 The subscribe UI is Modern-only (so under `surface_mode=classic_only` no one subscribes), but
 **ownership reconciliation runs on every authenticated surface**:

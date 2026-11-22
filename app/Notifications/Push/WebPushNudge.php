@@ -70,7 +70,9 @@ final class WebPushNudge extends Notification implements ShouldQueue
             ->data([
                 'url' => '/notifications',
                 'unreadCount' => (new CountUnreadNotifications)($notifiable),
-            ]);
+            ])
+            // RFC 8030: without it a push is "normal", which a device saving power may ask its push service not to forward.
+            ->options(['urgency' => 'high']);
 
         $preview = NotificationPreview::for($kind, $this->data, $notifiable);
 
