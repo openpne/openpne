@@ -384,6 +384,15 @@ class MemberPasskeyManagementTest extends TestCase
         $this->assertContains($passkey->credential_id, $excluded);
     }
 
+    /** EdDSA (-8) would need the sodium extension, which docs/installing.md leaves out. */
+    public function test_the_options_offer_only_algorithms_verified_without_sodium(): void
+    {
+        $member = Member::factory()->create();
+        $this->reauth($member);
+
+        $this->assertSame([-7, -257], collect($this->registrationOptions($member)['pubKeyCredParams'])->pluck('alg')->all());
+    }
+
     public function test_an_ai_account_row_never_gains_a_passkey(): void
     {
         $owner = Member::factory()->create();

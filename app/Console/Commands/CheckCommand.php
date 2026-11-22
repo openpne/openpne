@@ -10,6 +10,7 @@ use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\Finding;
 use App\SiteCheck\InstalledCheck;
 use App\SiteCheck\SiteLayout;
+use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\Verdict;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Formatter\OutputFormatter;
@@ -51,7 +52,7 @@ class CheckCommand extends Command
         $findings = [];
 
         if ($only === null || $only === 'before') {
-            $findings = [...$findings, ...$this->part('heading_before', [], fn (): array => (new BeforeInstallCheck($layout))->run($installed))];
+            $findings = [...$findings, ...$this->part('heading_before', [], fn (): array => (new BeforeInstallCheck($layout, $this->laravel->make(SqliteSupport::class)))->run($installed))];
         }
         if ($only !== 'before' && ! $installed) {
             $this->newLine();

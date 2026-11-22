@@ -11,6 +11,7 @@ use App\Setup\SetupHost;
 use App\Setup\SetupLock;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\SiteLayout;
+use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\WebCheck;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -199,7 +200,9 @@ class SetupCommandTest extends TestCase
         $this->tools('mysqldump');
 
         $this->answerSite($this->runSetup())
-            ->expectsOutputToContain('The database is MySQL. SQLite needs pdo_sqlite and the sqlite3 command, 3.28.0 or later, which this host lacks.')
+            ->expectsConfirmation('Go on with MySQL?', 'yes')
+            ->expectsOutputToContain('SQLite cannot be used here: the sqlite3 command, which the backup uses, is not on PATH.')
+            ->expectsOutputToContain('The database is MySQL, which needs a database on the host\'s MySQL server, 8.0.17 or later and not MariaDB.')
             ->expectsQuestion('MySQL server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
@@ -223,6 +226,7 @@ class SetupCommandTest extends TestCase
         $this->tools('mysqldump');
 
         $this->answerSite($this->runSetup())
+            ->expectsConfirmation('Go on with MySQL?', 'yes')
             ->expectsQuestion('MySQL server', (string) $settings['host'])
             ->expectsQuestion('Port', (string) $settings['port'])
             ->expectsQuestion('Database name', (string) $settings['database'])
@@ -267,6 +271,7 @@ class SetupCommandTest extends TestCase
         $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204');
 
         $this->answerSite($this->runSetup())
+            ->expectsConfirmation('Go on with MySQL?', 'yes')
             ->expectsQuestion('MySQL server', 'db.example.com')
             ->expectsQuestion('Port', '3306')
             ->expectsQuestion('Database name', 'site_db')
@@ -279,17 +284,73 @@ class SetupCommandTest extends TestCase
         $this->assertFileDoesNotExist($this->layout->envFile);
     }
 
-    public function test_a_sqlite3_too_old_for_the_backup_cannot_be_chosen(): void
+    public function test_a_sqlite3_too_old_for_the_backup_fails_the_check_before_any_question(): void
     {
         $this->tools('sqlite3');
         Process::fake(['*' => Process::result('3.27.2 2019-02-25 16:06:06 bd49a8271d')]);
 
-        $this->answerSite($this->runSetup())
-            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28.0 or later (VACUUM INTO under -readonly)')
-            ->expectsOutputToContain('No database can be backed up on this host, so a site here could not be updated. SQLite needs pdo_sqlite and the sqlite3 command, 3.28.0 or later;')
+        $this->runSetup()
+            ->expectsOutputToContain('SQLite cannot be used here: '.$this->layout->base.'/tools/sqlite3 is SQLite 3.27.2, and the backup needs 3.28.0 or later')
+            ->expectsOutputToContain('No database can be backed up here')
+            ->expectsOutputToContain('Put right what is marked [FAIL] above')
             ->assertFailed();
 
         $this->assertFileDoesNotExist($this->layout->envFile);
+    }
+
+    /** @return array<string, array{string, string, list<string>, list<string>}> */
+    public static function sqliteTooOld(): array
+    {
+        $library = 'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite ';
+        $command = 'is SQLite 3.26.0, and the backup needs 3.28.0 or later';
+
+        return [
+            'both, as on Enterprise Linux 8' => ['3.26.0', '3.26.0 2018-12-01 12:34:55 bf8c1b2b7a', [$library.'3.26.0, and OpenPNE needs 3.32.0 or later.', $command], []],
+            'the library alone' => ['3.31.1', '3.28.0 2019-04-16 19:49:53 884b4b7e50', [$library.'3.31.1, and OpenPNE needs 3.32.0 or later.'], [$command]],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $said
+     * @param  list<string>  $unsaid
+     */
+    #[DataProvider('sqliteTooOld')]
+    public function test_a_sqlite_too_old_is_named_by_what_it_lacks_and_mysql_is_asked_about_before_its_server(string $library, string $command, array $said, array $unsaid): void
+    {
+        $this->tools('sqlite3', 'mysqldump');
+        Process::fake(['*' => Process::result($command)]);
+        $this->libraryVersion($library);
+
+        $setup = $this->runSetup()->expectsOutputToContain('Databases: MySQL only');
+        foreach ($said as $line) {
+            $setup->expectsOutputToContain($line);
+        }
+        foreach ([...$unsaid, 'has no pdo_sqlite', 'not on PATH'] as $line) {
+            $setup->doesntExpectOutputToContain($line);
+        }
+        $this->answerSite($setup)
+            ->expectsOutputToContain('The database is MySQL, which needs a database on the host\'s MySQL server')
+            ->expectsConfirmation('Go on with MySQL?', 'no')
+            ->expectsOutputToContain('Nothing has been written.')
+            ->assertFailed();
+
+        $this->assertFileDoesNotExist($this->layout->envFile);
+    }
+
+    public function test_sqlite_at_the_versions_it_needs_is_chosen_without_a_question_about_mysql(): void
+    {
+        $this->tools('sqlite3');
+        Process::fake(['*' => Process::result('3.28.0 2019-04-16 19:49:53 884b4b7e50')]);
+        $this->libraryVersion('3.32.0');
+
+        $this->answerSite($this->runSetup())
+            ->doesntExpectOutputToContain('SQLite cannot be used here')
+            ->expectsOutputToContain('The database is SQLite.')
+            ->expectsChoice('Mail', 'later', ['later' => 'Later (nothing is sent until then)', 'smtp' => 'An SMTP server'])
+            ->expectsChoice('Background work', 'deferred', $this->queueChoices())
+            ->assertSuccessful();
+
+        $this->assertSame('sqlite', EnvFile::read((string) file_get_contents($this->layout->envFile))['DB_CONNECTION']);
     }
 
     public function test_a_host_without_proc_open_writes_env_and_asks_to_be_run_again(): void
@@ -327,6 +388,7 @@ class SetupCommandTest extends TestCase
         $this->hostState['hide'] = false;
 
         $this->answerSite($this->runSetup())
+            ->expectsConfirmation('Go on with MySQL?', 'yes')
             ->expectsQuestion('MySQL server', '127.0.0.1')
             ->expectsQuestion('Port', '3306')
             ->expectsQuestion('Database name', 'site_db')
@@ -344,7 +406,7 @@ class SetupCommandTest extends TestCase
         $this->hostState['spawn'] = false;
         $this->hostState['hide'] = false;
 
-        $command = $this->answerSite($this->runSetup());
+        $command = $this->answerSite($this->runSetup())->expectsConfirmation('Go on with MySQL?', 'yes');
         foreach ([true, false] as $first) {
             $command->expectsQuestion('MySQL server', '127.0.0.1')
                 ->expectsQuestion('Port', '1')
@@ -365,6 +427,7 @@ class SetupCommandTest extends TestCase
         $this->hostState['hide'] = false;
 
         $this->answerSite($this->runSetup())
+            ->expectsConfirmation('Go on with MySQL?', 'yes')
             ->expectsQuestion('MySQL server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
@@ -959,6 +1022,19 @@ class SetupCommandTest extends TestCase
         file_put_contents($base.'/.htaccess', SiteLayout::DENY);
         $this->layout = new SiteLayout($base, $base.'/public', $base.'/storage', $base.'/bootstrap/cache', $base.'/.env');
         $this->app->instance(SiteLayout::class, $this->layout);
+    }
+
+    private function libraryVersion(string $version): void
+    {
+        $this->app->instance(SqliteSupport::class, new class($version) extends SqliteSupport
+        {
+            public function __construct(private readonly string $version) {}
+
+            public function libraryVersion(): string
+            {
+                return $this->version;
+            }
+        });
     }
 
     private function tools(string ...$names): void

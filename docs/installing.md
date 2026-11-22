@@ -29,18 +29,20 @@ A server you administer is what the steps assume. A host where you cannot is cov
 
 - **PHP 8.3 or later**, for the web server and on the command line, with the extensions `ctype`,
   `curl`, `dom`, `exif`, `fileinfo`, `filter`, `gd`, `hash`, `iconv`, `intl`, `libxml`, `mbstring`,
-  `openssl`, `pcre`, `session`, `sodium`, `tokenizer`, `xml`, `xmlreader`, `zip`, `zlib`, and
+  `openssl`, `pcre`, `session`, `tokenizer`, `xml`, `xmlreader`, `zip`, `zlib`, and
   `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes
   [push notifications](#8-push-notifications-optional) faster; the queue worker's job timeouts need
   `pcntl` on the command line.
-- **A database**: SQLite 3, or MySQL 8.4. Any MySQL from 8.0.17 works too: that is the first with
-  the `utf8mb4_0900_bin` collation the tables use. MariaDB does not work yet. A SQLite site also
-  needs the `sqlite3` command, which [updating.md](updating.md) uses for its backup.
+- **A database**: SQLite 3.32.0 or later, as the library `pdo_sqlite` runs on, or MySQL 8.4. Any
+  MySQL from 8.0.17 works too: that is the first with the `utf8mb4_0900_bin` collation the tables
+  use. MariaDB does not work yet. A SQLite site also needs the `sqlite3` command, 3.28.0 or later,
+  which [updating.md](updating.md) uses for its backup.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
 - **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
   runs without, and offers it as one way to run the queue.
 - Nothing to build with, when the release is installed from its archive. A release taken from git
-  is built on the server and needs Composer 2 and Node.js 26 as well.
+  is built on the server and needs Composer 2 and Node.js 26 as well, and the `sodium` extension on
+  the command line, without which Composer refuses one of the libraries.
 
 ```bash
 sudo apt install php-cli php-curl php-mbstring php-xml php-intl php-zip php-gd php-bcmath unzip
@@ -599,7 +601,7 @@ too, when it gives you:
 - a shell (SSH), to unpack the archive and run `php artisan`;
 - PHP 8.3 or later, for the web and on the command line, with the extensions
   [above](#what-the-server-needs), `intl` among them;
-- MySQL 8.0.17 or later (not MariaDB), or SQLite;
+- MySQL 8.0.17 or later (not MariaDB), or SQLite of the versions [above](#what-the-server-needs);
 - Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
 - PHP for the web running as your own account, as the command line does. Where it runs as a user
   the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.
