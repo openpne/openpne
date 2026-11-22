@@ -331,8 +331,9 @@ Three switches, at three scopes:
   service reports as 404/410 is deleted by the package's report handler, so expiry needs no wiring.
   Any other failed send — a refusal status, or a transport failure such as a timeout — is not
   retried; [`LogWebPushFailure`](../../app/Listeners/Notifications/LogWebPushFailure.php) logs it as
-  a warning with the member id, the status, the reason, the push service's answer and the endpoint's
-  host (never the endpoint, which is the device's capability), and logs an expiry at info.
+  a warning with the member id, the endpoint's host and either the status or the transport's reason
+  with every URL cut to its origin — never the endpoint, which is the device's capability, nor a
+  response body — and logs an expiry at info.
 
 The subscribe UI is Modern-only (so under `surface_mode=classic_only` no one subscribes), but
 **ownership reconciliation runs on every authenticated surface**:
