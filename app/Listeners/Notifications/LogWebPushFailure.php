@@ -6,6 +6,7 @@ namespace App\Listeners\Notifications;
 
 use Illuminate\Support\Facades\Log;
 use NotificationChannels\WebPush\Events\NotificationFailed;
+use Psr\Http\Message\UriInterface;
 use Throwable;
 
 /**
@@ -21,12 +22,13 @@ final class LogWebPushFailure
     {
         try {
             $report = $event->report;
+            $endpoint = $report->getRequest()->getUri();
             $response = $report->getResponse();
             $context = array_filter([
                 'member_id' => $event->subscription->subscribable_id,
-                'host' => $report->getRequest()->getUri()->getHost(),
+                'host' => $endpoint->getHost(),
                 'status' => $response?->getStatusCode(),
-                'reason' => $response === null ? self::clean($report->getReason()) : null,
+                'reason' => $response === null ? self::clean($report->getReason(), $endpoint) : null,
             ], static fn (mixed $value): bool => $value !== null && $value !== '');
 
             if ($report->isSubscriptionExpired()) {
@@ -45,9 +47,13 @@ final class LogWebPushFailure
         }
     }
 
-    /** Every URL keeps only its origin, because the reason Guzzle gives for a failed transfer quotes the endpoint's path. */
-    private static function clean(string $text): string
+    /** The endpoint's path and query are cut wherever they appear and every URL keeps only its origin, so the capability stays out whatever wording upstream gives the reason (docs/internals/outbound-http.md, "Key invariants"). */
+    private static function clean(string $text, UriInterface $endpoint): string
     {
+        $text = str_replace(array_values(array_filter([
+            strlen($endpoint->getPath()) > 1 ? $endpoint->getPath() : '',
+            $endpoint->getQuery() !== '' ? '?'.$endpoint->getQuery() : '',
+        ])), '', $text);
         $text = (string) preg_replace('~(https?://[^/\s?#]+)\S*~i', '$1', $text);
 
         return mb_substr(trim((string) preg_replace('/[\x00-\x1F\x7F]+/', ' ', $text)), 0, self::MAX_LENGTH);

@@ -79,6 +79,17 @@ class WebPushFailureLogTest extends TestCase
         $this->assertSame(256, mb_strlen($line->context['reason']));
     }
 
+    public function test_a_transport_reason_quoting_the_endpoint_without_a_scheme_keeps_none_of_its_path(): void
+    {
+        $this->pushThrough(
+            fn (RequestInterface $request): PromiseInterface => Create::rejectionFor(new ConnectException('refused for push.example.com/device/capability-token?k=v', $request)),
+            ['https://push.example.com/device/capability-token?k=v'],
+        );
+
+        [$line] = $this->logged('warning');
+        $this->assertSame('refused for push.example.com', $line->context['reason']);
+    }
+
     public function test_an_expired_endpoint_is_logged_below_warning(): void
     {
         $member = $this->pushThrough(fn (): PromiseInterface => Create::promiseFor(new Response(410)), ['https://push.example.com/device/gone']);
