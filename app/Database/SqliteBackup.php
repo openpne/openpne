@@ -41,6 +41,7 @@ final class SqliteBackup
             try {
                 self::empty($temp);
                 self::copy($database, $temp);
+                self::flush($temp);
                 if (! @rename($temp, $target)) {
                     throw new RuntimeException("{$target} could not be written.");
                 }
@@ -52,7 +53,7 @@ final class SqliteBackup
         }
     }
 
-    /** Copies $database into $empty, an empty file the caller made, leaving the copy out of WAL. */
+    /** Copies $database into $empty, an empty file the caller made, leaving the copy out of WAL and not yet flushed to disk. */
     public static function copy(string $database, string $empty): void
     {
         $from = new SQLite3($database, SQLITE3_OPEN_READONLY);
@@ -62,6 +63,8 @@ final class SqliteBackup
             $to = new SQLite3($empty, SQLITE3_OPEN_READWRITE);
             try {
                 $to->enableExceptions(true);
+                // SQLite flushes the copy before it lets go of the database's read lock, so a slow disk would hold every commit up.
+                $to->exec('PRAGMA synchronous=OFF');
                 try {
                     $from->backup($to);
                 } catch (Exception $e) {
@@ -164,6 +167,15 @@ final class SqliteBackup
         }
         if ($handle === false) {
             throw new RuntimeException("{$file} cannot be written to.");
+        }
+        fclose($handle);
+    }
+
+    private static function flush(string $file): void
+    {
+        $handle = @fopen($file, 'r+');
+        if ($handle === false || ! fsync($handle)) {
+            throw new RuntimeException("{$file} could not be flushed to disk.");
         }
         fclose($handle);
     }

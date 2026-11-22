@@ -440,11 +440,15 @@ Key invariants:
    removed, held until the copy is renamed into place and what was beside it removed. A second run
    fails without touching anything.
 3. **The copy is written whole beside the last**: into `<path>.new` (0600), removed first with what a
-   killed run left beside it, and renamed over `<path>` only once the backup finished and the copy's
-   journal mode is `delete`. A run that fails leaves the last copy as it was.
-4. **The copy is out of WAL**: the backup takes the database's header, WAL mark included, and a
+   killed run left beside it, and renamed over `<path>` only once the backup finished, the copy's
+   journal mode is `delete` and the file is flushed to disk. A run that fails leaves the last copy as
+   it was.
+4. **No flush inside the read transaction**: SQLite would flush the copy before it ends the backup's
+   read transaction, holding commits up for as long as the disk takes, so the copy is written with
+   `synchronous` off and flushed after.
+5. **The copy is out of WAL**: the backup takes the database's header, WAL mark included, and a
    `-wal` file found beside a copy is read into it.
-5. **A last copy with a `-journal`, `-wal` or `-shm` beside it is not replaced**: something has it
+6. **A last copy with a `-journal`, `-wal` or `-shm` beside it is not replaced**: something has it
    open, or stopped while writing to it.
 
 ## Database server
