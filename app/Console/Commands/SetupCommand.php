@@ -814,7 +814,7 @@ class SetupCommand extends Command
 
             return $migrations > 0 ? null : $this->text('backup_no_tables');
         } catch (Exception $e) {
-            return self::firstLine($e->getMessage());
+            return rtrim(self::firstLine($e->getMessage()), '.');
         } finally {
             foreach (['', '-wal', '-shm', '-journal'] as $suffix) {
                 @unlink($copy.$suffix);

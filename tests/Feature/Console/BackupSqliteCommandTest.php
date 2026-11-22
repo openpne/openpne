@@ -116,6 +116,67 @@ class BackupSqliteCommandTest extends TestCase
         $this->assertSame($before, $this->files());
     }
 
+    /** @return array<string, array{string}> */
+    public static function endings(): array
+    {
+        return [
+            'another run\'s lock' => ['.lock'],
+            'another run\'s work file' => ['.new'],
+            'the journal of that work file' => ['.new-journal'],
+            'a -wal file beside a copy' => ['-wal'],
+        ];
+    }
+
+    #[DataProvider('endings')]
+    public function test_a_path_named_as_a_file_beside_a_copy_is_refused_and_another_run_keeps_its_lock(string $ending): void
+    {
+        $copy = $this->root.'/backup.sqlite';
+        $first = fopen($copy.'.lock', 'c');
+        $this->assertTrue(flock($first, LOCK_EX | LOCK_NB));
+        file_put_contents($copy.'.new', 'the first run\'s copy so far');
+        $before = $this->files();
+
+        $this->artisan('openpne:backup-sqlite', ['path' => $copy.$ending])
+            ->expectsOutputToContain('which openpne:backup-sqlite keeps for the files beside a copy.')
+            ->assertFailed();
+
+        $this->assertSame($before, $this->files());
+        $this->artisan('openpne:backup-sqlite', ['path' => $copy])
+            ->expectsOutputToContain('Another openpne:backup-sqlite is writing '.$copy.'.')
+            ->assertFailed();
+        fclose($first);
+    }
+
+    public function test_a_lock_that_is_a_link_is_refused_before_anything_is_touched(): void
+    {
+        $copy = $this->root.'/backup.sqlite';
+        symlink($this->root.'/data/made-through-the-link', $copy.'.lock');
+        $before = $this->files();
+
+        $this->artisan('openpne:backup-sqlite', ['path' => $copy])
+            ->expectsOutputToContain($copy.'.lock is not a plain file')
+            ->assertFailed();
+
+        $this->assertSame($before, $this->files());
+    }
+
+    public function test_a_copy_that_fails_leaves_the_earlier_copy_as_it_was(): void
+    {
+        $copy = $this->root.'/backup.sqlite';
+        $this->artisan('openpne:backup-sqlite', ['path' => $copy])->assertSuccessful();
+        $earlier = md5_file($copy);
+        file_put_contents($this->root.'/data/broken.sqlite', str_repeat('not a database ', 512));
+        config(['database.connections.backup_site.database' => $this->root.'/data/broken.sqlite']);
+        DB::purge('backup_site');
+
+        $this->artisan('openpne:backup-sqlite', ['path' => $copy])
+            ->expectsOutputToContain('file is not a database')
+            ->assertFailed();
+
+        $this->assertSame($earlier, md5_file($copy));
+        $this->assertSame(['backup.sqlite', 'backup.sqlite.lock'], $this->beside($copy));
+    }
+
     public function test_a_file_beside_the_earlier_copy_stops_the_copy_and_leaves_that_copy(): void
     {
         $copy = $this->root.'/backup.sqlite';

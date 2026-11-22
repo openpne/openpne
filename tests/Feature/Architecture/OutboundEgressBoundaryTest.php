@@ -55,6 +55,7 @@ class OutboundEgressBoundaryTest extends TestCase
      */
     private const LOCAL_FILE_READERS = [
         'Console/Commands/CheckTranslationsCommand.php',
+        'Database/SqliteBackup.php',
         'Files/DbBlobFileStorage.php',
         'Files/FileUploader.php',
         'Files/ImageFastPath.php',

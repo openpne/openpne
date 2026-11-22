@@ -192,6 +192,23 @@ class CheckCommandTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_a_sqlite_version_that_cannot_be_read_is_not_taken_for_too_old(): void
+    {
+        $this->sqliteLibrary(null, pdo: true);
+
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('Databases: SQLite (backed up through PHP\'s sqlite3 extension) or MySQL')
+            ->doesntExpectOutputToContain('SQLite cannot be used here')
+            ->assertSuccessful();
+        if ($this->sqlite()) {
+            $this->installEnv();
+            Artisan::call('openpne:install');
+            $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+                ->doesntExpectOutputToContain('and OpenPNE needs 3.32.0 or later')
+                ->run();
+        }
+    }
+
     public function test_the_sqlite_pdo_sqlite_runs_on_is_read(): void
     {
         $this->assertMatchesRegularExpression('/\A3\.\d+\.\d+\z/', (string) $this->app->make(SqliteSupport::class)->libraryVersion());
@@ -791,12 +808,12 @@ class CheckCommandTest extends TestCase
         file_put_contents($this->layout->base.'/.htaccess', SiteLayout::DENY);
     }
 
-    /** The SQLite pdo_sqlite runs on, null for a PHP without pdo_sqlite. */
-    private function sqliteLibrary(?string $version, bool $extension = true): void
+    /** The SQLite pdo_sqlite runs on, null for a PHP without pdo_sqlite unless $pdo says it is there. */
+    private function sqliteLibrary(?string $version, bool $extension = true, ?bool $pdo = null): void
     {
-        $this->app->instance(SqliteSupport::class, new class($version, $extension) extends SqliteSupport
+        $this->app->instance(SqliteSupport::class, new class($version, $extension, $pdo ?? $version !== null) extends SqliteSupport
         {
-            public function __construct(private readonly ?string $version, private readonly bool $extension) {}
+            public function __construct(private readonly ?string $version, private readonly bool $extension, private readonly bool $pdo) {}
 
             public function hasExtension(): bool
             {
@@ -805,7 +822,7 @@ class CheckCommandTest extends TestCase
 
             public function hasPdo(): bool
             {
-                return $this->version !== null;
+                return $this->pdo;
             }
 
             public function libraryVersion(): ?string

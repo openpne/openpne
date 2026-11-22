@@ -16,6 +16,9 @@ final class SqliteBackup
 
     private const BESIDE = ['-journal', '-wal', '-shm'];
 
+    /** The endings of the files beside a copy: a copy named with one could be another run's lock or work file. */
+    private const RESERVED = ['.lock', '.new', ...self::BESIDE];
+
     public static function available(): bool
     {
         return class_exists(SQLite3::class);
@@ -23,12 +26,17 @@ final class SqliteBackup
 
     /**
      * Writes a copy of $database at $path, replacing an earlier copy there once this one is whole;
-     * nothing is touched where any file it would write or remove is the database or one beside it.
+     * nothing is touched where a file it would write or remove is the database, one beside it, or another run's.
      */
     public static function write(string $database, string $path): void
     {
         $target = self::target($path);
         self::refuseOverlap($database, $target);
+        foreach (self::RESERVED as $suffix) {
+            if (str_ends_with($target, $suffix)) {
+                throw new RuntimeException("{$target} ends in {$suffix}, which openpne:backup-sqlite keeps for the files beside a copy.");
+            }
+        }
         $lock = self::lock($target.'.lock');
         try {
             foreach (self::BESIDE as $suffix) {
@@ -45,6 +53,7 @@ final class SqliteBackup
                 if (! @rename($temp, $target)) {
                     throw new RuntimeException("{$target} could not be written.");
                 }
+                self::flushDirectory(dirname($target));
             } finally {
                 self::remove($temp);
             }
@@ -65,11 +74,15 @@ final class SqliteBackup
                 $to->enableExceptions(true);
                 // SQLite flushes the copy before it lets go of the database's read lock, so a slow disk would hold every commit up.
                 $to->exec('PRAGMA synchronous=OFF');
+                $failed = null;
                 try {
                     $from->backup($to);
                 } catch (Exception $e) {
-                    // SQLite records why a backup failed on the connection it writes to.
-                    throw new RuntimeException("{$database} could not be copied: {$to->lastErrorMsg()}.", 0, $e);
+                    $failed = $e;
+                }
+                // SQLite records why a backup failed on the connection it writes to, where PHP does not look when the backup cannot start.
+                if ($failed !== null || $to->lastErrorCode() !== 0) {
+                    throw new RuntimeException("{$database} could not be copied: {$to->lastErrorMsg()}.", 0, $failed);
                 }
                 // The copy carries the WAL mark in its header, and a -wal file left beside it would be replayed into it.
                 $mode = $to->querySingle('PRAGMA journal_mode=DELETE');
@@ -139,6 +152,9 @@ final class SqliteBackup
      */
     private static function lock(string $file): mixed
     {
+        if (is_link($file) || (file_exists($file) && ! is_file($file))) {
+            throw new RuntimeException("{$file} is not a plain file, and the lock has to be one.");
+        }
         $umask = umask(0o077);
         try {
             $handle = @fopen($file, 'c');
@@ -148,10 +164,10 @@ final class SqliteBackup
         if ($handle === false) {
             throw new RuntimeException("{$file} cannot be written to.");
         }
-        if (! flock($handle, LOCK_EX | LOCK_NB)) {
+        if (! flock($handle, LOCK_EX | LOCK_NB, $held)) {
             fclose($handle);
 
-            throw new RuntimeException('Another openpne:backup-sqlite is writing '.substr($file, 0, -strlen('.lock')).'.');
+            throw new RuntimeException($held ? 'Another openpne:backup-sqlite is writing '.substr($file, 0, -strlen('.lock')).'.' : "{$file} could not be locked.");
         }
 
         return $handle;
@@ -178,6 +194,16 @@ final class SqliteBackup
             throw new RuntimeException("{$file} could not be flushed to disk.");
         }
         fclose($handle);
+    }
+
+    private static function flushDirectory(string $directory): void
+    {
+        // Best effort: some file systems cannot flush a directory, and the copy under its name is whole either way.
+        $handle = @fopen($directory, 'r');
+        if ($handle !== false) {
+            @fsync($handle);
+            fclose($handle);
+        }
     }
 
     private static function remove(string $file): void

@@ -579,7 +579,8 @@ there. All of those send mail.
   `storage/oauth-public.key` if step 3 made them, and, when `OPENPNE_FILES_DISK` names a disk, the
   files on it. With the default the stored files are in the database. For SQLite,
   `php artisan openpne:backup-sqlite /path/to/copy.sqlite` in the app root writes a consistent copy
-  while the site runs, in place of an earlier copy at that path once it is whole; without
+  while the site runs, in place of an earlier copy at that path once it is whole, and leaves
+  `copy.sqlite.lock` beside it for the next run; without
   `DB_JOURNAL_MODE=WAL` from step 2, the site waits for it as soon as anything writes, and fails
   where that wait passes a minute. Copying the file alone can lose the latest rows.
   A copy holds everything the database does: keep it where only the site user reads it.
@@ -600,7 +601,7 @@ too, when it gives you:
 - a shell (SSH), to unpack the archive and run `php artisan`;
 - PHP 8.3 or later, for the web and on the command line, with the extensions
   [above](#what-the-server-needs), `intl` among them;
-- MySQL 8.0.17 or later (not MariaDB), or SQLite of the versions [above](#what-the-server-needs);
+- MySQL 8.0.17 or later (not MariaDB), or SQLite as [above](#what-the-server-needs);
 - Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
 - PHP for the web running as your own account, as the command line does. Where it runs as a user
   the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.

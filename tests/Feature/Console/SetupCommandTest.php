@@ -937,7 +937,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->expectsOutputToContain('Tried once, and it failed: '.($this->sqlite() ? $this->sqlitePath().' could not be copied: file is not a database.' : 'mysqldump: Got error: 1044'))
+            ->expectsOutputToContain('Tried once, and it failed: '.($this->sqlite() ? $this->sqlitePath().' could not be copied: file is not a database. Until it works' : 'mysqldump: Got error: 1044'))
             ->assertSuccessful();
     }
 
@@ -1038,7 +1038,7 @@ class SetupCommandTest extends TestCase
     }
 
     /**
-     * The test database stands in for the site's; the SQLite path is only what the backup line names.
+     * The test database stands in for the site's; the SQLite path is only the file setup's trial copies from.
      * The connection keys are what the test's environment holds, which setup requires `.env` to match.
      */
     private function withEnv(string $more = ''): string
@@ -1101,7 +1101,7 @@ class SetupCommandTest extends TestCase
     }
 
     /**
-     * For SQLite the copy is taken in the process, so the file the backup line names is made to hold what $backup says.
+     * For SQLite the copy is taken in the process, so the file setup's trial copies from is made to hold what $backup says.
      *
      * @param  'works'|'empty'|'fails'  $backup
      */
