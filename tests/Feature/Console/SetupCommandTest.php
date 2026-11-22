@@ -291,7 +291,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsOutputToContain('SQLite cannot be used here: '.$this->layout->base.'/tools/sqlite3 is SQLite 3.27.2, and the backup needs 3.28.0 or later')
-            ->expectsOutputToContain('No database can be used here')
+            ->expectsOutputToContain('No database can be chosen for a new site here')
             ->expectsOutputToContain('Put right what is marked [FAIL] above')
             ->assertFailed();
 

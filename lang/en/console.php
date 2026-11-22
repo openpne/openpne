@@ -16,7 +16,7 @@ return [
         'cli_databases_both' => 'Databases: SQLite (backed up with :sqlite) or MySQL (backed up with :mysql).',
         'cli_databases_sqlite' => 'Databases: SQLite only (backed up with :sqlite). MySQL needs pdo_mysql, and mysqldump or mariadb-dump.',
         'cli_databases_mysql' => 'Databases: MySQL only (backed up with :mysql), which needs a MySQL server, 8.0.17 or later and not MariaDB. SQLite needs pdo_sqlite on SQLite :library or later, and the sqlite3 command, :command or later.',
-        'cli_databases_none' => 'No database can be used here: SQLite needs pdo_sqlite on SQLite :library or later, and the sqlite3 command, :command or later; MySQL needs pdo_mysql, and mysqldump or mariadb-dump. The commands take the backup, without which a site cannot be updated.',
+        'cli_databases_none' => 'No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite :library or later, and the sqlite3 command, :command or later; MySQL needs pdo_mysql, and mysqldump or mariadb-dump. The commands take the backup, without which a site cannot be updated.',
         'sqlite_no_pdo' => 'SQLite cannot be used here: PHP on the command line has no pdo_sqlite.',
         'sqlite_old_library' => 'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite :version, and OpenPNE needs :minimum or later.',
         'sqlite_no_command' => 'SQLite cannot be used here: the sqlite3 command, which the backup uses, is not on PATH.',

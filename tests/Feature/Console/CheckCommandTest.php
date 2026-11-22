@@ -148,7 +148,7 @@ class CheckCommandTest extends TestCase
         unlink($this->layout->base.'/tools/mysqldump');
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('No database can be used here: SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and the sqlite3 command, 3.28.0 or later; MySQL needs')
+            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and the sqlite3 command, 3.28.0 or later; MySQL needs')
             ->assertFailed();
     }
 
