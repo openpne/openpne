@@ -17,10 +17,12 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\InsertsManyMembers;
 use Tests\TestCase;
 
 class BroadcastTimelinePostedTest extends TestCase
 {
+    use InsertsManyMembers;
     use RefreshDatabase;
 
     /** @param  list<int>  $mentionedMemberIds */
@@ -225,5 +227,19 @@ class BroadcastTimelinePostedTest extends TestCase
             'author_id' => $author->getKey(),
             'post_id' => $post->getKey(),
         ], $row->data);
+    }
+
+    /** Bites only on SQLite before 3.32, where the opt-out read of a full chunk passes its 999 bound parameters. */
+    public function test_an_opt_out_holds_in_a_full_chunk(): void
+    {
+        Notification::fake();
+        $ids = $this->manyMembers(1000);
+        $last = Member::query()->findOrFail(end($ids));
+        $last->setNotificationSetting(NotificationKind::TimelineNewPost, NotificationChannel::Mail, false);
+
+        $this->broadcast($this->newPost(Member::factory()->create()));
+
+        Notification::assertSentTimes(TimelinePostedNotification::class, 1000);
+        Notification::assertSentTo($last, TimelinePostedNotification::class, fn (TimelinePostedNotification $n, array $channels) => $channels === ['database']);
     }
 }

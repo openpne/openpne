@@ -64,6 +64,10 @@ class ConsumeNotificationRows
             return;
         }
 
-        DatabaseNotification::query()->whereKey($ids)->update(['read_at' => now()]);
+        // The keys are uuids, which bind one parameter each; SQLite before 3.32 takes 999 in one statement.
+        $now = now();
+        foreach (array_chunk($ids, 500) as $chunk) {
+            DatabaseNotification::query()->whereKey($chunk)->update(['read_at' => $now]);
+        }
     }
 }

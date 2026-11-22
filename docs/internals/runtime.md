@@ -434,3 +434,11 @@ without `utf8mb4_0900_bin`, MariaDB 10 among them, refuses the `mysql` connectio
   for another server. A `.env` naming such a server stops it before `openpne:install`.
 - Check fails the site, even where the connection works.
 - Copy-database refuses it on either side before writing anything.
+
+## Bound parameters
+
+SQLite before 3.32 takes at most 999 bound parameters in one statement, and the limit cannot be
+raised at run time. An id list that grows with the site's data (a member's friends, the replies to
+a post, a fan-out chunk) goes into SQL through `whereIntegerInRaw()` / `whereIntegerNotInRaw()`,
+which write the integers into the statement and bind none. A list that has to bind, such as uuid
+keys or the rows of a multi-row insert, is split under the limit.

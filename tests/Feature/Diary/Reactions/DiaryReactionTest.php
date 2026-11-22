@@ -156,8 +156,21 @@ class DiaryReactionTest extends DiaryReactionTestCase
             app(ReactionAggregates::class)(null, Diary::class, [$diary->getKey()]),
         );
 
-        // The type and the id are bound; no member id is.
-        $this->assertSame(['diary', $diary->getKey()], $bindings);
+        // Only the type is bound: the ids are written into the statement, and no member id is bound.
+        $this->assertSame(['diary'], $bindings);
+    }
+
+    /** Bites only on SQLite before 3.32, where 1,000 bound ids pass its 999 bound parameters. */
+    public function test_the_grouped_read_takes_more_ids_than_sqlite_could_bind(): void
+    {
+        $diary = $this->diary();
+        $this->react(Member::factory()->create(), $diary)->assertOk();
+        $id = (int) $diary->getKey();
+
+        $this->assertSame(
+            [$id => [['emoji' => $this->emoji(0), 'count' => 1, 'mine' => false]]],
+            app(ReactionAggregates::class)(null, Diary::class, [...range($id + 1, $id + 1200), $id]),
+        );
     }
 
     /** The gate answers before the payload is looked at, so an id the viewer may not see reads the same whether the emoji is valid or not. */

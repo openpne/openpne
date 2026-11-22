@@ -15,10 +15,12 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\InsertsManyMembers;
 use Tests\TestCase;
 
 class BroadcastDiaryPostedTest extends TestCase
 {
+    use InsertsManyMembers;
     use RefreshDatabase;
 
     private function broadcast(Diary $diary): void
@@ -211,5 +213,19 @@ class BroadcastDiaryPostedTest extends TestCase
             DiaryPostedNotification::class,
             fn (DiaryPostedNotification $n, array $channels) => $channels === ['database'],
         );
+    }
+
+    /** Bites only on SQLite before 3.32, where the opt-out read of a full chunk passes its 999 bound parameters. */
+    public function test_an_opt_out_holds_in_a_full_chunk(): void
+    {
+        Notification::fake();
+        $ids = $this->manyMembers(1000);
+        $last = Member::query()->findOrFail(end($ids));
+        $last->setNotificationSetting(NotificationKind::DiaryNewPost, NotificationChannel::Mail, false);
+
+        $this->broadcast(Diary::factory()->create(['member_id' => Member::factory()->create()->getKey(), 'visibility' => Visibility::Members]));
+
+        Notification::assertSentTimes(DiaryPostedNotification::class, 1000);
+        Notification::assertSentTo($last, DiaryPostedNotification::class, fn (DiaryPostedNotification $n, array $channels) => $channels === ['database']);
     }
 }

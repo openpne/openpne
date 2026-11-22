@@ -134,8 +134,8 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->assertBytesGone($files);
     }
 
-    /** The placeholders do not grow with the group: MySQL caps a prepared statement at 65,535, and a decade-old board's comments pass that. */
-    public function test_the_teardown_binds_nothing_but_the_group_id_for_the_files_and_the_reactions_own_ids_for_the_deletes(): void
+    /** The placeholders do not grow with the group: MySQL caps a prepared statement at 65,535, SQLite before 3.32 at 999, and a decade-old board's comments pass both. */
+    public function test_the_teardown_binds_nothing_but_the_group_id_for_the_files_and_deletes_by_the_reactions_own_ids(): void
     {
         $this->group(); // so the group's id differs from its first topic's and event's
         $group = $this->group();
@@ -148,21 +148,21 @@ class BoardTeardownTest extends BoardReactionTestCase
         $this->react($author, app(CreateEventComment::class)($author, $event, 'reply', []))->assertOk();
         $this->react($author, $topic)->assertOk();
         $this->react($author, $event)->assertOk();
-        $bindings = [];
-        DB::listen(function ($query) use (&$bindings): void {
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void {
             if (preg_match('/^select .* from [`"]files[`"] where [`"]id[`"] in \(select|^delete from [`"]reactions[`"]/', $query->sql)) {
-                $bindings[] = $query->bindings;
+                $queries[] = $query;
             }
         });
 
         app(DeleteGroup::class)->purge($group);
 
-        $this->assertCount(5, $bindings, 'one File collection and one chunked reaction delete per board arm: the two bodies, then the two comment sets');
-        $this->assertSame([$group->getKey()], array_values(array_unique($bindings[0])), 'the File collection binds the group id, however many times, and nothing else');
-        $this->assertCount(1, $bindings[1], 'the topic body delete binds the reaction\'s own id');
-        $this->assertCount(1, $bindings[2], 'the event body delete binds the reaction\'s own id');
-        $this->assertCount(3, $bindings[3], 'the topic comment delete binds the reactions\' own ids');
-        $this->assertCount(1, $bindings[4], 'the event comment delete binds the reactions\' own ids');
+        $this->assertCount(5, $queries, 'one File collection and one chunked reaction delete per board arm: the two bodies, then the two comment sets');
+        $this->assertSame([$group->getKey()], array_values(array_unique($queries[0]->bindings)), 'the File collection binds the group id, however many times, and nothing else');
+        foreach ([1 => 1, 2 => 1, 3 => 3, 4 => 1] as $at => $reactions) {
+            $this->assertSame([], $queries[$at]->bindings, 'a reaction delete binds nothing');
+            $this->assertCount($reactions, self::deletedIds($queries[$at]->sql), 'a reaction delete names the reactions\' own ids');
+        }
         $this->assertDatabaseCount('reactions', 0);
     }
 
@@ -180,12 +180,14 @@ class BoardTeardownTest extends BoardReactionTestCase
                 $rows[] = ['reactable_type' => $comment->getMorphClass(), 'reactable_id' => $comment->getKey(), 'member_id' => $author->getKey(), 'emoji' => $emoji, 'created_at' => $at, 'updated_at' => $at];
             }
         }
-        DB::table('reactions')->insert($rows);
+        foreach (array_chunk($rows, 100) as $part) {
+            DB::table('reactions')->insert($part);
+        }
         $this->assertGreaterThan(1000, count($rows));
         $deletes = [];
         DB::listen(function ($query) use (&$deletes): void {
             if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
-                $deletes[] = count($query->bindings);
+                $deletes[] = count(self::deletedIds($query->sql));
             }
         });
 
@@ -202,13 +204,17 @@ class BoardTeardownTest extends BoardReactionTestCase
         $author = $this->joined($group);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $at = now();
-        DB::table('group_topic_comments')->insert(array_map(fn (int $i): array => [
+        foreach (array_chunk(array_map(fn (int $i): array => [
             'group_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => $i, 'body' => 'B', 'created_at' => $at, 'updated_at' => $at,
-        ], range(1, 1001)));
+        ], range(1, 1001)), 100) as $part) {
+            DB::table('group_topic_comments')->insert($part);
+        }
         $commentIds = DB::table('group_topic_comments')->where('group_topic_id', $topic->getKey())->orderBy('id')->pluck('id')->all();
-        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+        foreach (array_chunk(array_map(fn (int $id): array => [
             'reactable_type' => 'groupTopicComment', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at,
-        ], $commentIds));
+        ], $commentIds), 100) as $part) {
+            DB::table('reactions')->insert($part);
+        }
         $pages = [];
         $deletes = [];
         DB::listen(function ($query) use (&$pages, &$deletes): void {
@@ -216,7 +222,7 @@ class BoardTeardownTest extends BoardReactionTestCase
                 $pages[] = $query->bindings;
             }
             if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
-                $deletes[] = count($query->bindings);
+                $deletes[] = count(self::deletedIds($query->sql));
             }
         });
 
@@ -236,13 +242,17 @@ class BoardTeardownTest extends BoardReactionTestCase
         $group = $this->group();
         $author = $this->joined($group);
         $at = now();
-        DB::table('group_messages')->insert(array_map(fn (int $i): array => [
+        foreach (array_chunk(array_map(fn (int $i): array => [
             'group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'in_reply_to_id' => null, 'body' => "m{$i}", 'created_at' => $at, 'updated_at' => $at,
-        ], range(1, 1001)));
+        ], range(1, 1001)), 100) as $part) {
+            DB::table('group_messages')->insert($part);
+        }
         $messageIds = DB::table('group_messages')->where('group_id', $group->getKey())->orderBy('id')->pluck('id')->all();
-        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+        foreach (array_chunk(array_map(fn (int $id): array => [
             'reactable_type' => 'groupMessage', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at,
-        ], $messageIds));
+        ], $messageIds), 100) as $part) {
+            DB::table('reactions')->insert($part);
+        }
         $pages = [];
         DB::listen(function ($query) use (&$pages): void {
             if (preg_match('/from [`"]group_messages[`"] where .*order by [`"]created_at[`"] asc, [`"]id[`"] asc limit 1000$/', $query->sql)) {
@@ -271,7 +281,9 @@ class BoardTeardownTest extends BoardReactionTestCase
             'group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'in_reply_to_id' => null, 'body' => "m{$i}", 'created_at' => $at, 'updated_at' => $at,
         ], range(1, 1000));
         $rows[] = ['group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'in_reply_to_id' => null, 'body' => 'undated', 'created_at' => null, 'updated_at' => null];
-        DB::table('group_messages')->insert($rows);
+        foreach (array_chunk($rows, 100) as $part) {
+            DB::table('group_messages')->insert($part);
+        }
         $undated = DB::table('group_messages')->where('group_id', $group->getKey())->whereNull('created_at')->value('id');
         DB::table('reactions')->insert(['reactable_type' => 'groupMessage', 'reactable_id' => $undated, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at]);
 
@@ -290,12 +302,16 @@ class BoardTeardownTest extends BoardReactionTestCase
             'group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'in_reply_to_id' => null, 'body' => "m{$i}", 'created_at' => null, 'updated_at' => null,
         ], range(1, 1001));
         $rows[] = ['group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'in_reply_to_id' => null, 'body' => 'dated', 'created_at' => $at, 'updated_at' => $at];
-        DB::table('group_messages')->insert($rows);
+        foreach (array_chunk($rows, 100) as $part) {
+            DB::table('group_messages')->insert($part);
+        }
         $lastUndated = DB::table('group_messages')->where('group_id', $group->getKey())->whereNull('created_at')->max('id');
         $dated = DB::table('group_messages')->where('group_id', $group->getKey())->whereNotNull('created_at')->value('id');
-        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+        foreach (array_chunk(array_map(fn (int $id): array => [
             'reactable_type' => 'groupMessage', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $at, 'updated_at' => $at,
-        ], [$lastUndated, $dated]));
+        ], [$lastUndated, $dated]), 100) as $part) {
+            DB::table('reactions')->insert($part);
+        }
         $pages = 0;
         DB::listen(function ($query) use (&$pages): void {
             if (preg_match('/from [`"]group_messages[`"] where .*limit 1000$/', $query->sql)) {
@@ -400,7 +416,7 @@ class BoardTeardownTest extends BoardReactionTestCase
             $i === 1002 => 1,
             default => $i,
         };
-        DB::table('group_topics')->insert(array_map(fn (int $i): array => [
+        foreach (array_chunk(array_map(fn (int $i): array => [
             'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'name' => "Topic {$i}",
@@ -408,14 +424,18 @@ class BoardTeardownTest extends BoardReactionTestCase
             'bumped_at' => $earlier->copy()->addSeconds($seconds($i)),
             'created_at' => $earlier,
             'updated_at' => $earlier,
-        ], range(1, 1002)));
+        ], range(1, 1002)), 100) as $part) {
+            DB::table('group_topics')->insert($part);
+        }
         $bumpedAt = DB::table('group_topics')->where('group_id', $group->getKey())->orderBy('bumped_at')->orderBy('id')->pluck('bumped_at', 'id')->all();
         $ordered = array_keys($bumpedAt);
         $this->assertSame($bumpedAt[$ordered[999]], $bumpedAt[$ordered[1000]], 'the boundary rows share an instant');
         $this->assertGreaterThan($ordered[999], max(array_slice($ordered, 0, 1000)), 'the page holds an id above its last row');
-        DB::table('reactions')->insert(array_map(fn (int $id): array => [
+        foreach (array_chunk(array_map(fn (int $id): array => [
             'reactable_type' => 'groupTopic', 'reactable_id' => $id, 'member_id' => $author->getKey(), 'emoji' => $this->emoji(0), 'created_at' => $earlier, 'updated_at' => $earlier,
-        ], $ordered));
+        ], $ordered), 100) as $part) {
+            DB::table('reactions')->insert($part);
+        }
         $pages = [];
         $deletes = [];
         DB::listen(function ($query) use (&$pages, &$deletes): void {
@@ -423,7 +443,7 @@ class BoardTeardownTest extends BoardReactionTestCase
                 $pages[] = $query->bindings;
             }
             if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
-                $deletes[] = $query->bindings;
+                $deletes[] = self::deletedIds($query->sql);
             }
         });
         $secondPage = DB::table('reactions')->whereIn('reactable_id', array_slice($ordered, 1000))->orderBy('id')->pluck('id')->all();
@@ -445,7 +465,7 @@ class BoardTeardownTest extends BoardReactionTestCase
         $group = $this->group();
         $author = $this->joined($group);
         $first = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
-        DB::table('group_topics')->insert(array_map(fn (int $i): array => [
+        foreach (array_chunk(array_map(fn (int $i): array => [
             'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'name' => "Topic {$i}",
@@ -453,19 +473,23 @@ class BoardTeardownTest extends BoardReactionTestCase
             'bumped_at' => now(),
             'created_at' => now(),
             'updated_at' => now(),
-        ], range(2, 1001)));
-        DB::table('reactions')->insert(DB::table('group_topics')->where('group_id', $group->getKey())->pluck('id')->map(fn (int $id): array => [
+        ], range(2, 1001)), 100) as $part) {
+            DB::table('group_topics')->insert($part);
+        }
+        foreach (array_chunk(DB::table('group_topics')->where('group_id', $group->getKey())->pluck('id')->map(fn (int $id): array => [
             'reactable_type' => $first->getMorphClass(),
             'reactable_id' => $id,
             'member_id' => $author->getKey(),
             'emoji' => $this->emoji(0),
             'created_at' => now(),
             'updated_at' => now(),
-        ])->all());
+        ])->all(), 100) as $part) {
+            DB::table('reactions')->insert($part);
+        }
         $sizes = [];
         DB::listen(function ($query) use (&$sizes): void {
             if (preg_match('/^delete from [`"]reactions[`"]/', $query->sql)) {
-                $sizes[] = count($query->bindings);
+                $sizes[] = count(self::deletedIds($query->sql));
             }
         });
 
@@ -502,6 +526,14 @@ class BoardTeardownTest extends BoardReactionTestCase
         app(DeleteTopic::class)->purge($gone);
 
         $this->assertDatabaseCount('reactions', 1);
+    }
+
+    /** @return list<int> */
+    private static function deletedIds(string $sql): array
+    {
+        self::assertSame(1, preg_match('/^delete from [`"]reactions[`"] where [`"]id[`"] in \(([\d, ]+)\)$/', $sql, $match), $sql);
+
+        return array_map('intval', explode(', ', $match[1]));
     }
 
     private function eventForm(): GroupEventFormData

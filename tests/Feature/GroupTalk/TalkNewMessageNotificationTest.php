@@ -30,9 +30,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Concerns\InsertsManyMembers;
 
 class TalkNewMessageNotificationTest extends TalkTestCase
 {
+    use InsertsManyMembers;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -566,5 +569,22 @@ class TalkNewMessageNotificationTest extends TalkTestCase
 
         Exceptions::assertReported(RuntimeException::class);
         $this->assertCount(1, $rows->rowsFor((int) $reader->getKey(), (int) $group->getKey()));
+    }
+
+    /** Bites only on SQLite before 3.32, where the settings read of a full chunk passes its 999 bound parameters. */
+    public function test_an_explicit_choice_holds_in_a_full_chunk(): void
+    {
+        Notification::fake();
+        $this->notifyEveryMessage();
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $ids = $this->manyMembers(1000, $group);
+        $last = Member::query()->findOrFail(end($ids));
+        $last->setNotificationSetting(NotificationKind::GroupTalkNewMessage, NotificationChannel::Web, false);
+
+        $this->broadcast($this->message($group, $author));
+
+        Notification::assertSentTimes(GroupTalkMessagePostedNotification::class, 999);
+        Notification::assertNotSentTo($last, GroupTalkMessagePostedNotification::class);
     }
 }

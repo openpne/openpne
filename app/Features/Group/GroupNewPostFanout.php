@@ -62,7 +62,7 @@ class GroupNewPostFanout
         DB::table('member_notification_settings')
             ->where('kind', $kind->value)
             ->where('is_enabled', false)
-            ->whereIn('member_id', $ids)
+            ->whereIntegerInRaw('member_id', $ids)
             ->get(['member_id', 'channel'])
             ->each(function (object $row) use (&$out): void {
                 $out[$row->channel][(int) $row->member_id] = true;

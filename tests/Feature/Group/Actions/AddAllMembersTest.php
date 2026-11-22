@@ -11,10 +11,12 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\InsertsManyMembers;
 use Tests\TestCase;
 
 class AddAllMembersTest extends TestCase
 {
+    use InsertsManyMembers;
     use RefreshDatabase;
 
     public function test_adds_non_members_as_plain_members_and_returns_count(): void
@@ -80,5 +82,15 @@ class AddAllMembersTest extends TestCase
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
         ]);
+    }
+
+    /** Bites only on SQLite before 3.32, where one insert of 143 rows passes its 999 bound parameters. */
+    public function test_adds_more_members_than_one_insert_could_bind(): void
+    {
+        $group = Group::factory()->create();
+        $ids = $this->manyMembers(150);
+
+        $this->assertSame(150, app(AddAllMembers::class)($group));
+        $this->assertSame($ids, GroupMember::query()->where('group_id', $group->getKey())->orderBy('member_id')->pluck('member_id')->map(fn (mixed $id): int => (int) $id)->all());
     }
 }

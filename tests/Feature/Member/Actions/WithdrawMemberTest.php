@@ -181,7 +181,7 @@ class WithdrawMemberTest extends TestCase
         // More rows than one lazyById page, so an offset-paged read that deletes as it goes would skip some.
         $member = Member::factory()->create();
         $now = now();
-        DB::table('files')->insert(array_map(fn (int $i): array => [
+        foreach (array_chunk(array_map(fn (int $i): array => [
             'name' => "bulk-{$i}",
             'type' => 'image/png',
             'byte_size' => 0,
@@ -189,7 +189,9 @@ class WithdrawMemberTest extends TestCase
             'related_entity_id' => $member->getKey(),
             'created_at' => $now,
             'updated_at' => $now,
-        ], range(1, 250)));
+        ], range(1, 250)), 100) as $part) {
+            DB::table('files')->insert($part);
+        }
 
         $this->withdraw($member);
 

@@ -29,7 +29,7 @@ class ReactionAggregates
 
         $rows = DB::table('reactions')
             ->where('reactable_type', (new $reactable)->getMorphClass())
-            ->whereIn('reactable_id', $ids)
+            ->whereIntegerInRaw('reactable_id', $ids)
             ->select('reactable_id', 'emoji')
             ->selectRaw('count(*) as total')
             ->when(

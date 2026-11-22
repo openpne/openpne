@@ -100,7 +100,7 @@ final class ViewerRelations
 
         $blocking = DB::table('member_blocks')
             ->where('blocked_id', $viewer->getKey())
-            ->whereIn('blocker_id', $ids)
+            ->whereIntegerInRaw('blocker_id', $ids)
             ->pluck('blocker_id');
 
         $this->fill($this->blocks, $viewer, $ids, $this->set($blocking));
@@ -134,7 +134,7 @@ final class ViewerRelations
 
         $friends = DB::table('friendships')
             ->where('member_id', $viewer->getKey())
-            ->whereIn('friend_id', $ids)
+            ->whereIntegerInRaw('friend_id', $ids)
             ->pluck('friend_id');
 
         $this->fill($this->friends, $viewer, $ids, $this->set($friends));
@@ -158,7 +158,7 @@ final class ViewerRelations
 
         $roles = DB::table('group_members')
             ->where('member_id', $viewer->getKey())
-            ->whereIn('group_id', $ids)
+            ->whereIntegerInRaw('group_id', $ids)
             ->pluck('role', 'group_id');
 
         foreach ($ids as $id) {

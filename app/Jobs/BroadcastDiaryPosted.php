@@ -86,7 +86,7 @@ class BroadcastDiaryPosted implements ShouldQueue
         DB::table('member_notification_settings')
             ->whereIn('kind', [NotificationKind::DiaryNewPost->value, NotificationKind::DiaryNewPostOnlyFriends->value])
             ->where('is_enabled', false)
-            ->whereIn('member_id', $ids)
+            ->whereIntegerInRaw('member_id', $ids)
             ->get(['member_id', 'kind', 'channel'])
             ->each(function (object $row) use (&$out): void {
                 $out[$row->kind][$row->channel][(int) $row->member_id] = true;
