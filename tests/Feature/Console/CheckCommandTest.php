@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
+use App\Setup\SetupHost;
 use App\SiteCheck\BackupTools;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\InstalledCheck;
 use App\SiteCheck\SiteLayout;
+use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\WebCheck;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
@@ -20,7 +22,9 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Symfony\Component\Process\Exception\ProcessStartFailedException;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Tests\Concerns\FakesDatabaseServer;
 use Tests\TestCase;
@@ -144,8 +148,82 @@ class CheckCommandTest extends TestCase
         unlink($this->layout->base.'/tools/mysqldump');
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('No database can be backed up here')
+            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and the sqlite3 command, 3.28.0 or later; MySQL needs')
             ->assertFailed();
+    }
+
+    /** @return array<string, array{?string, string, string, list<string>}> */
+    public static function sqliteVersions(): array
+    {
+        return [
+            'both at what setup takes' => ['3.32.0', '3.28.0 2019-04-16 19:49:53 884b4b7e50', 'Databases: SQLite (backed up with', []],
+            'both too old, as on Enterprise Linux 8' => ['3.26.0', '3.26.0 2018-12-01 12:34:55 bf8c1b2b7a', 'Databases: MySQL only', [
+                'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite 3.26.0, and OpenPNE needs 3.32.0 or later.',
+                'tools/sqlite3 is SQLite 3.26.0, and the backup needs 3.28.0 or later',
+            ]],
+            'the library too old' => ['3.31.1', '3.28.0 2019-04-16 19:49:53 884b4b7e50', 'Databases: MySQL only', [
+                'pdo_sqlite on the command line runs on SQLite 3.31.1',
+            ]],
+            'no pdo_sqlite beside a sqlite3 command' => [null, '3.28.0 2019-04-16 19:49:53 884b4b7e50', 'Databases: MySQL only', [
+                'SQLite cannot be used here: PHP on the command line has no pdo_sqlite.',
+            ]],
+        ];
+    }
+
+    /** @param list<string> $lacks */
+    #[DataProvider('sqliteVersions')]
+    public function test_sqlite_passes_only_at_the_versions_setup_takes_and_each_thing_it_lacks_is_named(?string $library, string $command, string $databases, array $lacks): void
+    {
+        Process::fake(['*' => Process::result($command)]);
+        $this->sqliteLibrary($library);
+
+        $check = $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])->expectsOutputToContain($databases);
+        foreach ($lacks as $line) {
+            $check->expectsOutputToContain($line);
+        }
+        if ($lacks === []) {
+            $check->doesntExpectOutputToContain('SQLite cannot be used here');
+        }
+        $check->expectsOutputToContain('Warnings: '.count($lacks).'.')->assertSuccessful();
+    }
+
+    public function test_a_host_without_any_part_of_sqlite_says_what_it_needs_without_a_warning(): void
+    {
+        unlink($this->layout->base.'/tools/sqlite3');
+        $this->sqliteLibrary(null);
+
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('Databases: MySQL only (backed up with '.$this->layout->base.'/tools/mysqldump), which needs a MySQL server, 8.0.17 or later and not MariaDB. SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and the sqlite3 command, 3.28.0 or later.')
+            ->doesntExpectOutputToContain('SQLite cannot be used here')
+            ->expectsOutputToContain('Warnings: 0.')
+            ->assertSuccessful();
+    }
+
+    public function test_the_sqlite_pdo_sqlite_runs_on_is_read(): void
+    {
+        $this->assertMatchesRegularExpression('/\A3\.\d+\.\d+\z/', (string) $this->app->make(SqliteSupport::class)->libraryVersion());
+    }
+
+    public function test_a_sqlite3_that_cannot_be_started_is_not_taken_for_too_old(): void
+    {
+        Process::fake(['*' => fn () => throw new ProcessStartFailedException(new SymfonyProcess(['sqlite3', '-version']), 'proc_open(): Fork failed')]);
+
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('Databases: SQLite (backed up with')
+            ->doesntExpectOutputToContain('SQLite cannot be used here')
+            ->assertSuccessful();
+    }
+
+    public function test_an_installed_site_is_not_told_what_sqlite_lacks(): void
+    {
+        $this->installEnv();
+        Process::fake(['*' => Process::result('3.26.0 2018-12-01 12:34:55 bf8c1b2b7a')]);
+        $this->sqliteLibrary('3.26.0');
+
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('Databases: MySQL only')
+            ->doesntExpectOutputToContain('SQLite cannot be used here')
+            ->assertSuccessful();
     }
 
     // The installed site
@@ -714,6 +792,28 @@ class CheckCommandTest extends TestCase
         file_put_contents($this->layout->envFile, "APP_ENV=production\n");
         chmod($this->layout->envFile, $mode);
         file_put_contents($this->layout->base.'/.htaccess', SiteLayout::DENY);
+    }
+
+    /** The SQLite pdo_sqlite runs on, null for a PHP without pdo_sqlite. */
+    private function sqliteLibrary(?string $version): void
+    {
+        $this->app->instance(SqliteSupport::class, new class($version) extends SqliteSupport
+        {
+            public function __construct(private readonly ?string $version)
+            {
+                parent::__construct(new SetupHost);
+            }
+
+            public function hasPdo(): bool
+            {
+                return $this->version !== null;
+            }
+
+            public function libraryVersion(): ?string
+            {
+                return $this->version;
+            }
+        });
     }
 
     /** An executable that leaves a mark if anything runs it. */

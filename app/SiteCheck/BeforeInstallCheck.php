@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\SiteCheck;
 
+use App\Setup\BackupLine;
+
 /** What the command line can tell before `.env` exists; reads neither `.env` nor the database. */
 final class BeforeInstallCheck
 {
     /** docs/installing.md, "What the server needs", less the database's own. */
     public const EXTENSIONS = [
         'ctype', 'curl', 'dom', 'exif', 'fileinfo', 'filter', 'gd', 'hash', 'iconv', 'intl', 'libxml',
-        'mbstring', 'openssl', 'pcre', 'session', 'sodium', 'tokenizer', 'xml', 'xmlreader', 'zip', 'zlib',
+        'mbstring', 'openssl', 'pcre', 'session', 'tokenizer', 'xml', 'xmlreader', 'zip', 'zlib',
     ];
 
     public const MEMORY_BYTES = 256 * 1024 * 1024;
@@ -20,7 +22,7 @@ final class BeforeInstallCheck
         'storage/framework/sessions', 'storage/framework/views', 'storage/logs',
     ];
 
-    public function __construct(private readonly SiteLayout $layout) {}
+    public function __construct(private readonly SiteLayout $layout, private readonly SqliteSupport $sqlite) {}
 
     /** @return list<Finding> */
     public function run(bool $installed): array
@@ -29,7 +31,7 @@ final class BeforeInstallCheck
             Finding::ok('cli.php', 'cli_php', ['version' => PHP_VERSION, 'path' => PHP_BINARY]),
             $this->extensions(),
             $this->writable($installed),
-            $this->databases($installed),
+            ...$this->databases($installed),
             function_exists('proc_open')
                 ? Finding::ok('cli.proc_open', 'cli_proc_open')
                 : Finding::warn('cli.proc_open', 'cli_proc_open_missing'),
@@ -72,25 +74,32 @@ final class BeforeInstallCheck
             : Finding::fail('cli.writable', 'cli_writable_refused', ['list' => implode(', ', $refused)]);
     }
 
-    private function databases(bool $installed): Finding
+    /** @return list<Finding> */
+    private function databases(bool $installed): array
     {
-        $sqlite = extension_loaded('pdo_sqlite') ? BackupTools::sqlite() : null;
+        $lacks = $this->sqlite->lacks();
+        $sqlite = $lacks === [] ? BackupTools::sqlite() : null;
         $mysql = extension_loaded('pdo_mysql') ? BackupTools::mysql() : null;
+        $needs = ['library' => SqliteSupport::LIBRARY_MINIMUM, 'command' => BackupLine::SQLITE_MINIMUM];
+        $why = ! $installed && $this->sqlite->partlyThere() ? $lacks : [];
 
         if ($sqlite !== null && $mysql !== null) {
-            return Finding::ok('cli.databases', 'cli_databases_both', ['sqlite' => $sqlite, 'mysql' => $mysql]);
+            return [Finding::ok('cli.databases', 'cli_databases_both', ['sqlite' => $sqlite, 'mysql' => $mysql])];
         }
         if ($sqlite !== null) {
-            return Finding::ok('cli.databases', 'cli_databases_sqlite', ['sqlite' => $sqlite]);
+            return [Finding::ok('cli.databases', 'cli_databases_sqlite', ['sqlite' => $sqlite])];
         }
         if ($mysql !== null) {
-            return Finding::ok('cli.databases', 'cli_databases_mysql', ['mysql' => $mysql]);
+            return [Finding::ok('cli.databases', 'cli_databases_mysql', ['mysql' => $mysql, ...$needs]), ...$why];
         }
 
         // An installed site's own database is judged by InstalledCheck, with the tool it needs named.
-        return $installed
-            ? Finding::warn('cli.databases', 'cli_databases_none')
-            : Finding::fail('cli.databases', 'cli_databases_none');
+        return [
+            $installed
+                ? Finding::warn('cli.databases', 'cli_databases_none', $needs)
+                : Finding::fail('cli.databases', 'cli_databases_none', $needs),
+            ...$why,
+        ];
     }
 
     private function memory(): Finding

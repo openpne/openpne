@@ -414,6 +414,11 @@ Key invariants:
    one given may hold another application's tables, and empties none itself.
 6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
    the web's PHP running as this account.
+7. **SQLite is offered only where the check passes it**: `pdo_sqlite` on SQLite 3.32.0 or later and
+   the `sqlite3` command 3.28.0 or later, both judged by
+   [`SqliteSupport`](../../app/SiteCheck/SqliteSupport.php); a version that cannot be read is not
+   taken for too old. Before a site is installed, the check names what SQLite lacks; where MySQL is
+   all that is left, setup asks whether to go on before asking for the server.
 
 ## Database server
 

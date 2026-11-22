@@ -20,6 +20,7 @@ use App\SiteCheck\BackupTools;
 use App\SiteCheck\Finding;
 use App\SiteCheck\InstalledCheck;
 use App\SiteCheck\SiteLayout;
+use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\Verdict;
 use Closure;
 use DateTimeZone;
@@ -77,10 +78,13 @@ class SetupCommand extends Command
 
     private DatabaseServerProbe $servers;
 
-    public function handle(SetupHost $host, DatabaseServerProbe $servers): int
+    private SqliteSupport $sqlite;
+
+    public function handle(SetupHost $host, DatabaseServerProbe $servers, SqliteSupport $sqlite): int
     {
         $this->host = $host;
         $this->servers = $servers;
+        $this->sqlite = $sqlite;
         $lang = $this->option('lang');
         if ($lang !== null && ! in_array($lang, ['ja', 'en'], true)) {
             $this->error("Unknown language [{$lang}]. Expected ja or en.");
@@ -318,20 +322,24 @@ class SetupCommand extends Command
     /** @return array<string, string> */
     private function askDatabase(): array
     {
-        $sqlite = extension_loaded('pdo_sqlite') ? BackupTools::sqlite() : null;
-        if ($sqlite !== null && ($version = $this->sqliteVersion($sqlite)) !== null && version_compare($version, BackupLine::SQLITE_MINIMUM, '<')) {
-            $this->say('sqlite_old', ['path' => $sqlite, 'version' => $version, 'minimum' => BackupLine::SQLITE_MINIMUM]);
-            $sqlite = null;
-        }
+        $sqlite = $this->sqlite->lacks() === [] ? BackupTools::sqlite() : null;
         $mysql = extension_loaded('pdo_mysql') ? BackupTools::mysql() : null;
         $options = array_filter(['sqlite' => $sqlite !== null ? $this->text('db_sqlite') : null, 'mysql' => $mysql !== null ? $this->text('db_mysql') : null]);
         if ($options === []) {
-            $this->say('db_none', ['minimum' => BackupLine::SQLITE_MINIMUM], 'error');
+            $this->say('db_none', [], 'error');
 
             throw new StopSetup;
         }
-        if (count($options) === 1) {
-            $this->say($sqlite !== null ? 'db_only_sqlite' : 'db_only_mysql', ['minimum' => BackupLine::SQLITE_MINIMUM]);
+        if ($sqlite !== null && $mysql === null) {
+            $this->say('db_only_sqlite');
+        }
+        if ($sqlite === null) {
+            $this->say('db_only_mysql');
+            if (! confirm($this->text('db_only_mysql_go_on'), true)) {
+                $this->say('db_only_mysql_stopped');
+
+                throw new StopSetup;
+            }
         }
 
         while (true) {
@@ -760,7 +768,7 @@ class SetupCommand extends Command
             return;
         }
         if ($driver === 'sqlite') {
-            $version = $this->sqliteVersion($tool);
+            $version = $this->sqlite->commandVersion($tool);
             if ($version !== null && version_compare($version, BackupLine::SQLITE_MINIMUM, '<')) {
                 $this->say('backup_sqlite_old', ['path' => $tool, 'version' => $version, 'minimum' => BackupLine::SQLITE_MINIMUM], 'error');
 
@@ -845,20 +853,6 @@ class SetupCommand extends Command
         $this->newLine();
         $this->say('cron');
         $this->line(OutputFormatter::escape(BackupLine::cron(PHP_BINARY, $this->layout->base)));
-    }
-
-    private function sqliteVersion(string $tool): ?string
-    {
-        if (! $this->host->canSpawn()) {
-            return null;
-        }
-        try {
-            $result = Process::timeout(30)->run([$tool, '-version']);
-        } catch (ProcessTimedOutException) {
-            return null;
-        }
-
-        return $result->successful() && preg_match('/\A(\d+\.\d+\.\d+)/', trim($result->output()), $match) === 1 ? $match[1] : null;
     }
 
     /** Asks once, before the first password this host would echo, whether to go on. */
