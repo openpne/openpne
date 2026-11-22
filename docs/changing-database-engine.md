@@ -108,8 +108,8 @@ are the same for the source, which defaults to the connection the site itself us
 The command creates the schema, copies every table, and reports failure unless the row counts match
 on both sides afterwards. Each table's id counter comes along, so the target never hands out the id
 of a row the source deleted ([Row ids](internals/runtime.md#row-ids)); a copy into MySQL that fails
-leaves the counters raised on empty tables, and running it again is fine. It copies between SQLite,
-MySQL and MariaDB only. Nothing is written to the source. Then point the site at what it produced:
+leaves the counters raised on empty tables, and running it again is fine. It copies between SQLite
+and MySQL only. Nothing is written to the source. Then point the site at what it produced:
 
 ```dotenv
 DB_CONNECTION=sqlite
@@ -142,8 +142,8 @@ before any row is written:
   nobody else has a copy of, and what only the target defines would end up in the result holding
   something the source never had. Reconcile the two on a copy of the source, or extend the schema on
   both sides.
-- **A connection uses a driver other than SQLite, MySQL or MariaDB.** It is refused before the
-  target is touched.
+- **A side is neither SQLite nor MySQL**: another driver, or a MariaDB server, which OpenPNE does
+  not run on yet. It is refused before the target is touched.
 - **A table's id counter does not fit a signed 64-bit integer.** This is checked after the target's
   schema is created and before any row is written, so running it again needs no cleanup.
 

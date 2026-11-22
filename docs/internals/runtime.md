@@ -414,3 +414,18 @@ Key invariants:
    one given may hold another application's tables, and empties none itself.
 6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
    the web's PHP running as this account.
+
+## Database server
+
+`openpne:setup`, `openpne:check` and `openpne:copy-database` read the server behind a MySQL or
+MariaDB connection from its `VERSION()`, through
+[`DatabaseServerProbe`](../../app/Database/DatabaseServerProbe.php), and
+[`DatabaseServer::supported()`](../../app/Database/DatabaseServer.php) alone says whether OpenPNE runs
+on it. It does not yet on MariaDB of any version, whichever driver reaches it. MariaDB 10 has no
+`utf8mb4_0900_bin` and refuses the `mysql` connection's session with error 1273, so on that error the
+probe asks again through a session that names no collation.
+
+- Setup takes back the MySQL answers and offers SQLite again, or, where the host has no SQLite, asks
+  for another server. A `.env` naming such a server stops it before `openpne:install`.
+- Check fails the site, even where the connection works.
+- Copy-database refuses it on either side before writing anything.

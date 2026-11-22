@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\SiteCheck;
 
+use App\Database\DatabaseServer;
+use App\Database\DatabaseServerProbe;
 use Database\Seeders\InstallSeeder;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,7 @@ final class InstalledCheck
     public function __construct(
         private readonly SiteLayout $layout,
         private readonly Migrator $migrator,
+        private readonly DatabaseServerProbe $servers,
     ) {}
 
     /** @return list<Finding> */
@@ -96,12 +99,14 @@ final class InstalledCheck
                 : Finding::fail('db.backup_tool', $driver === 'sqlite' ? 'db_backup_tool_sqlite' : 'db_backup_tool_mysql'),
         ];
 
+        $server = null;
         try {
+            $server = $this->servers->behind($name);
             DB::connection()->getPdo();
         } catch (Throwable $e) {
-            return [Finding::fail('db.connect', 'db_connect_failed', ['reason' => self::reason($e)]), ...$findings];
+            return [Finding::fail('db.connect', 'db_connect_failed', ['reason' => self::reason($e)]), ...self::server($server), ...$findings];
         }
-        $findings = [Finding::ok('db.connect', 'db_connect', ['connection' => $name]), ...$findings];
+        $findings = [Finding::ok('db.connect', 'db_connect', ['connection' => $name]), ...self::server($server), ...$findings];
 
         try {
             if (! $this->migrator->repositoryExists()) {
@@ -125,6 +130,12 @@ final class InstalledCheck
         }
 
         return $findings;
+    }
+
+    /** @return list<Finding> */
+    private static function server(?DatabaseServer $server): array
+    {
+        return $server?->supported() === false ? [Finding::fail('db.server', 'db_server_mariadb', ['server' => $server->name()])] : [];
     }
 
     /** @return list<Finding> */

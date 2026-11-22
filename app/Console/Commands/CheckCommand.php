@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\RunsWebCheck;
+use App\Database\DatabaseServerProbe;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\Finding;
 use App\SiteCheck\InstalledCheck;
@@ -60,7 +61,7 @@ class CheckCommand extends Command
             }
         } else {
             if ($only === null || $only === 'installed') {
-                $check = new InstalledCheck($layout, $this->laravel->make('migrator'));
+                $check = new InstalledCheck($layout, $this->laravel->make('migrator'), $this->laravel->make(DatabaseServerProbe::class));
                 $findings = [...$findings, ...$this->part('heading_installed', [], $check->run(...))];
             }
             if ($only === null || $only === 'web') {

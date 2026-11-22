@@ -22,10 +22,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use RuntimeException;
 use Symfony\Component\Process\Process as SymfonyProcess;
+use Tests\Concerns\FakesDatabaseServer;
 use Tests\TestCase;
 
 class CheckCommandTest extends TestCase
 {
+    use FakesDatabaseServer;
     use RefreshDatabase;
 
     private const URL = 'https://sns.example.com';
@@ -301,6 +303,31 @@ class CheckCommandTest extends TestCase
 
         $this->assertStringContainsString('[FAIL] The database does not answer:', $output);
         $this->assertStringNotContainsString('sentinel-Pa55word', $output);
+    }
+
+    public function test_a_site_on_a_mariadb_server_fails_even_where_it_answers(): void
+    {
+        $this->installEnv();
+        Artisan::call('openpne:install');
+        $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204');
+
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('[ OK ] The database (')
+            ->expectsOutputToContain('[FAIL] The database server is MariaDB 10.11.19, and OpenPNE does not run on MariaDB yet')
+            ->expectsOutputToContain('[ OK ] Every migration has run.')
+            ->assertFailed();
+    }
+
+    public function test_a_mariadb_server_refusing_the_connection_is_named_beside_the_refusal(): void
+    {
+        $this->installEnv();
+        $this->useUnreachableMysql('sentinel-Pa55word');
+        $this->fakeDatabaseServer('10.6.28-MariaDB-ubu2204');
+
+        $output = $this->runCheck(['--only' => 'installed']);
+
+        $this->assertStringContainsString('[FAIL] The database does not answer:', $output);
+        $this->assertStringContainsString('[FAIL] The database server is MariaDB 10.6.28', $output);
     }
 
     public function test_the_language_follows_the_option_then_the_shell_then_app_locale(): void
