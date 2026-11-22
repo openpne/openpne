@@ -7,6 +7,7 @@ namespace Tests\Feature\Notifications;
 use App\Models\Member;
 use App\Notifications\Push\WebPushNudge;
 use App\Providers\WebPushServiceProvider;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -16,6 +17,7 @@ use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\VAPID;
+use Psr\Http\Message\RequestInterface;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -62,8 +64,19 @@ class WebPushFailureLogTest extends TestCase
         $this->assertArrayNotHasKey('status', $line->context);
         $this->assertStringContainsString('https://127.0.0.1:1', $line->context['reason']);
         $this->assertStringNotContainsString('capability-token', $line->context['reason']);
-        $this->assertDoesNotMatchRegularExpression('/[\x00-\x1F\x7F]/', $line->context['reason']);
-        $this->assertLessThanOrEqual(256, mb_strlen($line->context['reason']));
+    }
+
+    /** A reason Guzzle did not write, since the library already escapes the control characters in its own. */
+    public function test_a_transport_reason_is_logged_as_one_bounded_line(): void
+    {
+        $this->pushThrough(
+            fn (RequestInterface $request): PromiseInterface => Create::rejectionFor(new ConnectException("refused\r\nforged line ".str_repeat('x', 1000), $request)),
+            ['https://push.example.com/device/a'],
+        );
+
+        [$line] = $this->logged('warning');
+        $this->assertStringStartsWith('refused forged line x', $line->context['reason']);
+        $this->assertSame(256, mb_strlen($line->context['reason']));
     }
 
     public function test_an_expired_endpoint_is_logged_below_warning(): void
