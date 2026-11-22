@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 class AddAllMembers
 {
-    /** At seven columns a row, this many rows stay under the 999 bound parameters SQLite before 3.32 takes in one statement. */
+    /** At up to nine columns a row, this many rows stay under the 999 bound parameters SQLite before 3.32 takes in one statement. */
     private const INSERT_ROWS = 100;
 
     public function __invoke(Group $group): int
@@ -47,9 +47,11 @@ class AddAllMembers
                     ...$cursor,
                 ])->all();
 
-                foreach (array_chunk($rows, self::INSERT_ROWS) as $part) {
-                    $added += DB::table('group_members')->insertOrIgnore($part);
-                }
+                DB::transaction(function () use ($rows, &$added): void {
+                    foreach (array_chunk($rows, self::INSERT_ROWS) as $part) {
+                        $added += DB::table('group_members')->insertOrIgnore($part);
+                    }
+                });
             });
 
         // Everyone is now a member, so any pending join requests for this group are redundant.

@@ -10,13 +10,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Concerns\SqliteBindLimit;
 use Tests\TestCase;
 
 class ConsumeNotificationRowsTest extends TestCase
 {
     use RefreshDatabase;
+    use SqliteBindLimit;
 
-    /** Bites only on SQLite before 3.32, where 1,000 bound uuids pass its 999 bound parameters. */
     public function test_marks_more_rows_read_than_one_update_could_bind(): void
     {
         $member = Member::factory()->create();
@@ -33,7 +34,7 @@ class ConsumeNotificationRowsTest extends TestCase
             ], $part));
         }
 
-        app(ConsumeNotificationRows::class)->markRead(...$ids);
+        $this->withinSqliteBindLimit(fn () => app(ConsumeNotificationRows::class)->markRead(...$ids));
 
         $this->assertSame(0, DatabaseNotification::query()->whereNull('read_at')->count());
     }

@@ -10,9 +10,12 @@ use App\Models\Reaction;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\SqliteBindLimit;
 
 class DiaryReactionTest extends DiaryReactionTestCase
 {
+    use SqliteBindLimit;
+
     public function test_a_guest_is_sent_to_login_on_every_route(): void
     {
         $diary = Diary::factory()->create(['visibility' => Visibility::Open]);
@@ -160,7 +163,6 @@ class DiaryReactionTest extends DiaryReactionTestCase
         $this->assertSame(['diary'], $bindings);
     }
 
-    /** Bites only on SQLite before 3.32, where 1,000 bound ids pass its 999 bound parameters. */
     public function test_the_grouped_read_takes_more_ids_than_sqlite_could_bind(): void
     {
         $diary = $this->diary();
@@ -169,7 +171,7 @@ class DiaryReactionTest extends DiaryReactionTestCase
 
         $this->assertSame(
             [$id => [['emoji' => $this->emoji(0), 'count' => 1, 'mine' => false]]],
-            app(ReactionAggregates::class)(null, Diary::class, [...range($id + 1, $id + 1200), $id]),
+            $this->withinSqliteBindLimit(fn (): array => app(ReactionAggregates::class)(null, Diary::class, [...range($id + 1, $id + 1200), $id])),
         );
     }
 

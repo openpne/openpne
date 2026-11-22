@@ -4,6 +4,7 @@ namespace Tests\Feature\Group\Reactions;
 
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\BoardReactionSurface;
+use App\Features\Group\BoardSweep;
 use App\Features\GroupEvent\Actions\CreateEvent;
 use App\Features\GroupEvent\Actions\CreateEventComment;
 use App\Features\GroupEvent\Actions\DeleteEvent;
@@ -26,6 +27,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Concerns\SqliteBindLimit;
 
 /**
  * Single-connection: the rows and bytes each delete reclaims, and the transaction they are reclaimed
@@ -33,6 +35,8 @@ use RuntimeException;
  */
 class BoardTeardownTest extends BoardReactionTestCase
 {
+    use SqliteBindLimit;
+
     public function test_deleting_a_comment_sweeps_its_reactions_inside_the_transaction(): void
     {
         $group = $this->group();
@@ -513,6 +517,21 @@ class BoardTeardownTest extends BoardReactionTestCase
         }
 
         $this->assertDatabaseCount('reactions', 0);
+    }
+
+    public function test_the_file_purge_reaches_past_one_chunk_of_files(): void
+    {
+        $now = now();
+        foreach (array_chunk(range(1, 1001), 100) as $part) {
+            DB::table('files')->insert(array_map(fn (int $i): array => [
+                'name' => "bulk-{$i}", 'type' => 'image/png', 'byte_size' => 0, 'created_at' => $now, 'updated_at' => $now,
+            ], $part));
+        }
+        $ids = DB::table('files')->pluck('id')->map(fn (mixed $id): int => (int) $id)->all();
+
+        $this->withinSqliteBindLimit(fn () => BoardSweep::files($ids));
+
+        $this->assertDatabaseCount('files', 0);
     }
 
     public function test_deleting_a_topic_that_is_already_gone_does_nothing(): void

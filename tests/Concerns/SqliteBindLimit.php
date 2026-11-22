@@ -6,8 +6,30 @@ use App\Features\Group\GroupRole;
 use App\Models\Group;
 use Illuminate\Support\Facades\DB;
 
-trait InsertsManyMembers
+trait SqliteBindLimit
 {
+    /**
+     * Counts each statement's bindings, so a list bound past SQLite's 999 before 3.32 fails on every engine.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $act
+     * @return T
+     */
+    protected function withinSqliteBindLimit(callable $act): mixed
+    {
+        $most = 0;
+        DB::listen(function ($query) use (&$most): void {
+            $most = max($most, count($query->bindings));
+        });
+
+        $result = $act();
+
+        $this->assertLessThanOrEqual(999, $most, 'a statement bound more than 999 parameters');
+
+        return $result;
+    }
+
     /**
      * Inserts 100 rows a statement, under the 999 bound parameters SQLite before 3.32 takes.
      *
