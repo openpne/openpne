@@ -186,22 +186,32 @@ class SetupCommand extends Command
         $settings = (array) config("database.connections.{$connection}");
         $driver = (string) ($settings['driver'] ?? '');
 
+        $unanswered = null;
+        try {
+            $server = $this->servers->behind($connection);
+        } catch (Throwable $e) {
+            [$server, $unanswered] = [null, $e];
+        }
+        if ($server?->supported() === false) {
+            $this->say('db_mariadb', ['server' => $server->name(), 'path' => $this->layout->envFile], 'error');
+
+            return self::FAILURE;
+        }
         if (in_array($driver, ['mysql', 'mariadb'], true)) {
             $this->mysqlOptionFile($settings);
         }
         if ($driver === 'sqlite') {
             $this->sqliteFile((string) ($settings['database'] ?? ''));
         }
-        try {
-            $server = $this->servers->behind($connection);
-            if ($server?->supported() === false) {
-                $this->say('db_mariadb', ['server' => $server->name(), 'path' => $this->layout->envFile], 'error');
-
-                return self::FAILURE;
+        if ($unanswered === null) {
+            try {
+                DB::connection()->getPdo();
+            } catch (Throwable $e) {
+                $unanswered = $e;
             }
-            DB::connection()->getPdo();
-        } catch (Throwable $e) {
-            $this->say('db_failed', ['reason' => InstalledCheck::reason($e)], 'error');
+        }
+        if ($unanswered !== null) {
+            $this->say('db_failed', ['reason' => InstalledCheck::reason($unanswered)], 'error');
 
             return self::FAILURE;
         }

@@ -143,7 +143,7 @@ before any row is written:
   something the source never had. Reconcile the two on a copy of the source, or extend the schema on
   both sides.
 - **A side is neither SQLite nor MySQL**: another driver, or a MariaDB server, which OpenPNE does
-  not run on yet. It is refused before the target is touched.
+  not run on yet. It is refused before anything is written to the target.
 - **A table's id counter does not fit a signed 64-bit integer.** This is checked after the target's
   schema is created and before any row is written, so running it again needs no cleanup.
 

@@ -25,7 +25,7 @@ class CopyDatabaseCommand extends Command
     /** A batch holds every BLOB in it in PHP memory at once, so binary tables get a much smaller one. */
     private const BINARY_BATCH_ROWS = 25;
 
-    private const DRIVERS = ['sqlite', 'mysql', 'mariadb'];
+    private const DRIVERS = ['sqlite', 'mysql'];
 
     protected $signature = 'openpne:copy-database
         {--from= : Source connection (default: the app\'s own)}
@@ -474,7 +474,7 @@ class CopyDatabaseCommand extends Command
      */
     private function streamSource(Connection $source): callable
     {
-        if (! in_array($source->getDriverName(), ['mysql', 'mariadb'], true)) {
+        if ($source->getDriverName() !== 'mysql') {
             return static fn () => null;
         }
 

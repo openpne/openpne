@@ -7,6 +7,7 @@ namespace Tests\Feature\Database;
 use App\Database\DatabaseServerProbe;
 use Illuminate\Support\Facades\DB;
 use PDOException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class DatabaseServerProbeTest extends TestCase
@@ -47,15 +48,22 @@ class DatabaseServerProbeTest extends TestCase
         $this->assertArrayNotHasKey('openpne_server_probe', DB::getConnections());
     }
 
-    public function test_a_server_that_cannot_be_reached_throws_what_connecting_threw(): void
+    #[DataProvider('mysqlFamilyDrivers')]
+    public function test_a_server_that_cannot_be_reached_throws_what_connecting_threw(string $driver): void
     {
         config(['database.connections.probe_test' => [
-            'driver' => 'mysql', 'host' => '127.0.0.1', 'port' => 1, 'database' => 'site_db',
+            'driver' => $driver, 'host' => '127.0.0.1', 'port' => 1, 'database' => 'site_db',
             'username' => 'site', 'password' => '', 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_0900_bin', 'prefix' => '',
         ]]);
 
         $this->expectException(PDOException::class);
         (new DatabaseServerProbe)->behind('probe_test');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function mysqlFamilyDrivers(): array
+    {
+        return ['mysql' => ['mysql'], 'mariadb' => ['mariadb']];
     }
 
     private function requireMysql(): void

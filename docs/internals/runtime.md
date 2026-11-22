@@ -420,10 +420,10 @@ Key invariants:
 `openpne:setup`, `openpne:check` and `openpne:copy-database` read the server behind a MySQL or
 MariaDB connection from its `VERSION()`, through
 [`DatabaseServerProbe`](../../app/Database/DatabaseServerProbe.php), and
-[`DatabaseServer::supported()`](../../app/Database/DatabaseServer.php) alone says whether OpenPNE runs
-on it. It does not yet on MariaDB of any version, whichever driver reaches it. MariaDB 10 has no
-`utf8mb4_0900_bin` and refuses the `mysql` connection's session with error 1273, so on that error the
-probe asks again through a session that names no collation.
+[`DatabaseServer::supported()`](../../app/Database/DatabaseServer.php) is the one place that decides
+which servers they refuse: MariaDB of any version, whichever driver reaches it. A server
+without `utf8mb4_0900_bin`, MariaDB 10 among them, refuses the `mysql` connection's session with error
+1273, so on that error the probe asks again through a session that names no collation.
 
 - Setup takes back the MySQL answers and offers SQLite again, or, where the host has no SQLite, asks
   for another server. A `.env` naming such a server stops it before `openpne:install`.

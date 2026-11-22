@@ -9,6 +9,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\Concerns\FakesDatabaseServer;
 use Tests\TestCase;
 
@@ -92,9 +93,11 @@ class CopyDatabaseTest extends TestCase
         $this->assertGreaterThan($deleted->id, $this->insertMember('copy_target'));
     }
 
-    public function test_it_refuses_a_driver_other_than_sqlite_and_mysql_before_touching_it(): void
+    #[TestWith(['pgsql'])]
+    #[TestWith(['mariadb'])]
+    public function test_it_refuses_a_driver_other_than_sqlite_and_mysql_before_touching_it(string $driver): void
     {
-        config(['database.connections.copy_target' => ['driver' => 'pgsql', 'host' => '203.0.113.1', 'database' => 'openpne']]);
+        config(['database.connections.copy_target' => ['driver' => $driver, 'host' => '203.0.113.1', 'database' => 'openpne']]);
 
         $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
             ->expectsOutputToContain('only SQLite and MySQL are supported')

@@ -821,9 +821,17 @@ class SetupCommandTest extends TestCase
         $this->assertFalse(AdminUser::query()->exists());
     }
 
-    public function test_an_env_naming_a_mariadb_server_stops_before_anything_is_installed(): void
+    public function test_an_env_naming_a_mariadb_server_stops_before_anything_is_written_or_installed(): void
     {
         $this->withEnv();
+        // A port nothing answers on, so connecting before asking the server would end in a refusal instead.
+        config([
+            'database.connections.setup_mysql' => [
+                'driver' => 'mysql', 'host' => '127.0.0.1', 'port' => 1, 'database' => 'site_db',
+                'username' => 'site', 'password' => '', 'unix_socket' => '', 'charset' => 'utf8mb4', 'prefix' => '',
+            ],
+            'database.default' => 'setup_mysql',
+        ]);
         $this->fakeDatabaseServer('11.8.9-MariaDB-ubu2404');
 
         $this->runSetup()
@@ -831,7 +839,7 @@ class SetupCommandTest extends TestCase
             ->doesntExpectOutputToContain('Creating the tables')
             ->assertFailed();
 
-        $this->assertFalse(Schema::hasTable('admin_users') && DB::table('admin_users')->exists());
+        $this->assertFileDoesNotExist($this->layout->mysqlOptionFile());
     }
 
     public function test_the_mysql_option_file_is_its_own_step_for_an_env_written_by_hand(): void

@@ -6,6 +6,7 @@ namespace App\Database;
 
 use Illuminate\Support\Facades\DB;
 use PDOException;
+use Throwable;
 
 /** See docs/internals/runtime.md, "Database server". */
 class DatabaseServerProbe
@@ -31,6 +32,8 @@ class DatabaseServerProbe
             config(['database.connections.'.self::PROBE => [...$db->getConfig(), 'name' => self::PROBE, 'url' => null, 'collation' => null]]);
             try {
                 return DatabaseServer::fromVersion((string) DB::connection(self::PROBE)->scalar('select version()'));
+            } catch (Throwable) {
+                throw $e;
             } finally {
                 DB::purge(self::PROBE);
             }
