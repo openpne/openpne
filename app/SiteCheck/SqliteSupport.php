@@ -12,10 +12,7 @@ use Throwable;
 
 class SqliteSupport
 {
-    /**
-     * Below it, SQLite refuses a statement binding more than 999 values, which the app's batches of 1000 bind.
-     * 3.31.1 also fails a migration's ADD COLUMN defaulting to CURRENT_TIMESTAMP.
-     */
+    /** Below it, SQLite refuses a statement binding more than 999 values, which the app's batches of 1000 bind. */
     public const LIBRARY_MINIMUM = '3.32.0';
 
     public function __construct(private readonly SetupHost $host) {}
