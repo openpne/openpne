@@ -48,6 +48,8 @@ class SearchCollationTest extends TestCase
         return [
             'uppercase finds lowercase' => ['tanaka', 'TANAKA', true],
             'case outside ASCII is folded' => ['ÉCOLE', 'école', true],
+            'a capital sharp s finds the small one' => ['STRAẞE', 'straße', true],
+            'Deseret case is folded' => ['𐐀', '𐐨', true],
             'hiragana does not find katakana' => ['タナカ', 'たなか', false],
             'full-width letters do not find half-width' => ['Tanaka', 'ＴＡＮＡＫＡ', false],
             'a half-width kana is not its full-width one' => ['ｱ', 'ア', false],
@@ -60,7 +62,7 @@ class SearchCollationTest extends TestCase
     }
 
     #[DataProvider('mariadbMatches')]
-    public function test_mariadb_matches_through_the_uca_collation(string $stored, string $term, bool $matches): void
+    public function test_mariadb_search_matches(string $stored, string $term, bool $matches): void
     {
         $this->skipUnlessDriver('mariadb');
 
@@ -128,14 +130,14 @@ class SearchCollationTest extends TestCase
         $this->assertSame(['亜', '阿', '愛'], $this->namesInOrder());
     }
 
-    public function test_mariadb_orders_kanji_by_code_point(): void
+    public function test_mariadb_orders_the_main_kanji_block_by_code_point_ahead_of_its_extensions(): void
     {
         $this->skipUnlessDriver('mariadb');
-        foreach (['愛', '阿', '亜'] as $name) {
+        foreach (['愛', '阿', '㐂', '亜'] as $name) {
             Member::factory()->create(['name' => $name]);
         }
 
-        $this->assertSame(['亜', '愛', '阿'], $this->namesInOrder());
+        $this->assertSame(['亜', '愛', '阿', '㐂'], $this->namesInOrder());
     }
 
     public function test_a_subquery_orders_through_the_same_collation(): void

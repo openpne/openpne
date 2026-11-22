@@ -57,7 +57,7 @@ collation:
 | Engine | Search (`whereMatches`) | Name order (`orderBy`) |
 |---|---|---|
 | MySQL | `LOWER(column) COLLATE utf8mb4_ja_0900_as_cs LIKE LOWER(?)` | `column COLLATE utf8mb4_ja_0900_as_cs` |
-| MariaDB | `LOWER(column) COLLATE utf8mb4_uca1400_as_cs LIKE LOWER(?)` | `column COLLATE utf8mb4_uca1400_as_cs` |
+| MariaDB | `LOWER(column COLLATE utf8mb4_uca1400_as_cs) LIKE LOWER(? COLLATE utf8mb4_uca1400_as_cs)` | `column COLLATE utf8mb4_uca1400_as_cs` |
 | SQLite | `column LIKE ?` | `column COLLATE NOCASE` |
 | other | `LOWER(column) LIKE LOWER(?)` | the column's own |
 
@@ -69,7 +69,8 @@ example a voiced or semi-voiced kana (`ｶﾞ` and `ﾊﾟ`, two characters each
 the prolonged sound mark (`ｺｰﾋｰ` is not `コーヒー`) and the middle dot (`ｱ･ｲ` is not `ア・イ`).
 On MariaDB a search treats uppercase and lowercase as one, also outside ASCII, and tells apart
 hiragana and katakana, full- and half-width forms, the voiced marks, small kana, accents and emoji; a
-name order puts kanji in code point order rather than by reading.
+name order puts kanji not by reading but in code point order, the CJK Unified Ideographs block ahead
+of its extensions (`㐂`, U+3402, after `一`, U+4E00).
 SQLite's `LIKE` folds the case of ASCII letters and nothing else, and `NOCASE` orders the same way.
 
 The caller builds the pattern, so whether `%` and `_` in a term are wildcards is the screen's choice:
