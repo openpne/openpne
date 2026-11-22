@@ -174,10 +174,12 @@ class WebPushUpstreamAssumptionsTest extends TestCase
 
         $member->notify(new WebPushNudge(['kind' => 'direct_message_received'], null));
 
+        $request = $mock->getLastRequest();
+        $this->assertNotNull($request, 'The nudge was never sent, so its Urgency header could not be read.');
         $this->assertSame(
             'high',
-            $mock->getLastRequest()?->getHeaderLine('Urgency'),
-            'A nudge reached the push service without Urgency: high. Either the channel no longer hands the message\'s options() to queueNotification(), or minishlink/web-push no longer writes the urgency option as the header; set it wherever the library now takes it.',
+            $request->getHeaderLine('Urgency'),
+            'A nudge reached the push service without Urgency: high. WebPushNudge no longer sets it in options(), the channel no longer hands the message\'s options() to queueNotification(), or minishlink/web-push no longer writes the urgency option as the header.',
         );
     }
 
