@@ -12,7 +12,7 @@ use App\Models\Member;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
+use LogicException;
 use Tests\Concerns\SqliteBindLimit;
 use Tests\TestCase;
 
@@ -102,14 +102,14 @@ class AddAllMembersTest extends TestCase
         $inserts = 0;
         DB::listen(function (QueryExecuted $query) use (&$inserts): void {
             if (str_contains($query->sql, 'group_members') && str_starts_with($query->sql, 'insert') && ++$inserts === 2) {
-                throw new RuntimeException('second insert');
+                throw new LogicException('second insert');
             }
         });
 
         try {
             app(AddAllMembers::class)($group);
             $this->fail('the second insert should have thrown');
-        } catch (RuntimeException) {
+        } catch (LogicException) {
         }
 
         $this->assertSame(2, $inserts);

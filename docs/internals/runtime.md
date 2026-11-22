@@ -443,6 +443,6 @@ replies to a post, a fan-out chunk) goes into SQL through `whereIntegerInRaw()` 
 `whereIntegerNotInRaw()`, which write the integers into the statement and bind none. A list that
 has to bind, such as uuid keys or the rows of a multi-row insert, is split under the limit.
 
-Two admin screens still bind one value per row they change, and fail past the limit on such
-SQLite: attaching banner images (`sync()` in `BannerSettings`) and reordering profile options
-(Filament's table reorder).
+Two admin paths still bind per row they change, and fail past the limit on such SQLite: attaching
+banner images (`sync()` in `BannerSettings`, a multi-row insert), and Filament's table reorder on
+every reorderable admin table (one key per row).
