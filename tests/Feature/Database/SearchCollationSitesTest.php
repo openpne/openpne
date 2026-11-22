@@ -61,6 +61,17 @@ class SearchCollationSitesTest extends TestCase
         $this->assertFalse($this->{$site}('ば', 'は'));
     }
 
+    #[DataProvider('sites')]
+    public function test_mariadb_tells_kana_and_the_voiced_mark_apart(string $site): void
+    {
+        if (DB::connection()->getDriverName() !== 'mariadb') {
+            $this->markTestSkipped('mariadb only');
+        }
+
+        $this->assertFalse($this->{$site}('タナカ', 'たなか'));
+        $this->assertFalse($this->{$site}('ば', 'は'));
+    }
+
     private function memberName(string $stored, string $term): bool
     {
         $member = Member::factory()->create(['name' => $stored]);

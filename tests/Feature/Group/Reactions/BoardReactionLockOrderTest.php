@@ -37,7 +37,7 @@ class BoardReactionLockOrderTest extends TestCase
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             $this->markTestSkipped('Two connections need a server; sqlite :memory: has one.');
         }
 
@@ -46,7 +46,7 @@ class BoardReactionLockOrderTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (DB::connection()->getDriverName() === 'mysql') {
+        if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             $this->closeSecondConnection();
         }
 

@@ -55,7 +55,12 @@ final class TalkBurstCandidates
             // One joined row per room, so MAX() is that row's count; it keeps MySQL's only-full-group-by happy.
             ->selectRaw('coalesce(max(reacted.reactions), 0) as reaction_count')
             ->groupBy('groups.id')
-            ->orderByRaw('message_count + author_count + reaction_count desc')
+            // MariaDB refuses a select alias of an aggregate inside an ORDER BY expression (error 1247).
+            ->when(
+                DB::connection()->getDriverName() === 'mariadb',
+                fn ($query) => $query->orderByRaw('count(*) + count(distinct group_messages.member_id) + coalesce(max(reacted.reactions), 0) desc'),
+                fn ($query) => $query->orderByRaw('message_count + author_count + reaction_count desc'),
+            )
             ->orderByDesc('last_said')
             ->orderByDesc('groups.id')
             ->limit($limit);

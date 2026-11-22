@@ -21,10 +21,9 @@ trait MigratesUpgradeTargetsOnce
 
     protected function truncateDatabaseTables(): void
     {
-        // Never touch RefreshDatabaseState off MySQL: on sqlite :memory: RefreshDatabase pairs that
-        // flag with a PDO cache, and setting it alone leaves the next RefreshDatabase test on a
-        // schemaless connection.
-        if ($this->app->make('db')->connection()->getDriverName() !== 'mysql') {
+        // Never touch RefreshDatabaseState on sqlite: on :memory: RefreshDatabase pairs that flag with a
+        // PDO cache, and setting it alone leaves the next RefreshDatabase test on a schemaless connection.
+        if (! in_array($this->app->make('db')->connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }
 
@@ -65,7 +64,7 @@ trait MigratesUpgradeTargetsOnce
         $dispatcher = $connection->getEventDispatcher();
         $connection->unsetEventDispatcher();
 
-        $isMysql = $connection->getDriverName() === 'mysql';
+        $isMysql = in_array($connection->getDriverName(), ['mysql', 'mariadb'], true);
         $exceptTables = $this->exceptTables($connection, $name); // includes the migrations table
 
         (new Collection($this->getAllTablesForConnection($connection, $name)))

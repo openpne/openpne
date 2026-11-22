@@ -43,6 +43,31 @@ class SearchCollationTest extends TestCase
     }
 
     /** @return array<string, array{string, string, bool}> stored name, typed term, whether it matches */
+    public static function mariadbMatches(): array
+    {
+        return [
+            'uppercase finds lowercase' => ['tanaka', 'TANAKA', true],
+            'case outside ASCII is folded' => ['ÉCOLE', 'école', true],
+            'hiragana does not find katakana' => ['タナカ', 'たなか', false],
+            'full-width letters do not find half-width' => ['Tanaka', 'ＴＡＮＡＫＡ', false],
+            'a half-width kana is not its full-width one' => ['ｱ', 'ア', false],
+            'the voiced mark is told apart' => ['ば', 'は', false],
+            'a small kana is told apart' => ['きょう', 'きよう', false],
+            'an accent is told apart' => ['José', 'jose', false],
+            'two emoji are told apart' => ['🍣', '🍺', false],
+            'a skin tone is told apart' => ['👍🏻', '👍🏿', false],
+        ];
+    }
+
+    #[DataProvider('mariadbMatches')]
+    public function test_mariadb_matches_through_the_uca_collation(string $stored, string $term, bool $matches): void
+    {
+        $this->skipUnlessDriver('mariadb');
+
+        $this->assertSame($matches, $this->found($stored, $term));
+    }
+
+    /** @return array<string, array{string, string, bool}> stored name, typed term, whether it matches */
     public static function sqliteMatches(): array
     {
         return [
@@ -101,6 +126,16 @@ class SearchCollationTest extends TestCase
 
         // Code point order is 亜 < 愛 < 阿.
         $this->assertSame(['亜', '阿', '愛'], $this->namesInOrder());
+    }
+
+    public function test_mariadb_orders_kanji_by_code_point(): void
+    {
+        $this->skipUnlessDriver('mariadb');
+        foreach (['愛', '阿', '亜'] as $name) {
+            Member::factory()->create(['name' => $name]);
+        }
+
+        $this->assertSame(['亜', '愛', '阿'], $this->namesInOrder());
     }
 
     public function test_a_subquery_orders_through_the_same_collation(): void

@@ -20,7 +20,7 @@ class FileSchemaFreezeTest extends TestCase
 
         // The assertions read information_schema and check MySQL signed/unsigned
         // and LONGBLOB — none of which exist on SQLite (the default test lane).
-        if (DB::connection()->getDriverName() !== 'mysql') {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             $this->markTestSkipped('file_bin schema-freeze assertions are MySQL-specific (information_schema).');
         }
     }

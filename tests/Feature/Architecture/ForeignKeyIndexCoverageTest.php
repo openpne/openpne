@@ -22,7 +22,7 @@ class ForeignKeyIndexCoverageTest extends TestCase
         $foreignKeys = 0;
 
         // MySQL's getTables() spans every user schema on the server; only the connected one is the subject.
-        $schema = DB::connection()->getDriverName() === 'mysql' ? DB::connection()->getDatabaseName() : null;
+        $schema = in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true) ? DB::connection()->getDatabaseName() : null;
         foreach (Schema::getTables($schema) as $table) {
             $name = $table['name'];
             $indexes = array_map(fn (array $index) => $index['columns'], Schema::getIndexes($name));

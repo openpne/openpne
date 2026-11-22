@@ -34,7 +34,7 @@ return new class extends Migration
 
         // Laravel's binary() emits MySQL BLOB (64 KiB cap), too small for images; SQLite BLOB is
         // unbounded and needs no widening.
-        if (Schema::getConnection()->getDriverName() === 'mysql') {
+        if (in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             DB::statement('ALTER TABLE file_bin MODIFY bin LONGBLOB NULL');
         }
     }

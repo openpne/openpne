@@ -81,6 +81,8 @@ return new class extends Migration
     {
         return match (DB::getDriverName()) {
             'mysql' => DB::connection()->getConfig('collation') === self::COLLATION,
+            // Thrown rather than skipped: a migration that returns is recorded as run, and a converting release would never reach the site.
+            'mariadb' => throw new RuntimeException('This migration does not convert MariaDB yet. Nothing was changed, and it was not recorded as run.'),
             'sqlite' => true,
             default => false,
         };

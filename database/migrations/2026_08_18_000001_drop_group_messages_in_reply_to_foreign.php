@@ -20,7 +20,7 @@ return new class extends Migration
             $table->dropForeign(['in_reply_to_id']);
         });
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }
 

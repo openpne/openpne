@@ -33,8 +33,8 @@ final class EventStoryCandidates implements StoryCandidates
 
         return $query
             // The sum rather than the two counts in turn, which would rank 9 comments above 1
-            // comment and 50 RSVPs — both engines resolve a select alias inside an ORDER BY, so the
-            // subqueries are not written out a second time.
+            // comment and 50 RSVPs — every engine resolves a subquery's alias in an ORDER BY, so they
+            // are not written out twice.
             ->orderByRaw('comments_count + participants_count desc')
             ->orderByDesc('group_events.created_at')
             ->orderByDesc('group_events.id')

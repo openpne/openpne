@@ -27,7 +27,7 @@ return new class extends Migration
             // two distinct credential IDs collide on the unique index; 512 × 4 bytes stays under the
             // 3072-byte key limit (docs/internals/security.md, "Member passkeys").
             $credentialId = $table->string('credential_id', 512);
-            if ($driver === 'mysql') {
+            if (in_array($driver, ['mysql', 'mariadb'], true)) {
                 $credentialId->collation('utf8mb4_bin');
             }
             $credentialId->unique();

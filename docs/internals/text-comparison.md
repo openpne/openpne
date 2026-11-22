@@ -10,8 +10,8 @@ default, which needs MySQL 8.0.17), apart from the identifiers below and `push_s
 which is `ascii_bin`; SQLite compares `BINARY`. An `=`, an `IN`, a join, a
 `GROUP BY` and a unique index compare code points on both engines, and `utf8mb4_0900_bin` is NO PAD,
 so a trailing space is part of the value. Two group names, two profile item names or two values of a
-unique profile item that differ in case, kana or width are two values. The `mariadb` connection keeps
-`utf8mb4_unicode_ci`.
+unique profile item that differ in case, kana or width are two values. The `mariadb` connection's
+default is `utf8mb4_nopad_bin`, which compares the same way.
 
 ## Identifiers
 
@@ -57,6 +57,7 @@ collation:
 | Engine | Search (`whereMatches`) | Name order (`orderBy`) |
 |---|---|---|
 | MySQL | `LOWER(column) COLLATE utf8mb4_ja_0900_as_cs LIKE LOWER(?)` | `column COLLATE utf8mb4_ja_0900_as_cs` |
+| MariaDB | `LOWER(column) COLLATE utf8mb4_uca1400_as_cs LIKE LOWER(?)` | `column COLLATE utf8mb4_uca1400_as_cs` |
 | SQLite | `column LIKE ?` | `column COLLATE NOCASE` |
 | other | `LOWER(column) LIKE LOWER(?)` | the column's own |
 
@@ -66,6 +67,9 @@ apart the voiced and semi-voiced marks, small kana, accents (`José` is not `jos
 compatibility forms (`①` is not `1`). Some half-width forms do not match their full-width ones, for
 example a voiced or semi-voiced kana (`ｶﾞ` and `ﾊﾟ`, two characters each, are not `ガ` and `パ`),
 the prolonged sound mark (`ｺｰﾋｰ` is not `コーヒー`) and the middle dot (`ｱ･ｲ` is not `ア・イ`).
+On MariaDB a search treats uppercase and lowercase as one, also outside ASCII, and tells apart
+hiragana and katakana, full- and half-width forms, the voiced marks, small kana, accents and emoji; a
+name order puts kanji in code point order rather than by reading.
 SQLite's `LIKE` folds the case of ASCII letters and nothing else, and `NOCASE` orders the same way.
 
 The caller builds the pattern, so whether `%` and `_` in a term are wildcards is the screen's choice:
@@ -113,7 +117,7 @@ on SQLite rebuilds the five identifier tables.
   `DB_COLLATION` to anything else keeps its tables, and unsetting it later converts nothing, since the
   migration has already run. Such a site is outside what later migrations assume: one that adds an
   identifier column names `utf8mb4_0900_as_ci` through `IdentifierCollation::for()` whatever the
-  tables hold. MariaDB is never converted.
+  tables hold. On MariaDB it stops before changing anything and is not recorded as run.
 - **What stops it.** Before changing anything it refuses when a unique identifier column holds two
   values `IdentifierCollation` treats as one, or a value with whitespace at either end. The message
   names the column and the row ids, never the values. `email_change_requests.new_email` is not

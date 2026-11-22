@@ -103,7 +103,7 @@ class PushSubscriptionsEndpointWidthTest extends TestCase
 
     private function assertEndpointColumn(int $length, string $collation): void
     {
-        if (DB::connection()->getDriverName() !== 'mysql') {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }
 

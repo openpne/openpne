@@ -12,6 +12,8 @@ final class IdentifierCollation
 {
     public const MYSQL = 'utf8mb4_0900_as_ci';
 
+    public const MARIADB = 'utf8mb4_uca1400_nopad_as_ci';
+
     public const SQLITE = 'NOCASE';
 
     /** Null on an engine OpenPNE 4 does not support, whose columns keep the table's own collation. */
@@ -19,6 +21,7 @@ final class IdentifierCollation
     {
         return match ($connection->getDriverName()) {
             'mysql' => self::MYSQL,
+            'mariadb' => self::MARIADB,
             'sqlite' => self::SQLITE,
             default => null,
         };
