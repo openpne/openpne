@@ -62,7 +62,7 @@ class CheckCommand extends Command
             }
         } else {
             if ($only === null || $only === 'installed') {
-                $check = new InstalledCheck($layout, $this->laravel->make('migrator'), $this->laravel->make(DatabaseServerProbe::class));
+                $check = new InstalledCheck($layout, $this->laravel->make('migrator'), $this->laravel->make(DatabaseServerProbe::class), $this->laravel->make(SqliteSupport::class));
                 $findings = [...$findings, ...$this->part('heading_installed', [], $check->run(...))];
             }
             if ($only === null || $only === 'web') {

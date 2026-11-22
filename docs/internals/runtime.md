@@ -402,11 +402,11 @@ Key invariants:
    in, in place of any other and whether or not the top one is still in the
    release; the SQLite database (made only where nothing has its name, a broken link included), the
    MySQL option file (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it prints
-   writes `backup.sqlite` (`VACUUM INTO` under `-readonly`, which needs SQLite 3.28.0 or later,
-   waiting up to a minute for the site's locks) or `backup.sql` beside a `.new` copy moved over the
-   last, and refuses a path holding a character a shell or cron reads as its own. Where `proc_open`
-   allows, the same tool writes once into a 0600 file there, judged by a table read back from it,
-   and removed.
+   writes `backup.sqlite` through `openpne:backup-sqlite` ([SQLite backup](#sqlite-backup)) or
+   `backup.sql` beside a `.new` copy moved over the last, and refuses a path holding a character a
+   shell or cron reads as its own. The same copy is written once into a 0600 file there, judged by a
+   table read back from it, and removed: for SQLite in the process, without the command's lock and
+   rename, and for MySQL by the dump where `proc_open` allows.
 5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway
    included, as what it made is in the way of the next. Only where the database holds neither a
    member nor an administrator does it say how to start over: in a new, empty database (for SQLite an
@@ -415,10 +415,37 @@ Key invariants:
 6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
    the web's PHP running as this account.
 7. **SQLite is offered only where the check passes it**: `pdo_sqlite` on SQLite 3.32.0 or later and
-   the `sqlite3` command 3.28.0 or later, both judged by
+   the `sqlite3` extension, which takes the backup, both judged by
    [`SqliteSupport`](../../app/SiteCheck/SqliteSupport.php); a version that cannot be read is not
    taken for too old. Before a site is installed, the check names what SQLite lacks; where MySQL is
    all that is left, setup asks whether to go on before asking for the server.
+
+## SQLite backup
+
+`php artisan openpne:backup-sqlite <path>` copies the site's SQLite database while the site reads and
+writes it, through SQLite's online backup in PHP's `sqlite3` extension
+([`SqliteBackup`](../../app/Database/SqliteBackup.php)). Every page is copied in one step, inside one
+read transaction: under WAL no writer waits for it, and in a rollback journal a commit waits for the
+copy to end, failing where that passes the site's minute. The command waits up to a minute for a
+lock the site holds. The installed check fails an SQLite site without the extension, or below
+SQLite 3.32.0, and does not try the copy, which takes as long and as much disk as the database.
+
+Key invariants:
+
+1. **Nothing is written where it would reach the database**: `<path>`, `<path>.new`, `<path>.lock`
+   and the `-journal`, `-wal` and `-shm` beside the first two are compared with the database and the
+   files beside it, by name, with links followed, and by device and inode, before anything is
+   opened.
+2. **One run at a time for a path**: an exclusive lock on `<path>.lock`, not waited for and never
+   removed, held until the copy is renamed into place and what was beside it removed. A second run
+   fails without touching anything.
+3. **The copy is written whole beside the last**: into `<path>.new` (0600), removed first with what a
+   killed run left beside it, and renamed over `<path>` only once the backup finished and the copy's
+   journal mode is `delete`. A run that fails leaves the last copy as it was.
+4. **The copy is out of WAL**: the backup takes the database's header, WAL mark included, and a
+   `-wal` file found beside a copy is read into it.
+5. **A last copy with a `-journal`, `-wal` or `-shm` beside it is not replaced**: something has it
+   open, or stopped while writing to it.
 
 ## Database server
 

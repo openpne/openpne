@@ -35,8 +35,8 @@ A server you administer is what the steps assume. A host where you cannot is cov
   `pcntl` on the command line.
 - **A database**: SQLite 3.32.0 or later, as the library `pdo_sqlite` runs on, or MySQL 8.4. Any
   MySQL from 8.0.17 works too: that is the first with the `utf8mb4_0900_bin` collation the tables
-  use. MariaDB does not work yet. A SQLite site also needs the `sqlite3` command, 3.28.0 or later,
-  which [updating.md](updating.md) uses for its backup.
+  use. MariaDB does not work yet. A SQLite site also needs the `sqlite3` extension on the command
+  line, which takes the backup [updating.md](updating.md) asks for.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
 - **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
   runs without, and offers it as one way to run the queue.
@@ -166,7 +166,7 @@ Then the database. **Do one of the two below.**
 ### Either: SQLite
 
 ```bash
-sudo apt install php-sqlite3 sqlite3
+sudo apt install php-sqlite3
 ```
 
 The database is a file, at a path outside the release's directory. In `.env`:
@@ -578,11 +578,10 @@ there. All of those send mail.
 - **Back up** the database, `.env` (it holds `APP_KEY`), `storage/oauth-private.key` and
   `storage/oauth-public.key` if step 3 made them, and, when `OPENPNE_FILES_DISK` names a disk, the
   files on it. With the default the stored files are in the database. For SQLite,
-  `sqlite3 -readonly -cmd ".timeout 60000" /srv/openpne/database.sqlite "VACUUM INTO '/path/to/copy.sqlite'"`
-  writes a consistent copy while the site runs; without `DB_JOURNAL_MODE=WAL` from step 2, the
-  site waits for it as soon as anything writes, and fails where that wait passes a minute.
-  `VACUUM INTO` fails rather than write over an earlier copy at that path:
-  move that away, or give each copy its own name. Copying the file alone can lose the latest rows.
+  `php artisan openpne:backup-sqlite /path/to/copy.sqlite` in the app root writes a consistent copy
+  while the site runs, in place of an earlier copy at that path once it is whole; without
+  `DB_JOURNAL_MODE=WAL` from step 2, the site waits for it as soon as anything writes, and fails
+  where that wait passes a minute. Copying the file alone can lose the latest rows.
   A copy holds everything the database does: keep it where only the site user reads it.
 - **Update** by [updating.md](updating.md).
 - **After editing `.env`**, restart the queue worker if you run one

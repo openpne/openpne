@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Setup\SetupHost;
 use App\SiteCheck\BackupTools;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\InstalledCheck;
@@ -24,7 +23,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
-use Symfony\Component\Process\Exception\ProcessStartFailedException;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Tests\Concerns\FakesDatabaseServer;
 use Tests\TestCase;
@@ -61,7 +59,6 @@ class CheckCommandTest extends TestCase
 
         $this->connection = (string) config('database.default');
         $this->path = getenv('PATH');
-        $this->tool('sqlite3');
         $this->tool('mysqldump');
         putenv('PATH='.$base.'/tools');
 
@@ -129,42 +126,40 @@ class CheckCommandTest extends TestCase
         unlink($tools.'/mysqldump');
         $this->tool('mariadb-dump');
 
-        $this->assertSame($tools.'/sqlite3', BackupTools::sqlite());
         $this->assertSame($tools.'/mariadb-dump', BackupTools::mysql());
         $this->tool('mysqldump');
         $this->assertSame($tools.'/mysqldump', BackupTools::mysql());
         $this->assertFileDoesNotExist($tools.'/ran');
 
-        unlink($tools.'/sqlite3');
-        $this->assertNull(BackupTools::sqlite());
+        unlink($tools.'/mysqldump');
+        unlink($tools.'/mariadb-dump');
         // Not executable is not found.
-        file_put_contents($tools.'/sqlite3', '');
-        $this->assertNull(BackupTools::sqlite());
+        file_put_contents($tools.'/mysqldump', '');
+        $this->assertNull(BackupTools::mysql());
     }
 
     public function test_a_host_with_no_backup_tool_fails_before_install(): void
     {
-        unlink($this->layout->base.'/tools/sqlite3');
+        $this->sqliteLibrary('3.32.0', extension: false);
         unlink($this->layout->base.'/tools/mysqldump');
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and the sqlite3 command, 3.28.0 or later; MySQL needs')
+            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and PHP\'s sqlite3 extension; MySQL needs')
             ->assertFailed();
     }
 
-    /** @return array<string, array{?string, string, string, list<string>}> */
+    /** @return array<string, array{?string, bool, string, list<string>}> */
     public static function sqliteVersions(): array
     {
         return [
-            'both at what setup takes' => ['3.32.0', '3.28.0 2019-04-16 19:49:53 884b4b7e50', 'Databases: SQLite (backed up with', []],
-            'both too old, as on Enterprise Linux 8' => ['3.26.0', '3.26.0 2018-12-01 12:34:55 bf8c1b2b7a', 'Databases: MySQL only', [
-                'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite 3.26.0, and OpenPNE needs 3.32.0 or later.',
-                'tools/sqlite3 is SQLite 3.26.0, and the backup needs 3.28.0 or later',
+            'the library setup takes, and the extension' => ['3.32.0', true, 'Databases: SQLite (backed up through PHP\'s sqlite3 extension) or MySQL', []],
+            'the library too old' => ['3.31.1', true, 'Databases: MySQL only', [
+                'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite 3.31.1, and OpenPNE needs 3.32.0 or later.',
             ]],
-            'the library too old' => ['3.31.1', '3.28.0 2019-04-16 19:49:53 884b4b7e50', 'Databases: MySQL only', [
-                'pdo_sqlite on the command line runs on SQLite 3.31.1',
+            'no sqlite3 extension' => ['3.32.0', false, 'Databases: MySQL only', [
+                'SQLite cannot be used here: PHP on the command line has no sqlite3 extension, which the backup uses.',
             ]],
-            'no pdo_sqlite beside a sqlite3 command' => [null, '3.28.0 2019-04-16 19:49:53 884b4b7e50', 'Databases: MySQL only', [
+            'no pdo_sqlite beside the extension' => [null, true, 'Databases: MySQL only', [
                 'SQLite cannot be used here: PHP on the command line has no pdo_sqlite.',
             ]],
         ];
@@ -172,10 +167,9 @@ class CheckCommandTest extends TestCase
 
     /** @param list<string> $lacks */
     #[DataProvider('sqliteVersions')]
-    public function test_sqlite_passes_only_at_the_versions_setup_takes_and_each_thing_it_lacks_is_named(?string $library, string $command, string $databases, array $lacks): void
+    public function test_sqlite_passes_only_at_the_versions_setup_takes_and_each_thing_it_lacks_is_named(?string $library, bool $extension, string $databases, array $lacks): void
     {
-        Process::fake(['*' => Process::result($command)]);
-        $this->sqliteLibrary($library);
+        $this->sqliteLibrary($library, $extension);
 
         $check = $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])->expectsOutputToContain($databases);
         foreach ($lacks as $line) {
@@ -189,11 +183,10 @@ class CheckCommandTest extends TestCase
 
     public function test_a_host_without_any_part_of_sqlite_says_what_it_needs_without_a_warning(): void
     {
-        unlink($this->layout->base.'/tools/sqlite3');
-        $this->sqliteLibrary(null);
+        $this->sqliteLibrary(null, extension: false);
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('Databases: MySQL only (backed up with '.$this->layout->base.'/tools/mysqldump), which needs a MySQL server, 8.0.17 or later and not MariaDB. SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and the sqlite3 command, 3.28.0 or later.')
+            ->expectsOutputToContain('Databases: MySQL only (backed up with '.$this->layout->base.'/tools/mysqldump), which needs a MySQL server, 8.0.17 or later and not MariaDB. SQLite needs pdo_sqlite on SQLite 3.32.0 or later, and PHP\'s sqlite3 extension.')
             ->doesntExpectOutputToContain('SQLite cannot be used here')
             ->expectsOutputToContain('Warnings: 0.')
             ->assertSuccessful();
@@ -204,21 +197,10 @@ class CheckCommandTest extends TestCase
         $this->assertMatchesRegularExpression('/\A3\.\d+\.\d+\z/', (string) $this->app->make(SqliteSupport::class)->libraryVersion());
     }
 
-    public function test_a_sqlite3_that_cannot_be_started_is_not_taken_for_too_old(): void
-    {
-        Process::fake(['*' => fn () => throw new ProcessStartFailedException(new SymfonyProcess(['sqlite3', '-version']), 'proc_open(): Fork failed')]);
-
-        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('Databases: SQLite (backed up with')
-            ->doesntExpectOutputToContain('SQLite cannot be used here')
-            ->assertSuccessful();
-    }
-
     public function test_an_installed_site_is_not_told_what_sqlite_lacks(): void
     {
         $this->installEnv();
-        Process::fake(['*' => Process::result('3.26.0 2018-12-01 12:34:55 bf8c1b2b7a')]);
-        $this->sqliteLibrary('3.26.0');
+        $this->sqliteLibrary('3.26.0', extension: false);
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
             ->expectsOutputToContain('Databases: MySQL only')
@@ -236,16 +218,31 @@ class CheckCommandTest extends TestCase
         $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
             ->expectsOutputToContain('[ OK ] Every migration has run.')
             ->expectsOutputToContain('[ OK ] The initial data is there.')
-            ->expectsOutputToContain('[ OK ] The database is backed up with '.$this->layout->base.'/tools/')
+            ->expectsOutputToContain('[ OK ] The database is backed up with '.($this->sqlite() ? 'php artisan openpne:backup-sqlite.' : $this->layout->base.'/tools/'))
             ->doesntExpectOutputToContain('[FAIL]')
             ->assertSuccessful();
+    }
+
+    public function test_an_installed_sqlite_site_fails_without_the_extension_and_below_the_library_setup_takes(): void
+    {
+        if (! $this->sqlite()) {
+            $this->markTestSkipped('The site is on MySQL.');
+        }
+        $this->installEnv();
+        Artisan::call('openpne:install');
+        $this->sqliteLibrary('3.31.1', extension: false);
+
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('PHP on the command line has no sqlite3 extension, and the backup of an SQLite database (php artisan openpne:backup-sqlite, docs/updating.md) needs it.')
+            ->expectsOutputToContain('PHP on the command line runs on SQLite 3.31.1, and OpenPNE needs 3.32.0 or later.')
+            ->assertFailed();
     }
 
     public function test_each_setting_a_production_site_needs_fails_when_it_is_off(): void
     {
         $this->installEnv(0o644);
         unlink($this->layout->base.'/.htaccess');
-        unlink($this->layout->base.'/tools/sqlite3');
+        $this->sqliteLibrary('3.40.0', extension: false);
         unlink($this->layout->base.'/tools/mysqldump');
         config(['app.env' => 'local', 'app.debug' => true, 'app.key' => '', 'app.url' => 'http://sns.example.com/sub']);
 
@@ -255,7 +252,7 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('APP_DEBUG is on')
             ->expectsOutputToContain('APP_KEY is empty')
             ->expectsOutputToContain('APP_URL is http://sns.example.com/sub:')
-            ->expectsOutputToContain('on PATH, and the backup of')
+            ->expectsOutputToContain($this->sqlite() ? 'PHP on the command line has no sqlite3 extension, and the backup of an SQLite database' : 'on PATH, and the backup of')
             ->expectsOutputToContain('The initial data is missing')
             ->expectsOutputToContain($this->layout->base.'/.htaccess is missing')
             ->assertFailed();
@@ -795,13 +792,15 @@ class CheckCommandTest extends TestCase
     }
 
     /** The SQLite pdo_sqlite runs on, null for a PHP without pdo_sqlite. */
-    private function sqliteLibrary(?string $version): void
+    private function sqliteLibrary(?string $version, bool $extension = true): void
     {
-        $this->app->instance(SqliteSupport::class, new class($version) extends SqliteSupport
+        $this->app->instance(SqliteSupport::class, new class($version, $extension) extends SqliteSupport
         {
-            public function __construct(private readonly ?string $version)
+            public function __construct(private readonly ?string $version, private readonly bool $extension) {}
+
+            public function hasExtension(): bool
             {
-                parent::__construct(new SetupHost);
+                return $this->extension;
             }
 
             public function hasPdo(): bool
@@ -814,6 +813,11 @@ class CheckCommandTest extends TestCase
                 return $this->version;
             }
         });
+    }
+
+    private function sqlite(): bool
+    {
+        return config('database.connections.'.$this->connection.'.driver') === 'sqlite';
     }
 
     /** An executable that leaves a mark if anything runs it. */

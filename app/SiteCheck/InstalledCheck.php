@@ -23,6 +23,7 @@ final class InstalledCheck
         private readonly SiteLayout $layout,
         private readonly Migrator $migrator,
         private readonly DatabaseServerProbe $servers,
+        private readonly SqliteSupport $sqlite,
     ) {}
 
     /** @return list<Finding> */
@@ -92,12 +93,16 @@ final class InstalledCheck
     {
         $name = (string) config('database.default');
         $driver = (string) config("database.connections.{$name}.driver");
-        $tool = BackupTools::forDriver($driver);
-        $findings = [
-            $tool !== null
-                ? Finding::ok('db.backup_tool', 'db_backup_tool', ['path' => $tool])
-                : Finding::fail('db.backup_tool', $driver === 'sqlite' ? 'db_backup_tool_sqlite' : 'db_backup_tool_mysql'),
-        ];
+        if ($driver === 'sqlite') {
+            $findings = $this->sqliteBackup();
+        } else {
+            $tool = BackupTools::mysql();
+            $findings = [
+                $tool !== null
+                    ? Finding::ok('db.backup_tool', 'db_backup_tool', ['path' => $tool])
+                    : Finding::fail('db.backup_tool', 'db_backup_tool_mysql'),
+            ];
+        }
 
         $server = null;
         try {
@@ -127,6 +132,26 @@ final class InstalledCheck
                 : Finding::fail('db.initial', 'db_initial_missing');
         } catch (Throwable $e) {
             $findings[] = Finding::unknown('db.migrations', 'db_unreadable', ['reason' => self::reason($e)]);
+        }
+
+        return $findings;
+    }
+
+    /**
+     * The copy is not tried, as it takes as long and as much disk as the database.
+     *
+     * @return list<Finding>
+     */
+    private function sqliteBackup(): array
+    {
+        $findings = [
+            $this->sqlite->hasExtension()
+                ? Finding::ok('db.backup_tool', 'db_backup_sqlite')
+                : Finding::fail('db.backup_tool', 'db_backup_sqlite_missing'),
+        ];
+        $version = $this->sqlite->libraryVersion();
+        if ($version !== null && version_compare($version, SqliteSupport::LIBRARY_MINIMUM, '<')) {
+            $findings[] = Finding::fail('db.sqlite', 'db_sqlite_old', ['version' => $version, 'minimum' => SqliteSupport::LIBRARY_MINIMUM]);
         }
 
         return $findings;

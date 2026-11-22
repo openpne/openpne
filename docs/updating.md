@@ -29,7 +29,7 @@ follows [From a release archive](#from-a-release-archive), which says where it d
   site was cloned from). The site's database may then hold migrations the release's code does not
   have, which `migrate` does not report. Wait for a release that contains your commit.
 
-- **A SQLite site needs the `sqlite3` command**, for the copy step 2 takes.
+- **A SQLite site needs the `sqlite3` extension on the command line**, for the copy step 2 takes.
 
 ## Steps
 
@@ -50,18 +50,15 @@ Run them in the app root, as the user the site runs as.
 2. **Back up**, now that nothing is writing: a dump of the database, and `.env` if it is not
    already kept somewhere else. With the default `OPENPNE_FILES_DISK=blob` the stored files are in
    that dump. If the setting names a disk, copy what the disk holds at the same moment, so the
-   rows and the files they point to match. For SQLite, the database is the file `DB_DATABASE`
-   names, or `database/database.sqlite` in the app root when it names none, and this writes a
-   consistent copy of it:
+   rows and the files they point to match. For SQLite, this writes a consistent copy of the
+   database the site's settings name:
 
    ```bash
-   sqlite3 -readonly -cmd ".timeout 60000" /path/to/database.sqlite "VACUUM INTO '/path/to/copy.sqlite'"
+   php artisan openpne:backup-sqlite /path/to/copy.sqlite
    ```
 
-   `-readonly` makes a wrong path an error. Without it `sqlite3` creates an empty database at
-   that path and copies that, and says nothing. `.timeout 60000` has it wait up to a minute for a
-   lock another connection holds, instead of failing at once. `VACUUM INTO` fails rather than
-   write over an earlier copy at the path it is given.
+   An earlier copy at that path is replaced only once the new one is whole. The command refuses a
+   path that would write over the database or a file beside it.
 
 3. **Remove the caches the running release built**, while its code is still the one checked out:
 
