@@ -188,7 +188,13 @@ class BackupSqliteCommandTest extends TestCase
     {
         $files = [];
         foreach (array_merge(glob($this->root.'/*') ?: [], glob($this->root.'/data/*') ?: []) as $file) {
-            $files[$file] = is_link($file) ? 'link to '.readlink($file) : (is_file($file) ? md5_file($file) : 'directory');
+            $files[$file] = match (true) {
+                is_link($file) => 'link to '.readlink($file),
+                is_dir($file) => 'directory',
+                // A connection reading a WAL database writes into its -shm, and SQLite 3.26 leaves other bytes there.
+                str_ends_with($file, '-shm') => 'inode '.fileinode($file).', '.filesize($file).' bytes',
+                default => md5_file($file),
+            };
         }
         ksort($files);
 
@@ -207,5 +213,6 @@ class BackupSqliteCommandTest extends TestCase
         $this->database = $to;
         config(['database.connections.backup_site.database' => $to]);
         $this->site = new PDO('sqlite:'.$to);
+        $this->site->query('SELECT count(*) FROM members');
     }
 }
