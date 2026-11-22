@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Console;
 
+use App\Database\SqliteBackup;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use SQLite3;
 use Tests\TestCase;
 
@@ -121,6 +123,7 @@ class BackupSqliteCommandTest extends TestCase
     {
         return [
             'another run\'s lock' => ['.lock'],
+            'another run\'s lock, in capitals' => ['.LOCK'],
             'another run\'s work file' => ['.new'],
             'the journal of that work file' => ['.new-journal'],
             'a -wal file beside a copy' => ['-wal'],
@@ -147,10 +150,22 @@ class BackupSqliteCommandTest extends TestCase
         fclose($first);
     }
 
-    public function test_a_lock_that_is_a_link_is_refused_before_anything_is_touched(): void
+    /** @return array<string, array{string}> */
+    public static function locks(): array
+    {
+        return [
+            'a link to a file that does not exist' => ['link'],
+            'a directory' => ['directory'],
+        ];
+    }
+
+    #[DataProvider('locks')]
+    public function test_a_lock_that_is_not_a_plain_file_is_refused_before_anything_is_touched(string $lock): void
     {
         $copy = $this->root.'/backup.sqlite';
-        symlink($this->root.'/data/made-through-the-link', $copy.'.lock');
+        $lock === 'link'
+            ? symlink($this->root.'/data/made-through-the-link', $copy.'.lock')
+            : mkdir($copy.'.lock');
         $before = $this->files();
 
         $this->artisan('openpne:backup-sqlite', ['path' => $copy])
@@ -165,13 +180,15 @@ class BackupSqliteCommandTest extends TestCase
         $copy = $this->root.'/backup.sqlite';
         $this->artisan('openpne:backup-sqlite', ['path' => $copy])->assertSuccessful();
         $earlier = md5_file($copy);
-        file_put_contents($this->root.'/data/broken.sqlite', str_repeat('not a database ', 512));
-        config(['database.connections.backup_site.database' => $this->root.'/data/broken.sqlite']);
-        DB::purge('backup_site');
+        $broken = $this->root.'/data/broken.sqlite';
+        file_put_contents($broken, str_repeat('not a database ', 512));
 
-        $this->artisan('openpne:backup-sqlite', ['path' => $copy])
-            ->expectsOutputToContain('file is not a database')
-            ->assertFailed();
+        try {
+            SqliteBackup::write($broken, $copy);
+            $this->fail('A file that is not a database was copied.');
+        } catch (RuntimeException $e) {
+            $this->assertSame($broken.' could not be copied: file is not a database.', $e->getMessage());
+        }
 
         $this->assertSame($earlier, md5_file($copy));
         $this->assertSame(['backup.sqlite', 'backup.sqlite.lock'], $this->beside($copy));

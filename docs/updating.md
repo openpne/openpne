@@ -57,8 +57,9 @@ Run them in the app root, as the user the site runs as.
    php artisan openpne:backup-sqlite /path/to/copy.sqlite
    ```
 
-   An earlier copy at that path is replaced only once the new one is whole. The command refuses a
-   path that would write over the database or a file beside it.
+   An earlier copy at that path is replaced only once the new one is whole, and `copy.sqlite.lock`
+   is left beside it for the next run. The command refuses a path that would write over the
+   database or a file beside it.
 
 3. **Remove the caches the running release built**, while its code is still the one checked out:
 

@@ -33,7 +33,8 @@ final class SqliteBackup
         $target = self::target($path);
         self::refuseOverlap($database, $target);
         foreach (self::RESERVED as $suffix) {
-            if (str_ends_with($target, $suffix)) {
+            // A file system that ignores case would take p.LOCK for p.lock.
+            if (str_ends_with(strtolower($target), $suffix)) {
                 throw new RuntimeException("{$target} ends in {$suffix}, which openpne:backup-sqlite keeps for the files beside a copy.");
             }
         }

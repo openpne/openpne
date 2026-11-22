@@ -436,15 +436,16 @@ Key invariants:
    `<path>.new`, `<path>.lock` and the `-journal`, `-wal` and `-shm` beside the first two are
    compared with the database and the files beside it, by name, with links followed, and by device
    and inode, before anything is opened. A `<path>` ending as those files do (`.lock`, `.new`,
-   `-journal`, `-wal`, `-shm`) is refused, and so is a `<path>.lock` that is a link or not a file.
+   `-journal`, `-wal`, `-shm`, in any case) is refused, and so is a `<path>.lock` that is a link or not a file.
 2. **One run at a time for a path**: an exclusive lock on `<path>.lock`, not waited for and never
    removed, held until the copy is renamed into place and what was beside it removed. A second run
    fails without touching anything.
 3. **The copy is written whole beside the last**: into `<path>.new` (0600), removed first with what a
    killed run left beside it, and renamed over `<path>` only once the backup finished, the copy's
-   journal mode is `delete` and the file is flushed to disk; the directory is flushed after the
-   rename where the file system can. A run that fails leaves the last copy as it was, and a power cut
-   leaves `<path>` holding one copy or the other, whole.
+   journal mode is `delete` and the file is flushed to disk. A run that fails, or a power cut, leaves
+   `<path>` holding the last copy or this one, never part of one. That this one is still there after
+   a power cut right after the run needs the directory flushed too, which is done where the file
+   system can.
 4. **No flush inside the read transaction**: SQLite would flush the copy before it ends the backup's
    read transaction, holding commits up for as long as the disk takes, so the copy is written with
    `synchronous` off and flushed after.
