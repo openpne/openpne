@@ -67,8 +67,10 @@ apart the voiced and semi-voiced marks, small kana, accents (`José` is not `jos
 compatibility forms (`①` is not `1`). Some half-width forms do not match their full-width ones, for
 example a voiced or semi-voiced kana (`ｶﾞ` and `ﾊﾟ`, two characters each, are not `ガ` and `パ`),
 the prolonged sound mark (`ｺｰﾋｰ` is not `コーヒー`) and the middle dot (`ｱ･ｲ` is not `ア・イ`).
-On MariaDB a search treats uppercase and lowercase as one, also outside ASCII, and tells apart
-hiragana and katakana, full- and half-width forms, the voiced marks, small kana, accents and emoji; a
+On MariaDB a search lowers both sides through that collation's case table, which reaches past ASCII
+(`ẞ` finds `ß`) but maps letters to lowercase rather than folding case (`ς` does not find `Σ`, nor `ſ`
+find `S`), and tells apart hiragana and katakana, full- and half-width forms, the voiced marks, small kana,
+accents and emoji; a
 name order puts kanji not by reading but in code point order, the CJK Unified Ideographs block ahead
 of its extensions (`㐂`, U+3402, after `一`, U+4E00).
 SQLite's `LIKE` folds the case of ASCII letters and nothing else, and `NOCASE` orders the same way.

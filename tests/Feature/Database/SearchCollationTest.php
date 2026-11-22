@@ -49,6 +49,7 @@ class SearchCollationTest extends TestCase
             'uppercase finds lowercase' => ['tanaka', 'TANAKA', true],
             'case outside ASCII is folded' => ['ÉCOLE', 'école', true],
             'a capital sharp s finds the small one' => ['STRAẞE', 'straße', true],
+            'a small sharp s is found by the capital one' => ['straße', 'STRAẞE', true],
             'Deseret case is folded' => ['𐐀', '𐐨', true],
             'hiragana does not find katakana' => ['タナカ', 'たなか', false],
             'full-width letters do not find half-width' => ['Tanaka', 'ＴＡＮＡＫＡ', false],
