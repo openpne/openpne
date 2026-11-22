@@ -34,8 +34,8 @@ A server you administer is what the steps assume. A host where you cannot is cov
   [push notifications](#8-push-notifications-optional) faster; the queue worker's job timeouts need
   `pcntl` on the command line.
 - **A database**: SQLite 3, or MySQL 8.4. Any MySQL from 8.0.17 works too: that is the first with
-  the `utf8mb4_0900_bin` collation the tables use. A SQLite site also needs the `sqlite3` command,
-  which [updating.md](updating.md) uses for its backup.
+  the `utf8mb4_0900_bin` collation the tables use. MariaDB does not work yet. A SQLite site also
+  needs the `sqlite3` command, which [updating.md](updating.md) uses for its backup.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
 - **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
   runs without, and offers it as one way to run the queue.
@@ -599,7 +599,7 @@ too, when it gives you:
 - a shell (SSH), to unpack the archive and run `php artisan`;
 - PHP 8.3 or later, for the web and on the command line, with the extensions
   [above](#what-the-server-needs), `intl` among them;
-- MySQL 8.0.17 or later, or SQLite;
+- MySQL 8.0.17 or later (not MariaDB), or SQLite;
 - Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
 - PHP for the web running as your own account, as the command line does. Where it runs as a user
   the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\RunsWebCheck;
+use App\Database\DatabaseServer;
+use App\Database\DatabaseServerProbe;
 use App\Setup\BackupLine;
 use App\Setup\EnvFile;
 use App\Setup\EnvValue;
@@ -73,9 +75,12 @@ class SetupCommand extends Command
 
     private SetupLock $lock;
 
-    public function handle(SetupHost $host): int
+    private DatabaseServerProbe $servers;
+
+    public function handle(SetupHost $host, DatabaseServerProbe $servers): int
     {
         $this->host = $host;
+        $this->servers = $servers;
         $lang = $this->option('lang');
         if ($lang !== null && ! in_array($lang, ['ja', 'en'], true)) {
             $this->error("Unknown language [{$lang}]. Expected ja or en.");
@@ -181,16 +186,32 @@ class SetupCommand extends Command
         $settings = (array) config("database.connections.{$connection}");
         $driver = (string) ($settings['driver'] ?? '');
 
+        $unanswered = null;
+        try {
+            $server = $this->servers->behind($connection);
+        } catch (Throwable $e) {
+            [$server, $unanswered] = [null, $e];
+        }
+        if ($server?->supported() === false) {
+            $this->say('db_mariadb', ['server' => $server->name(), 'path' => $this->layout->envFile], 'error');
+
+            return self::FAILURE;
+        }
         if (in_array($driver, ['mysql', 'mariadb'], true)) {
             $this->mysqlOptionFile($settings);
         }
         if ($driver === 'sqlite') {
             $this->sqliteFile((string) ($settings['database'] ?? ''));
         }
-        try {
-            DB::connection()->getPdo();
-        } catch (Throwable $e) {
-            $this->say('db_failed', ['reason' => InstalledCheck::reason($e)], 'error');
+        if ($unanswered === null) {
+            try {
+                DB::connection()->getPdo();
+            } catch (Throwable $e) {
+                $unanswered = $e;
+            }
+        }
+        if ($unanswered !== null) {
+            $this->say('db_failed', ['reason' => InstalledCheck::reason($unanswered)], 'error');
 
             return self::FAILURE;
         }
@@ -311,31 +332,40 @@ class SetupCommand extends Command
         }
         if (count($options) === 1) {
             $this->say($sqlite !== null ? 'db_only_sqlite' : 'db_only_mysql', ['minimum' => BackupLine::SQLITE_MINIMUM]);
-            $choice = (string) array_key_first($options);
-        } else {
-            $choice = (string) select($this->text('db'), $options, 'sqlite');
         }
 
-        if ($choice === 'sqlite') {
-            $path = $this->layout->dataDirectory().'/database.sqlite';
-            // A site started over runs on a database-<n>.sqlite beside it.
-            $startedOver = preg_grep('/\/database-\d+\.sqlite\z/', glob($this->layout->dataDirectory().'/database-*.sqlite') ?: []);
-            foreach ([$path, ...$startedOver] as $file) {
-                if (is_file($file) && filesize($file) > 0 && $this->holdsSite('sqlite', ['database' => $file])) {
-                    $this->say('db_holds_site_sqlite', ['path' => $file, 'base' => $this->layout->base], 'error');
+        while (true) {
+            $choice = count($options) === 1 ? (string) array_key_first($options) : (string) select($this->text('db'), $options, 'sqlite');
+            if ($choice === 'sqlite') {
+                $path = $this->layout->dataDirectory().'/database.sqlite';
+                // A site started over runs on a database-<n>.sqlite beside it.
+                $startedOver = preg_grep('/\/database-\d+\.sqlite\z/', glob($this->layout->dataDirectory().'/database-*.sqlite') ?: []);
+                foreach ([$path, ...$startedOver] as $file) {
+                    if (is_file($file) && filesize($file) > 0 && $this->holdsSite('sqlite', ['database' => $file])) {
+                        $this->say('db_holds_site_sqlite', ['path' => $file, 'base' => $this->layout->base], 'error');
 
-                    throw new StopSetup;
+                        throw new StopSetup;
+                    }
                 }
+
+                return [
+                    'DB_CONNECTION' => 'sqlite',
+                    'DB_DATABASE' => $path,
+                    'DB_JOURNAL_MODE' => 'WAL',
+                    'DB_SYNCHRONOUS' => 'NORMAL',
+                ];
             }
 
-            return [
-                'DB_CONNECTION' => 'sqlite',
-                'DB_DATABASE' => $path,
-                'DB_JOURNAL_MODE' => 'WAL',
-                'DB_SYNCHRONOUS' => 'NORMAL',
-            ];
+            $settings = $this->askMysql($sqlite !== null);
+            if ($settings !== null) {
+                return ['DB_CONNECTION' => 'mysql', ...$settings];
+            }
         }
+    }
 
+    /** @return array<string, string>|null null where the server is one OpenPNE does not run on and SQLite is there to choose instead */
+    private function askMysql(bool $sqlite): ?array
+    {
         while (true) {
             $settings = [
                 'DB_HOST' => $this->until(fn (): string => text($this->text('mysql_host'), required: true, hint: $this->text('mysql_hint')), EnvValue::problem(...)),
@@ -347,12 +377,18 @@ class SetupCommand extends Command
             $settings['DB_PASSWORD'] = $this->until(fn (): string => password($this->text('mysql_password')), EnvValue::problem(...));
 
             $refusal = $this->mysqlRefusal($settings);
-            if ($refusal === null && ! $this->holdsSite('mysql', self::mysqlConnection($settings))) {
-                return ['DB_CONNECTION' => 'mysql', ...$settings];
+            if ($refusal instanceof DatabaseServer) {
+                $this->say($sqlite ? 'mysql_mariadb' : 'mysql_mariadb_no_sqlite', ['server' => $refusal->name()], 'error');
+                if ($sqlite) {
+                    return null;
+                }
+            } elseif ($refusal === null && ! $this->holdsSite('mysql', self::mysqlConnection($settings))) {
+                return $settings;
+            } else {
+                $refusal === null
+                    ? $this->say('db_holds_site_mysql', ['database' => $settings['DB_DATABASE']], 'error')
+                    : $this->say('mysql_refused', ['reason' => $refusal], 'error');
             }
-            $refusal === null
-                ? $this->say('db_holds_site_mysql', ['database' => $settings['DB_DATABASE']], 'error')
-                : $this->say('mysql_refused', ['reason' => $refusal], 'error');
             if (! confirm($this->text('mysql_again'), true)) {
                 throw new StopSetup;
             }
@@ -388,11 +424,18 @@ class SetupCommand extends Command
         return $values;
     }
 
-    /** @param array<string, string> $settings */
-    private function mysqlRefusal(array $settings): ?string
+    /**
+     * @param  array<string, string>  $settings
+     * @return DatabaseServer|string|null a server OpenPNE does not run on, what the server said in refusing, or null
+     */
+    private function mysqlRefusal(array $settings): DatabaseServer|string|null
     {
-        return $this->onConnection('mysql', self::mysqlConnection($settings), function (Connection $db) use ($settings): ?string {
+        return $this->onConnection('mysql', self::mysqlConnection($settings), function (Connection $db) use ($settings): DatabaseServer|string|null {
             try {
+                $server = $this->servers->behind((string) $db->getName());
+                if ($server?->supported() === false) {
+                    return $server;
+                }
                 $db->getPdo();
 
                 return null;

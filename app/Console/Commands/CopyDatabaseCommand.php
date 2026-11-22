@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Database\DatabaseServerProbe;
 use App\Database\SQLiteSchemaBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
@@ -24,7 +25,7 @@ class CopyDatabaseCommand extends Command
     /** A batch holds every BLOB in it in PHP memory at once, so binary tables get a much smaller one. */
     private const BINARY_BATCH_ROWS = 25;
 
-    private const DRIVERS = ['sqlite', 'mysql', 'mariadb'];
+    private const DRIVERS = ['sqlite', 'mysql'];
 
     protected $signature = 'openpne:copy-database
         {--from= : Source connection (default: the app\'s own)}
@@ -36,7 +37,7 @@ class CopyDatabaseCommand extends Command
 
     protected $description = 'Copy this site\'s database onto another connection (MySQL ↔ SQLite)';
 
-    public function handle(): int
+    public function handle(DatabaseServerProbe $servers): int
     {
         $from = (string) ($this->option('from') ?: config('database.default'));
         $to = (string) ($this->option('to') ?? '');
@@ -57,7 +58,7 @@ class CopyDatabaseCommand extends Command
             $driver = (string) config("database.connections.{$name}.driver");
 
             if (! in_array($driver, self::DRIVERS, true)) {
-                $this->error("[{$name}] uses the [{$driver}] driver; only SQLite, MySQL and MariaDB are supported.");
+                $this->error("[{$name}] uses the [{$driver}] driver; only SQLite and MySQL are supported.");
 
                 return self::FAILURE;
             }
@@ -70,6 +71,15 @@ class CopyDatabaseCommand extends Command
             $this->error("[{$from}] and [{$to}] resolve to the same database.");
 
             return self::FAILURE;
+        }
+
+        foreach ([$from, $to] as $name) {
+            $server = $servers->behind($name);
+            if ($server?->supported() === false) {
+                $this->error("[{$name}] is {$server->name()}, which OpenPNE does not run on yet.");
+
+                return self::FAILURE;
+            }
         }
 
         if (! $this->confirmToProceed()) {
@@ -464,7 +474,7 @@ class CopyDatabaseCommand extends Command
      */
     private function streamSource(Connection $source): callable
     {
-        if (! in_array($source->getDriverName(), ['mysql', 'mariadb'], true)) {
+        if ($source->getDriverName() !== 'mysql') {
             return static fn () => null;
         }
 

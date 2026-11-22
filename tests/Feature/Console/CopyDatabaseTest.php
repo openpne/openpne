@@ -9,6 +9,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\TestWith;
+use Tests\Concerns\FakesDatabaseServer;
 use Tests\TestCase;
 
 /**
@@ -18,6 +20,7 @@ use Tests\TestCase;
  */
 class CopyDatabaseTest extends TestCase
 {
+    use FakesDatabaseServer;
     use RefreshDatabase;
 
     /** @var list<array{0: string, 1: string}> connection name, database file */
@@ -90,13 +93,34 @@ class CopyDatabaseTest extends TestCase
         $this->assertGreaterThan($deleted->id, $this->insertMember('copy_target'));
     }
 
-    public function test_it_refuses_a_driver_other_than_sqlite_mysql_and_mariadb_before_touching_it(): void
+    #[TestWith(['pgsql'])]
+    #[TestWith(['mariadb'])]
+    public function test_it_refuses_a_driver_other_than_sqlite_and_mysql_before_touching_it(string $driver): void
     {
-        config(['database.connections.copy_target' => ['driver' => 'pgsql', 'host' => '203.0.113.1', 'database' => 'openpne']]);
+        config(['database.connections.copy_target' => ['driver' => $driver, 'host' => '203.0.113.1', 'database' => 'openpne']]);
 
         $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
-            ->expectsOutputToContain('only SQLite, MySQL and MariaDB')
+            ->expectsOutputToContain('only SQLite and MySQL are supported')
             ->assertFailed();
+    }
+
+    public function test_it_refuses_a_mariadb_server_on_either_side_before_writing(): void
+    {
+        $this->temporaryConnection('copy_target');
+        $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204', 'copy_target');
+
+        $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
+            ->expectsOutputToContain('[copy_target] is MariaDB 10.11.19, which OpenPNE does not run on yet.')
+            ->assertFailed();
+        $this->assertFalse(DB::connection('copy_target')->getSchemaBuilder()->hasTable('migrations'));
+
+        $from = (string) config('database.default');
+        $this->fakeDatabaseServer('11.8.9-MariaDB-ubu2404', $from);
+
+        $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
+            ->expectsOutputToContain("[{$from}] is MariaDB 11.8.9, which OpenPNE does not run on yet.")
+            ->assertFailed();
+        $this->assertFalse(DB::connection('copy_target')->getSchemaBuilder()->hasTable('migrations'));
     }
 
     public function test_it_refuses_a_target_that_already_holds_rows(): void
