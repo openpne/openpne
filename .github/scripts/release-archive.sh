@@ -298,14 +298,14 @@ update() {
 
   step "back up"
   if [ -n "$db" ]; then
-    sqlite3 -readonly "$db" ".backup '$work/backup.sqlite'"
+    sqlite3 -readonly -cmd ".timeout 60000" "$db" "VACUUM INTO '$work/backup.sqlite'"
     if [ "$mode" = sqlite-default ]; then
       # The fixture has to be one where the shortcut loses data, or this check proves nothing.
       cp "$db" "$work/alone.sqlite"
       [ "$(sqlite3 "$work/alone.sqlite" 'SELECT count(*) FROM members')" = 0 ] \
         || die "database.sqlite copied alone still holds the member: the fixture no longer leaves rows in the -wal file"
       [ "$(sqlite3 "$work/backup.sqlite" 'SELECT count(*) FROM members')" = 1 ] \
-        || die "the .backup copy does not hold the member"
+        || die "the VACUUM INTO copy does not hold the member"
     fi
   fi
 
@@ -355,6 +355,7 @@ update() {
 
   step "the site after the update"
   expect 200 /login
+  [ -z "$db" ] || [ "$(sqlite3 -cmd ".timeout 60000" "$db" 'PRAGMA journal_mode')" = wal ] || die "the database is not in WAL mode once the updated site has opened it"
   [ -z "${ARCHIVE_NEW_MARK:-}" ] || grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the login page is not the new release's"
   expect 200 /admin/login
   probe check
@@ -381,10 +382,8 @@ update() {
   cd "$root/openpne"
   rm -f "$db" "$db-wal" "$db-shm"
   cp "$work/backup.sqlite" "$db"
-  php artisan view:clear
-  php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
-  worker=$!
-  php artisan up
+  # Read before the site opens the copy: its first connection switches it to WAL under a lock that
+  # sqlite3, which does not wait, would fail on.
   [ "$(sqlite3 "$db" 'PRAGMA integrity_check')" = ok ] || die "the database put back does not pass its integrity check"
   for path in "$root/openpne-failed"/database/migrations/*.php; do
     name=$(basename "$path" .php)
@@ -392,7 +391,12 @@ update() {
     [ "$(sqlite3 "$db" "SELECT count(*) FROM migrations WHERE migration = '$name'")" = 0 ] \
       || die "the database put back has run $name, which the old release does not have"
   done
+  php artisan view:clear
+  php artisan queue:work --sleep=1 >"$work/worker.log" 2>&1 &
+  worker=$!
+  php artisan up
   expect 200 /login
+  [ "$(sqlite3 -cmd ".timeout 60000" "$db" 'PRAGMA journal_mode')" = wal ] || die "the database put back is not in WAL mode once the site has opened it"
   [ -z "${ARCHIVE_NEW_MARK:-}" ] || ! grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the old release is drawing the new release's login page"
   probe check
   [ -e "$marker" ] || die "going back did not bring back the old release's code"

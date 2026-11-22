@@ -55,11 +55,13 @@ Run them in the app root, as the user the site runs as.
    consistent copy of it:
 
    ```bash
-   sqlite3 -readonly /path/to/database.sqlite ".backup '/path/to/copy.sqlite'"
+   sqlite3 -readonly -cmd ".timeout 60000" /path/to/database.sqlite "VACUUM INTO '/path/to/copy.sqlite'"
    ```
 
    `-readonly` makes a wrong path an error. Without it `sqlite3` creates an empty database at
-   that path and copies that, and says nothing.
+   that path and copies that, and says nothing. `.timeout 60000` has it wait up to a minute for a
+   lock another connection holds, instead of failing at once. `VACUUM INTO` fails rather than
+   write over an earlier copy at the path it is given.
 
 3. **Remove the caches the running release built**, while its code is still the one checked out:
 
