@@ -25,7 +25,8 @@ class InstallCommand extends Command
         if ($server?->supported() === false) {
             return $this->refuse('db_mariadb', ['server' => $server->name(), 'path' => $this->laravel->environmentFilePath(), 'minimum' => DatabaseServer::MARIADB_MINIMUM]);
         }
-        if ($server !== null && $server->driver() !== $connection->getDriverName()) {
+        // The driver DB_CONNECTION names, as setup and check read it, which a DB_URL scheme does not override.
+        if ($server !== null && $server->driver() !== config('database.connections.'.$connection->getName().'.driver')) {
             return $this->refuse('db_driver', ['server' => $server->name(), 'driver' => $server->driver(), 'path' => $this->laravel->environmentFilePath()]);
         }
 
@@ -44,7 +45,7 @@ class InstallCommand extends Command
 
     /**
      * Asked through a session naming no database, as migrate creates a database that is missing (docs/internals/runtime.md, "Database server").
-     * Null where the server does not answer, which migrate then reports as it did before this check.
+     * Null where the probe fails, leaving the failure to migrate to report.
      *
      * @param  array<string, mixed>  $config
      */

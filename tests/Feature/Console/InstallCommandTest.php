@@ -75,7 +75,7 @@ class InstallCommandTest extends TestCase
     public function test_a_server_setup_refuses_stops_it_before_any_table(string $version, string $said): void
     {
         config([
-            'database.connections.install_empty' => [...config('database.connections.sqlite'), 'database' => ':memory:'],
+            'database.connections.install_empty' => [...config('database.connections.sqlite'), 'url' => null, 'database' => ':memory:'],
             'database.default' => 'install_empty',
         ]);
         $this->fakeDatabaseServer($version);
@@ -83,6 +83,41 @@ class InstallCommandTest extends TestCase
         $this->artisan('openpne:install')->expectsOutputToContain($said)->assertFailed();
 
         $this->assertSame([], Schema::connection('install_empty')->getTableListing());
+    }
+
+    public function test_the_driver_weighed_is_the_one_db_connection_names_as_setup_and_check_read_it(): void
+    {
+        config([
+            'database.connections.install_url' => [...config('database.connections.sqlite'), 'driver' => 'mariadb', 'url' => 'sqlite:///:memory:'],
+            'database.default' => 'install_url',
+        ]);
+        $this->fakeDatabaseServer('11.4.13-MariaDB-ubu2404');
+
+        try {
+            $this->artisan('openpne:install')->assertSuccessful();
+        } finally {
+            DB::purge('install_url');
+        }
+    }
+
+    public function test_a_refusal_is_in_the_shells_language_else_the_sites(): void
+    {
+        config([
+            'database.connections.install_empty' => [...config('database.connections.sqlite'), 'url' => null, 'database' => ':memory:'],
+            'database.default' => 'install_empty',
+        ]);
+        $this->fakeDatabaseServer('11.4.13-MariaDB-ubu2404');
+
+        putenv('LANG=ja_JP.UTF-8');
+        config(['app.locale' => 'en']);
+        $this->artisan('openpne:install')->expectsOutputToContain('データベースのサーバは MariaDB 11.4.13 です。')->assertFailed();
+
+        putenv('LANG=C.UTF-8');
+        config(['app.locale' => 'ja']);
+        $this->artisan('openpne:install')->expectsOutputToContain('データベースのサーバは MariaDB 11.4.13 です。')->assertFailed();
+
+        config(['app.locale' => 'en']);
+        $this->artisan('openpne:install')->expectsOutputToContain('The database server is MariaDB 11.4.13.')->assertFailed();
     }
 
     public function test_a_server_that_does_not_answer_is_left_to_migrate_to_report(): void
@@ -101,7 +136,7 @@ class InstallCommandTest extends TestCase
         $path = (string) tempnam(sys_get_temp_dir(), 'openpne-install-');
         unlink($path);
         config([
-            'database.connections.install_file' => [...config('database.connections.sqlite'), 'database' => $path],
+            'database.connections.install_file' => [...config('database.connections.sqlite'), 'url' => null, 'database' => $path],
             'database.default' => 'install_file',
         ]);
 
@@ -137,7 +172,7 @@ class InstallCommandTest extends TestCase
             $server->statement("CREATE DATABASE `{$database}`");
         }
         config([
-            'database.connections.install_other' => [...config('database.connections.'.($driver === 'mysql' ? 'mariadb' : 'mysql')), 'database' => $database],
+            'database.connections.install_other' => [...config('database.connections.'.($driver === 'mysql' ? 'mariadb' : 'mysql')), 'url' => null, 'database' => $database],
             'database.default' => 'install_other',
         ]);
 
