@@ -133,6 +133,76 @@ jobs:
       - run: php artisan migrate --force
       - run: php artisan test --parallel
 
+  # Not a required check, though a release waits on it as on every lane: each run installs unpinned
+  # from Docker Hub, the AlmaLinux mirrors, EPEL and Remi, so an outage at any of them turns it red.
+  test-sqlite-floor:
+    name: Test (PHP 8.5, sqlite 3.26)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+      # Not a `container:` job, whose steps would all run as root, where the tests that need mode bits
+      # to bind skip (TestCase::skipUnlessModeBitsBind()): here only dnf runs as root.
+      - name: Start AlmaLinux 8
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if docker pull almalinux:8; then
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error::could not pull almalinux:8 after 5 attempts"
+              exit 1
+            fi
+            echo "pull attempt $attempt failed; retrying in $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+          docker run -d --name el8 -u "$(id -u):$(id -g)" -e HOME=/tmp \
+            -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
+            -v "$GITHUB_WORKSPACE:/app" -w /app almalinux:8 sleep infinity
+      - name: Install PHP 8.5 from Remi
+        run: |
+          docker exec -u 0 el8 dnf -y install epel-release
+          docker exec -u 0 el8 dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+          docker exec -u 0 el8 dnf -y module enable php:remi-8.5
+          docker exec -u 0 el8 dnf -y install composer git unzip php-cli php-pdo php-sqlite3 \
+            php-mysqlnd php-mbstring php-intl php-gd php-bcmath php-xml php-pecl-zip php-process \
+            php-sodium php-opcache
+      - run: docker exec el8 composer install --no-interaction --no-progress --prefer-dist
+      # Raising LIBRARY_MINIMUM turns this red until the image and the job name move with it.
+      - name: Check the SQLite under test
+        run: |
+          docker exec -i el8 php <<'PHP'
+          <?php
+          require 'vendor/autoload.php';
+          $floor = App\SiteCheck\SqliteSupport::LIBRARY_MINIMUM;
+          $pdo = new PDO('sqlite::memory:');
+          $pdoVersion = $pdo->getAttribute(PDO::ATTR_SERVER_VERSION);
+          $extVersion = extension_loaded('sqlite3') ? SQLite3::version()['versionString'] : 'missing';
+          echo 'PHP ', PHP_VERSION, ", pdo_sqlite on SQLite $pdoVersion, sqlite3 extension on SQLite $extVersion\n";
+          if ($pdoVersion !== $floor || $extVersion !== $floor) {
+              echo "::error::this lane is meant to run on SQLite $floor\n";
+              exit(1);
+          }
+          try {
+              $pdo->prepare('SELECT '.implode(',', array_fill(0, 1000, '?')));
+              echo "::error::SQLite $pdoVersion took 1000 bound parameters; this lane is meant to refuse them\n";
+              exit(1);
+          } catch (PDOException $e) {
+              echo '1000 bound parameters refused: ', $e->getMessage(), "\n";
+          }
+          PHP
+      - name: Prepare environment
+        run: |
+          docker exec el8 cp .env.example .env
+          docker exec el8 php artisan key:generate
+          docker exec el8 touch database/database.sqlite
+      - run: docker exec el8 php artisan migrate --force
+      - run: docker exec el8 php artisan test --parallel
+
   # The image suite again, against a live imgproxy sidecar, so the second ImageProcessor is held to
   # the same contract as GD (docs/internals/images.md, "Processing"). The sidecar reads the checkout
   # through a bind mount, which is how it sees the files the app spools for it. Not a required check
