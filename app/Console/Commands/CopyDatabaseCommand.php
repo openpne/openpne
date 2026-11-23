@@ -57,6 +57,12 @@ class CopyDatabaseCommand extends Command
 
             $driver = (string) config("database.connections.{$name}.driver");
 
+            if ($driver === 'mariadb') {
+                $this->error("[{$name}] uses the [mariadb] driver, which this command does not copy to or from yet.");
+
+                return self::FAILURE;
+            }
+
             if (! in_array($driver, self::DRIVERS, true)) {
                 $this->error("[{$name}] uses the [{$driver}] driver; only SQLite and MySQL are supported.");
 
@@ -75,8 +81,8 @@ class CopyDatabaseCommand extends Command
 
         foreach ([$from, $to] as $name) {
             $server = $servers->behind($name);
-            if ($server?->supported() === false) {
-                $this->error("[{$name}] is {$server->name()}, which OpenPNE does not run on yet.");
+            if ($server?->mariaDb === true) {
+                $this->error("[{$name}] is {$server->name()}, which this command does not copy to or from yet.");
 
                 return self::FAILURE;
             }

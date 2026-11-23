@@ -1,8 +1,9 @@
 # Changing the database engine
 
-OpenPNE 4 runs on either MySQL or SQLite. A fresh install starts on SQLite because it needs no server
-to set up; [the OpenPNE 3 upgrade](upgrading-from-openpne3.md) requires MySQL. `openpne:copy-database`
-moves an existing site's data from one to the other, in either direction. Every foreign-key column
+OpenPNE 4 runs on MySQL, MariaDB or SQLite. A fresh install starts on SQLite because it needs no
+server to set up; [the OpenPNE 3 upgrade](upgrading-from-openpne3.md) requires MySQL.
+`openpne:copy-database` moves an existing site's data between SQLite and MySQL, in either direction,
+and not yet to or from MariaDB. Every foreign-key column
 is indexed on both engines, so a query that read an index on one engine reads one on the other; the
 two mention tables carry a wider index on SQLite ([why](internals/ordering.md#sqlite-foreign-key-indexes)),
 and what the engines sort and match differently is described below.
@@ -139,8 +140,8 @@ before any row is written:
   nobody else has a copy of, and what only the target defines would end up in the result holding
   something the source never had. Reconcile the two on a copy of the source, or extend the schema on
   both sides.
-- **A side is neither SQLite nor MySQL**: another driver, or a MariaDB server, which OpenPNE does
-  not run on yet. It is refused before anything is written to the target.
+- **A side is neither SQLite nor MySQL**: another driver, or MariaDB, which this command does not
+  copy to or from yet. It is refused before anything is written to the target.
 - **A table's id counter does not fit a signed 64-bit integer.** This is checked after the target's
   schema is created and before any row is written, so running it again needs no cleanup.
 

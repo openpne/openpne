@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\SiteCheck;
 
+use App\Database\DatabaseServer;
+
 /** What the command line can tell before `.env` exists; reads neither `.env` nor the database. */
 final class BeforeInstallCheck
 {
@@ -88,7 +90,7 @@ final class BeforeInstallCheck
             return [Finding::ok('cli.databases', 'cli_databases_sqlite')];
         }
         if ($mysql !== null) {
-            return [Finding::ok('cli.databases', 'cli_databases_mysql', ['mysql' => $mysql, ...$needs]), ...$why];
+            return [Finding::ok('cli.databases', 'cli_databases_mysql', ['mysql' => $mysql, 'minimum' => DatabaseServer::MARIADB_MINIMUM, ...$needs]), ...$why];
         }
 
         // An installed site's own database is judged by InstalledCheck, with the tool it needs named.

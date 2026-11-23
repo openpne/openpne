@@ -109,9 +109,9 @@ final class InstalledCheck
             $server = $this->servers->behind($name);
             DB::connection()->getPdo();
         } catch (Throwable $e) {
-            return [Finding::fail('db.connect', 'db_connect_failed', ['reason' => self::reason($e)]), ...self::server($server), ...$findings];
+            return [Finding::fail('db.connect', 'db_connect_failed', ['reason' => self::reason($e)]), ...self::server($server, $driver), ...$findings];
         }
-        $findings = [Finding::ok('db.connect', 'db_connect', ['connection' => $name]), ...self::server($server), ...$findings];
+        $findings = [Finding::ok('db.connect', 'db_connect', ['connection' => $name]), ...self::server($server, $driver), ...$findings];
 
         try {
             if (! $this->migrator->repositoryExists()) {
@@ -158,9 +158,14 @@ final class InstalledCheck
     }
 
     /** @return list<Finding> */
-    private static function server(?DatabaseServer $server): array
+    private static function server(?DatabaseServer $server, string $driver): array
     {
-        return $server?->supported() === false ? [Finding::fail('db.server', 'db_server_mariadb', ['server' => $server->name()])] : [];
+        return match (true) {
+            $server === null => [],
+            ! $server->supported() => [Finding::fail('db.server', 'db_server_mariadb', ['server' => $server->name(), 'minimum' => DatabaseServer::MARIADB_MINIMUM])],
+            $server->driver() !== $driver => [Finding::fail('db.server', 'db_server_driver', ['server' => $server->name(), 'driver' => $server->driver(), 'current' => $driver])],
+            default => [],
+        };
     }
 
     /** @return list<Finding> */

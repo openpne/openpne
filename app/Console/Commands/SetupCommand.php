@@ -200,7 +200,12 @@ class SetupCommand extends Command
             [$server, $unanswered] = [null, $e];
         }
         if ($server?->supported() === false) {
-            $this->say('db_mariadb', ['server' => $server->name(), 'path' => $this->layout->envFile], 'error');
+            $this->say('db_mariadb', ['server' => $server->name(), 'path' => $this->layout->envFile, 'minimum' => DatabaseServer::MARIADB_MINIMUM], 'error');
+
+            return self::FAILURE;
+        }
+        if ($server !== null && $server->driver() !== $driver) {
+            $this->say('db_driver', ['server' => $server->name(), 'driver' => $server->driver(), 'path' => $this->layout->envFile], 'error');
 
             return self::FAILURE;
         }
@@ -337,7 +342,7 @@ class SetupCommand extends Command
             $this->say('db_only_sqlite');
         }
         if (! $sqlite) {
-            $this->say('db_only_mysql');
+            $this->say('db_only_mysql', ['minimum' => DatabaseServer::MARIADB_MINIMUM]);
             if (! confirm($this->text('db_only_mysql_go_on'), true)) {
                 $this->say('db_only_mysql_stopped');
 
@@ -369,7 +374,7 @@ class SetupCommand extends Command
 
             $settings = $this->askMysql($sqlite);
             if ($settings !== null) {
-                return ['DB_CONNECTION' => 'mysql', ...$settings];
+                return $settings;
             }
         }
     }
@@ -387,18 +392,18 @@ class SetupCommand extends Command
             $this->acceptShownInput(viaPrompts: true);
             $settings['DB_PASSWORD'] = $this->until(fn (): string => password($this->text('mysql_password')), EnvValue::problem(...));
 
-            $refusal = $this->mysqlRefusal($settings);
-            if ($refusal instanceof DatabaseServer) {
-                $this->say($sqlite ? 'mysql_mariadb' : 'mysql_mariadb_no_sqlite', ['server' => $refusal->name()], 'error');
+            $server = $this->mysqlServer($settings);
+            if (is_string($server)) {
+                $this->say('mysql_refused', ['reason' => $server], 'error');
+            } elseif (! $server->supported()) {
+                $this->say($sqlite ? 'mysql_mariadb' : 'mysql_mariadb_no_sqlite', ['server' => $server->name(), 'minimum' => DatabaseServer::MARIADB_MINIMUM], 'error');
                 if ($sqlite) {
                     return null;
                 }
-            } elseif ($refusal === null && ! $this->holdsSite('mysql', self::mysqlConnection($settings))) {
-                return $settings;
+            } elseif (! $this->holdsSite($server->driver(), self::mysqlConnection($settings))) {
+                return ['DB_CONNECTION' => $server->driver(), ...$settings];
             } else {
-                $refusal === null
-                    ? $this->say('db_holds_site_mysql', ['database' => $settings['DB_DATABASE']], 'error')
-                    : $this->say('mysql_refused', ['reason' => $refusal], 'error');
+                $this->say('db_holds_site_mysql', ['database' => $settings['DB_DATABASE']], 'error');
             }
             if (! confirm($this->text('mysql_again'), true)) {
                 throw new StopSetup;
@@ -437,19 +442,19 @@ class SetupCommand extends Command
 
     /**
      * @param  array<string, string>  $settings
-     * @return DatabaseServer|string|null a server OpenPNE does not run on, what the server said in refusing, or null
+     * @return DatabaseServer|string the server, which the connection of its own driver reached if it is supported, or what the server said in refusing
      */
-    private function mysqlRefusal(array $settings): DatabaseServer|string|null
+    private function mysqlServer(array $settings): DatabaseServer|string
     {
-        return $this->onConnection('mysql', self::mysqlConnection($settings), function (Connection $db) use ($settings): DatabaseServer|string|null {
+        return $this->onConnection('mysql', self::mysqlConnection($settings), function (Connection $db) use ($settings): DatabaseServer|string {
             try {
                 $server = $this->servers->behind((string) $db->getName());
-                if ($server?->supported() === false) {
-                    return $server;
+                if ($server === null || ! $server->supported()) {
+                    return $server ?? 'not a MySQL or MariaDB server';
                 }
-                $db->getPdo();
+                $this->onConnection($server->driver(), self::mysqlConnection($settings), fn (Connection $own) => $own->getPdo());
 
-                return null;
+                return $server;
             } catch (Throwable $e) {
                 $line = trim((string) strtok(trim($e->getMessage()), "\n"));
 
@@ -498,7 +503,8 @@ class SetupCommand extends Command
      */
     private function onConnection(string $template, array $connection, Closure $use): mixed
     {
-        $name = 'openpne_setup';
+        // Named per template, since the manager would hand a nested call the other driver's cached connection.
+        $name = "openpne_setup_{$template}";
         config(["database.connections.{$name}" => array_merge((array) config("database.connections.{$template}"), ['url' => null], $connection)]);
 
         try {

@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 /** See docs/internals/runtime.md, "Database server". */
 final readonly class DatabaseServer
 {
+    public const MARIADB_MINIMUM = '10.11';
+
     private function __construct(
         public bool $mariaDb,
         public string $version,
@@ -21,7 +23,13 @@ final readonly class DatabaseServer
 
     public function supported(): bool
     {
-        return ! $this->mariaDb;
+        return ! $this->mariaDb || version_compare($this->version, self::MARIADB_MINIMUM, '>=');
+    }
+
+    /** The connection driver this server takes; the other one's collations or branches do not fit it. */
+    public function driver(): string
+    {
+        return $this->mariaDb ? 'mariadb' : 'mysql';
     }
 
     public function name(): string
