@@ -4,7 +4,7 @@ OpenPNE 4 runs on MySQL, MariaDB or SQLite. A fresh install starts on SQLite bec
 server to set up; [the OpenPNE 3 upgrade](upgrading-from-openpne3.md) requires MySQL.
 `openpne:copy-database` moves an existing site's data between SQLite and MySQL, in either direction,
 and not yet to or from MariaDB. Every foreign-key column
-is indexed on both engines, so a query that read an index on one engine reads one on the other; the
+is indexed on SQLite and MySQL alike, so a query that read an index on one engine reads one on the other; the
 two mention tables carry a wider index on SQLite ([why](internals/ordering.md#sqlite-foreign-key-indexes)),
 and what the engines sort and match differently is described below.
 

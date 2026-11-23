@@ -217,8 +217,8 @@ DB_PASSWORD=...
 ```
 
 On MariaDB 10.11 or later, make the database with `COLLATE utf8mb4_nopad_bin` and write
-`DB_CONNECTION=mariadb`: MariaDB has no `utf8mb4_0900_bin`, and the `mariadb` connection names the
-collations it has instead.
+`DB_CONNECTION=mariadb`: the `mariadb` connection names MariaDB's own collations, which every MariaDB
+from 10.11 has, while 10.11 has no `utf8mb4_0900_bin`.
 
 ## 3. Create the site
 

@@ -259,6 +259,36 @@ class SetupCommandTest extends TestCase
         $this->assertSame([(string) $settings['driver'], (string) $settings['database']], [$env['DB_CONNECTION'], $env['DB_DATABASE']]);
     }
 
+    public function test_a_mysql_database_holding_a_site_is_not_set_up_over(): void
+    {
+        $settings = (array) config('database.connections.'.$this->connection);
+        if (! in_array($settings['driver'] ?? null, ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('Needs the MySQL or MariaDB test connection.');
+        }
+        $this->tools('mysqldump');
+        // Committed past the test's transaction, as setup reads through a connection of its own.
+        $site = new \PDO("mysql:host={$settings['host']};port={$settings['port']};dbname={$settings['database']}", (string) $settings['username'], (string) $settings['password']);
+        $site->exec("INSERT INTO admin_users (username, password) VALUES ('holds-a-site', 'x')");
+
+        try {
+            $this->answerSite($this->runSetup())
+                ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
+                ->expectsQuestion('Database server', (string) $settings['host'])
+                ->expectsQuestion('Port', (string) $settings['port'])
+                ->expectsQuestion('Database name', (string) $settings['database'])
+                ->expectsQuestion('User name', (string) $settings['username'])
+                ->expectsQuestion('Password', (string) $settings['password'])
+                ->expectsOutputToContain("The database {$settings['database']} holds a site already.")
+                ->expectsConfirmation('Enter them again?', 'no')
+                ->assertFailed()
+                ->run();
+        } finally {
+            $site->exec("DELETE FROM admin_users WHERE username = 'holds-a-site'");
+        }
+
+        $this->assertFileDoesNotExist($this->layout->envFile);
+    }
+
     public function test_a_mariadb_server_given_for_mysql_is_named_and_sqlite_offered_again(): void
     {
         $this->sqliteState['extension'] = true;
