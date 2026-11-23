@@ -328,8 +328,9 @@ class CheckCommandTest extends TestCase
             ->assertFailed();
 
         $limit = (string) ini_get('memory_limit');
-        if (ini_set('memory_limit', '255M') === false) {
-            $this->markTestIncomplete('This process already uses more than the limit to set.');
+        // A refused ini_set warns, which the framework turns into an exception.
+        if (memory_get_usage(true) > 224 * 1024 * 1024 || @ini_set('memory_limit', '255M') === false) {
+            $this->markTestIncomplete('This process holds too much memory to lower its limit under 256M.');
         }
         try {
             $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
@@ -356,11 +357,15 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('Databases: MySQL or MariaDB only (backed up with '.$tools.'/mariadb-dump)')
             ->assertSuccessful();
 
-        if (! $this->sqlite()) {
-            $this->installEnv();
-            $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
-                ->expectsOutputToContain('[ OK ] The database is backed up with '.$tools.'/mariadb-dump.');
-        }
+        $this->installEnv();
+        mkdir($this->layout->dataDirectory(), 0o700);
+        copy($this->layout->base.'/.htaccess', $this->layout->dataDirectory().'/.htaccess');
+        $this->useUnreachableMysql('secret');
+        file_put_contents($this->layout->mysqlOptionFile(), "[client]\n");
+        chmod($this->layout->mysqlOptionFile(), 0o600);
+        Process::fake();
+        $this->assertStringContainsString('The database is backed up with '.$tools.'/mariadb-dump.', $this->runCheck(['--only' => 'installed']));
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command[0] === $tools.'/mariadb-dump');
     }
 
     public function test_pending_migrations_are_counted(): void
