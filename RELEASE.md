@@ -29,7 +29,7 @@ then copy the fix from `main` onto the renamed branch as well (the checks ask fo
 1. **Run the Release workflow** (Actions, "Release", from `main`) with the version and the commit at
    the tip of the branch. It refuses anything but that tip, runs every CI lane on it (the MySQL lane
    on 8.4 and again on 8.0, which CI otherwise leaves out), rehearses the update from the last
-   release on SQLite and MySQL, and audits the dependencies the release ships.
+   release on SQLite, MySQL and MariaDB, and audits the dependencies the release ships.
    It also builds the release's archives (`openpne-<version>.tar.gz`, `.zip` and `SHA256SUMS`:
    the tree with its dependencies and the built frontend), installs each where Composer and Node
    fail when called, and, when the last release has archives, updates a site from them, as
