@@ -10,6 +10,7 @@ use App\Setup\EnvFile;
 use App\Setup\SetupHost;
 use App\Setup\SetupLock;
 use App\SiteCheck\BeforeInstallCheck;
+use App\SiteCheck\PhpCommand;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\WebCheck;
@@ -720,6 +721,7 @@ class SetupCommandTest extends TestCase
         $this->withEnv();
         $this->fakeWeb();
         $this->fakeTools();
+        $php = $this->versionedPhp();
         chmod($this->layout->storage, 0o775);
 
         $this->runSetup()
@@ -733,9 +735,10 @@ class SetupCommandTest extends TestCase
             ->expectsQuestion('Their email address', 'first@example.com')
             ->expectsOutputToContain('registers as [first@example.com]')
             ->expectsOutputToContain('The copy is written to '.$this->layout->dataDirectory().($this->sqlite() ? '/backup.sqlite,' : '/backup.sql,'))
-            ->expectsOutputToContain($this->backupLineStart())
+            ->expectsOutputToContain($this->backupLineStart($php))
             ->expectsOutputToContain('Tried once: the copy holds the site\'s tables.')
-            ->expectsOutputToContain("*/5 * * * * cd '{$this->layout->base}' && '".PHP_BINARY."' artisan schedule:run")
+            ->expectsOutputToContain("*/5 * * * * cd '{$this->layout->base}' && '{$php}' artisan schedule:run")
+            ->expectsOutputToContain("Done. {$php} artisan openpne:check says")
             ->assertSuccessful();
 
         $this->assertTrue(AdminUser::where('username', 'admin')->exists());
@@ -1141,13 +1144,13 @@ class SetupCommandTest extends TestCase
         return config('database.connections.'.$this->connection.'.driver') === 'sqlite';
     }
 
-    private function backupLineStart(): string
+    private function backupLineStart(string $php): string
     {
         $data = $this->layout->dataDirectory();
         $tools = $this->layout->base.'/tools';
 
         return $this->sqlite()
-            ? "cd '{$this->layout->base}' && '".PHP_BINARY."' artisan openpne:backup-sqlite '{$data}/backup.sqlite'"
+            ? "cd '{$this->layout->base}' && '{$php}' artisan openpne:backup-sqlite '{$data}/backup.sqlite'"
             : "(umask 077 && rm -f '{$data}/backup.sql.new' && '{$tools}/mysqldump' --defaults-extra-file='{$this->layout->mysqlOptionFile()}'";
     }
 
@@ -1156,6 +1159,19 @@ class SetupCommandTest extends TestCase
      *
      * @param  'works'|'empty'|'fails'  $backup
      */
+    /** A PHP whose path holds its patch release, reached on PATH by a versioned name. */
+    private function versionedPhp(): string
+    {
+        $binary = $this->root.'/pkg/php-8.4.1/bin/php';
+        mkdir(dirname($binary), 0o755, true);
+        file_put_contents($binary, "#!/bin/sh\n");
+        chmod($binary, 0o755);
+        symlink($binary, $this->layout->base.'/tools/php8.4');
+        $this->app->instance(PhpCommand::class, new PhpCommand($binary, '8.4.1'));
+
+        return $this->layout->base.'/tools/php8.4';
+    }
+
     private function fakeTools(string $backup = 'works'): void
     {
         if ($this->sqlite()) {

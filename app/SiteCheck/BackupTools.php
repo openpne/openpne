@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\SiteCheck;
 
-/** The commands docs/updating.md backs a MySQL database up with, found on PATH without running them. */
+/** Finds commands without running them. */
 final class BackupTools
 {
     /** Named as PATH has it, not as the link resolves (docs/internals/runtime.md, "Site setup"). */

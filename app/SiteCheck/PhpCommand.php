@@ -12,7 +12,7 @@ final class PhpCommand
         private readonly string $release = PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION.'.'.PHP_RELEASE_VERSION,
     ) {}
 
-    /** An absolute path for a line cron runs, never one holding the patch release while PATH has the same PHP under another name. */
+    /** For a line cron runs: a path holding the patch release only where PATH has this PHP as neither php<major>.<minor> nor php. */
     public function path(): string
     {
         // PHP_BINARY has its links resolved, which names the patch release's directory where a versioned name links into one.

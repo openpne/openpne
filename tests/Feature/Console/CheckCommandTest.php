@@ -288,20 +288,32 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('APP_KEY is empty')
             ->expectsOutputToContain('APP_URL is http://sns.example.com/sub:')
             ->expectsOutputToContain($this->sqlite() ? 'PHP on the command line has no sqlite3 extension, and the backup of an SQLite database' : 'on PATH, and the backup of')
-            ->expectsOutputToContain('The initial data is missing')
+            ->expectsOutputToContain('The initial data is missing: php artisan openpne:install')
             ->expectsOutputToContain($this->layout->base.'/.htaccess is missing')
             ->assertFailed();
     }
 
-    public function test_a_sentence_names_this_php_where_path_s_php_is_another(): void
+    public function test_the_php_the_lines_name_is_shown_and_said_where_path_s_php_is_another(): void
     {
-        $this->installEnv();
+        $binary = $this->root.'/pkg/php-8.4.1/bin/php';
+        mkdir(dirname($binary), 0o755, true);
+        file_put_contents($binary, "#!/bin/sh\n");
+        chmod($binary, 0o755);
+        $php = $this->layout->base.'/tools/php8.4';
+        symlink($binary, $php);
         unlink($this->layout->base.'/tools/php');
         $this->tool('php');
-        config(['app.key' => '']);
+        $this->app->instance(PhpCommand::class, new PhpCommand($binary, '8.4.1'));
 
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('PHP on the command line: '.PHP_VERSION.' ('.$php.').');
+
+        $this->installEnv();
+        config(['app.key' => '']);
         $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
-            ->expectsOutputToContain('APP_KEY is empty: '.(new PhpCommand)->path().' artisan key:generate')
+            ->expectsOutputToContain('APP_KEY is empty: '.$php.' artisan key:generate')
+            ->expectsOutputToContain('The initial data is missing: '.$php.' artisan openpne:install')
+            ->expectsOutputToContain($this->sqlite() ? 'The database is backed up with '.$php.' artisan openpne:backup-sqlite.' : '[ OK ] The database is backed up with')
             ->assertFailed();
         $this->assertFileDoesNotExist($this->layout->base.'/tools/ran');
     }
