@@ -641,6 +641,7 @@ class CheckCommandTest extends TestCase
 
         $output = $this->runCheck(['--only' => 'web']);
         $this->assertStringContainsString('[WARN] Headers that a proxy in front adds reached the site (X-Forwarded-For, CF-Connecting-IP), and TRUSTED_PROXIES is empty', $output);
+        $this->assertStringContainsString('docs/installing.md, step 5, says how to tell', $output);
         $this->assertStringNotContainsString('203.0.113.9', $output);
         $this->assertSame([], config('trustedproxy.proxies'));
         $this->assertStringNotContainsString('TRUSTED_PROXIES', (string) file_get_contents($this->layout->envFile));

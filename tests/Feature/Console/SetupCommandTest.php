@@ -702,6 +702,7 @@ class SetupCommandTest extends TestCase
             ->expectsConfirmation('Print a registration link for the first member?', 'yes')
             ->expectsQuestion('Their email address', 'first@example.com')
             ->expectsOutputToContain('registers as [first@example.com]')
+            ->expectsOutputToContain('The copy is written to '.$this->layout->dataDirectory().($this->sqlite() ? '/backup.sqlite,' : '/backup.sql,'))
             ->expectsOutputToContain($this->backupLineStart())
             ->expectsOutputToContain('Tried once: the copy holds the site\'s tables.')
             ->expectsOutputToContain("*/5 * * * * cd '{$this->layout->base}' && '".PHP_BINARY."' artisan schedule:run")

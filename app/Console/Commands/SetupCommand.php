@@ -773,7 +773,7 @@ class SetupCommand extends Command
         }
         $line = $sqlite ? BackupLine::sqlite($tool, $this->layout->base, $data) : BackupLine::mysql($tool, $option, $database, $data);
 
-        $this->say('backup_line', ['path' => $data]);
+        $this->say('backup_line', ['path' => $data.'/'.($sqlite ? BackupLine::SQLITE_FILE : BackupLine::MYSQL_FILE)]);
         $this->line(OutputFormatter::escape($line));
         if (! $sqlite && ! $this->host->canSpawn()) {
             $this->say('backup_untried');
