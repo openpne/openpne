@@ -414,7 +414,7 @@ Key invariants:
    one given may hold another application's tables, and empties none itself.
 6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown
    the web's PHP running as this account.
-7. **SQLite is offered only where the check passes it**: `pdo_sqlite` on SQLite 3.32.0 or later and
+7. **SQLite is offered only where the check passes it**: `pdo_sqlite` on SQLite 3.26.0 or later and
    the `sqlite3` extension, which takes the backup, both judged by
    [`SqliteSupport`](../../app/SiteCheck/SqliteSupport.php); a version that cannot be read is not
    taken for too old. Before a site is installed, the check names what SQLite lacks; where MySQL is
@@ -428,7 +428,7 @@ writes it, through SQLite's online backup in PHP's `sqlite3` extension
 read transaction: under WAL no writer waits for it, and in a rollback journal a commit waits for the
 copy to end, failing where that passes the site's minute. The command waits up to a minute for a
 lock the site holds. The installed check fails an SQLite site without the extension, or below
-SQLite 3.32.0, and does not try the copy, which takes as long and as much disk as the database.
+SQLite 3.26.0, and does not try the copy, which takes as long and as much disk as the database.
 
 Key invariants:
 
