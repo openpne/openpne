@@ -104,7 +104,7 @@ jobs:
       - run: php artisan --version
 
   # The sqlite lane and the mysql and mariadb aggregators (below) are standalone jobs, not
-  # matrix combinations, so the `if` gate produces stable, named "skipped" checks on a docs-only PR.
+  # matrix combinations, so their checks exist by name on a docs-only PR too (skipped or passing).
   # A job-level `if` on a matrix job is evaluated before the matrix expands, so the per-combination
   # check names may never be created — leaving a required check pending forever. The shards
   # sidestep this by being non-required; see the aggregator note below.
@@ -471,7 +471,6 @@ jobs:
           --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --fail-on-empty-test-suite
 
-  # test-mysql's counterpart for the mariadb shards.
   test-mariadb:
     name: Test (PHP 8.5, mariadb)
     needs: [changes, mariadb-shard]
