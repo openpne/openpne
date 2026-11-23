@@ -150,6 +150,9 @@ A release without them cannot be reached this way. A site that updates from arch
 next release that has one, or builds this one from source on another machine; the archive of an
 earlier release is not this release.
 
+A site installed by [installing-on-a-shared-host.md](installing-on-a-shared-host.md) updates as that
+guide says, in the directories it sets up, rather than by the steps below.
+
 An archive replaces the whole directory, so the steps differ wherever the ones above use git,
 Composer or npm. Below, the site is at `/srv/openpne/site`, as [installing.md](installing.md) sets
 one up, runs `OLD` and moves to `NEW`; use your own path and versions. The user the site runs as
