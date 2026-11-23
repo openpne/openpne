@@ -79,11 +79,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db: [sqlite, mysql]
+        db: [sqlite, mysql, mariadb]
     env:
-      # The image ci.yml's mysql-shard job pins: bump the tag and the digest there, here and in
-      # release.yml together.
+      # The images ci.yml's mysql-shard and mariadb-shard jobs pin: bump a tag and its digest there and
+      # here together, and MySQL's in release.yml too.
       MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
+      MARIADB_IMAGE: mariadb:10.11@sha256:e5fe75b2b9de0eb9f6f9a4d9c97272fb3a7480e389ccd487a786bab2a12cc0d7 # 10.11.19
       DB_CONNECTION: ${{ matrix.db }}
       BASELINE: ${{ needs.baseline.outputs.from }}
     steps:
@@ -92,40 +93,44 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
           fetch-tags: true
-      - name: Start MySQL
-        if: matrix.db == 'mysql'
+      - name: Start ${{ matrix.db }}
+        if: matrix.db != 'sqlite'
+        env:
+          IMAGE: ${{ matrix.db == 'mysql' && env.MYSQL_IMAGE || env.MARIADB_IMAGE }}
+          ADMIN: ${{ matrix.db == 'mysql' && 'mysqladmin' || 'mariadb-admin' }}
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
-            if docker pull "$MYSQL_IMAGE"; then
+            if docker pull "$IMAGE"; then
               break
             fi
             if [ "$attempt" = 5 ]; then
-              echo "::error::could not pull $MYSQL_IMAGE after 5 attempts"
+              echo "::error::could not pull $IMAGE after 5 attempts"
               exit 1
             fi
             echo "pull attempt $attempt failed; retrying in $((attempt * 15))s"
             sleep $((attempt * 15))
           done
-          docker run -d --name mysql -p 3306:3306 --tmpfs /var/lib/mysql:rw \
+          # The MariaDB image takes the MYSQL_ variables as well as its own.
+          docker run -d --name db -p 3306:3306 --tmpfs /var/lib/mysql:rw \
             -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=openpne_rehearsal \
-            --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -psecret" \
+            --health-cmd="$ADMIN ping -h 127.0.0.1 -uroot -psecret" \
             --health-interval=5s --health-timeout=5s --health-retries=20 \
-            "$MYSQL_IMAGE"
+            "$IMAGE"
           for _ in $(seq 1 40); do
-            status=$(docker inspect -f '{{.State.Health.Status}}' mysql)
+            status=$(docker inspect -f '{{.State.Health.Status}}' db)
             if [ "$status" = healthy ]; then
               exit 0
             fi
-            if [ "$(docker inspect -f '{{.State.Running}}' mysql)" != true ]; then
-              echo "::error::MySQL exited during startup"
-              docker logs mysql
+            if [ "$(docker inspect -f '{{.State.Running}}' db)" != true ]; then
+              echo "::error::$DB_CONNECTION exited during startup"
+              docker logs db
               exit 1
             fi
             sleep 5
           done
-          echo "::error::MySQL did not become healthy within 200s (last status: $status)"
-          docker logs mysql
+          echo "::error::$DB_CONNECTION did not become healthy within 200s (last status: $status)"
+          docker logs db
           exit 1
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
