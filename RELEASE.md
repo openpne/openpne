@@ -11,7 +11,7 @@ digit. A release tagged any other way is invisible to them.
 
 1. **Cut `release/<version>` from `main`** at the commit the release should contain. `main` moves
    on; the branch is what gets reviewed and released. One release is in progress at a time. The
-   branch refuses a force push: cutting it again means deleting it first.
+   branch takes changes only through pull requests: cutting it again means deleting it first.
 2. **A fix found during review goes to `main` first**, then onto the branch as a copy:
    `git cherry-pick -x <commit on main>`, opened as a pull request against the branch. The
    `(cherry picked from commit …)` line has to survive into the commit that lands. A copy does not
