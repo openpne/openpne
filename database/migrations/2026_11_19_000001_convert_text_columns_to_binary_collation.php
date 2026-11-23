@@ -1,5 +1,6 @@
 <?php
 
+use App\Database\DatabaseServer;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
@@ -57,6 +58,7 @@ return new class extends Migration
             return;
         }
 
+        $this->refuseTheOtherEnginesServer();
         $this->refuseValuesTheIdentifierCollationCannotHold();
 
         if ($this->mysqlFamily()) {
@@ -72,6 +74,8 @@ return new class extends Migration
         if (! $this->converts()) {
             return;
         }
+
+        $this->refuseTheOtherEnginesServer();
 
         if ($this->mysqlFamily()) {
             $this->alterMysql($this->collation());
@@ -98,6 +102,20 @@ return new class extends Migration
     private function collation(): string
     {
         return DB::getDriverName() === 'mariadb' ? self::MARIADB_COLLATION : self::COLLATION;
+    }
+
+    /** A MariaDB that has MySQL's 0900 collations takes a mysql connection, and this would read its information_schema as MySQL's. */
+    private function refuseTheOtherEnginesServer(): void
+    {
+        if (! $this->mysqlFamily()) {
+            return;
+        }
+
+        $mariaDb = DatabaseServer::fromVersion((string) DB::getPdo()->getAttribute(PDO::ATTR_SERVER_VERSION))->mariaDb;
+
+        if ($mariaDb !== (DB::getDriverName() === 'mariadb')) {
+            throw new RuntimeException('Nothing was converted: the '.DB::getDriverName().' connection reaches a '.($mariaDb ? 'MariaDB server, which takes the mariadb one.' : 'MySQL server, which takes the mysql one.'));
+        }
     }
 
     private function refuseValuesTheIdentifierCollationCannotHold(): void

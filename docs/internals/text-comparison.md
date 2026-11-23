@@ -8,7 +8,7 @@ site's members is in [Changing the database engine](../changing-database-engine.
 On MySQL every OpenPNE 4 table and its text columns are `utf8mb4_0900_bin` (the `mysql` connection's
 default, which needs MySQL 8.0.17), apart from the identifiers below and `push_subscriptions.endpoint`,
 which is `ascii_bin`; SQLite compares `BINARY`. An `=`, an `IN`, a join, a
-`GROUP BY` and a unique index compare code points on both engines, and `utf8mb4_0900_bin` is NO PAD,
+`GROUP BY` and a unique index compare code points on each engine, and `utf8mb4_0900_bin` is NO PAD,
 so a trailing space is part of the value. Two group names, two profile item names or two values of a
 unique profile item that differ in case, kana or width are two values. MariaDB uses other names for
 the same comparisons ([MariaDB](#mariadb)).
@@ -18,11 +18,12 @@ the same comparisons ([MariaDB](#mariadb)).
 Five columns hold what a person signs in with or is reached at, and compare without case through
 [`IdentifierCollation`](../../app/Support/Database/IdentifierCollation.php): `members.email`,
 `registration_tokens.email`, `password_reset_tokens.email`, `email_change_requests.new_email` and
-`admin_users.username`. MySQL uses `utf8mb4_0900_as_ci` and MariaDB `utf8mb4_uca1400_nopad_as_ci`,
-which compare them the same way: they also treat as one hiragana and
+`admin_users.username`. MySQL uses `utf8mb4_0900_as_ci`, which also treats as one hiragana and
 katakana, small and full-size kana, full- and half-width forms, compatibility forms (`①` is `1`) and
 the kinds of space inside a value, tells accents and voiced marks apart (`é` is not `e`, `が` is not
-`か`) and is NO PAD; SQLite uses `NOCASE`, which folds ASCII letters only. A migration that adds such
+`か`) and is NO PAD; MariaDB uses `utf8mb4_uca1400_nopad_as_ci`, which does the same but follows UCA
+14.0.0 where MySQL follows 9.0.0, so some letters, most of them added to Unicode after 9.0, compare
+otherwise; SQLite uses `NOCASE`, which folds ASCII letters only. A migration that adds such
 a column takes its collation from `IdentifierCollation::for()`.
 
 Everything that writes or looks up these columns trims with `Str::trim`, which also removes Unicode
@@ -107,9 +108,9 @@ name order that skips the helper is not caught; it falls back to the column's ow
 
 ## MariaDB
 
-MariaDB 10.11 has none of MySQL's `0900` collations, so the `mariadb` connection names ones that
-compare the same: `utf8mb4_nopad_bin` for stored text, which is NO PAD and in code point order, and
-`utf8mb4_uca1400_nopad_as_ci` for the identifiers. Its JSON is `LONGTEXT` held to a column
+MariaDB 10.11 has none of MySQL's `0900` collations, so the `mariadb` connection names its own:
+`utf8mb4_nopad_bin` for stored text, which is NO PAD and in code point order like
+`utf8mb4_0900_bin`, and `utf8mb4_uca1400_nopad_as_ci` for the identifiers ([Identifiers](#identifiers)). Its JSON is `LONGTEXT` held to a column
 `CHECK (json_valid(...))`, and the three JSON columns (`passkeys.credential`,
 `home_issue_items.stats`, `openpne4_upgrade_state.metadata`) keep the `utf8mb4_bin` MariaDB gives
 them, since changing a column's collation redefines it without the check. A search and a name order
@@ -136,8 +137,10 @@ on SQLite rebuilds the five identifier tables.
 - **What stops it.** Before changing anything it refuses when a unique identifier column holds two
   values `IdentifierCollation` treats as one, or a value with whitespace at either end. The message
   names the column and the row ids, never the values. `email_change_requests.new_email` is not
-  checked: two members may ask for the same address. On MariaDB it also refuses when a text column has
-  a check other than a JSON column's `json_valid()`, even a column already in the wanted collation.
+  checked: two members may ask for the same address. It refuses a server of the other engine behind
+  the connection, such as a MariaDB that has the `0900` collations behind the `mysql` connection, and
+  on MariaDB a text column with a check other than a JSON column's `json_valid()`, even a column
+  already in the wanted collation.
 - **How.** MySQL and MariaDB get one `ALTER TABLE` per table that copies each column's type,
   nullability and default, built for every table before the first runs, and MariaDB's JSON columns
   are left out. Neither rolls DDL back, so a failure

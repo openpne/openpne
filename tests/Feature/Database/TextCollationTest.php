@@ -138,10 +138,7 @@ class TextCollationTest extends TestCase
         $this->assertSame($binary === null ? [] : ['push_subscriptions.endpoint' => 'ascii_bin'], $others);
     }
 
-    /**
-     * Only MariaDB has a uuid type of its own, so only there can this fail; reading the result, it also
-     * catches what MigrationUuidColumnTest cannot read in a migration, such as foreignIdFor() on a HasUuids model.
-     */
+    /** Only MariaDB has a uuid type of its own, so only there can this fail, also for a form no migration's text shows, such as foreignIdFor() on a HasUuids model. */
     public function test_no_column_takes_mariadbs_own_uuid_type(): void
     {
         $uuid = [];

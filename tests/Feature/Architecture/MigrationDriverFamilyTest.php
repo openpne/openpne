@@ -19,10 +19,9 @@ class MigrationDriverFamilyTest extends TestCase
             $mariaDbArms = 0;
             foreach ($lines as $number => $line) {
                 $where = basename($path).':'.($number + 1);
-                $mariaDbArms += preg_match_all("/['\"]mariadb['\"]\\s*=>/", preg_replace("/['\"]mysql['\"]\\s*,\\s*['\"]mariadb['\"]/", '', $line));
-                if (preg_match("/['\"]mysql['\"]\\s*=>/", $line) === 1) {
-                    $arms[] = $where;
-                }
+                $separate = (string) preg_replace("/['\"](?:mysql|mariadb)['\"]\\s*,\\s*['\"](?:mysql|mariadb)['\"]/", '', $line);
+                $mariaDbArms += preg_match_all("/['\"]mariadb['\"]\\s*=>/", $separate);
+                array_push($arms, ...array_fill(0, preg_match_all("/['\"]mysql['\"]\\s*=>/", $separate), $where));
                 if (preg_match("/['\"]mysql['\"](?!\\s*=>)/", $line) === 1 && preg_match("/['\"]mariadb['\"]/", $line) !== 1) {
                     $offending[] = $where;
                 }

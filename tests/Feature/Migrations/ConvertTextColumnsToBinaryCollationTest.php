@@ -18,6 +18,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PDOException;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -214,6 +215,11 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
             }
             DB::table('file_bin')->insert(['file_id' => File::factory()->create()->getKey(), 'bin' => 'bytes', 'created_at' => now(), 'updated_at' => now()]);
             $this->seedOneOfEach();
+            // MariaDB reports these defaults as SQL literals that the conversion writes back as they are; MySQL refuses an expression default as an attribute.
+            DB::statement("ALTER TABLE profiles ADD COLUMN quoted VARCHAR(16) NOT NULL DEFAULT 'it''s \\\\ x', ADD COLUMN null_word VARCHAR(8) NULL DEFAULT 'NULL', ADD COLUMN sql_null VARCHAR(8) NULL DEFAULT NULL");
+            if (DB::connection()->getDriverName() === 'mariadb') {
+                DB::statement('ALTER TABLE profiles ADD COLUMN expression VARCHAR(36) NULL DEFAULT (uuid())');
+            }
 
             $tables = $this->migration()::TABLES;
             $this->assertSame(['utf8mb4_unicode_ci'], collect(Schema::getTables(DB::connection()->getDatabaseName()))
@@ -257,7 +263,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         }
     }
 
-    public function test_a_column_check_other_than_mariadbs_json_stops_it(): void
+    public function test_a_column_check_other_than_mariadbs_json_stops_it_even_on_a_column_already_converted(): void
     {
         $this->onlyOn('mariadb');
         $binary = (string) $this->binary();
@@ -268,22 +274,58 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         ))]);
 
         try {
-            DB::statement("ALTER TABLE profiles ADD COLUMN probe VARCHAR(8) NULL CHECK (probe <> '')");
+            DB::statement("ALTER TABLE profiles ADD COLUMN probe VARCHAR(8) COLLATE {$binary} NULL CHECK (probe <> '')");
             $this->useCollation($binary);
             $definitions = $this->mysqlDefinitions(['profiles']);
+            $stopped = null;
 
             try {
                 $this->migration()->up();
-                $this->fail('the migration dropped a check it does not copy');
             } catch (RuntimeException $e) {
-                $this->assertSame('Nothing was converted: profiles.probe has a check this migration does not copy.', $e->getMessage());
+                $stopped = $e;
             }
 
+            $this->assertSame('Nothing was converted: profiles.probe has a check this migration does not copy.', $stopped?->getMessage());
             $this->assertSame($definitions, $this->mysqlDefinitions(['profiles']));
         } finally {
             DB::statement('ALTER TABLE profiles DROP COLUMN IF EXISTS probe');
             $this->useCollation($binary);
         }
+    }
+
+    /** Without the refusal this changes the schema: MariaDB's quoted defaults are quoted again and its JSON columns lose their check. */
+    public function test_a_mysql_connection_to_mariadb_stops_it(): void
+    {
+        $this->onlyOn('mariadb');
+        config(['database.connections.mysql_on_mariadb' => [...DB::connection()->getConfig(), 'name' => 'mysql_on_mariadb', 'driver' => 'mysql', 'collation' => 'utf8mb4_0900_bin']]);
+
+        try {
+            DB::connection('mysql_on_mariadb')->getPdo();
+        } catch (PDOException $e) {
+            DB::purge('mysql_on_mariadb');
+            $this->assertSame(1273, $e->errorInfo[1] ?? null, $e->getMessage());
+            $this->markTestSkipped('this MariaDB has no utf8mb4_0900_bin, so a mysql connection cannot reach it');
+        }
+
+        $default = config('database.default');
+        $tables = $this->migration()::TABLES;
+        $definitions = $this->mysqlDefinitions($tables);
+        $checks = $this->checks();
+        $stopped = null;
+
+        try {
+            config(['database.default' => 'mysql_on_mariadb']);
+            $this->migration()->up();
+        } catch (RuntimeException $e) {
+            $stopped = $e;
+        } finally {
+            config(['database.default' => $default]);
+            DB::purge('mysql_on_mariadb');
+        }
+
+        $this->assertSame('Nothing was converted: the mysql connection reaches a MariaDB server, which takes the mariadb one.', $stopped?->getMessage());
+        $this->assertSame($definitions, $this->mysqlDefinitions($tables));
+        $this->assertSame($checks, $this->checks());
     }
 
     private function migration(): Migration
@@ -411,8 +453,11 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
     /** @return array<string, string> */
     private function checks(): array
     {
-        return collect(DB::select('SELECT CONSTRAINT_NAME, CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() ORDER BY CONSTRAINT_NAME'))
-            ->pluck('CHECK_CLAUSE', 'CONSTRAINT_NAME')->all();
+        // MariaDB names a column check after its column, so two tables may share a name; MySQL's view has no TABLE_NAME.
+        $name = DB::connection()->getDriverName() === 'mariadb' ? "CONCAT(TABLE_NAME, '.', CONSTRAINT_NAME)" : 'CONSTRAINT_NAME';
+
+        return collect(DB::select("SELECT {$name} AS name, CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() ORDER BY name"))
+            ->pluck('CHECK_CLAUSE', 'name')->all();
     }
 
     /**
