@@ -89,7 +89,7 @@ class InstallCommandTest extends TestCase
     public static function urlOverrides(): array
     {
         return [
-            'DB_CONNECTION is the server\'s, DB_URL is not' => ['mariadb', 'DB_CONNECTION=mariadb in %s matches it, but DB_URL there names the sqlite driver, which overrides DB_CONNECTION. Begin DB_URL with mariadb://'],
+            'DB_CONNECTION is the server\'s, DB_URL is not' => ['mariadb', 'DB_CONNECTION=mariadb in %s matches it, but DB_URL there names the mysql driver, which overrides DB_CONNECTION. Begin DB_URL with mariadb://'],
             'neither is the server\'s' => ['mysql', 'Set DB_CONNECTION=mariadb in %s, then'],
         ];
     }
@@ -98,7 +98,7 @@ class InstallCommandTest extends TestCase
     public function test_both_the_driver_db_connection_names_and_the_one_db_url_sets_are_weighed(string $configured, string $said): void
     {
         config([
-            'database.connections.install_url' => [...config('database.connections.sqlite'), 'driver' => $configured, 'url' => 'sqlite:///:memory:'],
+            'database.connections.install_url' => [...config('database.connections.'.$configured), 'url' => 'mysql://root@127.0.0.1:1/site_db'],
             'database.default' => 'install_url',
         ]);
         $this->fakeDatabaseServer('11.4.13-MariaDB-ubu2404');

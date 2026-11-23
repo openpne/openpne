@@ -244,6 +244,6 @@ return [
     ],
 
     'install' => [
-        'db_url' => 'データベースのサーバは :server です。:path の DB_CONNECTION=:driver は合っていますが、同じ file の DB_URL が :live の driver を指していて、DB_CONNECTION より優先されます。DB_URL を :driver:// で始めてから、もう一度このコマンドを打ってください。',
+        'db_url' => 'データベースのサーバは :server です。:path の DB_CONNECTION=:driver は合っていますが、同じファイルの DB_URL は :live で接続する指定で、DB_CONNECTION より優先されます。DB_URL を :driver:// で始めてから、もう一度このコマンドを打ってください。',
     ],
 ];
