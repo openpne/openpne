@@ -133,9 +133,8 @@ jobs:
       - run: php artisan migrate --force
       - run: php artisan test --parallel
 
-  # The suite on the SQLite floor setup accepts, with PHP 8.5 as an Enterprise Linux 8 host gets it
-  # from Remi. Not a required check: every run installs from EPEL and Remi, unpinned, so an outage
-  # there turns it red, and so does a SQLite that is not the floor, at the check step.
+  # Not a required check, though a release waits on it as on every lane: each run installs unpinned
+  # from Docker Hub, the AlmaLinux mirrors, EPEL and Remi, so an outage at any of them turns it red.
   test-sqlite-floor:
     name: Test (PHP 8.5, sqlite 3.26)
     needs: changes
@@ -146,8 +145,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
-      # Not a `container:` job, whose steps would all run as root: here only dnf does, and the suite
-      # runs as the runner's uid.
+      # Not a `container:` job, whose steps would all run as root, where the tests that need mode bits
+      # to bind skip (TestCase::skipUnlessModeBitsBind()): here only dnf runs as root.
       - name: Start AlmaLinux 8
         run: |
           for attempt in 1 2 3 4 5; do
@@ -166,14 +165,14 @@ jobs:
             -v "$GITHUB_WORKSPACE:/app" -w /app almalinux:8 sleep infinity
       - name: Install PHP 8.5 from Remi
         run: |
-          docker exec -u 0 el8 dnf -y install \
-            https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
-            https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+          docker exec -u 0 el8 dnf -y install epel-release
+          docker exec -u 0 el8 dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
           docker exec -u 0 el8 dnf -y module enable php:remi-8.5
           docker exec -u 0 el8 dnf -y install composer git unzip php-cli php-pdo php-sqlite3 \
             php-mysqlnd php-mbstring php-intl php-gd php-bcmath php-xml php-pecl-zip php-process \
             php-sodium php-opcache
       - run: docker exec el8 composer install --no-interaction --no-progress --prefer-dist
+      # Raising LIBRARY_MINIMUM turns this red until the image and the job name move with it.
       - name: Check the SQLite under test
         run: |
           docker exec -i el8 php <<'PHP'
