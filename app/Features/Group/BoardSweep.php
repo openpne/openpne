@@ -35,12 +35,12 @@ final class BoardSweep
             foreach (self::pagesOf($table, $parentColumn, (int) $parentId) as $page) {
                 $pool = [...$pool, ...$page];
                 while (count($pool) >= self::CHUNK) {
-                    self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', array_splice($pool, 0, self::CHUNK)));
+                    self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIntegerInRaw('reactable_id', array_splice($pool, 0, self::CHUNK)));
                 }
             }
         }
         if ($pool !== []) {
-            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $pool));
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIntegerInRaw('reactable_id', $pool));
         }
     }
 
@@ -63,7 +63,7 @@ final class BoardSweep
             if ($page->isEmpty()) {
                 break;
             }
-            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->map(fn ($id): int => (int) $id)->all()));
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIntegerInRaw('reactable_id', $page->pluck('id')->map(fn ($id): int => (int) $id)->all()));
             $cursor = [$page->last()->bumped_at, (int) $page->last()->id];
         } while ($page->count() === self::CHUNK);
     }
@@ -118,7 +118,7 @@ final class BoardSweep
             if ($page->isEmpty()) {
                 break;
             }
-            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIn('reactable_id', $page->pluck('id')->all()));
+            self::deleteMatching(DB::table('reactions')->where('reactable_type', $alias)->whereIntegerInRaw('reactable_id', $page->pluck('id')->all()));
             [$at, $id, $first] = [$page->last()->created_at === null ? null : (string) $page->last()->created_at, (int) $page->last()->id, false];
         } while ($page->count() === self::CHUNK);
     }
@@ -131,7 +131,7 @@ final class BoardSweep
             if ($ids === []) {
                 break;
             }
-            Reaction::query()->whereIn('id', $ids)->delete();
+            Reaction::query()->whereIntegerInRaw('id', $ids)->delete();
             $after = (int) end($ids);
         } while (count($ids) === self::CHUNK);
     }
@@ -144,7 +144,7 @@ final class BoardSweep
     public static function files(array $fileIds): void
     {
         foreach (array_chunk($fileIds, self::CHUNK) as $chunk) {
-            foreach (File::query()->whereIn('id', $chunk)->get() as $file) {
+            foreach (File::query()->whereIntegerInRaw('id', $chunk)->get() as $file) {
                 $file->delete();
             }
         }

@@ -15,11 +15,13 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\SqliteBindLimit;
 use Tests\TestCase;
 
 class BroadcastDiaryPostedTest extends TestCase
 {
     use RefreshDatabase;
+    use SqliteBindLimit;
 
     private function broadcast(Diary $diary): void
     {
@@ -211,5 +213,20 @@ class BroadcastDiaryPostedTest extends TestCase
             DiaryPostedNotification::class,
             fn (DiaryPostedNotification $n, array $channels) => $channels === ['database'],
         );
+    }
+
+    public function test_an_opt_out_holds_in_a_full_chunk(): void
+    {
+        Notification::fake();
+        $ids = $this->manyMembers(1000);
+        $last = Member::query()->findOrFail(end($ids));
+        $last->setNotificationSetting(NotificationKind::DiaryNewPost, NotificationChannel::Mail, false);
+
+        $diary = Diary::factory()->create(['member_id' => Member::factory()->create()->getKey(), 'visibility' => Visibility::Members]);
+
+        $this->withinSqliteBindLimit(fn () => $this->broadcast($diary));
+
+        Notification::assertSentTimes(DiaryPostedNotification::class, 1000);
+        Notification::assertSentTo($last, DiaryPostedNotification::class, fn (DiaryPostedNotification $n, array $channels) => $channels === ['database']);
     }
 }

@@ -36,9 +36,11 @@ class DeletePendingRowsForUnacceptedEmailsTest extends TestCase
 
     public function test_it_reads_past_the_first_chunk(): void
     {
-        DB::table('registration_tokens')->insert(array_map(fn (int $i): array => [
+        foreach (array_chunk(array_map(fn (int $i): array => [
             'email' => $i % 2 === 0 ? "ｕｓｅｒ{$i}@example.com" : "user{$i}@example.com", 'token' => "t{$i}", 'created_at' => now(),
-        ], range(1, 1200)));
+        ], range(1, 1200)), 100) as $part) {
+            DB::table('registration_tokens')->insert($part);
+        }
 
         $this->migration()->up();
 

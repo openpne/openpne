@@ -134,7 +134,7 @@ class SearchMembers
             case 'checkbox':
                 $ids = is_array($value) ? array_values(array_filter(array_map('intval', $value))) : [];
 
-                return $ids === [] ? null : fn ($q) => $q->whereIn('member_profiles.profile_option_id', $ids);
+                return $ids === [] ? null : fn ($q) => $q->whereIntegerInRaw('member_profiles.profile_option_id', $ids);
 
             case 'date':
                 return $this->dateMatch($profile, $range);

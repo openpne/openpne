@@ -20,11 +20,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\SqliteBindLimit;
 use Tests\TestCase;
 
 class BroadcastGroupCommentTest extends TestCase
 {
     use RefreshDatabase;
+    use SqliteBindLimit;
 
     private function member(Group $group, ?Member $member = null): Member
     {
@@ -164,5 +166,44 @@ class BroadcastGroupCommentTest extends TestCase
                 && in_array($author->getKey(), $job->excludedMemberIds, true)
                 && in_array($commenter->getKey(), $job->excludedMemberIds, true),
         );
+    }
+
+    public function test_an_opt_out_holds_in_a_full_chunk(): void
+    {
+        Notification::fake();
+        $group = Group::factory()->create();
+        $author = $this->member($group);
+        $commenter = $this->member($group);
+        $ids = $this->manyMembers(1000, $group);
+        $last = Member::query()->findOrFail(end($ids));
+        $last->setNotificationSetting(NotificationKind::GroupTopicCommentNewPost, NotificationChannel::Mail, false);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = $this->comment($topic, $commenter);
+
+        $excluded = $this->excluded($topic);
+
+        $this->withinSqliteBindLimit(fn () => $this->broadcast($topic, $comment, $commenter, $excluded));
+
+        Notification::assertSentTimes(TopicCommentBroadcastNotification::class, 1000);
+        Notification::assertSentTo($last, TopicCommentBroadcastNotification::class, fn (TopicCommentBroadcastNotification $n, array $channels) => $channels === ['database']);
+    }
+
+    public function test_an_exclusion_past_999_members_still_reaches_the_rest(): void
+    {
+        Notification::fake();
+        $group = Group::factory()->create();
+        $author = $this->member($group);
+        $commenter = $this->member($group);
+        $excluded = $this->manyMembers(1000, $group);
+        $general = $this->member($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = $this->comment($topic, $commenter);
+
+        $excluded = [...$excluded, ...$this->excluded($topic)];
+
+        $this->withinSqliteBindLimit(fn () => $this->broadcast($topic, $comment, $commenter, $excluded));
+
+        Notification::assertSentTimes(TopicCommentBroadcastNotification::class, 1);
+        Notification::assertSentTo($general, TopicCommentBroadcastNotification::class);
     }
 }

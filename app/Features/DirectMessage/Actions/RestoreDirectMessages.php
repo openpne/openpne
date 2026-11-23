@@ -30,14 +30,14 @@ class RestoreDirectMessages
             $sender = DirectMessage::query()
                 ->senderTrashed()
                 ->where('sender_id', $viewerId)
-                ->whereIn('id', $ids)
+                ->whereIntegerInRaw('id', $ids)
                 ->update(['sender_deleted_at' => null]);
 
             $recipient = DirectMessageRecipient::query()
                 ->ofDelivered() // a draft is never the recipient's, even if a stray receipt were trashed
                 ->recipientTrashed()
                 ->where('recipient_id', $viewerId)
-                ->whereIn('direct_message_id', $ids)
+                ->whereIntegerInRaw('direct_message_id', $ids)
                 ->update(['recipient_deleted_at' => null]);
 
             return $sender + $recipient;

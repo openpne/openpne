@@ -47,7 +47,7 @@ class DeleteDiary
                 ->delete();
             Reaction::query()
                 ->where('reactable_type', (new DiaryComment)->getMorphClass())
-                ->whereIn('reactable_id', $commentIds)
+                ->whereIntegerInRaw('reactable_id', $commentIds)
                 ->delete();
 
             $files = $this->ownedImageFiles($diary, $commentIds);
@@ -75,7 +75,7 @@ class DeleteDiary
             ->pluck('file')
             ->all();
 
-        foreach (DiaryCommentImage::query()->whereIn('diary_comment_id', $commentIds)->with('file')->get() as $image) {
+        foreach (DiaryCommentImage::query()->whereIntegerInRaw('diary_comment_id', $commentIds)->with('file')->get() as $image) {
             $files[] = $image->file;
         }
 

@@ -28,7 +28,7 @@ class DirectMessageNotificationRows
         $read = DirectMessageRecipient::query()
             ->where('recipient_id', $viewer->getKey())
             ->whereNotNull('read_at')
-            ->whereIn('direct_message_id', $unread->map($this->messageId(...))->all())
+            ->whereIntegerInRaw('direct_message_id', $unread->map($this->messageId(...))->all())
             ->pluck('direct_message_id')
             ->map(static fn (mixed $id): int => (int) $id)
             ->flip();

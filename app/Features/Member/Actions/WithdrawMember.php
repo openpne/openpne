@@ -192,7 +192,7 @@ class WithdrawMember
 
             Reaction::query()
                 ->where('reactable_type', $row->getMorphClass())
-                ->whereIn('reactable_id', $ids)
+                ->whereIntegerInRaw('reactable_id', $ids)
                 ->delete();
         }
     }
@@ -216,7 +216,7 @@ class WithdrawMember
                 ->delete();
             Reaction::query()
                 ->where('reactable_type', (new DiaryComment)->getMorphClass())
-                ->whereIn('reactable_id', $diary->comments()->sharedLock()->pluck('id')->all()) // locking: the snapshot predates the hold
+                ->whereIntegerInRaw('reactable_id', $diary->comments()->sharedLock()->pluck('id')->all()) // locking: the snapshot predates the hold
                 ->delete();
         }
     }

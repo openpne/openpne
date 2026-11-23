@@ -9,13 +9,17 @@ use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use LogicException;
+use Tests\Concerns\SqliteBindLimit;
 use Tests\TestCase;
 
 class AddAllMembersTest extends TestCase
 {
     use RefreshDatabase;
+    use SqliteBindLimit;
 
     public function test_adds_non_members_as_plain_members_and_returns_count(): void
     {
@@ -80,5 +84,35 @@ class AddAllMembersTest extends TestCase
             'group_id' => $group->getKey(),
             'member_id' => $applicant->getKey(),
         ]);
+    }
+
+    public function test_adds_more_members_than_one_insert_could_bind(): void
+    {
+        $group = Group::factory()->create();
+        $ids = $this->manyMembers(150);
+
+        $this->assertSame(150, $this->withinSqliteBindLimit(fn (): int => app(AddAllMembers::class)($group)));
+        $this->assertSame($ids, GroupMember::query()->where('group_id', $group->getKey())->orderBy('member_id')->pluck('member_id')->map(fn (mixed $id): int => (int) $id)->all());
+    }
+
+    public function test_a_failure_inside_a_page_adds_none_of_its_rows(): void
+    {
+        $group = Group::factory()->create();
+        $this->manyMembers(150);
+        $inserts = 0;
+        DB::listen(function (QueryExecuted $query) use (&$inserts): void {
+            if (str_contains($query->sql, 'group_members') && str_starts_with($query->sql, 'insert') && ++$inserts === 2) {
+                throw new LogicException('second insert');
+            }
+        });
+
+        try {
+            app(AddAllMembers::class)($group);
+            $this->fail('the second insert should have thrown');
+        } catch (LogicException) {
+        }
+
+        $this->assertSame(2, $inserts);
+        $this->assertSame(0, GroupMember::query()->where('group_id', $group->getKey())->count());
     }
 }

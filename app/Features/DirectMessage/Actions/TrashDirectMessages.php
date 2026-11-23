@@ -31,13 +31,13 @@ class TrashDirectMessages
                 ->ofDelivered() // a draft is never the recipient's, even to trash
                 ->recipientLive()
                 ->where('recipient_id', $viewerId)
-                ->whereIn('direct_message_id', $ids)
+                ->whereIntegerInRaw('direct_message_id', $ids)
                 ->update(['recipient_deleted_at' => now()]),
             // Each box trashes only its own kind, so a sent id submitted as a draft matches nothing.
             DirectMessageBox::Sent, DirectMessageBox::Draft => DirectMessage::query()
                 ->senderLive()
                 ->where('sender_id', $viewerId)
-                ->whereIn('id', $ids)
+                ->whereIntegerInRaw('id', $ids)
                 ->where('is_draft', $box === DirectMessageBox::Draft)
                 ->update(['sender_deleted_at' => now()]),
             DirectMessageBox::Trash => 0, // the trash box restores or purges, it does not trash

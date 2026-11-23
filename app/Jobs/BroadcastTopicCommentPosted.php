@@ -53,7 +53,7 @@ class BroadcastTopicCommentPosted implements ShouldQueue
 
         // The exclusion is the set captured when the comment was posted, never one re-read here: a
         // comment deleted since would drop its own author out of it.
-        $audience = $recipients->viewers($topic->group, $commenter)->whereNotIn('id', $this->excludedMemberIds);
+        $audience = $recipients->viewers($topic->group, $commenter)->whereIntegerNotInRaw('id', $this->excludedMemberIds);
         $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
         $fanout->run(

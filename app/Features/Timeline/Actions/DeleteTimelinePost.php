@@ -27,11 +27,11 @@ class DeleteTimelinePost
 
             Reaction::query()
                 ->where('reactable_type', $post->getMorphClass())
-                ->whereIn('reactable_id', $ids)
+                ->whereIntegerInRaw('reactable_id', $ids)
                 ->delete();
 
             $files = TimelinePostImage::query()
-                ->whereIn('timeline_post_id', $ids)
+                ->whereIntegerInRaw('timeline_post_id', $ids)
                 ->with('file')
                 ->get()
                 ->pluck('file')

@@ -135,7 +135,7 @@ class BroadcastGroupMessagePosted implements ShouldQueue
 
         DB::table('member_notification_settings')
             ->where('kind', $kind->value)
-            ->whereIn('member_id', $ids)
+            ->whereIntegerInRaw('member_id', $ids)
             ->get(['member_id', 'channel', 'is_enabled'])
             ->each(function (object $row) use (&$out): void {
                 $out[$row->channel][(int) $row->member_id] = (bool) $row->is_enabled;
