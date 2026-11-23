@@ -95,13 +95,12 @@ final class SetupValuesTest extends TestCase
 
     public function test_the_option_file_holds_the_connection_and_what_each_client_needs(): void
     {
-        $connection = ['driver' => 'mariadb', 'host' => 'db.example.com', 'port' => 3306, 'username' => 'site', 'password' => 'p"w', 'unix_socket' => ''];
+        $connection = ['host' => 'db.example.com', 'port' => 3306, 'username' => 'site', 'password' => 'p"w', 'unix_socket' => ''];
 
         $this->assertSame(
             "[client]\nhost=\"db.example.com\"\nport=\"3306\"\nuser=\"site\"\npassword=\"p\\\"w\"\nloose-get-server-public-key=1\n[mysqldump]\nloose-column-statistics=0\n[client-mariadb]\nssl-verify-server-cert=0\n",
             MysqlOptionFile::contents($connection, '/usr/bin/mysqldump'),
         );
-        $this->assertStringNotContainsString('column-statistics', MysqlOptionFile::contents(['driver' => 'mysql'] + $connection, '/usr/bin/mysqldump'));
         foreach (['get-server-public-key', 'column-statistics'] as $option) {
             $this->assertStringNotContainsString($option, MysqlOptionFile::contents($connection, '/usr/bin/mariadb-dump'));
         }
