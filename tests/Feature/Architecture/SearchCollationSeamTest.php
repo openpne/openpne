@@ -38,9 +38,9 @@ class SearchCollationSeamTest extends TestCase
             "LIKE 'en%'" => 'reads an OpenPNE 3 table, which keeps its own collation',
         ],
         'app/Upgrade/Steps/MemberProfileUpgrade.php' => [
-            " LIKE 'op_preset_%')))" => 'reads an OpenPNE 3 table, which keeps its own collation',
-            "NOT LIKE 'op_preset_%')" => 'reads an OpenPNE 3 table, which keeps its own collation',
-            "LIKE \\'op_preset_%%\\'" => 'reads an OpenPNE 3 table, which keeps its own collation',
+            " LIKE 'op!_preset!_%' ESCAPE '!')))" => 'reads an OpenPNE 3 table, which keeps its own collation',
+            "NOT LIKE 'op!_preset!_%' ESCAPE '!')" => 'reads an OpenPNE 3 table, which keeps its own collation',
+            "LIKE \\'op!_preset!_%%\\' ESCAPE \\'!\\'" => 'reads an OpenPNE 3 table, which keeps its own collation',
         ],
         'app/Upgrade/Steps/NavigationUpgrade.php' => [
             "`uri` LIKE '/%'" => 'reads an OpenPNE 3 table, which keeps its own collation',

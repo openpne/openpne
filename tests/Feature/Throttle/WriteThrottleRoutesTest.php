@@ -14,7 +14,7 @@ use Tests\TestCase;
 class WriteThrottleRoutesTest extends TestCase
 {
     /** The limiters AppServiceProvider::configureRateLimiting() builds with writeLimiter(). */
-    private const LIMITERS = ['posting', 'preview', 'mention-search', 'direct-message-send', 'friend-request', 'group-join', 'reaction', 'reaction-read'];
+    private const LIMITERS = ['posting', 'preview', 'mention-search', 'direct-message-send', 'friend-request', 'group-join', 'reaction', 'reaction-read', 'search'];
 
     /** @return array<string, array{string, string}> */
     public static function throttledRoutes(): array
@@ -71,6 +71,9 @@ class WriteThrottleRoutesTest extends TestCase
             'group.talk.reactions.index' => ['group.talk.reactions.index', 'throttle:reaction-read'],
             'group.events.reactions.index' => ['group.events.reactions.index', 'throttle:reaction-read'],
             'group.events.comment.reactions.index' => ['group.events.comment.reactions.index', 'throttle:reaction-read'],
+            'diary.search' => ['diary.search', 'throttle:search'],
+            'member.search' => ['member.search', 'throttle:search'],
+            'group.search' => ['group.search', 'throttle:search'],
         ];
     }
 

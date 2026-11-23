@@ -6,6 +6,7 @@ use App\Features\GroupEvent\GroupEventAccess;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\GroupEvent;
 use App\Models\Member;
+use App\Rules\MaxBytes;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -14,6 +15,9 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreEventCommentRequest extends FormRequest
 {
+    // Bytes, not characters, equal to the TEXT column MySQL enforces at insert.
+    private const BODY_MAX_BYTES = 65535;
+
     public function authorize(): bool
     {
         $event = GroupEvent::find($this->route('event'));
@@ -41,8 +45,7 @@ class StoreEventCommentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // No max length: OpenPNE 3 comment body is TEXT with no validator limit.
-            'body' => ['required', 'string'],
+            'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             ...PostImageRules::rules(),
         ];
     }

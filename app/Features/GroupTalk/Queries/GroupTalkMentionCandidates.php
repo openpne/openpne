@@ -21,13 +21,10 @@ class GroupTalkMentionCandidates
     /** A handle is "@" plus the name, and the body caps at TalkBody::MAX, so a longer name could be picked but never posted. */
     public const MAX_NAME = TalkBody::MAX - 1;
 
-    /** Not a backslash: MySQL and SQLite read one inside `ESCAPE` differently. */
-    private const ESCAPE = '!';
-
     /** @return Collection<int, Member> */
     public function __invoke(Member $viewer, Group $group, string $q): Collection
     {
-        $pattern = '%'.$this->escapeLike(trim($q)).'%';
+        $term = trim($q);
 
         // Code points, to match the body cap the name must fit into — sqlite's LENGTH counts them;
         // MySQL's counts bytes and needs CHAR_LENGTH.
@@ -40,7 +37,7 @@ class GroupTalkMentionCandidates
             ->with('avatar.file')
             ->whereKeyNot($viewer->getKey())
             ->where('members.is_login_rejected', false)
-            ->tap(fn ($q) => SearchCollation::whereMatches($q, 'members.name', $pattern, self::ESCAPE))
+            ->tap(fn ($q) => SearchCollation::whereContains($q, 'members.name', $term))
             ->whereRaw("{$length}(members.name) <= ?", [self::MAX_NAME])
             // The id breaks ties, so members sharing a name keep a fixed order under the limit.
             ->tap(fn ($q) => SearchCollation::orderBy($q, 'members.name'))
@@ -49,10 +46,5 @@ class GroupTalkMentionCandidates
         BlockLookup::excludeBlockedBetween($query, $viewer, 'members.id');
 
         return $query->limit(self::LIMIT)->get();
-    }
-
-    private function escapeLike(string $term): string
-    {
-        return str_replace([self::ESCAPE, '%', '_'], [self::ESCAPE.self::ESCAPE, self::ESCAPE.'%', self::ESCAPE.'_'], $term);
     }
 }

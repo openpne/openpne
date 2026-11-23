@@ -271,9 +271,9 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Named limiters for the content-posting and mail-triggering member writes, the keystroke-driven
-     * endpoints a compose form calls and the reactor list, the one read a pointer or a keyboard fires
-     * without navigating (auth-flow limiters live in FortifyServiceProvider). Attached per route in
-     * routes/web.php.
+     * endpoints a compose form calls, the reactor list, the one read a pointer or a keyboard fires
+     * without navigating, and the search screens, which scan a table per request (auth-flow limiters
+     * live in FortifyServiceProvider). Attached per route in routes/web.php.
      */
     private function configureRateLimiting(): void
     {
@@ -285,6 +285,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('group-join', $this->writeLimiter('group', 'group', 'group_ip'));
         RateLimiter::for('reaction', $this->writeLimiter('reaction', 'reaction', 'reaction_ip'));
         RateLimiter::for('reaction-read', $this->writeLimiter('reaction-read', 'reaction_read', 'reaction_read_ip'));
+        RateLimiter::for('search', $this->writeLimiter('search', 'search', 'search_ip'));
         RateLimiter::for('mcp', $this->tokenLimiter());
     }
 

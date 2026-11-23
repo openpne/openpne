@@ -7,12 +7,17 @@ use App\Files\PostImages;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\DirectMessage;
 use App\Models\Member;
+use App\Rules\MaxBytes;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 /** Ownership and draft state are gated in authorize(), before validation, so any other message id gets a uniform 404. */
 class UpdateDraftRequest extends FormRequest
 {
+    // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated value
+    // is locked out of re-editing.
+    private const BODY_MAX_BYTES = 65535;
+
     public function authorize(): bool
     {
         $draft = DirectMessage::find($this->route('message'));
@@ -40,8 +45,8 @@ class UpdateDraftRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject' => ['required', 'string'],
-            'body' => ['required', 'string'],
+            'subject' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
+            'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'remove_images' => ['array'],
             'remove_images.*' => ['integer'],
             ...PostImageRules::rules(),

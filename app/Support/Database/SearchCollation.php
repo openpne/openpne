@@ -12,42 +12,8 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 final class SearchCollation
 {
-    /**
-     * @template TQuery of EloquentBuilder|QueryBuilder
-     *
-     * @param  TQuery  $query
-     * @param  string  $pattern  a LIKE pattern the caller built, wildcards included
-     * @return TQuery
-     */
-    public static function whereMatches(EloquentBuilder|QueryBuilder $query, string $column, string $pattern, ?string $escape = null, string $boolean = 'and'): EloquentBuilder|QueryBuilder
-    {
-        $base = self::base($query);
-        $subject = $base->getGrammar()->wrap($column);
-        $collation = self::collation($base->getConnection());
-
-        [$subject, $term] = match (true) {
-            $base->getConnection()->getDriverName() === 'sqlite' => [$subject, '?'],
-            // MariaDB lowers by the operand's collation, and the binary one's case table predates the UCA one.
-            $base->getConnection()->getDriverName() === 'mariadb' && $collation !== null => ["LOWER({$subject} COLLATE {$collation})", "LOWER(? COLLATE {$collation})"],
-            $collation !== null => ["LOWER({$subject}) COLLATE {$collation}", 'LOWER(?)'],
-            default => ["LOWER({$subject})", 'LOWER(?)'],
-        };
-
-        $bindings = $escape === null ? [$pattern] : [$pattern, $escape];
-
-        return $query->whereRaw("{$subject} LIKE {$term}".($escape === null ? '' : ' ESCAPE ?'), $bindings, $boolean);
-    }
-
-    /**
-     * @template TQuery of EloquentBuilder|QueryBuilder
-     *
-     * @param  TQuery  $query
-     * @return TQuery
-     */
-    public static function orWhereMatches(EloquentBuilder|QueryBuilder $query, string $column, string $pattern, ?string $escape = null): EloquentBuilder|QueryBuilder
-    {
-        return self::whereMatches($query, $column, $pattern, $escape, 'or');
-    }
+    /** Not a backslash: MySQL and SQLite read one inside `ESCAPE` differently, while `!` is one character to all three engines. */
+    private const ESCAPE = '!';
 
     /**
      * @template TQuery of EloquentBuilder|QueryBuilder
@@ -85,9 +51,45 @@ final class SearchCollation
      */
     public static function whereContains(EloquentBuilder|QueryBuilder $query, string $column, string $term, string $boolean = 'and'): EloquentBuilder|QueryBuilder
     {
-        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term);
+        $escaped = str_replace([self::ESCAPE, '%', '_'], [self::ESCAPE.self::ESCAPE, self::ESCAPE.'%', self::ESCAPE.'_'], $term);
 
-        return self::whereMatches($query, $column, "%{$escaped}%", '!', $boolean);
+        return self::whereMatches($query, $column, "%{$escaped}%", $boolean);
+    }
+
+    /**
+     * @template TQuery of EloquentBuilder|QueryBuilder
+     *
+     * @param  TQuery  $query
+     * @return TQuery
+     */
+    public static function orWhereContains(EloquentBuilder|QueryBuilder $query, string $column, string $term): EloquentBuilder|QueryBuilder
+    {
+        return self::whereContains($query, $column, $term, 'or');
+    }
+
+    /**
+     * Private so that no caller hands a typed term to LIKE with its wildcards live.
+     *
+     * @template TQuery of EloquentBuilder|QueryBuilder
+     *
+     * @param  TQuery  $query
+     * @return TQuery
+     */
+    private static function whereMatches(EloquentBuilder|QueryBuilder $query, string $column, string $pattern, string $boolean): EloquentBuilder|QueryBuilder
+    {
+        $base = self::base($query);
+        $subject = $base->getGrammar()->wrap($column);
+        $collation = self::collation($base->getConnection());
+
+        [$subject, $term] = match (true) {
+            $base->getConnection()->getDriverName() === 'sqlite' => [$subject, '?'],
+            // MariaDB lowers by the operand's collation, and the binary one's case table predates the UCA one.
+            $base->getConnection()->getDriverName() === 'mariadb' && $collation !== null => ["LOWER({$subject} COLLATE {$collation})", "LOWER(? COLLATE {$collation})"],
+            $collation !== null => ["LOWER({$subject}) COLLATE {$collation}", 'LOWER(?)'],
+            default => ["LOWER({$subject})", 'LOWER(?)'],
+        };
+
+        return $query->whereRaw("{$subject} LIKE {$term} ESCAPE ?", [$pattern, self::ESCAPE], $boolean);
     }
 
     private static function collation(Connection $connection): ?string

@@ -355,7 +355,7 @@ Route::middleware(['auth.session', EnsureFeatureEnabled::class.':diary', EnsureW
 
     Route::prefix('diary')->controller(DiaryController::class)->group(function () use ($memberMissing) {
         // Literal-prefix routes must precede the {diary} wildcard.
-        Route::get('/search', 'search')->name('diary.search');
+        Route::get('/search', 'search')->middleware('throttle:search')->name('diary.search');
         Route::get('/list', 'list')->name('diary.list');
         Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->missing($memberMissing)->name('diary.list_member');
         // Calendar archive: same listMember view narrowed to a month or day.
@@ -709,7 +709,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->name('member.profile.mine_compat');
 
     // OpenPNE 3 member/search.
-    Route::get('/member/search', [MemberSearchController::class, 'search'])->name('member.search');
+    Route::get('/member/search', [MemberSearchController::class, 'search'])->middleware('throttle:search')->name('member.search');
 
     // OpenPNE 3 member/editProfile.
     Route::get('/member/edit/profile', [ProfileController::class, 'edit'])->name('member.profile.edit');
@@ -717,7 +717,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // OpenPNE 3 community.
     Route::prefix('groups')->middleware(EnsureFeatureEnabled::class.':group')->controller(GroupController::class)->group(function () {
-        Route::get('/', 'search')->name('group.search');
+        Route::get('/', 'search')->middleware('throttle:search')->name('group.search');
         Route::get('/mine', 'listMine')->name('group.list_mine');
         // Single endpoint for new+edit and create+update (?id= switches), as in OpenPNE 3.
         Route::get('/edit', 'edit')->name('group.edit');
