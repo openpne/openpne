@@ -10,7 +10,8 @@ digit. A release tagged any other way is invisible to them.
 ## The release branch
 
 1. **Cut `release/<version>` from `main`** at the commit the release should contain. `main` moves
-   on; the branch is what gets reviewed and released. One release is in progress at a time.
+   on; the branch is what gets reviewed and released. One release is in progress at a time. The
+   branch takes changes only through pull requests: cutting it again means deleting it first.
 2. **A fix found during review goes to `main` first**, then onto the branch as a copy:
    `git cherry-pick -x <commit on main>`, opened as a pull request against the branch. The
    `(cherry picked from commit …)` line has to survive into the commit that lands. A copy does not
@@ -44,7 +45,8 @@ then copy the fix from `main` onto the renamed branch as well (the checks ask fo
    check then compares the tag and the attached files with what was drafted. If it fails, the
    last error it reports says what to do: delete the release and the tag and draft again, or, when
    GitHub did not answer, run the check again. A failure that reports no such error is not about
-   the release: run the check again.
+   the release: run the check again. The ruleset on `v*` tags refuses their deletion: set its
+   enforcement status to Disabled to delete the tag, then back to Active.
 3. Delete the branch.
 
 ## After publishing
