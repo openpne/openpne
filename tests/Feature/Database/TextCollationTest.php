@@ -111,15 +111,26 @@ class TextCollationTest extends TestCase
         }
     }
 
+    public function test_mariadb_json_columns_keep_their_check(): void
+    {
+        if (DB::connection()->getDriverName() !== 'mariadb') {
+            $this->markTestSkipped('MariaDB only: its JSON is LONGTEXT held to a column check.');
+        }
+
+        $this->assertSame(['home_issue_items.stats', 'openpne4_upgrade_state.metadata', 'passkeys.credential'], $this->mariaDbJsonColumns());
+    }
+
     public function test_every_other_text_column_compares_binary(): void
     {
-        $binary = DB::connection()->getDriverName() === 'mysql' ? 'utf8mb4_0900_bin' : null;
+        $binary = $this->binary();
+        $json = $this->mariaDbJsonColumns();
         $others = [];
 
         foreach ($this->tables() as $table) {
             foreach (Schema::getColumns($table) as $column) {
-                if (in_array($column['type_name'], self::TEXT_TYPES, true) && ! in_array("{$table}.{$column['name']}", self::IDENTIFIERS, true) && $column['collation'] !== $binary) {
-                    $others["{$table}.{$column['name']}"] = $column['collation'];
+                $name = "{$table}.{$column['name']}";
+                if (in_array($column['type_name'], self::TEXT_TYPES, true) && ! in_array($name, [...self::IDENTIFIERS, ...$json], true) && $column['collation'] !== $binary) {
+                    $others[$name] = $column['collation'];
                 }
             }
         }
@@ -127,19 +138,44 @@ class TextCollationTest extends TestCase
         $this->assertSame($binary === null ? [] : ['push_subscriptions.endpoint' => 'ascii_bin'], $others);
     }
 
+    /** Only MariaDB has a uuid type of its own, so only there can this fail, also for a form no migration's text shows, such as foreignIdFor() on a HasUuids model. */
+    public function test_no_column_takes_mariadbs_own_uuid_type(): void
+    {
+        $uuid = [];
+
+        foreach ($this->tables() as $table) {
+            foreach (Schema::getColumns($table) as $column) {
+                if ($column['type_name'] === 'uuid') {
+                    $uuid[] = "{$table}.{$column['name']}";
+                }
+            }
+        }
+
+        $this->assertSame([], $uuid);
+    }
+
     public function test_every_table_defaults_to_the_binary_collation_on_mysql(): void
     {
-        if (DB::connection()->getDriverName() !== 'mysql') {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             $this->markTestSkipped('Only MySQL tables carry a default collation.');
         }
 
-        $this->assertSame([], collect(Schema::getTables(DB::connection()->getDatabaseName()))->where('collation', '!=', 'utf8mb4_0900_bin')->pluck('collation', 'name')->all());
+        $this->assertSame([], collect(Schema::getTables(DB::connection()->getDatabaseName()))->where('collation', '!=', $this->binary())->pluck('collation', 'name')->all());
+    }
+
+    private function binary(): ?string
+    {
+        return match (DB::connection()->getDriverName()) {
+            'mysql' => 'utf8mb4_0900_bin',
+            'mariadb' => 'utf8mb4_nopad_bin',
+            default => null,
+        };
     }
 
     /** @return list<string> */
     private function tables(): array
     {
-        $schema = DB::connection()->getDriverName() === 'mysql' ? DB::connection()->getDatabaseName() : null;
+        $schema = in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true) ? DB::connection()->getDatabaseName() : null;
 
         return Schema::getTableListing($schema, schemaQualified: false);
     }
@@ -147,5 +183,16 @@ class TextCollationTest extends TestCase
     private function collationOf(string $table, string $column): ?string
     {
         return collect(Schema::getColumns($table))->firstWhere('name', $column)['collation'];
+    }
+
+    /** @return list<string> */
+    private function mariaDbJsonColumns(): array
+    {
+        if (DB::connection()->getDriverName() !== 'mariadb') {
+            return [];
+        }
+
+        return collect(DB::select("SELECT TABLE_NAME, CONSTRAINT_NAME FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND LEVEL = 'Column' AND CHECK_CLAUSE = CONCAT('json_valid(`', CONSTRAINT_NAME, '`)')"))
+            ->map(fn (object $check) => "{$check->TABLE_NAME}.{$check->CONSTRAINT_NAME}")->sort()->values()->all();
     }
 }

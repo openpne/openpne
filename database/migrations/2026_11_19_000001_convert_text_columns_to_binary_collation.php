@@ -14,8 +14,11 @@ return new class extends Migration
 {
     public const COLLATION = 'utf8mb4_0900_bin';
 
+    /** MariaDB 10.11 has no utf8mb4_0900_bin; this NO PAD binary collation compares the same (docs/internals/text-comparison.md, "MariaDB"). */
+    public const MARIADB_COLLATION = 'utf8mb4_nopad_bin';
+
     /** What IdentifierCollation named when this was released, written out (like the whitespace check) so a later change to it leaves this migration as it was. */
-    private const IDENTIFIER_COLLATION = ['mysql' => 'utf8mb4_0900_as_ci', 'sqlite' => 'NOCASE'];
+    private const IDENTIFIER_COLLATION = ['mysql' => 'utf8mb4_0900_as_ci', 'mariadb' => 'utf8mb4_uca1400_nopad_as_ci', 'sqlite' => 'NOCASE'];
 
     /** Named rather than discovered: an upgraded site keeps OpenPNE 3's tables, file_bin among them, in the same database. */
     public const TABLES = [
@@ -54,10 +57,11 @@ return new class extends Migration
             return;
         }
 
+        $this->refuseTheOtherEnginesServer();
         $this->refuseValuesTheIdentifierCollationCannotHold();
 
-        if (DB::getDriverName() === 'mysql') {
-            $this->alterMysql(self::IDENTIFIER_COLLATION['mysql']);
+        if ($this->mysqlFamily()) {
+            $this->alterMysql(self::IDENTIFIER_COLLATION[DB::getDriverName()]);
         } else {
             $this->rebuildSqlite(self::IDENTIFIER_COLLATION['sqlite']);
         }
@@ -70,8 +74,10 @@ return new class extends Migration
             return;
         }
 
-        if (DB::getDriverName() === 'mysql') {
-            $this->alterMysql(self::COLLATION);
+        $this->refuseTheOtherEnginesServer();
+
+        if ($this->mysqlFamily()) {
+            $this->alterMysql($this->collation());
         } else {
             $this->rebuildSqlite(null);
         }
@@ -81,11 +87,34 @@ return new class extends Migration
     {
         return match (DB::getDriverName()) {
             'mysql' => DB::connection()->getConfig('collation') === self::COLLATION,
-            // Thrown rather than skipped: a migration that returns is recorded as run, and a converting release would never reach the site.
-            'mariadb' => throw new RuntimeException('This migration does not convert MariaDB yet and changed nothing.'),
+            'mariadb' => DB::connection()->getConfig('collation') === self::MARIADB_COLLATION,
             'sqlite' => true,
             default => false,
         };
+    }
+
+    private function mysqlFamily(): bool
+    {
+        return in_array(DB::getDriverName(), ['mysql', 'mariadb'], true);
+    }
+
+    private function collation(): string
+    {
+        return DB::getDriverName() === 'mariadb' ? self::MARIADB_COLLATION : self::COLLATION;
+    }
+
+    /** A MariaDB that has MySQL's 0900 collations takes a mysql connection, and this would read its information_schema as MySQL's. */
+    private function refuseTheOtherEnginesServer(): void
+    {
+        if (! $this->mysqlFamily()) {
+            return;
+        }
+
+        $mariaDb = str_contains((string) DB::getPdo()->getAttribute(PDO::ATTR_SERVER_VERSION), 'MariaDB');
+
+        if ($mariaDb !== (DB::getDriverName() === 'mariadb')) {
+            throw new RuntimeException('Nothing was converted: the '.DB::getDriverName().' connection reaches a '.($mariaDb ? 'MariaDB server, which takes the mariadb one.' : 'MySQL server, which takes the mysql one.'));
+        }
     }
 
     private function refuseValuesTheIdentifierCollationCannotHold(): void
@@ -139,6 +168,8 @@ return new class extends Migration
     private function alterMysql(string $identifierCollation): void
     {
         $grammar = DB::getQueryGrammar();
+        $collation = $this->collation();
+        $mariaDb = DB::getDriverName() === 'mariadb';
         $tables = collect(DB::select(
             'SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = ? AND TABLE_NAME IN ('.implode(', ', array_fill(0, count(self::TABLES), '?')).') ORDER BY TABLE_NAME',
             ['BASE TABLE', ...self::TABLES],
@@ -147,6 +178,10 @@ return new class extends Migration
             'SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLLATION_NAME, EXTRA, GENERATION_EXPRESSION, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND CHARACTER_SET_NAME = ? AND TABLE_NAME IN ('.implode(', ', array_fill(0, count(self::TABLES), '?')).') ORDER BY TABLE_NAME, ORDINAL_POSITION',
             ['utf8mb4', ...self::TABLES],
         ))->groupBy('TABLE_NAME');
+        $checks = $mariaDb ? collect(DB::select(
+            'SELECT TABLE_NAME, CONSTRAINT_NAME, CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND LEVEL = ?',
+            ['Column'],
+        ))->mapWithKeys(fn (object $check) => ["{$check->TABLE_NAME}.{$check->CONSTRAINT_NAME}" => $check->CHECK_CLAUSE]) : collect();
 
         $statements = [];
 
@@ -154,13 +189,25 @@ return new class extends Migration
             $modify = [];
 
             foreach ($columns->get($table, []) as $column) {
-                $wanted = (self::IDENTIFIERS[$table][0] ?? null) === $column->COLUMN_NAME ? $identifierCollation : self::COLLATION;
+                $check = $checks->get("{$table}.{$column->COLUMN_NAME}");
+
+                // MariaDB's JSON is LONGTEXT held to a column CHECK that MODIFY would drop; MySQL's JSON has no character set and is never listed.
+                if ($check === 'json_valid('.$grammar->wrap($column->COLUMN_NAME).')') {
+                    continue;
+                }
+
+                if ($check !== null) {
+                    throw new RuntimeException("Nothing was converted: {$table}.{$column->COLUMN_NAME} has a check this migration does not copy.");
+                }
+
+                $wanted = (self::IDENTIFIERS[$table][0] ?? null) === $column->COLUMN_NAME ? $identifierCollation : $collation;
 
                 if ($column->COLLATION_NAME === $wanted) {
                     continue;
                 }
 
-                if ($column->EXTRA !== '' || $column->GENERATION_EXPRESSION !== '' || $column->COLUMN_COMMENT !== '') {
+                // MariaDB reports a plain column's GENERATION_EXPRESSION as NULL where MySQL reports ''.
+                if ($column->EXTRA !== '' || ($column->GENERATION_EXPRESSION ?? '') !== '' || $column->COLUMN_COMMENT !== '') {
                     throw new RuntimeException("Nothing was converted: {$table}.{$column->COLUMN_NAME} has an attribute, a generation expression or a comment this migration does not copy.");
                 }
 
@@ -170,24 +217,34 @@ return new class extends Migration
                     $column->COLUMN_TYPE,
                     $wanted,
                     $column->IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL',
-                    $column->COLUMN_DEFAULT === null ? '' : ' DEFAULT '.DB::getPdo()->quote($column->COLUMN_DEFAULT),
+                    $this->default($column->COLUMN_DEFAULT, $mariaDb),
                 );
             }
 
-            if ($modify === [] && $tableCollation === self::COLLATION) {
+            if ($modify === [] && $tableCollation === $collation) {
                 continue;
             }
 
             $statements[] = sprintf(
                 'ALTER TABLE %s %s',
                 $grammar->wrapTable($table),
-                implode(', ', ['DEFAULT CHARACTER SET utf8mb4 COLLATE '.self::COLLATION, ...$modify]),
+                implode(', ', ['DEFAULT CHARACTER SET utf8mb4 COLLATE '.$collation, ...$modify]),
             );
         }
 
         foreach ($statements as $statement) {
             DB::statement($statement);
         }
+    }
+
+    /** MariaDB reports COLUMN_DEFAULT as the SQL literal (quoted, and NULL as the word) where MySQL reports the value itself. */
+    private function default(?string $default, bool $mariaDb): string
+    {
+        if ($default === null || ($mariaDb && $default === 'NULL')) {
+            return '';
+        }
+
+        return ' DEFAULT '.($mariaDb ? $default : DB::getPdo()->quote($default));
     }
 
     /**

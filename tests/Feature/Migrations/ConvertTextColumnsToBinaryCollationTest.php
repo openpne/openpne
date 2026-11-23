@@ -196,7 +196,11 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
 
     public function test_a_mysql_site_made_under_unicode_ci_converts_its_own_tables_and_nothing_else(): void
     {
-        $this->onlyOn('mysql');
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('mysql and mariadb only');
+        }
+        $binary = (string) $this->binary();
+        $identifier = (string) IdentifierCollation::for(DB::connection());
         $this->useCollation('utf8mb4_unicode_ci');
         $this->artisan('migrate:fresh', ['--realpath' => true, '--path' => array_values(array_filter(
             glob(database_path('migrations/*.php')),
@@ -210,43 +214,115 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
             }
             DB::table('file_bin')->insert(['file_id' => File::factory()->create()->getKey(), 'bin' => 'bytes', 'created_at' => now(), 'updated_at' => now()]);
             $this->seedOneOfEach();
+            // MariaDB reports these defaults as SQL literals that the conversion writes back as they are; on MySQL an expression default is DEFAULT_GENERATED, an attribute the conversion refuses.
+            DB::statement("ALTER TABLE profiles ADD COLUMN quoted VARCHAR(16) NOT NULL DEFAULT 'it''s \\\\ x', ADD COLUMN null_word VARCHAR(8) NULL DEFAULT 'NULL', ADD COLUMN sql_null VARCHAR(8) NULL DEFAULT NULL");
+            if (DB::connection()->getDriverName() === 'mariadb') {
+                DB::statement('ALTER TABLE profiles ADD COLUMN expression VARCHAR(36) NULL DEFAULT (uuid())');
+            }
 
             $tables = $this->migration()::TABLES;
             $this->assertSame(['utf8mb4_unicode_ci'], collect(Schema::getTables(DB::connection()->getDatabaseName()))
                 ->whereIn('name', $tables)->pluck('collation')->unique()->values()->all(), 'migrate left the tables in the collation the site chose');
             $definitions = $this->mysqlDefinitions($tables);
+            $checks = $this->checks();
             $indexes = array_map(fn (string $table) => [Schema::getIndexes($table), Schema::getForeignKeys($table)], $tables);
             $rows = $this->rows($tables);
             $untouched = $this->untouched();
 
             $this->assertSame(0, $this->altersRunBy(fn () => $this->migration()->up()), 'a site that chose another collation is not converted');
 
-            $this->useCollation('utf8mb4_0900_bin');
+            $this->useCollation($binary);
             $this->migration()->up();
 
             $this->assertSame($definitions, $this->mysqlDefinitions($tables));
+            $this->assertSame($checks, $this->checks());
             $this->assertSame($indexes, array_map(fn (string $table) => [Schema::getIndexes($table), Schema::getForeignKeys($table)], $tables));
             $this->assertSame($rows, $this->rows($tables));
             $this->assertSame($untouched, $this->untouched());
-            $this->assertSame(
-                ['admin_users.username' => 'utf8mb4_0900_as_ci', 'email_change_requests.new_email' => 'utf8mb4_0900_as_ci',
-                    'members.email' => 'utf8mb4_0900_as_ci', 'password_reset_tokens.email' => 'utf8mb4_0900_as_ci',
-                    'push_subscriptions.endpoint' => 'ascii_bin', 'registration_tokens.email' => 'utf8mb4_0900_as_ci'],
-                $this->mysqlColumnsNotIn($tables, 'utf8mb4_0900_bin'),
-            );
+            $json = DB::connection()->getDriverName() === 'mariadb'
+                ? ['home_issue_items.stats' => 'utf8mb4_bin', 'openpne4_upgrade_state.metadata' => 'utf8mb4_bin', 'passkeys.credential' => 'utf8mb4_bin']
+                : [];
+            $expected = ['admin_users.username' => $identifier, 'email_change_requests.new_email' => $identifier,
+                'members.email' => $identifier, 'password_reset_tokens.email' => $identifier,
+                'push_subscriptions.endpoint' => 'ascii_bin', 'registration_tokens.email' => $identifier, ...$json];
+            ksort($expected);
+            $this->assertSame($expected, $this->mysqlColumnsNotIn($tables, $binary));
             $this->assertSame(0, $this->altersRunBy(fn () => $this->migration()->up()), 'a second run converts nothing');
 
             $this->artisan('migrate');
             $this->assertSame([], collect(DB::select(
                 'SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_COLLATION <> ?',
-                ['utf8mb4_0900_bin'],
+                [$binary],
             ))->pluck('TABLE_COLLATION', 'TABLE_NAME')->except(['file_bin', ...array_keys(self::OP3_TABLES)])->all());
         } finally {
             foreach (array_keys(self::OP3_TABLES) as $table) {
                 DB::statement("DROP TABLE IF EXISTS {$table}");
             }
-            $this->useCollation('utf8mb4_0900_bin');
+            $this->useCollation($binary);
         }
+    }
+
+    public function test_a_column_check_other_than_mariadbs_json_stops_it_even_on_a_column_already_converted(): void
+    {
+        $this->onlyOn('mariadb');
+        $binary = (string) $this->binary();
+        $this->useCollation('utf8mb4_unicode_ci');
+        $this->artisan('migrate:fresh', ['--realpath' => true, '--path' => array_values(array_filter(
+            glob(database_path('migrations/*.php')),
+            fn (string $file) => basename($file) <= self::MIGRATION,
+        ))]);
+
+        try {
+            DB::statement("ALTER TABLE profiles ADD COLUMN probe VARCHAR(8) COLLATE {$binary} NULL CHECK (probe <> '')");
+            $this->useCollation($binary);
+            $definitions = $this->mysqlDefinitions(['profiles']);
+            $stopped = null;
+
+            try {
+                $this->migration()->up();
+            } catch (RuntimeException $e) {
+                $stopped = $e;
+            }
+
+            $this->assertSame('Nothing was converted: profiles.probe has a check this migration does not copy.', $stopped?->getMessage());
+            $this->assertSame($definitions, $this->mysqlDefinitions(['profiles']));
+        } finally {
+            DB::statement('ALTER TABLE profiles DROP COLUMN IF EXISTS probe');
+            $this->useCollation($binary);
+        }
+    }
+
+    /** The other driver borrows this session, since its collation would refuse to connect; without the refusal the conversion runs the other engine's SQL. */
+    public function test_a_connection_of_the_other_engines_driver_stops_it(): void
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('mysql and mariadb only');
+        }
+
+        [$other, $collation, $server] = $driver === 'mariadb' ? ['mysql', 'utf8mb4_0900_bin', 'MariaDB'] : ['mariadb', 'utf8mb4_nopad_bin', 'MySQL'];
+        config(['database.connections.other_engine' => [...DB::connection()->getConfig(), 'name' => 'other_engine', 'driver' => $other, 'collation' => $collation]]);
+        DB::connection('other_engine')->setPdo(DB::connection()->getPdo());
+        $default = config('database.default');
+        $tables = $this->migration()::TABLES;
+        $definitions = $this->mysqlDefinitions($tables);
+        $checks = $this->checks();
+        $stopped = null;
+
+        try {
+            config(['database.default' => 'other_engine']);
+            $this->migration()->up();
+        } catch (RuntimeException $e) {
+            $stopped = $e;
+        } finally {
+            config(['database.default' => $default]);
+            DB::purge('other_engine');
+        }
+
+        $this->assertSame("Nothing was converted: the {$other} connection reaches a {$server} server, which takes the {$driver} one.", $stopped?->getMessage());
+        $this->assertSame($definitions, $this->mysqlDefinitions($tables));
+        $this->assertSame($checks, $this->checks());
     }
 
     private function migration(): Migration
@@ -263,13 +339,18 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
 
     private function binary(): ?string
     {
-        return DB::connection()->getDriverName() === 'mysql' ? 'utf8mb4_0900_bin' : null;
+        return match (DB::connection()->getDriverName()) {
+            'mysql' => 'utf8mb4_0900_bin',
+            'mariadb' => 'utf8mb4_nopad_bin',
+            default => null,
+        };
     }
 
     private function useCollation(string $collation): void
     {
-        config(['database.connections.mysql.collation' => $collation]);
-        DB::purge('mysql');
+        $connection = DB::getDefaultConnection();
+        config(["database.connections.{$connection}.collation" => $collation]);
+        DB::purge($connection);
     }
 
     private function refusal(Migration $migration): string
@@ -364,6 +445,16 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
              ORDER BY TABLE_NAME, ORDINAL_POSITION',
             $tables,
         ));
+    }
+
+    /** @return array<string, string> */
+    private function checks(): array
+    {
+        // MariaDB names a column check after its column, so two tables may share a name; MySQL's view has no TABLE_NAME.
+        $name = DB::connection()->getDriverName() === 'mariadb' ? "CONCAT(TABLE_NAME, '.', CONSTRAINT_NAME)" : 'CONSTRAINT_NAME';
+
+        return collect(DB::select("SELECT {$name} AS name, CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() ORDER BY name"))
+            ->pluck('CHECK_CLAUSE', 'name')->all();
     }
 
     /**
