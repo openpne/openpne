@@ -24,7 +24,7 @@ final class MysqlOptionFile
         // MySQL's own client needs it to sign in to a server without TLS as a caching_sha2_password user; MariaDB's warns at it.
         if (! self::isMariaDb($tool)) {
             $lines[] = 'loose-get-server-public-key=1';
-            // MySQL's mysqldump otherwise reads information_schema.COLUMN_STATISTICS, which a MariaDB server does not have.
+            // Whatever the driver, as the file outlives a first run that could not reach the server: MySQL's mysqldump otherwise reads information_schema.COLUMN_STATISTICS, which a MariaDB server does not have.
             $lines[] = '[mysqldump]';
             $lines[] = 'loose-column-statistics=0';
         }
