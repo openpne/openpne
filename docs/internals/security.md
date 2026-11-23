@@ -595,7 +595,9 @@ now provides — every throttled request logs a `throttle.hit` event (route + me
 limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
 proxy deployments where the per-IP limb should be relaxed or turned off; the read limb counts a
 tip each time it is held open without names still good for it, so behind a shared address it is
-the first to relax. A throttled request
+the first to relax. A guest has no member id, so a guest's search counts the client IP in both
+limbs: behind a shared address the per-member figure (`OPENPNE_THROTTLE_SEARCH`) is the one to
+raise, and without trusted-proxy configuration every guest shares one address. A throttled request
 renders the framework default 429 page.
 
 Authentication and credential-mutation events (login, MFA, password/email change, ban, withdrawal)

@@ -76,9 +76,9 @@ accents and emoji; a name order puts kanji not by reading but in code point orde
 Ideographs block ahead of its extensions (`㐂`, U+3402, after `一`, U+4E00).
 SQLite's `LIKE` folds the case of ASCII letters and nothing else, and `NOCASE` orders the same way.
 
-A search finds the term as typed. `whereContains` escapes `%`, `_` and the escape character itself
-before wrapping the term in `%…%`, and appends `ESCAPE '!'` to each `LIKE` above. The escape is not a
-backslash, which MySQL and MariaDB already treat as an escape inside a `LIKE` pattern.
+A search finds the term as typed. `whereContains` escapes `%`, `_` and the escape character `!`
+before wrapping the term in `%…%`, and appends `ESCAPE '!'` to each `LIKE` above; naming the escape
+also stops MySQL and MariaDB from reading a backslash in the term as their default one.
 
 A name order is a list a reader scans by name: the mention and recipient pickers, the muted talk
 rooms, group categories after `sort_order`, and the admin tables' sorts by a member's, a group's or an

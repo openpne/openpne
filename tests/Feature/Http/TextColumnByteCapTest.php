@@ -45,6 +45,22 @@ class TextColumnByteCapTest extends TestCase
         $this->assertSame(0, DB::table('diary_comments')->count() + DB::table('group_topic_comments')->count() + DB::table('group_event_comments')->count());
     }
 
+    public function test_titles_and_event_details_over_the_text_column_are_rejected(): void
+    {
+        $owner = Member::factory()->create();
+        $this->actingAs($owner)->postJson('/diary/create', ['title' => $this->over(), 'body' => 'b', 'visibility' => '1'])
+            ->assertStatus(422)->assertJsonValidationErrors('title');
+
+        $group = Group::factory()->create();
+        $member = $this->joined($group, GroupRole::Admin);
+        $this->actingAs($member)->postJson(route('group.topics.store', $group), ['name' => $this->over(), 'body' => 'b'])
+            ->assertStatus(422)->assertJsonValidationErrors('name');
+        $this->actingAs($member)->postJson(route('group.events.store', $group), [
+            'name' => $this->over(), 'body' => 'b', 'open_date' => now()->addWeek()->format('Y-m-d'),
+            'area' => $this->over(), 'open_date_comment' => $this->over(),
+        ])->assertStatus(422)->assertJsonValidationErrors(['name', 'area', 'open_date_comment']);
+    }
+
     /** The cap counts bytes: 21,846 three-byte characters pass a character count but not the column. */
     public function test_a_direct_message_over_the_text_column_is_rejected_on_send_and_on_draft_edit(): void
     {

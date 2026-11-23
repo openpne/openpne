@@ -70,6 +70,8 @@ class WriteThrottleBehaviorTest extends TestCase
         $this->get('/diary/search?keyword=a')->assertOk();
         $this->get('/diary/search?keyword=a')->assertOk();
         $this->get('/diary/search?keyword=a')->assertStatus(429);
+
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10'])->get('/diary/search?keyword=a')->assertOk();
     }
 
     public function test_a_member_search_counts_by_member(): void

@@ -10,6 +10,7 @@ use App\Support\SnsSettingKey;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -52,6 +53,28 @@ class SearchInputLimitsTest extends TestCase
             ->assertSessionHas('error');
     }
 
+    public function test_the_modern_diary_archive_keyword_is_capped_too(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $member = Member::factory()->create();
+        $path = '/diary/listMember/'.$member->getKey();
+
+        $this->actingAs($member)->get($path.'?keyword='.str_repeat('a', SearchInput::MAX_LENGTH + 1))
+            ->assertRedirect($path)
+            ->assertSessionHas('error');
+    }
+
+    public function test_the_ai_account_group_browser_is_capped_too(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        $path = route('member.config.ai.show', ['member' => Member::factory()->aiAccount($owner)->create()->getKey()], false);
+
+        $this->actingAs($owner)->get($path.'?keyword='.str_repeat('a', SearchInput::MAX_LENGTH + 1))
+            ->assertRedirect($path)
+            ->assertSessionHas('error');
+    }
+
     public function test_the_classic_screen_shows_the_reason_in_its_error_slot(): void
     {
         config(['openpne.surface_mode' => 'classic_default']);
@@ -81,6 +104,19 @@ class SearchInputLimitsTest extends TestCase
         $this->actingAs(Member::factory()->create())
             ->get('/groups?keyword='.str_repeat('a', SearchInput::MAX_LENGTH + 1))
             ->assertRedirect('/groups');
+    }
+
+    /** The request reaches PHP as plain http, as it does behind a proxy that ends TLS and is not trusted. */
+    public function test_the_way_back_keeps_a_forced_https_scheme(): void
+    {
+        URL::forceScheme('https');
+
+        $location = $this->actingAs(Member::factory()->create())
+            ->get('http://localhost/groups?keyword='.str_repeat('a', SearchInput::MAX_LENGTH + 1))
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $this->assertSame('https://localhost/groups', $location);
     }
 
     public function test_a_json_request_gets_a_422(): void

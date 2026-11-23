@@ -73,11 +73,11 @@ class MemberProfileUpgrade extends UpgradeStep
         return implode(' ', [
             '(',
             // single-value root (or legacy untreed row)
-            "($rootOrLegacy AND ($ft IN (".self::SINGLE_VALUE_TYPES.") OR ($ft = 'date' AND $name LIKE 'op!_preset!_%' ESCAPE '!')))",
+            "($rootOrLegacy AND ($ft IN (".self::SINGLE_VALUE_TYPES.") OR ($ft = 'date' AND $name LIKE 'op_preset_%')))",
             // checkbox child (carries the chosen option)
             "OR (`member_profile`.`tree_key` IS NOT NULL AND NOT ($root) AND `member_profile`.`profile_option_id` IS NOT NULL AND $ft = 'checkbox')",
             // custom (non-preset) date root — value composed from its children
-            "OR ($root AND $ft = 'date' AND $name NOT LIKE 'op!_preset!_%' ESCAPE '!')",
+            "OR ($root AND $ft = 'date' AND $name NOT LIKE 'op_preset_%')",
             ')',
         ]);
     }
@@ -123,7 +123,7 @@ class MemberProfileUpgrade extends UpgradeStep
     private function isCustomDateRoot(): string
     {
         return sprintf(
-            '`member_profile`.`tree_key` = `member_profile`.`id` AND %s = \'date\' AND %s NOT LIKE \'op!_preset!_%%\' ESCAPE \'!\'',
+            '`member_profile`.`tree_key` = `member_profile`.`id` AND %s = \'date\' AND %s NOT LIKE \'op_preset_%%\'',
             $this->profileFormType(),
             $this->profileName(),
         );

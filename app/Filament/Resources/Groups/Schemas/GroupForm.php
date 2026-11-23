@@ -6,6 +6,7 @@ use App\Features\Group\JoinPolicy;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\GroupCategory;
+use App\Rules\MaxBytes;
 use BackedEnum;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -28,6 +29,7 @@ class GroupForm
 
                 Textarea::make('description')
                     ->label(__('Description'))
+                    ->rule(new MaxBytes(65535))
                     ->rows(4),
 
                 // Categories are a flat master in OpenPNE 4 (no parent/child), so every category is

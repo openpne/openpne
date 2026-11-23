@@ -12,7 +12,6 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 final class SearchCollation
 {
-    /** Not a backslash: MySQL and SQLite read one inside `ESCAPE` differently, while `!` is one character to all three engines. */
     private const ESCAPE = '!';
 
     /**

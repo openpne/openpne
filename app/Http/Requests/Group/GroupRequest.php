@@ -20,7 +20,7 @@ class GroupRequest extends FormRequest
 {
     // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated value
     // is locked out of re-editing.
-    private const BODY_MAX_BYTES = 65535;
+    private const TEXT_MAX_BYTES = 65535;
 
     /** @return array<string, mixed> */
     public function rules(): array
@@ -31,7 +31,7 @@ class GroupRequest extends FormRequest
         return [
             // OpenPNE 3 community.name is varchar(64) UNIQUE.
             'name' => ['required', 'string', 'max:64', Rule::unique('groups', 'name')->ignore($id)],
-            'description' => ['nullable', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
+            'description' => ['nullable', 'string', new MaxBytes(self::TEXT_MAX_BYTES)],
             // Enum fields travel as slugs (the enums' own rule: never the raw int) and are
             // REQUIRED: an absent-means-default here would let a partial payload silently reopen
             // a group that was members-only — both forms always submit all three.

@@ -238,7 +238,7 @@ return [
         // it more often than they react.
         'reaction_read' => (int) env('OPENPNE_THROTTLE_REACTION_READ', 120),
         'reaction_read_ip' => (int) env('OPENPNE_THROTTLE_REACTION_READ_IP', 240),
-        // A search reads a whole table per request, so it takes a post's cap rather than the pickers' looser one.
+        // Each search reads a whole table.
         'search' => (int) env('OPENPNE_THROTTLE_SEARCH', 30),
         'search_ip' => (int) env('OPENPNE_THROTTLE_SEARCH_IP', 60),
         // The MCP endpoint, in two layers that answer different questions: `mcp` is what one token

@@ -13,7 +13,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class ComposeDirectMessageRequest extends FormRequest
 {
     // Bytes, not characters, equal to the TEXT column MySQL enforces at insert.
-    private const BODY_MAX_BYTES = 65535;
+    private const TEXT_MAX_BYTES = 65535;
 
     public function authorize(): bool
     {
@@ -35,8 +35,8 @@ class ComposeDirectMessageRequest extends FormRequest
     {
         return [
             'to' => ['required', 'integer', 'exists:members,id'],
-            'subject' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
-            'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
+            'subject' => ['required', 'string', new MaxBytes(self::TEXT_MAX_BYTES)],
+            'body' => ['required', 'string', new MaxBytes(self::TEXT_MAX_BYTES)],
             // A reply link must point at a message the viewer is a party to, not just any message id,
             // so a crafted parent_id/thread_id can never reference a stranger's message.
             'parent_id' => ['nullable', 'integer', $this->partyToMessage()],

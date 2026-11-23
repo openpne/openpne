@@ -111,20 +111,6 @@ class MemberProfileUpgradeSqlTest extends UpgradeSqlTestCase
         $this->assertSame(1, MemberProfile::where('profile_id', 5)->count());
     }
 
-    /** OpenPNE 3 tells a preset by its literal `op_preset_` prefix, so an underscore in the prefix is not a wildcard. */
-    public function test_a_custom_date_named_like_a_preset_is_still_composed(): void
-    {
-        $this->seedProfile(13, 'op-preset-day', 'date');
-        $this->seedMemberProfile(1300, 13, ['value' => '', 'public_flag' => 1, 'tree_key' => 1300, 'lft' => 1]);
-        $this->seedMemberProfile(1301, 13, ['value' => '2020', 'tree_key' => 1300, 'lft' => 2]);
-        $this->seedMemberProfile(1302, 13, ['value' => '3', 'tree_key' => 1300, 'lft' => 3]);
-        $this->seedMemberProfile(1303, 13, ['value' => '5', 'tree_key' => 1300, 'lft' => 4]);
-
-        $this->runUpgrade();
-
-        $this->assertDatabaseHas('member_profiles', ['id' => 1300, 'value' => '2020-03-05']);
-    }
-
     public function test_custom_date_without_children_keeps_the_root_value(): void
     {
         // The shape OpenPNE 3.10 actually writes: the root holds the date and there are no

@@ -20,6 +20,8 @@ use Illuminate\Validation\Rule;
  */
 class StoreEventRequest extends FormRequest
 {
+    // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated value
+    // is locked out of re-editing.
     private const BODY_MAX_BYTES = 65535;
 
     public function authorize(): bool
@@ -58,13 +60,11 @@ class StoreEventRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string'],
-            // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated
-            // value is locked out of re-editing.
+            'name' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
-            'area' => ['required', 'string'],
+            'area' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'open_date' => $this->openDateRules(),
-            'open_date_comment' => ['string'],
+            'open_date_comment' => ['string', new MaxBytes(self::BODY_MAX_BYTES)],
             // Date-only (no time): OpenPNE 3's form is a date widget, and isClosed/isExpired add a
             // whole day, so a time component would shift the join window.
             'application_deadline' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],

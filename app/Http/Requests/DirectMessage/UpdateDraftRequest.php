@@ -16,7 +16,7 @@ class UpdateDraftRequest extends FormRequest
 {
     // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated value
     // is locked out of re-editing.
-    private const BODY_MAX_BYTES = 65535;
+    private const TEXT_MAX_BYTES = 65535;
 
     public function authorize(): bool
     {
@@ -45,8 +45,8 @@ class UpdateDraftRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
-            'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
+            'subject' => ['required', 'string', new MaxBytes(self::TEXT_MAX_BYTES)],
+            'body' => ['required', 'string', new MaxBytes(self::TEXT_MAX_BYTES)],
             'remove_images' => ['array'],
             'remove_images.*' => ['integer'],
             ...PostImageRules::rules(),

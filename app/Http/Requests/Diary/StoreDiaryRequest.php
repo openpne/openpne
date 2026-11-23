@@ -31,7 +31,7 @@ class StoreDiaryRequest extends FormRequest
     protected function textRules(): array
     {
         return [
-            'title' => ['required', 'string'],
+            'title' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'visibility' => ['required', DiaryVisibility::rule($this->currentVisibility())],
             // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
