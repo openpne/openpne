@@ -85,19 +85,25 @@ class InstallCommandTest extends TestCase
         $this->assertSame([], Schema::connection('install_empty')->getTableListing());
     }
 
-    public function test_the_driver_weighed_is_the_one_db_connection_names_as_setup_and_check_read_it(): void
+    /** @return array<string, array{string, string}> */
+    public static function urlOverrides(): array
+    {
+        return [
+            'DB_CONNECTION is the server\'s, DB_URL is not' => ['mariadb', 'DB_CONNECTION=mariadb in %s matches it, but DB_URL there names the sqlite driver, which overrides DB_CONNECTION. Begin DB_URL with mariadb://'],
+            'neither is the server\'s' => ['mysql', 'Set DB_CONNECTION=mariadb in %s, then'],
+        ];
+    }
+
+    #[DataProvider('urlOverrides')]
+    public function test_both_the_driver_db_connection_names_and_the_one_db_url_sets_are_weighed(string $configured, string $said): void
     {
         config([
-            'database.connections.install_url' => [...config('database.connections.sqlite'), 'driver' => 'mariadb', 'url' => 'sqlite:///:memory:'],
+            'database.connections.install_url' => [...config('database.connections.sqlite'), 'driver' => $configured, 'url' => 'sqlite:///:memory:'],
             'database.default' => 'install_url',
         ]);
         $this->fakeDatabaseServer('11.4.13-MariaDB-ubu2404');
 
-        try {
-            $this->artisan('openpne:install')->assertSuccessful();
-        } finally {
-            DB::purge('install_url');
-        }
+        $this->artisan('openpne:install')->expectsOutputToContain(sprintf($said, $this->app->environmentFilePath()))->assertFailed();
     }
 
     public function test_a_refusal_is_in_the_shells_language_else_the_sites(): void

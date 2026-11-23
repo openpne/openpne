@@ -475,9 +475,10 @@ session that names no collation.
   stops it before `openpne:install`.
 - Check fails the site on either, even where the connection works.
 - Install stops on either before it migrates, with setup's message in the shell's language, else the
-  site's. It reads the server through a session that names no database, as `migrate` creates a
-  database that is missing; where it cannot read the server, it leaves the failure to `migrate` to
-  report.
+  site's, and also on a `DB_URL` whose scheme sets a driver other than the server's, which overrides
+  `DB_CONNECTION`'s and which setup and check do not weigh. It reads the server through a session
+  that names no database, as `migrate` creates a database that is missing; where it cannot read the
+  server, it leaves the failure to `migrate` to report.
 - Copy-database refuses the `mariadb` driver and a MariaDB server on either side before writing
   anything.
 

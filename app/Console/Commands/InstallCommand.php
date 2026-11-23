@@ -23,11 +23,15 @@ class InstallCommand extends Command
         $connection = DB::connection();
         $server = $this->server($servers, $connection->getConfig());
         if ($server?->supported() === false) {
-            return $this->refuse('db_mariadb', ['server' => $server->name(), 'path' => $this->laravel->environmentFilePath(), 'minimum' => DatabaseServer::MARIADB_MINIMUM]);
+            return $this->refuse('setup.db_mariadb', ['server' => $server->name(), 'path' => $this->laravel->environmentFilePath(), 'minimum' => DatabaseServer::MARIADB_MINIMUM]);
         }
-        // The driver DB_CONNECTION names, as setup and check read it, which a DB_URL scheme does not override.
+        // The driver DB_CONNECTION names, as setup and check read it.
         if ($server !== null && $server->driver() !== config('database.connections.'.$connection->getName().'.driver')) {
-            return $this->refuse('db_driver', ['server' => $server->name(), 'driver' => $server->driver(), 'path' => $this->laravel->environmentFilePath()]);
+            return $this->refuse('setup.db_driver', ['server' => $server->name(), 'driver' => $server->driver(), 'path' => $this->laravel->environmentFilePath()]);
+        }
+        // The driver migrate runs on, which a DB_URL scheme sets over DB_CONNECTION's.
+        if ($server !== null && $server->driver() !== $connection->getDriverName()) {
+            return $this->refuse('install.db_url', ['server' => $server->name(), 'live' => $connection->getDriverName(), 'driver' => $server->driver(), 'path' => $this->laravel->environmentFilePath()]);
         }
 
         // Both return FAILURE rather than throwing when refused, so each exit code is checked.
@@ -45,7 +49,7 @@ class InstallCommand extends Command
 
     /**
      * Asked through a session naming no database, as migrate creates a database that is missing (docs/internals/runtime.md, "Database server").
-     * Null where the probe fails, leaving the failure to migrate to report.
+     * Null for a connection other than MySQL or MariaDB, or where the probe fails, leaving the failure to migrate to report.
      *
      * @param  array<string, mixed>  $config
      */
@@ -65,7 +69,7 @@ class InstallCommand extends Command
     private function refuse(string $key, array $replace): int
     {
         $locale = CheckCommand::shellLocale() ?? (config('app.locale') === 'ja' ? 'ja' : 'en');
-        $this->error(OutputFormatter::escape(CheckCommand::translate('setup.'.$key, $replace, $locale)));
+        $this->error(OutputFormatter::escape(CheckCommand::translate($key, $replace, $locale)));
 
         return self::FAILURE;
     }
