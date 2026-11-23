@@ -62,7 +62,7 @@ class StoreTopicRequest extends FormRequest
     protected function textRules(): array
     {
         return [
-            'name' => ['required', 'string'],
+            'name' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
             'format' => ['sometimes', Rule::in([BodyFormat::Plain->value, BodyFormat::Markdown->value])],

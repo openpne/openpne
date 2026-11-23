@@ -90,16 +90,6 @@ class SearchCollationTest extends TestCase
         $this->assertSame($matches, $this->found($stored, $term));
     }
 
-    public function test_an_escape_character_neutralizes_a_wildcard(): void
-    {
-        $percent = Member::factory()->create(['name' => '100%']);
-        Member::factory()->create(['name' => '1000']);
-
-        $found = SearchCollation::whereMatches(Member::query(), 'name', '%0!%%', '!')->pluck('id')->all();
-
-        $this->assertSame([$percent->getKey()], $found);
-    }
-
     public function test_a_typed_term_takes_its_wildcards_literally(): void
     {
         $percent = Member::factory()->create(['name' => '100%_!']);
@@ -109,6 +99,28 @@ class SearchCollationTest extends TestCase
         $found = SearchCollation::whereContains(Member::query(), 'name', '0%_!')->pluck('id')->all();
 
         $this->assertSame([$percent->getKey()], $found);
+    }
+
+    /** MySQL and MariaDB read a backslash in a LIKE pattern as their default escape unless the statement names another. */
+    public function test_a_backslash_in_a_term_is_an_ordinary_character(): void
+    {
+        $backslash = Member::factory()->create(['name' => 'a\\%b']);
+        Member::factory()->create(['name' => 'a%b']);
+        Member::factory()->create(['name' => 'a\\xb']);
+
+        $this->assertSame([$backslash->getKey()], SearchCollation::whereContains(Member::query(), 'name', 'a\\%')->pluck('id')->all());
+        $this->assertCount(2, SearchCollation::whereContains(Member::query(), 'name', '\\')->get());
+    }
+
+    public function test_the_or_form_widens_the_match(): void
+    {
+        $percent = Member::factory()->create(['name' => '100%']);
+        $plain = Member::factory()->create(['name' => 'tanaka']);
+        Member::factory()->create(['name' => '1000']);
+
+        $found = SearchCollation::orWhereContains(SearchCollation::whereContains(Member::query(), 'name', '0%'), 'name', 'tanaka')->pluck('id')->sort()->values()->all();
+
+        $this->assertSame([$percent->getKey(), $plain->getKey()], $found);
     }
 
     public function test_names_order_ignoring_ascii_case_on_both_engines(): void
@@ -164,7 +176,7 @@ class SearchCollationTest extends TestCase
     {
         $member = Member::factory()->create(['name' => $stored]);
 
-        return SearchCollation::whereMatches(Member::query(), 'name', '%'.$term.'%')->whereKey($member->getKey())->exists();
+        return SearchCollation::whereContains(Member::query(), 'name', $term)->whereKey($member->getKey())->exists();
     }
 
     /** @return list<string> */

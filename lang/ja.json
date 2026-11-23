@@ -1304,6 +1304,8 @@
     "Search members": "メンバー検索",
     "Search Results": "検索結果",
     "Search results for :keyword": "「:keyword」の検索結果",
+    "Search with up to :max characters.": "検索できるのは :max 文字までです。",
+    "Search with up to :max keywords.": "検索できるキーワードは :max 個までです。",
     "Security": "セキュリティ",
     "See all %activity% posts": "すべての%activity%投稿を見る",
     "See earlier comments": "以前のコメントを見る",

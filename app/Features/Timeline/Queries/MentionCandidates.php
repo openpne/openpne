@@ -26,26 +26,20 @@ class MentionCandidates
     public const MAX_NAME = 139;
 
     /**
-     * The LIKE escape character. Not a backslash: MySQL and SQLite read a backslash inside the
-     * ESCAPE literal differently, while `!` is one character to both.
-     */
-    private const ESCAPE = '!';
-
-    /**
     @return Collection<int, Member> */
     public function __invoke(Member $viewer, string $q): Collection
     {
-        $pattern = '%'.$this->escapeLike(trim($q)).'%';
+        $term = trim($q);
 
-        $friends = $this->friends($viewer, $pattern);
+        $friends = $this->friends($viewer, $term);
 
         return $friends->concat(
-            $this->others($viewer, $pattern, $friends->modelKeys(), self::LIMIT - $friends->count())
+            $this->others($viewer, $term, $friends->modelKeys(), self::LIMIT - $friends->count())
         );
     }
 
     /** @return Collection<int, Member> */
-    private function friends(Member $viewer, string $pattern): Collection
+    private function friends(Member $viewer, string $term): Collection
     {
         // Ranking friends first is a friend lens, so it goes with the unit; the all-member tier below
         // answers the same question without it (docs/internals/feature-toggles.md).
@@ -54,7 +48,7 @@ class MentionCandidates
         }
 
         $friends = $viewer->friendships();
-        $this->constrain($friends->getQuery(), $viewer, $pattern);
+        $this->constrain($friends->getQuery(), $viewer, $term);
 
         return $friends->limit(self::LIMIT)->get();
     }
@@ -66,14 +60,14 @@ class MentionCandidates
      * @param  list<int>  $exclude
      * @return Collection<int, Member>
      */
-    private function others(Member $viewer, string $pattern, array $exclude, int $limit): Collection
+    private function others(Member $viewer, string $term, array $exclude, int $limit): Collection
     {
         if ($limit <= 0) {
             return Collection::empty();
         }
 
         $query = Member::query()->whereNotIn('members.id', $exclude);
-        $this->constrain($query, $viewer, $pattern);
+        $this->constrain($query, $viewer, $term);
 
         return $query->limit($limit)->get();
     }
@@ -85,7 +79,7 @@ class MentionCandidates
      *
      * @param  Builder<Member>  $query
      */
-    private function constrain(Builder $query, Member $viewer, string $pattern): void
+    private function constrain(Builder $query, Member $viewer, string $term): void
     {
         // Code points, to match the body cap the name must fit into — sqlite's LENGTH counts them;
         // MySQL's counts bytes and needs CHAR_LENGTH.
@@ -96,17 +90,11 @@ class MentionCandidates
             ->with('avatar.file')
             ->whereKeyNot($viewer->getKey())
             ->where('members.is_login_rejected', false)
-            ->tap(fn ($q) => SearchCollation::whereMatches($q, 'members.name', $pattern, self::ESCAPE))
+            ->tap(fn ($q) => SearchCollation::whereContains($q, 'members.name', $term))
             ->whereRaw("{$length}(members.name) <= ?", [self::MAX_NAME])
             ->tap(fn ($q) => SearchCollation::orderBy($q, 'members.name'))
             ->orderBy('members.id');
 
         BlockLookup::excludeBlockedBetween($query, $viewer, 'members.id');
-    }
-
-    /** Neutralize the LIKE wildcards in the term: typing `%` looks for a member named `100%`, not for everyone. */
-    private function escapeLike(string $term): string
-    {
-        return str_replace([self::ESCAPE, '%', '_'], [self::ESCAPE.self::ESCAPE, self::ESCAPE.'%', self::ESCAPE.'_'], $term);
     }
 }

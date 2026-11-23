@@ -242,4 +242,8 @@ return [
         'env_quote_mix' => 'A value with " and also \\ or \' does not read back from .env as typed.',
         'env_quote_equals' => 'A value whose one " comes right after = does not read back from .env as typed.',
     ],
+
+    'install' => [
+        'db_url' => 'The database server is :server. DB_CONNECTION=:driver in :path matches it, but DB_URL there names the :live driver, which overrides DB_CONNECTION. Begin DB_URL with :driver://, then run this command again.',
+    ],
 ];

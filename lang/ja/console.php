@@ -242,4 +242,8 @@ return [
         'env_quote_mix' => '" と、\\ か \' の両方を含む値は、.env から打ったとおりに読み戻せません。',
         'env_quote_equals' => '" が 1 つだけで、それが = のすぐ後にある値は、.env から打ったとおりに読み戻せません。',
     ],
+
+    'install' => [
+        'db_url' => 'データベースのサーバは :server です。:path の DB_CONNECTION=:driver は合っていますが、同じファイルの DB_URL は :live で接続する指定で、DB_CONNECTION より優先されます。DB_URL を :driver:// で始めてから、もう一度このコマンドを打ってください。',
+    ],
 ];

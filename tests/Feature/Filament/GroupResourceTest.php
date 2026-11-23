@@ -85,6 +85,22 @@ class GroupResourceTest extends TestCase
         $this->assertSame(TopicPostAuthority::AdminsOnly, $group->topic_post_authority);
     }
 
+    public function test_a_description_is_capped_at_the_text_column(): void
+    {
+        $group = Group::factory()->create();
+
+        Livewire::test(EditGroup::class, ['record' => $group->getKey()])
+            ->fillForm(['description' => str_repeat('a', 65536)])
+            ->call('save')
+            ->assertHasFormErrors(['description']);
+
+        Livewire::test(EditGroup::class, ['record' => $group->getKey()])
+            ->fillForm(['description' => str_repeat('a', 65535)])
+            ->call('save')
+            ->assertHasNoFormErrors();
+        $this->assertSame(65535, strlen((string) $group->fresh()->description));
+    }
+
     public function test_delete_purges_community_and_all_nested_image_files(): void
     {
         $group = Group::factory()->create();

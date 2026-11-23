@@ -562,8 +562,8 @@ window.
 ## Rate limits on member requests
 
 Content-posting and mail-triggering member writes, the keystroke-driven endpoints a compose form
-calls, and the reactor list, the one read a pointer or a keyboard fires without navigating, carry
-named per-minute limiters
+calls, the reactor list, the one read a pointer or a keyboard fires without navigating, and the
+search screens, which scan a table per request, carry named per-minute limiters
 ([`AppServiceProvider`](../../app/Providers/AppServiceProvider.php)), attached per route in
 `routes/web.php` and pinned by `WriteThrottleRoutesTest`, which also sweeps the route inventory so
 a route carrying one of these limiters cannot go unlisted. Each has two limbs: a per-member cap
@@ -579,6 +579,7 @@ a route carrying one of these limiters cannot go unlisted. Each has two limbs: a
 | `group-join` | 15 / 40 | member id / client IP | group join, member approve, member decline, AI account group join |
 | `reaction` | 60 / 120 | member id / client IP | reaction add, remove (group talk, timeline, diary, group boards) |
 | `reaction-read` | 120 / 240 | member id / client IP | reactor list (who reacted) on the same four surfaces; read once a chip's tip has stayed open, and each answer lists members with avatars |
+| `search` | 30 / 60 | member id, a guest's client IP / client IP | diary, member and group search ([text comparison](text-comparison.md#search-limits)) |
 
 The MCP `send-direct-message` tool is not a route, so it counts its sends itself: the
 `direct-message-send` per-member figure, in a bucket of its own and keyed by member
@@ -594,8 +595,10 @@ now provides — every throttled request logs a `throttle.hit` event (route + me
 limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
 proxy deployments where the per-IP limb should be relaxed or turned off; the read limb counts a
 tip each time it is held open without names still good for it, so behind a shared address it is
-the first to relax. A throttled request
-renders the framework default 429 page.
+the first to relax. A guest has no member id, so a guest's search counts the client IP in both
+limbs and stops at the lower of `OPENPNE_THROTTLE_SEARCH` and `OPENPNE_THROTTLE_SEARCH_IP`: behind
+a shared address both are raised, and without trusted-proxy configuration every guest shares one
+address. A throttled request renders the framework default 429 page.
 
 Authentication and credential-mutation events (login, MFA, password/email change, ban, withdrawal)
 are recorded on a dedicated `security` log channel — the event vocabulary, PII/injection contract,

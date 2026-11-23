@@ -7,6 +7,8 @@ use App\Models\Member;
 use App\Models\Profile;
 use App\Services\PresetProfileService;
 use App\Support\Database\SearchCollation;
+use App\Support\SearchInput;
+use App\Support\SearchInputRejected;
 use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -64,13 +66,17 @@ class SearchMembers
      * @param  array<int|string, mixed>  $monthDayRanges  birthday profile id => [from_month, from_day, to_month, to_day]
      * @param  array{min?: mixed, max?: mixed}|null  $ageRange  derived age min/max (gated by AgeVisibility, not the birthday field)
      * @return LengthAwarePaginator<int, Member>
+     *
+     * @throws SearchInputRejected
      */
     public function __invoke(Member $viewer, string $name, array $profileFilters, array $dateRanges, array $monthDayRanges = [], ?array $ageRange = null, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
         $query = Member::query()->with('avatar.file');
 
-        if (trim($name) !== '') {
-            SearchCollation::whereMatches($query, 'name', '%'.trim($name).'%');
+        $name = trim($name);
+        SearchInput::ensureLength($name);
+        if ($name !== '') {
+            SearchCollation::whereContains($query, 'name', $name);
         }
 
         $birthdayName = $this->birthdayProfileName();
@@ -118,8 +124,9 @@ class SearchMembers
             case 'input':
             case 'textarea':
                 $text = is_string($value) ? trim($value) : '';
+                SearchInput::ensureLength($text);
 
-                return $text === '' ? null : fn ($q) => SearchCollation::whereMatches($q, 'member_profiles.value', '%'.$text.'%');
+                return $text === '' ? null : fn ($q) => SearchCollation::whereContains($q, 'member_profiles.value', $text);
 
             case 'select':
             case 'radio':
