@@ -292,7 +292,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         }
     }
 
-    /** The other driver borrows this session, since its collation would refuse to connect; without the refusal the conversion reads one engine's information_schema as the other's. */
+    /** The other driver borrows this session, since its collation would refuse to connect; without the refusal the conversion runs the other engine's SQL. */
     public function test_a_connection_of_the_other_engines_driver_stops_it(): void
     {
         $driver = DB::connection()->getDriverName();
