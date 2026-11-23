@@ -110,11 +110,11 @@ php artisan openpne:setup
 ```
 
 It asks for the language of its questions, then says what the host lacks, if anything, and stops
-there until it is put right. Then it asks for the site's address (`https://` and the domain), the site's
-name, the time zone, the database, mail (later, or the host's SMTP server) and the background work:
-on a shared host, keep the answer it offers, that nothing can be kept running. It writes `.env`,
-makes `~/openpne/openpne-data/` beside the site, for the SQLite database and the backups, and asks
-for the first administrator's user name and password.
+there until it is put right. Then it asks for the site's address (`https://` and the domain), the
+site's name, the time zone, the database, mail (later, or the host's SMTP server) and the background
+work: on a shared host, keep the answer it offers, that nothing can be kept running. It writes
+`.env`, makes `~/openpne/openpne-data/` beside the site, for the SQLite database and the backups,
+and asks for the first administrator's user name and password.
 
 Then it shows what to set in the control panel, and waits:
 
@@ -126,17 +126,17 @@ Then it shows what to set in the control panel, and waits:
 A change there can take tens of minutes to show. Setup can be stopped while you wait: the same two
 commands, run again, go on from where it stopped. Where it says that a proxy in front adds headers,
 [installing.md](installing.md#5-https-and-a-proxy-in-front) says how to tell whether the site needs
-`TRUSTED_PROXIES`; answering "Later" leaves the site working. Setup ends with a registration link for
-the first member, to open in a browser, a line that backs up the database, and a line for cron. Keep
-the last two.
+`TRUSTED_PROXIES`; answering "Later" leaves the site working. Setup ends with a registration link
+for the first member, to open in a browser, a line that backs up the database, and a line for cron.
+Keep the last two.
 
 ## 4. After setup
 
-- **Back up** with the line setup printed, as it printed it. It writes `openpne-data/backup.sqlite`, or
-  `backup.sql` for MySQL, in place of the last copy. Where the host has cron, run it from there
-  once a day as well: `0 4 * * *` in front of the line is 04:00 by the host's clock. A copy on the host goes with the
-  host: from time to time, download it and `site/.env`, which holds the key the site encrypts with,
-  to a machine of your own.
+- **Back up** with the line setup printed, as it printed it. It writes `openpne-data/backup.sqlite`,
+  or `backup.sql` for MySQL, in place of the last copy. Where the host has cron, run it from there
+  once a day as well: `0 4 * * *` in front of the line is 04:00 by the host's clock. A copy on the
+  host goes with the host: from time to time, download it and `site/.env`, which holds the key the
+  site encrypts with, to a machine of your own.
 - **Cron** is optional: setup's line, registered as it printed it, runs the scheduler every five
   minutes, and [installing.md](installing.md#the-scheduler) says what a site without it does
   differently. Where the control panel takes a cron job's time and its command in separate fields,
@@ -151,8 +151,8 @@ the last two.
   that shows `~/openpne`, so that it checks nothing can be read through it:
   `php artisan openpne:check --parent-url=https://www.example.net/openpne`.
 
-Lost the two lines? `php artisan openpne:setup` on an installed site prints them again once its check
-from the web passes; answer No when it offers a link for a first member.
+Lost the two lines? `php artisan openpne:setup` on an installed site prints them again once its
+check from the web passes; answer No when it offers a link for a first member.
 
 ## Updating
 
@@ -273,7 +273,8 @@ cd site
 
 For MySQL or MariaDB, remove every table from the site's database in the host's database tool first,
 with its foreign key checks off, or again until none is left: the copy puts back only the tables it
-holds, and one the failed update made would stop the next attempt. Then, with `mariadb` for `mysql` where the backup line runs `mariadb-dump`:
+holds, and one the failed update made would stop the next attempt. Then, with `mariadb` for `mysql`
+where the backup line runs `mariadb-dump`:
 
 ```
 cd ~/openpne
@@ -283,7 +284,7 @@ cd site
 mysql --defaults-extra-file=../openpne-data/mysql-backup.cnf DATABASE < ../openpne-data/before-4.0.0-alpha.N.sql
 ```
 
-Where no line printed an error, open the site:
+For either database, where no line printed an error, open the site:
 
 ```
 php artisan up
