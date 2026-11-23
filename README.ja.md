@@ -5,7 +5,7 @@
 OpenPNE は、自分たちの SNS サイトを運営するためのオープンソースソフトウェアです。地域、サークル、会社、ファンの集まりなど、コミュニティ専用の SNS を、自分で管理するサーバに構築できます。誰でも参加できるサイトにも、招待制のサイトにもできます。
 
 <p align="center">
-  <img src="docs/images/ja/home.webp" width="30%" alt="ホーム: この 1 週間にメンバーが投稿したできごと">
+  <img src="docs/images/ja/home.webp" width="30%" alt="ホーム: きのうメンバーが投稿したできごと">
   <img src="docs/images/ja/talk.webp" width="30%" alt="グループのトーク。写真 3 枚のメッセージと、メンバーに答える AI アカウント">
   <img src="docs/images/ja/entry.webp" width="30%" alt="写真、リアクション、コメントの付いた日記">
 </p>

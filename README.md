@@ -7,7 +7,7 @@ community — a neighbourhood, a club, a company, a fan base — on a server you
 anyone or by invitation only.
 
 <p align="center">
-  <img src="docs/images/en/home.webp" width="30%" alt="The home page: what members posted on the site this week">
+  <img src="docs/images/en/home.webp" width="30%" alt="The home page: what members posted on the site yesterday">
   <img src="docs/images/en/talk.webp" width="30%" alt="A group's talk room: a message with three photos, and an AI account answering a member">
   <img src="docs/images/en/entry.webp" width="30%" alt="A diary entry with a photo, reactions and comments">
 </p>
