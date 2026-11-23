@@ -7,6 +7,7 @@ namespace Tests\Feature\Console;
 use App\SiteCheck\BackupTools;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\InstalledCheck;
+use App\SiteCheck\PhpCommand;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\WebCheck;
@@ -60,6 +61,7 @@ class CheckCommandTest extends TestCase
         $this->connection = (string) config('database.default');
         $this->path = getenv('PATH');
         $this->tool('mysqldump');
+        symlink(PHP_BINARY, $base.'/tools/php');
         putenv('PATH='.$base.'/tools');
 
         config([
@@ -286,9 +288,84 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('APP_KEY is empty')
             ->expectsOutputToContain('APP_URL is http://sns.example.com/sub:')
             ->expectsOutputToContain($this->sqlite() ? 'PHP on the command line has no sqlite3 extension, and the backup of an SQLite database' : 'on PATH, and the backup of')
-            ->expectsOutputToContain('The initial data is missing')
+            ->expectsOutputToContain('The initial data is missing: php artisan openpne:install')
             ->expectsOutputToContain($this->layout->base.'/.htaccess is missing')
             ->assertFailed();
+    }
+
+    public function test_the_php_the_lines_name_is_shown_and_said_where_path_s_php_is_another(): void
+    {
+        $binary = $this->root.'/pkg/php-8.4.1/bin/php';
+        mkdir(dirname($binary), 0o755, true);
+        file_put_contents($binary, "#!/bin/sh\n");
+        chmod($binary, 0o755);
+        $php = $this->layout->base.'/tools/php8.4';
+        symlink($binary, $php);
+        unlink($this->layout->base.'/tools/php');
+        $this->tool('php');
+        $this->app->instance(PhpCommand::class, new PhpCommand($binary, '8.4.1'));
+
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('PHP on the command line: '.PHP_VERSION.' ('.$php.').');
+
+        $this->installEnv();
+        config(['app.key' => '']);
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('APP_KEY is empty: '.$php.' artisan key:generate')
+            ->expectsOutputToContain('The initial data is missing: '.$php.' artisan openpne:install')
+            ->expectsOutputToContain($this->sqlite() ? 'The database is backed up with '.$php.' artisan openpne:backup-sqlite.' : '[ OK ] The database is backed up with')
+            ->assertFailed();
+
+        touch($this->root.'/blank.sqlite');
+        config([
+            'database.connections.blank' => ['driver' => 'sqlite', 'database' => $this->root.'/blank.sqlite', 'prefix' => ''],
+            'database.default' => 'blank',
+        ]);
+        $this->sqliteLibrary('3.26.0', extension: false);
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('The database has no tables yet: '.$php.' artisan openpne:install')
+            ->expectsOutputToContain('backup of an SQLite database ('.$php.' artisan openpne:backup-sqlite, docs/updating.md)')
+            ->assertFailed();
+
+        $limit = (string) ini_get('memory_limit');
+        // A refused ini_set warns, which the framework turns into an exception.
+        if (memory_get_usage(true) > 224 * 1024 * 1024 || @ini_set('memory_limit', '255M') === false) {
+            $this->markTestIncomplete('This process holds too much memory to lower its limit under 256M.');
+        }
+        try {
+            $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+                ->expectsOutputToContain('Give such a command more with '.$php.' -d memory_limit=256M.');
+        } finally {
+            ini_set('memory_limit', $limit);
+        }
+        $this->assertFileDoesNotExist($this->layout->base.'/tools/ran');
+    }
+
+    public function test_mariadb_s_mysqldump_is_named_as_setup_names_it(): void
+    {
+        $tools = $this->layout->base.'/tools';
+        $dump = $this->root.'/pkg/mariadb-11.4.2/bin/mariadb-dump';
+        mkdir(dirname($dump), 0o755, true);
+        file_put_contents($dump, "#!/bin/sh\n");
+        chmod($dump, 0o755);
+        unlink($tools.'/mysqldump');
+        symlink($dump, $tools.'/mysqldump');
+        symlink($dump, $tools.'/mariadb-dump');
+        $this->sqliteLibrary(null, extension: false);
+
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('Databases: MySQL or MariaDB only (backed up with '.$tools.'/mariadb-dump)')
+            ->assertSuccessful();
+
+        $this->installEnv();
+        mkdir($this->layout->dataDirectory(), 0o700);
+        copy($this->layout->base.'/.htaccess', $this->layout->dataDirectory().'/.htaccess');
+        $this->useUnreachableMysql('secret');
+        file_put_contents($this->layout->mysqlOptionFile(), "[client]\n");
+        chmod($this->layout->mysqlOptionFile(), 0o600);
+        Process::fake();
+        $this->assertStringContainsString('The database is backed up with '.$tools.'/mariadb-dump.', $this->runCheck(['--only' => 'installed']));
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command[0] === $tools.'/mariadb-dump');
     }
 
     public function test_pending_migrations_are_counted(): void

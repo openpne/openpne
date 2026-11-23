@@ -561,9 +561,11 @@ shared_update() {
     sqlite)
       [ "$(sqlite3 "$data/before-$new_version.sqlite" 'SELECT count(*) FROM members')" = 1 ] \
         || die "the copy taken before the update does not hold the member"
+      [ "$(stat -c %a "$data/before-$new_version.sqlite")" = 600 ] || die "the copy taken before the update is readable by others"
       ;;
     mysql)
       grep -q '^CREATE TABLE `members`' "$data/before-$new_version.sql" || die "the copy taken before the update has no members table"
+      [ "$(stat -c %a "$data/before-$new_version.sql")" = 600 ] || die "the copy taken before the update is readable by others"
       ;;
   esac
 

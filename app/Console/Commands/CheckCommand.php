@@ -9,6 +9,7 @@ use App\Database\DatabaseServerProbe;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\Finding;
 use App\SiteCheck\InstalledCheck;
+use App\SiteCheck\PhpCommand;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\Verdict;
@@ -52,7 +53,7 @@ class CheckCommand extends Command
         $findings = [];
 
         if ($only === null || $only === 'before') {
-            $findings = [...$findings, ...$this->part('heading_before', [], fn (): array => (new BeforeInstallCheck($layout, $this->laravel->make(SqliteSupport::class)))->run($installed))];
+            $findings = [...$findings, ...$this->part('heading_before', [], fn (): array => (new BeforeInstallCheck($layout, $this->laravel->make(SqliteSupport::class), $this->laravel->make(PhpCommand::class)))->run($installed))];
         }
         if ($only !== 'before' && ! $installed) {
             $this->newLine();
@@ -62,7 +63,7 @@ class CheckCommand extends Command
             }
         } else {
             if ($only === null || $only === 'installed') {
-                $check = new InstalledCheck($layout, $this->laravel->make('migrator'), $this->laravel->make(DatabaseServerProbe::class), $this->laravel->make(SqliteSupport::class));
+                $check = new InstalledCheck($layout, $this->laravel->make('migrator'), $this->laravel->make(DatabaseServerProbe::class), $this->laravel->make(SqliteSupport::class), $this->laravel->make(PhpCommand::class));
                 $findings = [...$findings, ...$this->part('heading_installed', [], $check->run(...))];
             }
             if ($only === null || $only === 'web') {

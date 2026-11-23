@@ -144,6 +144,26 @@ final class SetupValuesTest extends TestCase
         $this->assertTrue(BackupLine::safe('/home/u/my site/日本語 (1)&2'));
     }
 
+    public function test_the_mysql_line_writes_a_copy_only_its_owner_reads_and_leaves_the_shell_s_umask(): void
+    {
+        $directory = sys_get_temp_dir().'/openpne-setup-umask-'.bin2hex(random_bytes(4));
+        mkdir($directory);
+        file_put_contents($directory.'/mysqldump', "#!/bin/sh\necho dump\n");
+        chmod($directory.'/mysqldump', 0o755);
+        $line = BackupLine::mysql($directory.'/mysqldump', $directory.'/mysql-backup.cnf', 'site_db', $directory);
+
+        try {
+            exec('umask 022; '.$line.' && umask', $output, $status);
+
+            $this->assertSame([0, ['0022']], [$status, $output]);
+            $this->assertSame("dump\n", file_get_contents($directory.'/backup.sql'));
+            $this->assertSame(0o600, fileperms($directory.'/backup.sql') & 0o777);
+        } finally {
+            array_map(unlink(...), glob($directory.'/*') ?: []);
+            rmdir($directory);
+        }
+    }
+
     public function test_the_backup_lines_write_aside_and_move_over_the_last_copy(): void
     {
         $this->assertSame(
@@ -151,8 +171,8 @@ final class SetupValuesTest extends TestCase
             BackupLine::sqlite('/usr/bin/php8.3', '/h/site', '/h/openpne-data'),
         );
         $this->assertSame(
-            "rm -f '/h/openpne-data/backup.sql.new' && '/usr/bin/mysqldump' --defaults-extra-file='/h/openpne-data/mysql-backup.cnf'"
-            ." --single-transaction --no-tablespaces 'site_db' > '/h/openpne-data/backup.sql.new' && mv '/h/openpne-data/backup.sql.new' '/h/openpne-data/backup.sql'",
+            "(umask 077 && rm -f '/h/openpne-data/backup.sql.new' && '/usr/bin/mysqldump' --defaults-extra-file='/h/openpne-data/mysql-backup.cnf'"
+            ." --single-transaction --no-tablespaces 'site_db' > '/h/openpne-data/backup.sql.new' && mv '/h/openpne-data/backup.sql.new' '/h/openpne-data/backup.sql')",
             BackupLine::mysql('/usr/bin/mysqldump', '/h/openpne-data/mysql-backup.cnf', 'site_db', '/h/openpne-data'),
         );
         $this->assertSame(
