@@ -268,7 +268,8 @@ where the engine would not:
   rebuild inside one Blueprint is covered: a migration that rebuilds a table across several
   (creating a copy, copying the rows, dropping the original, renaming the copy) or in raw SQL
   restores the mark itself. The rebuild also drops the table's triggers and nothing puts them back,
-  so a migration that rebuilds a table holding triggers recreates them, for a `dropColumn()` too.
+  so a migration that may rebuild a table holding triggers drops them if they exist and creates them
+  again: a `dropColumn()` rebuilds below SQLite 3.35 and keeps them from 3.35.
 
 Nothing restores a mark lowered another way: `TRUNCATE`, an `ALTER TABLE … AUTO_INCREMENT` that
 lowers it, a dump restored without it, an upgrade from OpenPNE 3 (it carries rows, not marks), a
