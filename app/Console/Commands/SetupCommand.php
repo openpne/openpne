@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Console\Commands\Concerns\RunsWebCheck;
 use App\Database\DatabaseServer;
 use App\Database\DatabaseServerProbe;
+use App\Database\SqliteBackup;
 use App\Setup\BackupLine;
 use App\Setup\EnvFile;
 use App\Setup\EnvValue;
@@ -24,6 +25,7 @@ use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\Verdict;
 use Closure;
 use DateTimeZone;
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Database\Connection;
 use Illuminate\Encryption\Encrypter;
@@ -39,6 +41,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Prompts\Prompt;
 use RuntimeException;
+use SQLite3;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Throwable;
@@ -322,18 +325,18 @@ class SetupCommand extends Command
     /** @return array<string, string> */
     private function askDatabase(): array
     {
-        $sqlite = $this->sqlite->lacks() === [] ? BackupTools::sqlite() : null;
+        $sqlite = $this->sqlite->lacks() === [];
         $mysql = extension_loaded('pdo_mysql') ? BackupTools::mysql() : null;
-        $options = array_filter(['sqlite' => $sqlite !== null ? $this->text('db_sqlite') : null, 'mysql' => $mysql !== null ? $this->text('db_mysql') : null]);
+        $options = array_filter(['sqlite' => $sqlite ? $this->text('db_sqlite') : null, 'mysql' => $mysql !== null ? $this->text('db_mysql') : null]);
         if ($options === []) {
             $this->say('db_none', [], 'error');
 
             throw new StopSetup;
         }
-        if ($sqlite !== null && $mysql === null) {
+        if ($sqlite && $mysql === null) {
             $this->say('db_only_sqlite');
         }
-        if ($sqlite === null) {
+        if (! $sqlite) {
             $this->say('db_only_mysql');
             if (! confirm($this->text('db_only_mysql_go_on'), true)) {
                 $this->say('db_only_mysql_stopped');
@@ -364,7 +367,7 @@ class SetupCommand extends Command
                 ];
             }
 
-            $settings = $this->askMysql($sqlite !== null);
+            $settings = $this->askMysql($sqlite);
             if ($settings !== null) {
                 return ['DB_CONNECTION' => 'mysql', ...$settings];
             }
@@ -748,46 +751,37 @@ class SetupCommand extends Command
     private function backup(string $driver, array $settings): void
     {
         $this->newLine();
-        $tool = BackupTools::forDriver($driver);
+        $sqlite = $driver === 'sqlite';
+        $tool = $sqlite ? ($this->sqlite->hasExtension() ? PHP_BINARY : null) : BackupTools::mysql();
         $data = $this->layout->dataDirectory();
         $database = (string) ($settings['database'] ?? '');
         if ($tool === null) {
-            $this->say($driver === 'sqlite' ? 'backup_no_sqlite_tool' : 'backup_no_mysql_tool', [], 'error');
+            $this->say($sqlite ? 'backup_no_sqlite_extension' : 'backup_no_mysql_tool', [], 'error');
 
             return;
         }
         // Called mysqldump, MariaDB's tool warns at every run, cron's included.
-        if ($driver !== 'sqlite' && MysqlOptionFile::isMariaDb($tool)) {
+        if (! $sqlite && MysqlOptionFile::isMariaDb($tool)) {
             $tool = realpath($tool) ?: $tool;
         }
         $option = $this->layout->mysqlOptionFile();
-        $unsafe = array_filter([$tool, $database, $data, ...($driver === 'sqlite' ? [] : [$option])], fn (string $part): bool => ! BackupLine::safe($part));
+        $unsafe = array_filter($sqlite ? [$tool, $this->layout->base, $data] : [$tool, $database, $data, $option], fn (string $part): bool => ! BackupLine::safe($part));
         if ($unsafe !== []) {
             $this->say('backup_unsafe_path', ['path' => reset($unsafe)]);
 
             return;
         }
-        if ($driver === 'sqlite') {
-            $version = $this->sqlite->commandVersion($tool);
-            if ($version !== null && version_compare($version, BackupLine::SQLITE_MINIMUM, '<')) {
-                $this->say('backup_sqlite_old', ['path' => $tool, 'version' => $version, 'minimum' => BackupLine::SQLITE_MINIMUM], 'error');
-
-                return;
-            }
-            $line = BackupLine::sqlite($tool, $database, $data);
-        } else {
-            $line = BackupLine::mysql($tool, $option, $database, $data);
-        }
+        $line = $sqlite ? BackupLine::sqlite($tool, $this->layout->base, $data) : BackupLine::mysql($tool, $option, $database, $data);
 
         $this->say('backup_line', ['path' => $data]);
         $this->line(OutputFormatter::escape($line));
-        if (! $this->host->canSpawn()) {
+        if (! $sqlite && ! $this->host->canSpawn()) {
             $this->say('backup_untried');
 
             return;
         }
         try {
-            $failure = $driver === 'sqlite' ? $this->trySqliteBackup($tool, $database, $data) : $this->tryMysqlBackup($tool, $option, $database, $data);
+            $failure = $sqlite ? $this->trySqliteBackup($database, $data) : $this->tryMysqlBackup($tool, $option, $database, $data);
         } catch (ProcessTimedOutException) {
             $failure = $this->text('backup_timeout', ['seconds' => self::TRIAL_SECONDS]);
         } catch (RuntimeException $e) {
@@ -797,28 +791,30 @@ class SetupCommand extends Command
             $this->say('backup_tried');
         } else {
             $this->say('backup_failed', ['reason' => $failure], 'error');
-            if ($driver !== 'sqlite' && MysqlOptionFile::isMariaDb($tool) && str_contains($failure, '1045')) {
+            if (! $sqlite && MysqlOptionFile::isMariaDb($tool) && str_contains($failure, '1045')) {
                 $this->say('backup_mariadb_auth');
             }
         }
     }
 
-    private function trySqliteBackup(string $tool, string $database, string $data): ?string
+    /** The copy the printed line takes, without the line's lock and rename, which leave nothing to try. */
+    private function trySqliteBackup(string $database, string $data): ?string
     {
-        // VACUUM INTO writes into an empty file as it finds it, so the copy stays at 0600.
         $copy = PrivateFile::temp($data, self::TRIAL_PREFIX, '', 0o600);
 
         try {
-            $write = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', '-cmd', BackupLine::SQLITE_WAIT, $database, "VACUUM INTO '{$copy}'"]);
-            if (! $write->successful()) {
-                return self::firstLine($write->errorOutput());
-            }
-            $read = Process::timeout(self::TRIAL_SECONDS)->run([$tool, '-readonly', $copy, 'SELECT count(*) FROM migrations']);
-            if (! $read->successful()) {
-                return self::firstLine($read->errorOutput().$read->output());
+            SqliteBackup::copy($database, $copy);
+            $read = new SQLite3($copy, SQLITE3_OPEN_READONLY);
+            try {
+                $read->enableExceptions(true);
+                $migrations = (int) $read->querySingle('SELECT count(*) FROM migrations');
+            } finally {
+                $read->close();
             }
 
-            return (int) trim($read->output()) > 0 ? null : $this->text('backup_no_tables');
+            return $migrations > 0 ? null : $this->text('backup_no_tables');
+        } catch (Exception $e) {
+            return rtrim(self::firstLine($e->getMessage()), '.');
         } finally {
             foreach (['', '-wal', '-shm', '-journal'] as $suffix) {
                 @unlink($copy.$suffix);

@@ -4,26 +4,12 @@ declare(strict_types=1);
 
 namespace App\SiteCheck;
 
-/** The commands docs/updating.md backs a database up with, found on PATH without running them. */
+/** The commands docs/updating.md backs a MySQL database up with, found on PATH without running them. */
 final class BackupTools
 {
-    public static function sqlite(): ?string
-    {
-        return self::locate('sqlite3');
-    }
-
     public static function mysql(): ?string
     {
         return self::locate('mysqldump') ?? self::locate('mariadb-dump');
-    }
-
-    public static function forDriver(string $driver): ?string
-    {
-        return match ($driver) {
-            'sqlite' => self::sqlite(),
-            'mysql', 'mariadb' => self::mysql(),
-            default => null,
-        };
     }
 
     /** An absolute path, since cron runs with a shorter PATH than a login shell. */

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\SiteCheck;
 
-use App\Setup\BackupLine;
-
 /** What the command line can tell before `.env` exists; reads neither `.env` nor the database. */
 final class BeforeInstallCheck
 {
@@ -78,16 +76,16 @@ final class BeforeInstallCheck
     private function databases(bool $installed): array
     {
         $lacks = $this->sqlite->lacks();
-        $sqlite = $lacks === [] ? BackupTools::sqlite() : null;
+        $sqlite = $lacks === [];
         $mysql = extension_loaded('pdo_mysql') ? BackupTools::mysql() : null;
-        $needs = ['library' => SqliteSupport::LIBRARY_MINIMUM, 'command' => BackupLine::SQLITE_MINIMUM];
+        $needs = ['library' => SqliteSupport::LIBRARY_MINIMUM];
         $why = ! $installed && $this->sqlite->partlyThere() ? $lacks : [];
 
-        if ($sqlite !== null && $mysql !== null) {
-            return [Finding::ok('cli.databases', 'cli_databases_both', ['sqlite' => $sqlite, 'mysql' => $mysql])];
+        if ($sqlite && $mysql !== null) {
+            return [Finding::ok('cli.databases', 'cli_databases_both', ['mysql' => $mysql])];
         }
-        if ($sqlite !== null) {
-            return [Finding::ok('cli.databases', 'cli_databases_sqlite', ['sqlite' => $sqlite])];
+        if ($sqlite) {
+            return [Finding::ok('cli.databases', 'cli_databases_sqlite')];
         }
         if ($mysql !== null) {
             return [Finding::ok('cli.databases', 'cli_databases_mysql', ['mysql' => $mysql, ...$needs]), ...$why];

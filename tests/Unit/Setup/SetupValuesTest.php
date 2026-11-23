@@ -134,7 +134,7 @@ final class SetupValuesTest extends TestCase
     #[DataProvider('unsafeCharacters')]
     public function test_a_path_a_shell_or_cron_would_read_is_not_put_in_a_line(string $path): void
     {
-        $this->assertFalse(BackupLine::safe('/usr/bin/sqlite3', $path));
+        $this->assertFalse(BackupLine::safe('/usr/bin/php8.3', $path));
     }
 
     public function test_spaces_japanese_and_brackets_are_safe_in_a_line(): void
@@ -145,9 +145,8 @@ final class SetupValuesTest extends TestCase
     public function test_the_backup_lines_write_aside_and_move_over_the_last_copy(): void
     {
         $this->assertSame(
-            "rm -f '/h/openpne-data/backup.sqlite.new' && '/usr/bin/sqlite3' -readonly -cmd \".timeout 60000\" '/h/openpne-data/database.sqlite'"
-            ." \"VACUUM INTO '/h/openpne-data/backup.sqlite.new'\" && mv '/h/openpne-data/backup.sqlite.new' '/h/openpne-data/backup.sqlite'",
-            BackupLine::sqlite('/usr/bin/sqlite3', '/h/openpne-data/database.sqlite', '/h/openpne-data'),
+            "cd '/h/site' && '/usr/bin/php8.3' artisan openpne:backup-sqlite '/h/openpne-data/backup.sqlite'",
+            BackupLine::sqlite('/usr/bin/php8.3', '/h/site', '/h/openpne-data'),
         );
         $this->assertSame(
             "rm -f '/h/openpne-data/backup.sql.new' && '/usr/bin/mysqldump' --defaults-extra-file='/h/openpne-data/mysql-backup.cnf'"

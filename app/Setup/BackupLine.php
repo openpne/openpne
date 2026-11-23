@@ -12,17 +12,6 @@ final class BackupLine
     public const MYSQL_FILE = 'backup.sql';
 
     /**
-     * VACUUM INTO copies in one read transaction where `.backup` restarts on every write. SQLite
-     * takes it under `-readonly` from 3.28.0.
-     */
-    public const SQLITE_MINIMUM = '3.28.0';
-
-    /**
-     * The sqlite3 shell does not wait on a lock unless told to. A minute is pdo_sqlite's default wait.
-     */
-    public const SQLITE_WAIT = '.timeout 60000';
-
-    /**
      * Whether every part can go inside single quotes in both shells and in cron: none of these closes
      * the quotes, expands in csh, or ends a cron line.
      */
@@ -37,12 +26,9 @@ final class BackupLine
         return true;
     }
 
-    /** VACUUM INTO fails on an existing file, so the copy is written aside and moved over the last one. */
-    public static function sqlite(string $tool, string $database, string $dataDirectory): string
+    public static function sqlite(string $php, string $base, string $dataDirectory): string
     {
-        $copy = $dataDirectory.'/'.self::SQLITE_FILE;
-
-        return self::rotate($copy, self::quote($tool).' -readonly -cmd "'.self::SQLITE_WAIT.'" '.self::quote($database).' "VACUUM INTO \''.$copy.'.new\'"');
+        return 'cd '.self::quote($base).' && '.self::quote($php).' artisan openpne:backup-sqlite '.self::quote($dataDirectory.'/'.self::SQLITE_FILE);
     }
 
     public static function mysql(string $tool, string $optionFile, string $database, string $dataDirectory): string

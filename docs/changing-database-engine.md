@@ -51,18 +51,15 @@ wal
 
 Backing the site up is then one command, not one file copy. Under WAL a committed row can still be
 in the `-wal` file beside the database, so copying the database on its own quietly produces a backup
-missing the newest writes. This takes the whole of it:
+missing the newest writes. This takes the whole of it, in the app root:
 
 ```bash
-sqlite3 -readonly -cmd ".timeout 60000" database.sqlite "VACUUM INTO 'out.sqlite'"
+php artisan openpne:backup-sqlite /path/to/copy.sqlite
 ```
 
-`VACUUM INTO` copies inside one read transaction, which under WAL holds no writer up, so it finishes
-however much the site goes on writing. The shell's `.backup` copies a few pages at a time and starts
-over whenever another connection writes in between, so under steady writes it may never finish.
-`-readonly` makes a wrong path an error, where `sqlite3` would create an empty database there and
-copy that. `.timeout` has `sqlite3` wait up to a minute for a lock the site holds for a moment, where
-it would otherwise fail at once. The copy is in the default journal mode; with
+It copies inside one read transaction, which under WAL holds no writer up, so it finishes however
+much the site goes on writing, and it waits up to a minute for a lock the site holds for a moment.
+The copy is in the default journal mode; with
 `DB_JOURNAL_MODE=WAL` set, the site's first connection to a database restored from it puts it back
 in WAL.
 

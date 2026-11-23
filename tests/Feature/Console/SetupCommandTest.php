@@ -53,6 +53,9 @@ class SetupCommandTest extends TestCase
     /** @var array<string, array{mixed, mixed, string|false}> */
     private array $shell = [];
 
+    /** @var array{extension: bool, library: ?string} */
+    private array $sqliteState = ['extension' => false, 'library' => null];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -90,6 +93,22 @@ class SetupCommandTest extends TestCase
                 return $this->state['code'];
             }
         });
+        $sqlite = &$this->sqliteState;
+        $this->app->instance(SqliteSupport::class, new class($sqlite) extends SqliteSupport
+        {
+            /** @param array{extension: bool, library: ?string} $state */
+            public function __construct(private array &$state) {}
+
+            public function hasExtension(): bool
+            {
+                return $this->state['extension'];
+            }
+
+            public function libraryVersion(): ?string
+            {
+                return $this->state['library'] ?? parent::libraryVersion();
+            }
+        });
         config(['app.url' => self::URL, 'trustedproxy.proxies' => []]);
     }
 
@@ -121,7 +140,8 @@ class SetupCommandTest extends TestCase
 
     public function test_answers_become_env_beside_a_private_data_directory_and_a_new_process_goes_on(): void
     {
-        $this->tools('sqlite3', 'mysqldump');
+        $this->sqliteState['extension'] = true;
+        $this->tools('mysqldump');
         putenv('APP_NAME=from the shell');
         mkdir($this->layout->dataDirectory(), 0o755);
         // A copy kept under a name of its own is not a site started over.
@@ -160,8 +180,7 @@ class SetupCommandTest extends TestCase
 
     public function test_a_refused_answer_is_asked_again_and_never_written(): void
     {
-        $this->tools('sqlite3');
-        Process::fake(['*' => Process::result('3.28.0 2019-04-16 19:49:53 884b4b7e50')]);
+        $this->sqliteState['extension'] = true;
 
         $this->runSetup()
             ->expectsQuestion('The site\'s address', 'https://sns.example.com/sns')
@@ -201,7 +220,7 @@ class SetupCommandTest extends TestCase
 
         $this->answerSite($this->runSetup())
             ->expectsConfirmation('Go on with MySQL?', 'yes')
-            ->expectsOutputToContain('SQLite cannot be used here: the sqlite3 command, which the backup uses, is not on PATH.')
+            ->expectsOutputToContain('SQLite cannot be used here: PHP on the command line has no sqlite3 extension, which the backup uses.')
             ->expectsOutputToContain('The database is MySQL, as SQLite cannot be used here (the check above says why). It needs a database on the host\'s MySQL server, 8.0.17 or later and not MariaDB.')
             ->expectsQuestion('MySQL server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
@@ -242,7 +261,8 @@ class SetupCommandTest extends TestCase
 
     public function test_a_mariadb_server_given_for_mysql_is_named_and_sqlite_offered_again(): void
     {
-        $this->tools('sqlite3', 'mysqldump');
+        $this->sqliteState['extension'] = true;
+        $this->tools('mysqldump');
         $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204');
         $databases = ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL (the host\'s database server)'];
 
@@ -284,13 +304,10 @@ class SetupCommandTest extends TestCase
         $this->assertFileDoesNotExist($this->layout->envFile);
     }
 
-    public function test_a_sqlite3_too_old_for_the_backup_fails_the_check_before_any_question(): void
+    public function test_a_php_without_the_sqlite3_extension_and_no_mysql_fails_the_check_before_any_question(): void
     {
-        $this->tools('sqlite3');
-        Process::fake(['*' => Process::result('3.27.2 2019-02-25 16:06:06 bd49a8271d')]);
-
         $this->runSetup()
-            ->expectsOutputToContain('SQLite cannot be used here: '.$this->layout->base.'/tools/sqlite3 is SQLite 3.27.2, and the backup needs 3.28.0 or later')
+            ->expectsOutputToContain('SQLite cannot be used here: PHP on the command line has no sqlite3 extension, which the backup uses.')
             ->expectsOutputToContain('No database can be chosen for a new site here')
             ->expectsOutputToContain('Put right what is marked [FAIL] above')
             ->assertFailed();
@@ -298,34 +315,26 @@ class SetupCommandTest extends TestCase
         $this->assertFileDoesNotExist($this->layout->envFile);
     }
 
-    /** @return array<string, array{string, string, list<string>, list<string>}> */
+    /** @return array<string, array{string}> */
     public static function sqliteTooOld(): array
     {
-        $library = 'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite ';
-        $command = 'is SQLite 3.26.0, and the backup needs 3.28.0 or later';
-
         return [
-            'both, as on Enterprise Linux 8' => ['3.26.0', '3.26.0 2018-12-01 12:34:55 bf8c1b2b7a', [$library.'3.26.0, and OpenPNE needs 3.32.0 or later.', $command], []],
-            'the library alone' => ['3.31.1', '3.28.0 2019-04-16 19:49:53 884b4b7e50', [$library.'3.31.1, and OpenPNE needs 3.32.0 or later.'], [$command]],
+            'as on Enterprise Linux 8' => ['3.26.0'],
+            'just below' => ['3.31.1'],
         ];
     }
 
-    /**
-     * @param  list<string>  $said
-     * @param  list<string>  $unsaid
-     */
     #[DataProvider('sqliteTooOld')]
-    public function test_a_sqlite_too_old_is_named_by_what_it_lacks_and_mysql_is_asked_about_before_its_server(string $library, string $command, array $said, array $unsaid): void
+    public function test_a_sqlite_too_old_is_named_by_what_it_lacks_and_mysql_is_asked_about_before_its_server(string $library): void
     {
-        $this->tools('sqlite3', 'mysqldump');
-        Process::fake(['*' => Process::result($command)]);
-        $this->libraryVersion($library);
+        $this->sqliteState['extension'] = true;
+        $this->tools('mysqldump');
+        $this->sqliteState['library'] = $library;
 
-        $setup = $this->runSetup()->expectsOutputToContain('Databases: MySQL only');
-        foreach ($said as $line) {
-            $setup->expectsOutputToContain($line);
-        }
-        foreach ([...$unsaid, 'has no pdo_sqlite', 'not on PATH'] as $line) {
+        $setup = $this->runSetup()
+            ->expectsOutputToContain('Databases: MySQL only')
+            ->expectsOutputToContain("SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite {$library}, and OpenPNE needs 3.32.0 or later.");
+        foreach (['has no pdo_sqlite', 'has no sqlite3 extension'] as $line) {
             $setup->doesntExpectOutputToContain($line);
         }
         $this->answerSite($setup)
@@ -339,9 +348,8 @@ class SetupCommandTest extends TestCase
 
     public function test_sqlite_at_the_versions_it_needs_is_chosen_without_a_question_about_mysql(): void
     {
-        $this->tools('sqlite3');
-        Process::fake(['*' => Process::result('3.28.0 2019-04-16 19:49:53 884b4b7e50')]);
-        $this->libraryVersion('3.32.0');
+        $this->sqliteState['extension'] = true;
+        $this->sqliteState['library'] = '3.32.0';
 
         $this->answerSite($this->runSetup())
             ->doesntExpectOutputToContain('SQLite cannot be used here')
@@ -355,7 +363,7 @@ class SetupCommandTest extends TestCase
 
     public function test_a_host_without_proc_open_writes_env_and_asks_to_be_run_again(): void
     {
-        $this->tools('sqlite3');
+        $this->sqliteState['extension'] = true;
         $this->hostState['spawn'] = false;
 
         $this->answerSite($this->runSetup())
@@ -370,7 +378,7 @@ class SetupCommandTest extends TestCase
 
     public function test_the_first_process_fails_when_the_one_it_started_does(): void
     {
-        $this->tools('sqlite3');
+        $this->sqliteState['extension'] = true;
         $this->hostState['code'] = 1;
 
         $this->answerSite($this->runSetup())
@@ -447,7 +455,7 @@ class SetupCommandTest extends TestCase
     #[DataProvider('sqliteSites')]
     public function test_a_sqlite_database_holding_a_site_is_not_set_up_over(string $name): void
     {
-        $this->tools('sqlite3');
+        $this->sqliteState['extension'] = true;
         mkdir($this->layout->dataDirectory(), 0o700);
         touch($this->sqlitePath());
         $database = new \PDO('sqlite:'.$this->layout->dataDirectory().'/'.$name);
@@ -477,7 +485,7 @@ class SetupCommandTest extends TestCase
 
     public function test_a_parent_directory_that_cannot_be_written_stops_before_any_question(): void
     {
-        $this->tools('sqlite3');
+        $this->sqliteState['extension'] = true;
         chmod($this->layout->parent(), 0o555);
 
         try {
@@ -561,10 +569,10 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb();
-        $this->fakeTools();
         AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
         mkdir($this->layout->dataDirectory(), 0o755);
         touch($this->layout->dataDirectory().'/.htaccess');
+        $this->fakeTools();
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
@@ -578,10 +586,10 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb();
-        $this->fakeTools();
         AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
         mkdir($this->layout->dataDirectory(), 0o700);
         file_put_contents($this->layout->dataDirectory().'/.htaccess', "RewriteEngine On\n");
+        $this->fakeTools();
         unlink($this->layout->base.'/.htaccess');
 
         $this->runSetup()
@@ -705,9 +713,6 @@ class SetupCommandTest extends TestCase
         $this->assertSame([], glob($this->layout->dataDirectory().'/openpne-setup-*') ?: []);
         if ($this->sqlite()) {
             $this->assertSame(0o600, fileperms($this->sqlitePath()) & 0o777);
-            Process::assertRan(fn (PendingProcess $p): bool => is_array($p->command)
-                && array_slice($p->command, 1, 4) === ['-readonly', '-cmd', '.timeout 60000', $this->sqlitePath()]
-                && str_starts_with((string) ($p->command[5] ?? ''), 'VACUUM INTO '));
         }
     }
 
@@ -932,7 +937,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->expectsOutputToContain('Tried once, and it failed: '.($this->sqlite() ? 'Error: in prepare, no such table: migrations' : 'mysqldump: Got error: 1044'))
+            ->expectsOutputToContain('Tried once, and it failed: '.($this->sqlite() ? $this->sqlitePath().' could not be copied: file is not a database. Until it works' : 'mysqldump: Got error: 1044'))
             ->assertSuccessful();
     }
 
@@ -951,23 +956,22 @@ class SetupCommandTest extends TestCase
         $this->assertSame([], glob($this->layout->dataDirectory().'/openpne-setup-*') ?: []);
     }
 
-    public function test_a_rerun_with_a_sqlite3_too_old_for_the_backup_shows_no_line(): void
+    public function test_a_rerun_without_the_sqlite3_extension_shows_no_line(): void
     {
         if (! $this->sqlite()) {
-            $this->markTestSkipped('The version is the sqlite3 command\'s.');
+            $this->markTestSkipped('The site is on MySQL.');
         }
         $this->withEnv();
         $this->fakeWeb();
-        $this->fakeTools(version: '3.27.2 2019-02-25 16:06:06 bd49a8271d');
+        $this->fakeTools();
+        $this->sqliteState['extension'] = false;
         AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->expectsOutputToContain('SQLite 3.27.2, and the backup needs 3.28.0 or later (VACUUM INTO under -readonly). Ask the host for a newer sqlite3.')
-            ->doesntExpectOutputToContain($this->backupLineStart())
+            ->expectsOutputToContain('PHP on the command line has no sqlite3 extension, and the backup of an SQLite database needs it. Ask the host for it.')
+            ->doesntExpectOutputToContain('openpne:backup-sqlite')
             ->assertSuccessful();
-
-        Process::assertDidntRun(fn (PendingProcess $p): bool => is_array($p->command) && str_starts_with((string) end($p->command), 'VACUUM INTO '));
     }
 
     public function test_a_path_a_shell_would_read_shows_no_line(): void
@@ -982,7 +986,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->expectsOutputToContain('The backup line is not shown: '.$this->layout->base.'/tools/')
+            ->expectsOutputToContain('The backup line is not shown: '.$this->layout->base)
             ->expectsOutputToContain('The cron line is not shown')
             ->doesntExpectOutputToContain('backup.sql')
             ->assertSuccessful();
@@ -1024,22 +1028,6 @@ class SetupCommandTest extends TestCase
         $this->app->instance(SiteLayout::class, $this->layout);
     }
 
-    private function libraryVersion(string $version): void
-    {
-        $this->app->instance(SqliteSupport::class, new class($version, $this->app->make(SetupHost::class)) extends SqliteSupport
-        {
-            public function __construct(private readonly string $version, SetupHost $host)
-            {
-                parent::__construct($host);
-            }
-
-            public function libraryVersion(): string
-            {
-                return $this->version;
-            }
-        });
-    }
-
     private function tools(string ...$names): void
     {
         foreach ($names as $name) {
@@ -1050,12 +1038,13 @@ class SetupCommandTest extends TestCase
     }
 
     /**
-     * The test database stands in for the site's; the SQLite path is only what the backup line names.
+     * The test database stands in for the site's; the SQLite path is only the file setup's trial copies from.
      * The connection keys are what the test's environment holds, which setup requires `.env` to match.
      */
     private function withEnv(string $more = ''): string
     {
-        $this->tools('sqlite3', 'mysqldump');
+        $this->sqliteState['extension'] = true;
+        $this->tools('mysqldump');
         $contents = 'APP_URL='.self::URL."\n";
         foreach (['APP_KEY', 'DB_CONNECTION', 'DB_URL', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_SOCKET'] as $key) {
             if (Env::get($key) !== null) {
@@ -1107,31 +1096,44 @@ class SetupCommandTest extends TestCase
         $tools = $this->layout->base.'/tools';
 
         return $this->sqlite()
-            ? "rm -f '{$data}/backup.sqlite.new' && '{$tools}/sqlite3' -readonly -cmd \".timeout 60000\" '{$this->sqlitePath()}'"
+            ? "cd '{$this->layout->base}' && '".PHP_BINARY."' artisan openpne:backup-sqlite '{$data}/backup.sqlite'"
             : "rm -f '{$data}/backup.sql.new' && '{$tools}/mysqldump' --defaults-extra-file='{$this->layout->mysqlOptionFile()}'";
     }
 
-    /** @param 'works'|'empty'|'fails' $backup */
-    private function fakeTools(string $backup = 'works', string $version = '3.28.0 2019-04-16 19:49:53 884b4b7e50'): void
+    /**
+     * For SQLite the copy is taken in the process, so the file setup's trial copies from is made to hold what $backup says.
+     *
+     * @param  'works'|'empty'|'fails'  $backup
+     */
+    private function fakeTools(string $backup = 'works'): void
     {
-        Process::fake(function (PendingProcess $process) use ($backup, $version) {
+        if ($this->sqlite()) {
+            if (! is_dir($this->layout->dataDirectory())) {
+                mkdir($this->layout->dataDirectory(), 0o700);
+            }
+            if ($backup === 'fails') {
+                file_put_contents($this->sqlitePath(), str_repeat('not a database ', 512));
+            } else {
+                $site = new \PDO('sqlite:'.$this->sqlitePath());
+                $site->exec('CREATE TABLE migrations (id INTEGER PRIMARY KEY, migration TEXT)');
+                if ($backup === 'works') {
+                    $site->exec("INSERT INTO migrations (migration) VALUES ('0001_01_01_000000_create_members_table')");
+                }
+                $site = null;
+            }
+            chmod($this->sqlitePath(), 0o600);
+        }
+        Process::fake(function (PendingProcess $process) use ($backup) {
             $command = is_array($process->command) ? $process->command : [$process->command];
-            $last = (string) end($command);
             $copy = preg_grep('/\A--result-file=/', $command);
             if ($copy !== [] && $backup !== 'fails') {
                 file_put_contents(substr((string) reset($copy), strlen('--result-file=')), $backup === 'works' ? "CREATE TABLE `migrations` (\n" : "-- MySQL dump\n");
             }
 
             return match (true) {
-                $last === '-version' => Process::result($version),
                 str_ends_with((string) $command[0], 'mysqldump') => $backup !== 'fails'
                     ? Process::result()
                     : Process::result('', "mysqldump: Got error: 1044: Access denied for user 'site'@'%' to database 'site_db'\n", 2),
-                str_starts_with($last, 'SELECT') => match ($backup) {
-                    'works' => Process::result("80\n"),
-                    'empty' => Process::result("0\n"),
-                    'fails' => Process::result('', 'Error: in prepare, no such table: migrations', 1),
-                },
                 default => Process::result(),
             };
         });

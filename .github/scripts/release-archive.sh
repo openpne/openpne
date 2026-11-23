@@ -298,14 +298,16 @@ update() {
 
   step "back up"
   if [ -n "$db" ]; then
-    sqlite3 -readonly -cmd ".timeout 60000" "$db" "VACUUM INTO '$work/backup.sqlite'"
+    php artisan openpne:backup-sqlite "$work/backup.sqlite"
+    [ "$(sqlite3 "$work/backup.sqlite" 'PRAGMA journal_mode')" = delete ] \
+      || die "the openpne:backup-sqlite copy is not out of WAL"
     if [ "$mode" = sqlite-default ]; then
       # The fixture has to be one where the shortcut loses data, or this check proves nothing.
       cp "$db" "$work/alone.sqlite"
       [ "$(sqlite3 "$work/alone.sqlite" 'SELECT count(*) FROM members')" = 0 ] \
         || die "database.sqlite copied alone still holds the member: the fixture no longer leaves rows in the -wal file"
       [ "$(sqlite3 "$work/backup.sqlite" 'SELECT count(*) FROM members')" = 1 ] \
-        || die "the VACUUM INTO copy does not hold the member"
+        || die "the openpne:backup-sqlite copy does not hold the member"
     fi
   fi
 
