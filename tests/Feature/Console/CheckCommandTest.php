@@ -315,6 +315,28 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('The initial data is missing: '.$php.' artisan openpne:install')
             ->expectsOutputToContain($this->sqlite() ? 'The database is backed up with '.$php.' artisan openpne:backup-sqlite.' : '[ OK ] The database is backed up with')
             ->assertFailed();
+
+        touch($this->root.'/blank.sqlite');
+        config([
+            'database.connections.blank' => ['driver' => 'sqlite', 'database' => $this->root.'/blank.sqlite', 'prefix' => ''],
+            'database.default' => 'blank',
+        ]);
+        $this->sqliteLibrary('3.26.0', extension: false);
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('The database has no tables yet: '.$php.' artisan openpne:install')
+            ->expectsOutputToContain('backup of an SQLite database ('.$php.' artisan openpne:backup-sqlite, docs/updating.md)')
+            ->assertFailed();
+
+        $limit = (string) ini_get('memory_limit');
+        if (ini_set('memory_limit', '255M') === false) {
+            $this->markTestIncomplete('This process already uses more than the limit to set.');
+        }
+        try {
+            $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+                ->expectsOutputToContain('Give such a command more with '.$php.' -d memory_limit=256M.');
+        } finally {
+            ini_set('memory_limit', $limit);
+        }
         $this->assertFileDoesNotExist($this->layout->base.'/tools/ran');
     }
 
@@ -333,6 +355,12 @@ class CheckCommandTest extends TestCase
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
             ->expectsOutputToContain('Databases: MySQL or MariaDB only (backed up with '.$tools.'/mariadb-dump)')
             ->assertSuccessful();
+
+        if (! $this->sqlite()) {
+            $this->installEnv();
+            $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+                ->expectsOutputToContain('[ OK ] The database is backed up with '.$tools.'/mariadb-dump.');
+        }
     }
 
     public function test_pending_migrations_are_counted(): void

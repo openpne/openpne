@@ -204,9 +204,9 @@ For MySQL or MariaDB, write the database's name, `DB_DATABASE` in `.env`, for `D
 (umask 077 && mysqldump --defaults-extra-file=../openpne-data/mysql-backup.cnf --single-transaction --no-tablespaces DATABASE > ../openpne-data/before-4.0.0-alpha.N.sql)
 ```
 
-In parentheses with `umask 077`, the copy is readable by your account alone, as the SQLite one is.
 Either prints nothing when it has worked. Where it prints an error, stop: [If a step
-fails](#if-a-step-fails) says how to open the site again.
+fails](#if-a-step-fails) says how to open the site again. In parentheses with `umask 077`, the
+MySQL copy is readable by your account alone, as the SQLite one is.
 
 ### 3. Carry the site's own files into the release
 

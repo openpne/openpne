@@ -1179,11 +1179,6 @@ class SetupCommandTest extends TestCase
             : "(umask 077 && rm -f '{$data}/backup.sql.new' && '{$tools}/mysqldump' --defaults-extra-file='{$this->layout->mysqlOptionFile()}'";
     }
 
-    /**
-     * For SQLite the copy is taken in the process, so the file setup's trial copies from is made to hold what $backup says.
-     *
-     * @param  'works'|'empty'|'fails'  $backup
-     */
     /** A PHP whose path holds its patch release, reached on PATH by a versioned name. */
     private function versionedPhp(): string
     {
@@ -1197,6 +1192,11 @@ class SetupCommandTest extends TestCase
         return $this->layout->base.'/tools/php8.4';
     }
 
+    /**
+     * For SQLite the copy is taken in the process, so the file setup's trial copies from is made to hold what $backup says.
+     *
+     * @param  'works'|'empty'|'fails'  $backup
+     */
     private function fakeTools(string $backup = 'works'): void
     {
         if ($this->sqlite()) {
