@@ -415,6 +415,19 @@ unchanged. Name no address that anyone other than a proxy can send requests from
 believed about the address they come from. See
 [runtime.md](internals/runtime.md#reverse-proxy--https).
 
+A proxy in front can hand the web server each visitor's own address as well; the setting then stays
+empty, though `php artisan openpne:check` warns of the proxy's headers, seen on a request the server
+makes to itself. To tell, sign in from a browser off the server (the administrator of step 3 will
+do) and read the address the site recorded:
+
+```bash
+grep login.success storage/logs/security-*.log | tail -n 1
+```
+
+If its `ip` is the address you connect from (from the same network, the first field of
+`echo $SSH_CLIENT`), leave the setting empty. If it is one of the host's, every member has it: name
+the proxies, as whoever runs them lists them.
+
 ## 6. Background work
 
 Both parts run as the site user.
@@ -607,11 +620,16 @@ too, when it gives you:
   the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.
 
 The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are as
-written, in a directory of yours, without the `sudo apt install` lines. Step 4 is the host's own
-setting that makes the release's `public/` the document root; nothing outside `public/` may be
-reachable from the web. PHP's two upload sizes of step 4 are set by whatever means the host gives.
-Step 5 is as written: a host that ends TLS in front of your site is a proxy in front. Step 6 is the
-way of working the queue that the host allows, and the scheduler if the host has cron. An update is
-[updating.md](updating.md), in the directories you have.
+written, in a directory of yours, without the `sudo apt install` lines; where `php` on the command
+line is older than 8.3, use the name the host gives a newer one (`php8.3`, say) wherever the guide
+says `php`. Step 4 is the host's own setting that makes the release's `public/` the document root;
+nothing outside `public/` may be reachable from the web. PHP's two upload sizes of step 4 are set by
+whatever means the host gives (the PHP settings of its control panel, where it has them). Step 5 is
+as written: a host that ends TLS in front of your site is a proxy in front, which may hand the site
+each visitor's own address all the same ([how to tell](#5-https-and-a-proxy-in-front)). Step 6 is
+the way of working the queue that the host allows, and the scheduler if the host has cron. Where its
+control panel asks for a cron line's time and command apart, the first five fields are the time
+(minute, hour, day of the month, month, day of the week) and the rest, from `cd`, is the command. An
+update is [updating.md](updating.md), in the directories you have.
 
 This guide does not walk through any one host.
