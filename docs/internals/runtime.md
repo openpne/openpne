@@ -267,7 +267,8 @@ where the engine would not:
   failed ones included, so an insert later in the same migration does not reuse an id. Only a
   rebuild inside one Blueprint is covered: a migration that rebuilds a table across several
   (creating a copy, copying the rows, dropping the original, renaming the copy) or in raw SQL
-  restores the mark itself.
+  restores the mark itself. The rebuild also drops the table's triggers and nothing puts them back,
+  so a migration that rebuilds a table holding triggers recreates them, for a `dropColumn()` too.
 
 Nothing restores a mark lowered another way: `TRUNCATE`, an `ALTER TABLE … AUTO_INCREMENT` that
 lowers it, a dump restored without it, an upgrade from OpenPNE 3 (it carries rows, not marks), a
