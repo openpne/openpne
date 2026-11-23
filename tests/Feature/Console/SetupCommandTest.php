@@ -763,6 +763,31 @@ class SetupCommandTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_mariadb_s_mysqldump_is_named_mariadb_dump_in_the_backup_line(): void
+    {
+        if ($this->sqlite()) {
+            $this->markTestSkipped('The site is on SQLite.');
+        }
+        $this->withEnv();
+        $this->fakeWeb();
+        $this->fakeTools();
+        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        $tools = $this->layout->base.'/tools';
+        $dump = $this->root.'/pkg/mariadb-11.4.2/bin/mariadb-dump';
+        mkdir(dirname($dump), 0o755, true);
+        file_put_contents($dump, "#!/bin/sh\n");
+        chmod($dump, 0o755);
+        unlink($tools.'/mysqldump');
+        symlink($dump, $tools.'/mysqldump');
+        symlink($dump, $tools.'/mariadb-dump');
+
+        $this->runSetup()
+            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->expectsOutputToContain("&& '{$tools}/mariadb-dump' --defaults-extra-file=")
+            ->doesntExpectOutputToContain($dump)
+            ->assertSuccessful();
+    }
+
     public function test_an_administrator_with_migrations_not_run_stops_before_migrating(): void
     {
         $this->withEnv();

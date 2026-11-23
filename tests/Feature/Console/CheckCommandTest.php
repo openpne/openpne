@@ -318,6 +318,23 @@ class CheckCommandTest extends TestCase
         $this->assertFileDoesNotExist($this->layout->base.'/tools/ran');
     }
 
+    public function test_mariadb_s_mysqldump_is_named_as_setup_names_it(): void
+    {
+        $tools = $this->layout->base.'/tools';
+        $dump = $this->root.'/pkg/mariadb-11.4.2/bin/mariadb-dump';
+        mkdir(dirname($dump), 0o755, true);
+        file_put_contents($dump, "#!/bin/sh\n");
+        chmod($dump, 0o755);
+        unlink($tools.'/mysqldump');
+        symlink($dump, $tools.'/mysqldump');
+        symlink($dump, $tools.'/mariadb-dump');
+        $this->sqliteLibrary(null, extension: false);
+
+        $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
+            ->expectsOutputToContain('Databases: MySQL or MariaDB only (backed up with '.$tools.'/mariadb-dump)')
+            ->assertSuccessful();
+    }
+
     public function test_pending_migrations_are_counted(): void
     {
         $this->installEnv();

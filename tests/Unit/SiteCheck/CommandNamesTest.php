@@ -17,7 +17,7 @@ final class CommandNamesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->root = sys_get_temp_dir().'/openpne-names-'.bin2hex(random_bytes(4));
+        $this->root = realpath(sys_get_temp_dir()).'/openpne-names-'.bin2hex(random_bytes(4));
         mkdir($this->root);
         $this->path = getenv('PATH');
     }
