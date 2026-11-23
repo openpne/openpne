@@ -421,12 +421,12 @@ makes to itself. To tell, sign in from a browser off the server (the administrat
 do) and read the address the site recorded:
 
 ```bash
-grep login.success storage/logs/security-*.log | tail -n 1
+grep -rh --include='security-*.log' login.success storage/logs | sort | tail -n 1
 ```
 
 If its `ip` is the address you connect from (from the same network, the first field of
-`echo $SSH_CLIENT`), leave the setting empty. If it is one of the host's, every member has it: name
-the proxies, as whoever runs them lists them.
+`echo $SSH_CLIENT` in your own SSH session), leave the setting empty. If it is the proxy's, every
+member has it: name the proxies, as whoever runs them lists them.
 
 ## 6. Background work
 
