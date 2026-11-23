@@ -10,7 +10,7 @@ use Throwable;
 
 class SqliteSupport
 {
-    /** The floor Laravel 13 states for SQLite; below 3.32 the app keeps each statement under 999 bound values (docs/internals/runtime.md, "Bound parameters"). */
+    /** The floor Laravel 13 states for SQLite; below 3.32 a statement takes at most 999 bound values (docs/internals/runtime.md, "Bound parameters"). */
     public const LIBRARY_MINIMUM = '3.26.0';
 
     public function hasPdo(): bool

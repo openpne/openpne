@@ -204,7 +204,7 @@ class CheckCommandTest extends TestCase
             $this->installEnv();
             Artisan::call('openpne:install');
             $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
-                ->doesntExpectOutputToContain('and OpenPNE needs 3.26.0 or later')
+                ->doesntExpectOutputToContain('and OpenPNE needs')
                 ->run();
         }
     }
@@ -253,6 +253,22 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('PHP on the command line has no sqlite3 extension, and the backup of an SQLite database (php artisan openpne:backup-sqlite, docs/updating.md) needs it.')
             ->expectsOutputToContain('PHP on the command line runs on SQLite 3.25.3, and OpenPNE needs 3.26.0 or later.')
             ->assertFailed();
+    }
+
+    public function test_an_installed_sqlite_site_passes_at_the_library_setup_takes(): void
+    {
+        if (! $this->sqlite()) {
+            $this->markTestSkipped('The site is on MySQL.');
+        }
+        $this->installEnv();
+        Artisan::call('openpne:install');
+        $this->sqliteLibrary('3.26.0');
+
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('[ OK ] The database is backed up with php artisan openpne:backup-sqlite.')
+            ->doesntExpectOutputToContain('and OpenPNE needs')
+            ->doesntExpectOutputToContain('[FAIL]')
+            ->assertSuccessful();
     }
 
     public function test_each_setting_a_production_site_needs_fails_when_it_is_off(): void
