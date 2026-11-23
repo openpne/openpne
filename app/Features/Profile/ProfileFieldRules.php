@@ -3,6 +3,7 @@
 namespace App\Features\Profile;
 
 use App\Models\Profile;
+use App\Rules\MaxBytes;
 use App\Services\CountryListService;
 use App\Services\PresetProfileService;
 use App\Services\RegionListService;
@@ -12,6 +13,10 @@ use Illuminate\Validation\Rule;
 /** The caller adds the per-value visibility rule and any non-profile keys. */
 class ProfileFieldRules
 {
+    // Bytes, not characters, equal to the TEXT column MySQL enforces at insert, so no migrated value
+    // is locked out of re-editing.
+    private const VALUE_MAX_BYTES = 65535;
+
     public function __construct(private PresetProfileService $presets) {}
 
     /**
@@ -83,6 +88,7 @@ class ProfileFieldRules
                 break;
             default: // input / textarea
                 $rules[] = 'string';
+                $rules[] = new MaxBytes(self::VALUE_MAX_BYTES);
                 if ($profile->value_regexp) {
                     $rules[] = 'regex:'.$this->normalizeRegex($profile->value_regexp);
                 }

@@ -63,6 +63,30 @@ class WriteThrottleBehaviorTest extends TestCase
         $this->assertNotSame(429, $this->getAs($b, $uri)->status());
     }
 
+    public function test_a_guest_search_counts_by_address(): void
+    {
+        config(['openpne.throttle.search' => 2, 'openpne.throttle.search_ip' => 1000]);
+
+        $this->get('/diary/search?keyword=a')->assertOk();
+        $this->get('/diary/search?keyword=a')->assertOk();
+        $this->get('/diary/search?keyword=a')->assertStatus(429);
+
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10'])->get('/diary/search?keyword=a')->assertOk();
+    }
+
+    public function test_a_member_search_counts_by_member(): void
+    {
+        config(['openpne.throttle.search' => 2, 'openpne.throttle.search_ip' => 1000]);
+
+        $a = Member::factory()->create();
+        $this->assertNotSame(429, $this->getAs($a, '/member/search?name=a')->status());
+        $this->assertNotSame(429, $this->getAs($a, '/groups?keyword=a')->status());
+        $this->getAs($a, '/member/search?name=a')->assertStatus(429);
+
+        $b = Member::factory()->create();
+        $this->assertNotSame(429, $this->getAs($b, '/member/search?name=a')->status());
+    }
+
     public function test_per_ip_limb_caps_across_members_sharing_an_address(): void
     {
         // Member limb off, IP limb tight: two members on one address (127.0.0.1 in tests) share it.

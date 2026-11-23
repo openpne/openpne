@@ -19,6 +19,7 @@ use Filament\Facades\Filament;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -48,6 +49,19 @@ class SearchCollationSitesTest extends TestCase
     public function test_ascii_case_is_folded_on_both_engines(string $site): void
     {
         $this->assertTrue($this->{$site}('tanaka', 'TANAKA'));
+    }
+
+    /** A backslash is MySQL's and MariaDB's LIKE escape unless the statement names another. */
+    #[DataProvider('sites')]
+    public function test_a_typed_wildcard_matches_only_itself(string $site): void
+    {
+        $this->assertFalse($this->{$site}('abc', '%'));
+        $this->assertFalse($this->{$site}('abd', '_'));
+        $this->assertFalse($this->{$site}('x1y', 'x_y'));
+        $this->assertTrue($this->{$site}('x_y', 'x_y'));
+        $this->assertFalse($this->{$site}('p%q', '\\%'));
+        $this->assertTrue($this->{$site}('p\\%q', '\\%'));
+        $this->assertTrue($this->{$site}('r!s', '!'));
     }
 
     #[DataProvider('sites')]
@@ -154,7 +168,8 @@ class SearchCollationSitesTest extends TestCase
     {
         Filament::setCurrentPanel('admin');
         $this->actingAs(AdminUser::factory()->create(), 'admin');
-        $profile = Profile::factory()->create(['form_type' => 'input']);
+        // The name column is searched too, and the factory's names carry an underscore.
+        $profile = Profile::factory()->create(['form_type' => 'input', 'name' => 'f'.Str::lower(Str::random(12))]);
         $profile->setTranslation('ja_JP', $stored);
         $profile->setTranslation('en', $stored);
 

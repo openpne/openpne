@@ -7,13 +7,14 @@ use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Database\SearchCollation;
+use App\Support\SearchInput;
+use App\Support\SearchInputRejected;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Diary keyword search over the recent feed's tier: each whitespace-split term must match the title
- * or the body, AND-connected. Wildcards are not escaped, matching the member search — the term is
- * still bound, so this is wildcard latitude rather than injection.
+ * or the body, AND-connected.
  */
 class SearchDiaries
 {
@@ -44,8 +45,8 @@ class SearchDiaries
     {
         foreach (self::terms($keyword) as $term) {
             $query->where(function ($q) use ($term): void {
-                SearchCollation::whereMatches($q, 'title', '%'.$term.'%');
-                SearchCollation::orWhereMatches($q, 'body', '%'.$term.'%');
+                SearchCollation::whereContains($q, 'title', $term);
+                SearchCollation::orWhereContains($q, 'body', $term);
             });
         }
     }
@@ -56,11 +57,17 @@ class SearchDiaries
      * `forwardUnless($keywords, 'diary', 'list')` condition — the caller renders the list.
      *
      * @return list<string>
+     *
+     * @throws SearchInputRejected
      */
     public static function terms(string $keyword): array
     {
-        $normalized = str_replace('　', ' ', $keyword);
+        $normalized = trim(str_replace('　', ' ', $keyword));
+        SearchInput::ensureLength($normalized);
 
-        return preg_split('/\s+/u', trim($normalized), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $terms = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        SearchInput::ensureTermCount($terms);
+
+        return $terms;
     }
 }

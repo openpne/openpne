@@ -53,8 +53,6 @@ class PostDiaryTool extends DiaryTool
                 ...$request->only(['visibility', 'format']),
             ],
             [
-                // The title's column is TEXT too and the web form leaves it to the column; capped
-                // here so an oversize title is a refusal rather than a database error.
                 'title' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
                 'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
                 // A refused audience names the field: it is the caller's own choice, and says nothing

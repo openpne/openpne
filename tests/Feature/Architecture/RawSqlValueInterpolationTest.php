@@ -48,7 +48,7 @@ class RawSqlValueInterpolationTest extends TestCase
             '"(({$effAge} <= {$this->clearanceCase()}) AND (({$effAge} <> 0) OR ({$allowWeb})))",' => 'the age visibility expression is composed by the code from enum values and driver-chosen column names; the viewer id is bound',
         ],
         'app/Support/Database/SearchCollation.php' => [
-            '"{$subject} LIKE {$term}".($escape === null ? \'\' : \' ESCAPE ?\'), $bindings, $boolean);' => 'the column is the caller\'s own, wrapped by the grammar, and the collation is the connection\'s configuration; the pattern and the escape character are bound',
+            '"{$subject} LIKE {$term} ESCAPE ?", [$pattern, self::ESCAPE], $boolean);' => 'the column is the caller\'s own, wrapped by the grammar, and the collation is the connection\'s configuration; the pattern and the escape character are bound',
             '"{$subject}{$collate} {$direction}", $bindings);' => 'the column is the caller\'s own, wrapped by the grammar, or a subquery whose values are bound; the collation is the connection\'s configuration and the direction is one of two words',
         ],
         'app/Features/Member/Queries/VisibleSelfIntroductions.php' => [

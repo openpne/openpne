@@ -56,7 +56,7 @@ A search a member types and a list ordered by a name go through
 [`SearchCollation`](../../app/Support/Database/SearchCollation.php), not through the column's own
 collation:
 
-| Engine | Search (`whereMatches`) | Name order (`orderBy`) |
+| Engine | Search (`whereContains`) | Name order (`orderBy`) |
 |---|---|---|
 | MySQL | `LOWER(column) COLLATE utf8mb4_ja_0900_as_cs LIKE LOWER(?)` | `column COLLATE utf8mb4_ja_0900_as_cs` |
 | MariaDB | `LOWER(column COLLATE utf8mb4_uca1400_as_cs) LIKE LOWER(? COLLATE utf8mb4_uca1400_as_cs)` | `column COLLATE utf8mb4_uca1400_as_cs` |
@@ -76,13 +76,24 @@ accents and emoji; a name order puts kanji not by reading but in code point orde
 Ideographs block ahead of its extensions (`㐂`, U+3402, after `一`, U+4E00).
 SQLite's `LIKE` folds the case of ASCII letters and nothing else, and `NOCASE` orders the same way.
 
-The caller builds the pattern, so whether `%` and `_` in a term are wildcards is the screen's choice:
-the mention and recipient pickers escape them, the admin panel goes through `whereContains`, which
-does, and the member, diary and group searches do not.
+A search finds the term as typed. `whereContains` escapes `%`, `_` and the escape character `!`
+before wrapping the term in `%…%`, and appends `ESCAPE '!'` to each `LIKE` above; naming the escape
+also stops MySQL and MariaDB from reading a backslash in the term as their default one.
 
 A name order is a list a reader scans by name: the mention and recipient pickers, the muted talk
 rooms, group categories after `sort_order`, and the admin tables' sorts by a member's, a group's or an
 administrator's name. Ordering through an expression is a filesort, even on an indexed column.
+
+### Search limits
+
+The diary, member and group searches, and the keyword filter of a member's Modern diary archive,
+refuse a field longer than 100 characters (code points, spaces included) and a diary keyword of more
+than 10 terms ([`SearchInput`](../../app/Support/SearchInput.php)).
+Each diary term is two `LIKE`s with two bound values each, so the term cap keeps a statement far below
+the 999 bound values that SQLite before 3.32 accepts. A refused search goes back to the same screen
+without its query and shows the reason in the `error` flash; it is not logged, and a JSON request gets
+a 422. The term is never shortened, so the results always answer what was typed. The three screens are
+also rate-limited (`throttle:search`, [security.md](security.md#rate-limits-on-member-requests)).
 
 ### Filament
 
@@ -104,7 +115,9 @@ LIKE in the same file is not let through; English prose and codes that say "like
 The same test fails on a `searchable()` without `query:` and on the components that search with SQL
 of Filament's own and take no query (`MorphToSelect`, `SelectColumn`, the attach and associate
 actions, the query builder's text and relationship constraints), unless listed with a reason. A
-name order that skips the helper is not caught; it falls back to the column's own order.
+name order that skips the helper is not caught; it falls back to the column's own order. Inside the
+helper, the method that takes a ready-made pattern is private, so `whereContains` is the only way
+in and every caller's term is escaped.
 
 ## MariaDB
 

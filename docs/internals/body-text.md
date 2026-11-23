@@ -114,7 +114,12 @@ alone keeps a hostile body inert. Notable choices, each pinned by
   65,535-byte body legitimately exceeds that once escaped. The bound lives upstream instead:
   the markdown-capable body rules (diary/topic/event) and the preview cap the **raw** input at
   the TEXT column's 65,535 bytes ([`MaxBytes`](../../app/Rules/MaxBytes.php) — bytes, not
-  characters). Plain-only bodies keep their own rules (timeline stays `max:140` characters).
+  characters). Plain-only bodies keep their own rules (timeline stays `max:140` characters, chat a
+  character cap of its own). Every other TEXT column a member fills — titles, an event's place and
+  date note, comments, a direct message's subject and body, a group's description, a profile's
+  text value — carries the same byte cap, so an oversized value is an input error rather than a
+  failed insert. A stored value past it, which only SQLite can hold, still renders and is refused
+  on save until shortened.
 - Soft breaks render as `<br>`, so a markdown body keeps plaintext-like line behavior.
 
 The compose forms post `format=plain|markdown`. The Classic form drives it from a checkbox paired

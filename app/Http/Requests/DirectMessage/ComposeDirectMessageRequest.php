@@ -5,12 +5,16 @@ namespace App\Http\Requests\DirectMessage;
 use App\Features\DirectMessage\DirectMessageComposeData;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\DirectMessage;
+use App\Rules\MaxBytes;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 /** Only the shape of `to` is validated here: the action re-checks the recipient and the send gate. */
 class ComposeDirectMessageRequest extends FormRequest
 {
+    // Bytes, not characters, equal to the TEXT column MySQL enforces at insert.
+    private const TEXT_MAX_BYTES = 65535;
+
     public function authorize(): bool
     {
         return true;
@@ -31,9 +35,8 @@ class ComposeDirectMessageRequest extends FormRequest
     {
         return [
             'to' => ['required', 'integer', 'exists:members,id'],
-            // No max length: OpenPNE 3 subject/body are TEXT with no validator limit (required, trimmed).
-            'subject' => ['required', 'string'],
-            'body' => ['required', 'string'],
+            'subject' => ['required', 'string', new MaxBytes(self::TEXT_MAX_BYTES)],
+            'body' => ['required', 'string', new MaxBytes(self::TEXT_MAX_BYTES)],
             // A reply link must point at a message the viewer is a party to, not just any message id,
             // so a crafted parent_id/thread_id can never reference a stranger's message.
             'parent_id' => ['nullable', 'integer', $this->partyToMessage()],
