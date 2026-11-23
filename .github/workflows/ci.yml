@@ -146,6 +146,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
+      # Not a `container:` job: its pull has no retry, and its steps would run the suite as root.
       - name: Start AlmaLinux 8
         run: |
           for attempt in 1 2 3 4 5; do
