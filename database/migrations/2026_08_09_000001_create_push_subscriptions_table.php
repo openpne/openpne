@@ -16,7 +16,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $mysql = DB::connection()->getDriverName() === 'mysql';
+        $mysql = in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true);
 
         Schema::create('push_subscriptions', function (Blueprint $table) use ($mysql) {
             $table->bigIncrements('id');

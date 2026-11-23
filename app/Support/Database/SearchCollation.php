@@ -27,6 +27,8 @@ final class SearchCollation
 
         [$subject, $term] = match (true) {
             $base->getConnection()->getDriverName() === 'sqlite' => [$subject, '?'],
+            // MariaDB lowers by the operand's collation, and the binary one's case table predates the UCA one.
+            $base->getConnection()->getDriverName() === 'mariadb' && $collation !== null => ["LOWER({$subject} COLLATE {$collation})", "LOWER(? COLLATE {$collation})"],
             $collation !== null => ["LOWER({$subject}) COLLATE {$collation}", 'LOWER(?)'],
             default => ["LOWER({$subject})", 'LOWER(?)'],
         };

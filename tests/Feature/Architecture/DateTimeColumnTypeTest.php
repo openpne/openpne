@@ -65,7 +65,8 @@ class DateTimeColumnTypeTest extends TestCase
 
         foreach ($this->converter()::TABLES as $table) {
             foreach (Schema::getColumns($table) as $column) {
-                if ($column['default'] === 'CURRENT_TIMESTAMP') {
+                // MariaDB reports the default as current_timestamp().
+                if (in_array(strtolower((string) $column['default']), ['current_timestamp', 'current_timestamp()'], true)) {
                     $defaults[] = $table.'.'.$column['name'];
                 }
             }

@@ -30,7 +30,7 @@ return new class extends Migration
 
     private function resize(int $length, string $charset, string $collation): void
     {
-        if (DB::connection()->getDriverName() !== 'mysql') {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }
 

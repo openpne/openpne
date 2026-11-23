@@ -132,4 +132,30 @@ class TalkBurstCandidatesTest extends TestCase
         $this->assertSame([$liked->getKey(), $wordy->getKey(), $quietLate->getKey()], $this->ids($items));
         $this->assertSame([3, 1, 0], $items->map(fn (PlannedItem $item): int => $item->stats['reactions'])->all());
     }
+
+    public function test_messages_authors_and_reactions_each_count_toward_the_score(): void
+    {
+        $window = $this->window();
+        $member = Member::factory()->create();
+        // Scored 6, 5, 4 and 3; leaving any one of the three out of the sum reorders them.
+        $talkative = Group::factory()->create();
+        foreach ([10, 9, 8, 7, 6] as $hoursAgo) {
+            $this->said($talkative, $member, $window->end->subHours($hoursAgo));
+        }
+        $reacted = Group::factory()->create();
+        $once = $this->said($reacted, $member, $window->end->subHours(5));
+        foreach (Member::factory()->count(3)->create() as $reader) {
+            $this->reacted($once, $reader);
+        }
+        $pair = Group::factory()->create();
+        $this->said($pair, Member::factory()->create(), $window->end->subHours(4));
+        $this->said($pair, Member::factory()->create(), $window->end->subHours(3));
+        $alone = Group::factory()->create();
+        $this->said($alone, $member, $window->end->subHours(2));
+        $this->said($alone, $member, $window->end->subHour());
+
+        $items = app(TalkBurstCandidates::class)($window, 10);
+
+        $this->assertSame([$talkative->getKey(), $reacted->getKey(), $pair->getKey(), $alone->getKey()], $this->ids($items));
+    }
 }

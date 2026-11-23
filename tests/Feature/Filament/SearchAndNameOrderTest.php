@@ -63,11 +63,21 @@ class SearchAndNameOrderTest extends TestCase
 
     public function test_mysql_table_search_folds_kana_but_tells_the_voiced_mark_apart(): void
     {
-        $this->skipUnlessMysql();
+        $this->skipUnlessDriver('mysql');
         $katakana = Member::factory()->create(['name' => 'タナカ']);
         $voiced = Member::factory()->create(['name' => 'ば']);
 
         Livewire::test(ListMembers::class)->searchTable('たなか')->assertCanSeeTableRecords([$katakana]);
+        Livewire::test(ListMembers::class)->searchTable('は')->assertCanNotSeeTableRecords([$voiced]);
+    }
+
+    public function test_mariadb_table_search_tells_kana_and_the_voiced_mark_apart(): void
+    {
+        $this->skipUnlessDriver('mariadb');
+        $katakana = Member::factory()->create(['name' => 'タナカ']);
+        $voiced = Member::factory()->create(['name' => 'ば']);
+
+        Livewire::test(ListMembers::class)->searchTable('たなか')->assertCanNotSeeTableRecords([$katakana]);
         Livewire::test(ListMembers::class)->searchTable('は')->assertCanNotSeeTableRecords([$voiced]);
     }
 
@@ -80,11 +90,21 @@ class SearchAndNameOrderTest extends TestCase
 
     public function test_mysql_global_search_folds_kana_but_tells_the_voiced_mark_apart(): void
     {
-        $this->skipUnlessMysql();
+        $this->skipUnlessDriver('mysql');
         Group::factory()->create(['name' => 'タナカ']);
         Group::factory()->create(['name' => 'ば']);
 
         $this->assertContains('タナカ', $this->globalSearchTitles('たなか'));
+        $this->assertNotContains('ば', $this->globalSearchTitles('は'));
+    }
+
+    public function test_mariadb_global_search_tells_kana_and_the_voiced_mark_apart(): void
+    {
+        $this->skipUnlessDriver('mariadb');
+        Group::factory()->create(['name' => 'タナカ']);
+        Group::factory()->create(['name' => 'ば']);
+
+        $this->assertNotContains('タナカ', $this->globalSearchTitles('たなか'));
         $this->assertNotContains('ば', $this->globalSearchTitles('は'));
     }
 
@@ -216,20 +236,26 @@ class SearchAndNameOrderTest extends TestCase
 
     /**
      * Created in neither the expected order nor its reverse (the tables' default is newest first),
-     * and in an order each engine's plain comparison does not give: SQLite's code points put Tanaka
-     * before abe, and MySQL's put 愛 before 阿.
+     * and in an order each engine's plain comparison does not give: SQLite's and MariaDB's binary
+     * comparison put Tanaka before abe, and MySQL's puts 愛 before 阿.
      *
      * @return list<string>
      */
     private function unorderedNames(): array
     {
-        return DB::connection()->getDriverName() === 'mysql' ? ['阿', '愛', '亜'] : ['Tanaka', 'たなか', 'abe'];
+        return match (DB::connection()->getDriverName()) {
+            'mysql' => ['阿', '愛', '亜'],
+            'mariadb', 'sqlite' => ['Tanaka', 'たなか', 'abe'],
+        };
     }
 
     /** @param  array<string, Model>  $byName */
     private function assertOrder(array $byName, Testable $list): void
     {
-        $expected = DB::connection()->getDriverName() === 'mysql' ? ['亜', '阿', '愛'] : ['abe', 'Tanaka', 'たなか'];
+        $expected = match (DB::connection()->getDriverName()) {
+            'mysql' => ['亜', '阿', '愛'],
+            'mariadb', 'sqlite' => ['abe', 'Tanaka', 'たなか'],
+        };
         $records = $list->instance()->getTableRecords();
         $ids = collect($records instanceof Paginator ? $records->items() : $records)
             ->map(fn (Model $record): mixed => $record->getKey())
@@ -246,10 +272,10 @@ class SearchAndNameOrderTest extends TestCase
         return GroupResource::getGlobalSearchResults($search)->map(fn ($result): string => (string) $result->title)->all();
     }
 
-    private function skipUnlessMysql(): void
+    private function skipUnlessDriver(string $driver): void
     {
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('mysql only');
+        if (DB::connection()->getDriverName() !== $driver) {
+            $this->markTestSkipped("{$driver} only");
         }
     }
 }

@@ -27,6 +27,12 @@ class RawSqlValueInterpolationTest extends TestCase
         'app/Features/Diary/Queries/MemberDiaryMonthlyCounts.php' => [
             '"{$ym} as ym, count(*) as total")' => 'the month expression is chosen per driver by the code',
         ],
+        'app/Features/Home/Queries/TalkBurstCandidates.php' => [
+            '"{$messageCount} as message_count")' => 'a score term, a literal of the code\'s own written once for the select and MariaDB\'s ORDER BY',
+            '"{$authorCount} as author_count")' => 'a score term, a literal of the code\'s own written once for the select and MariaDB\'s ORDER BY',
+            '"{$reactionCount} as reaction_count")' => 'a score term, a literal of the code\'s own written once for the select and MariaDB\'s ORDER BY',
+            '"{$messageCount} + {$authorCount} + {$reactionCount} desc"),' => 'the score terms, literals of the code\'s own',
+        ],
         'app/Features/Timeline/Queries/MentionCandidates.php' => [
             '"{$length}(members.name) <= ?", [self::MAX_NAME])' => 'the length function is chosen per driver by the code',
         ],

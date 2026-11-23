@@ -37,7 +37,7 @@ class ConvertTimestampColumnsToDatetimeTest extends TestCase
     {
         parent::setUp();
 
-        if (DB::connection()->getDriverName() !== 'mysql') {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             $this->markTestSkipped('Only MySQL has TIMESTAMP columns to convert.');
         }
     }

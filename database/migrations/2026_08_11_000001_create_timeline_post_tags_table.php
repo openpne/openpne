@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $mysql = DB::connection()->getDriverName() === 'mysql';
+        $mysql = in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true);
 
         Schema::create('timeline_post_tags', function (Blueprint $table) use ($mysql) {
             $table->id();

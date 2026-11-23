@@ -42,20 +42,29 @@ final class TalkBurstCandidates
             ->groupBy('reacted_messages.group_id');
         $window->apply($reactions, 'reacted_messages.created_at');
 
+        $messageCount = 'count(*)';
+        // COUNT(DISTINCT) skips the null a withdrawn author leaves, which is the answer wanted:
+        // nobody is not somebody who spoke.
+        $authorCount = 'count(distinct group_messages.member_id)';
+        // One joined row per room, so MAX() is that row's count; it keeps MySQL's only-full-group-by happy.
+        $reactionCount = 'coalesce(max(reacted.reactions), 0)';
+
         $bursts = DB::table('group_messages')
             ->join('groups', 'groups.id', '=', 'group_messages.group_id')
             ->leftJoinSub($reactions, 'reacted', 'reacted.group_id', '=', 'groups.id')
             ->where('groups.topic_read_access', TopicReadAccess::Everyone->value)
             ->select('groups.id')
-            ->selectRaw('count(*) as message_count')
-            // COUNT(DISTINCT) skips the null a withdrawn author leaves, which is the answer wanted:
-            // nobody is not somebody who spoke.
-            ->selectRaw('count(distinct group_messages.member_id) as author_count')
+            ->selectRaw("{$messageCount} as message_count")
+            ->selectRaw("{$authorCount} as author_count")
             ->selectRaw('max(group_messages.created_at) as last_said')
-            // One joined row per room, so MAX() is that row's count; it keeps MySQL's only-full-group-by happy.
-            ->selectRaw('coalesce(max(reacted.reactions), 0) as reaction_count')
+            ->selectRaw("{$reactionCount} as reaction_count")
             ->groupBy('groups.id')
-            ->orderByRaw('message_count + author_count + reaction_count desc')
+            // MariaDB refuses a select alias of an aggregate inside an ORDER BY expression (error 1247).
+            ->when(
+                DB::connection()->getDriverName() === 'mariadb',
+                fn ($query) => $query->orderByRaw("{$messageCount} + {$authorCount} + {$reactionCount} desc"),
+                fn ($query) => $query->orderByRaw('message_count + author_count + reaction_count desc'),
+            )
             ->orderByDesc('last_said')
             ->orderByDesc('groups.id')
             ->limit($limit);
