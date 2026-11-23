@@ -408,7 +408,14 @@ Key invariants:
    MySQL option file (`mysql-backup.cnf`, 0600) and the backups go there. The backup line it prints
    writes `backup.sqlite` through `openpne:backup-sqlite` ([SQLite backup](#sqlite-backup)) or
    `backup.sql` beside a `.new` copy moved over the last, and refuses a path holding a character a
-   shell or cron reads as its own. The same copy is written once into a 0600 file there, judged by a
+   shell or cron reads as its own. The MySQL line runs in a subshell under umask 077, so `backup.sql`
+   is 0600 as `backup.sqlite` is while the shell keeps its umask. This line and the cron line name
+   PHP by `PHP_BINARY`, which has its links resolved, except where that path holds the patch
+   release, which a host's update can take away: there by the first `php<major>.<minor>`, then
+   `php`, on PATH that is the same file and outside such a path. A `mysqldump` that is MariaDB's is
+   named by the `mariadb-dump` on PATH that is the same file, else by the file it links to, as
+   MariaDB's tool called `mysqldump` warns at every run. `openpne:check` names both the same way,
+   and a sentence of either command says `php` where PATH's `php` is that PHP. The same copy is written once into a 0600 file there, judged by a
    table read back from it, and removed: for SQLite in the process, without the command's lock and
    rename, and for MySQL by the dump where `proc_open` allows.
 5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway

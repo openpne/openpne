@@ -1148,7 +1148,7 @@ class SetupCommandTest extends TestCase
 
         return $this->sqlite()
             ? "cd '{$this->layout->base}' && '".PHP_BINARY."' artisan openpne:backup-sqlite '{$data}/backup.sqlite'"
-            : "rm -f '{$data}/backup.sql.new' && '{$tools}/mysqldump' --defaults-extra-file='{$this->layout->mysqlOptionFile()}'";
+            : "(umask 077 && rm -f '{$data}/backup.sql.new' && '{$tools}/mysqldump' --defaults-extra-file='{$this->layout->mysqlOptionFile()}'";
     }
 
     /**

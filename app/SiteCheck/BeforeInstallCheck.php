@@ -22,13 +22,13 @@ final class BeforeInstallCheck
         'storage/framework/sessions', 'storage/framework/views', 'storage/logs',
     ];
 
-    public function __construct(private readonly SiteLayout $layout, private readonly SqliteSupport $sqlite) {}
+    public function __construct(private readonly SiteLayout $layout, private readonly SqliteSupport $sqlite, private readonly PhpCommand $php) {}
 
     /** @return list<Finding> */
     public function run(bool $installed): array
     {
         return [
-            Finding::ok('cli.php', 'cli_php', ['version' => PHP_VERSION, 'path' => PHP_BINARY]),
+            Finding::ok('cli.php', 'cli_php', ['version' => PHP_VERSION, 'path' => $this->php->path()]),
             $this->extensions(),
             $this->writable($installed),
             ...$this->databases($installed),
@@ -108,7 +108,7 @@ final class BeforeInstallCheck
 
         return self::enoughMemory($limit)
             ? Finding::ok('cli.memory', 'cli_memory', ['value' => $limit])
-            : Finding::warn('cli.memory', 'cli_memory_low', ['value' => $limit]);
+            : Finding::warn('cli.memory', 'cli_memory_low', ['value' => $limit, 'php' => $this->php->word()]);
     }
 
     public static function enoughMemory(string $limit): bool

@@ -7,6 +7,7 @@ namespace Tests\Feature\Console;
 use App\SiteCheck\BackupTools;
 use App\SiteCheck\BeforeInstallCheck;
 use App\SiteCheck\InstalledCheck;
+use App\SiteCheck\PhpCommand;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\WebCheck;
@@ -60,6 +61,7 @@ class CheckCommandTest extends TestCase
         $this->connection = (string) config('database.default');
         $this->path = getenv('PATH');
         $this->tool('mysqldump');
+        symlink(PHP_BINARY, $base.'/tools/php');
         putenv('PATH='.$base.'/tools');
 
         config([
@@ -289,6 +291,19 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('The initial data is missing')
             ->expectsOutputToContain($this->layout->base.'/.htaccess is missing')
             ->assertFailed();
+    }
+
+    public function test_a_sentence_names_this_php_where_path_s_php_is_another(): void
+    {
+        $this->installEnv();
+        unlink($this->layout->base.'/tools/php');
+        $this->tool('php');
+        config(['app.key' => '']);
+
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('APP_KEY is empty: '.(new PhpCommand)->path().' artisan key:generate')
+            ->assertFailed();
+        $this->assertFileDoesNotExist($this->layout->base.'/tools/ran');
     }
 
     public function test_pending_migrations_are_counted(): void

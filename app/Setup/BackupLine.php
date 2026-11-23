@@ -35,8 +35,9 @@ final class BackupLine
     {
         $copy = $dataDirectory.'/'.self::MYSQL_FILE;
 
-        return self::rotate($copy, self::quote($tool).' --defaults-extra-file='.self::quote($optionFile)
-            .' --single-transaction --no-tablespaces '.self::quote($database).' > '.self::quote($copy.'.new'));
+        // In a subshell, so that the copy is made 0600 as SQLite's is, while the shell it is pasted into keeps its umask.
+        return '(umask 077 && '.self::rotate($copy, self::quote($tool).' --defaults-extra-file='.self::quote($optionFile)
+            .' --single-transaction --no-tablespaces '.self::quote($database).' > '.self::quote($copy.'.new')).')';
     }
 
     public static function cron(string $php, string $base): string

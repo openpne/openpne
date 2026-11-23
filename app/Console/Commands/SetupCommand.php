@@ -20,6 +20,7 @@ use App\Setup\StopSetup;
 use App\SiteCheck\BackupTools;
 use App\SiteCheck\Finding;
 use App\SiteCheck\InstalledCheck;
+use App\SiteCheck\PhpCommand;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\Verdict;
@@ -83,11 +84,14 @@ class SetupCommand extends Command
 
     private SqliteSupport $sqlite;
 
-    public function handle(SetupHost $host, DatabaseServerProbe $servers, SqliteSupport $sqlite): int
+    private PhpCommand $php;
+
+    public function handle(SetupHost $host, DatabaseServerProbe $servers, SqliteSupport $sqlite, PhpCommand $php): int
     {
         $this->host = $host;
         $this->servers = $servers;
         $this->sqlite = $sqlite;
+        $this->php = $php;
         $lang = $this->option('lang');
         if ($lang !== null && ! in_array($lang, ['ja', 'en'], true)) {
             $this->error("Unknown language [{$lang}]. Expected ja or en.");
@@ -294,7 +298,7 @@ class SetupCommand extends Command
         $this->cron();
 
         $this->newLine();
-        $this->say('done');
+        $this->say('done', ['php' => $this->php->word()]);
 
         return self::SUCCESS;
     }
@@ -758,17 +762,13 @@ class SetupCommand extends Command
     {
         $this->newLine();
         $sqlite = $driver === 'sqlite';
-        $tool = $sqlite ? ($this->sqlite->hasExtension() ? PHP_BINARY : null) : BackupTools::mysql();
+        $tool = $sqlite ? ($this->sqlite->hasExtension() ? $this->php->path() : null) : BackupTools::mysql();
         $data = $this->layout->dataDirectory();
         $database = (string) ($settings['database'] ?? '');
         if ($tool === null) {
             $this->say($sqlite ? 'backup_no_sqlite_extension' : 'backup_no_mysql_tool', [], 'error');
 
             return;
-        }
-        // Called mysqldump, MariaDB's tool warns at every run, cron's included.
-        if (! $sqlite && MysqlOptionFile::isMariaDb($tool)) {
-            $tool = realpath($tool) ?: $tool;
         }
         $option = $this->layout->mysqlOptionFile();
         $unsafe = array_filter($sqlite ? [$tool, $this->layout->base, $data] : [$tool, $database, $data, $option], fn (string $part): bool => ! BackupLine::safe($part));
@@ -847,14 +847,15 @@ class SetupCommand extends Command
 
     private function cron(): void
     {
-        if (! BackupLine::safe(PHP_BINARY, $this->layout->base)) {
+        $php = $this->php->path();
+        if (! BackupLine::safe($php, $this->layout->base)) {
             $this->say('cron_unsafe_path');
 
             return;
         }
         $this->newLine();
         $this->say('cron');
-        $this->line(OutputFormatter::escape(BackupLine::cron(PHP_BINARY, $this->layout->base)));
+        $this->line(OutputFormatter::escape(BackupLine::cron($php, $this->layout->base)));
     }
 
     /** Asks once, before the first password this host would echo, whether to go on. */

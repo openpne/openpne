@@ -24,6 +24,7 @@ final class InstalledCheck
         private readonly Migrator $migrator,
         private readonly DatabaseServerProbe $servers,
         private readonly SqliteSupport $sqlite,
+        private readonly PhpCommand $php,
     ) {}
 
     /** @return list<Finding> */
@@ -39,7 +40,7 @@ final class InstalledCheck
                 : Finding::ok('app.debug', 'app_debug'),
             filled(config('app.key'))
                 ? Finding::ok('app.key', 'app_key')
-                : Finding::fail('app.key', 'app_key_missing'),
+                : Finding::fail('app.key', 'app_key_missing', ['php' => $this->php->word()]),
             $this->appUrl(),
             ...$this->database(),
             file_exists($this->layout->base.'/.htaccess')
@@ -115,7 +116,7 @@ final class InstalledCheck
 
         try {
             if (! $this->migrator->repositoryExists()) {
-                return [...$findings, Finding::fail('db.migrations', 'db_not_installed')];
+                return [...$findings, Finding::fail('db.migrations', 'db_not_installed', ['php' => $this->php->word()])];
             }
             $files = $this->migrator->getMigrationFiles([database_path('migrations'), ...$this->migrator->paths()]);
             $pending = count(array_diff(array_keys($files), $this->migrator->getRepository()->getRan()));
@@ -129,7 +130,7 @@ final class InstalledCheck
             }
             $findings[] = $seeded
                 ? Finding::ok('db.initial', 'db_initial')
-                : Finding::fail('db.initial', 'db_initial_missing');
+                : Finding::fail('db.initial', 'db_initial_missing', ['php' => $this->php->word()]);
         } catch (Throwable $e) {
             $findings[] = Finding::unknown('db.migrations', 'db_unreadable', ['reason' => self::reason($e)]);
         }
@@ -146,8 +147,8 @@ final class InstalledCheck
     {
         $findings = [
             $this->sqlite->hasExtension()
-                ? Finding::ok('db.backup_tool', 'db_backup_sqlite')
-                : Finding::fail('db.backup_tool', 'db_backup_sqlite_missing'),
+                ? Finding::ok('db.backup_tool', 'db_backup_sqlite', ['php' => $this->php->word()])
+                : Finding::fail('db.backup_tool', 'db_backup_sqlite_missing', ['php' => $this->php->word()]),
         ];
         $version = $this->sqlite->libraryVersion();
         if ($version !== null && version_compare($version, SqliteSupport::LIBRARY_MINIMUM, '<')) {
