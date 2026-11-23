@@ -269,7 +269,9 @@ where the engine would not:
   (creating a copy, copying the rows, dropping the original, renaming the copy) or in raw SQL
   restores the mark itself. The rebuild also drops the table's triggers and nothing puts them back,
   so a migration that may rebuild a table holding triggers drops them if they exist and creates them
-  again: a `dropColumn()` rebuilds below SQLite 3.35 and keeps them from 3.35.
+  again: a `dropColumn()` rebuilds below SQLite 3.35 and keeps them from 3.35. Doing that in one
+  transaction with the rebuild means turning foreign keys off before the transaction opens: SQLite
+  ignores the pragma inside one, and the rebuild's `DROP TABLE` would cascade.
 
 Nothing restores a mark lowered another way: `TRUNCATE`, an `ALTER TABLE … AUTO_INCREMENT` that
 lowers it, a dump restored without it, an upgrade from OpenPNE 3 (it carries rows, not marks), a
