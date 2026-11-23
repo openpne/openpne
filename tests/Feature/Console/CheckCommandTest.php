@@ -144,7 +144,7 @@ class CheckCommandTest extends TestCase
         unlink($this->layout->base.'/tools/mysqldump');
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.26.0 or later, and PHP\'s sqlite3 extension; MySQL needs')
+            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.26.0 or later, and PHP\'s sqlite3 extension; MySQL and MariaDB need')
             ->assertFailed();
     }
 
@@ -152,14 +152,14 @@ class CheckCommandTest extends TestCase
     public static function sqliteVersions(): array
     {
         return [
-            'the library setup takes, and the extension' => ['3.26.0', true, 'Databases: SQLite (backed up through PHP\'s sqlite3 extension) or MySQL', []],
-            'the library too old' => ['3.25.3', true, 'Databases: MySQL only', [
+            'the library setup takes, and the extension' => ['3.26.0', true, 'Databases: SQLite (backed up through PHP\'s sqlite3 extension), MySQL or MariaDB', []],
+            'the library too old' => ['3.25.3', true, 'Databases: MySQL or MariaDB only', [
                 'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite 3.25.3, and OpenPNE needs 3.26.0 or later.',
             ]],
-            'no sqlite3 extension' => ['3.26.0', false, 'Databases: MySQL only', [
+            'no sqlite3 extension' => ['3.26.0', false, 'Databases: MySQL or MariaDB only', [
                 'SQLite cannot be used here: PHP on the command line has no sqlite3 extension, which the backup uses.',
             ]],
-            'no pdo_sqlite beside the extension' => [null, true, 'Databases: MySQL only', [
+            'no pdo_sqlite beside the extension' => [null, true, 'Databases: MySQL or MariaDB only', [
                 'SQLite cannot be used here: PHP on the command line has no pdo_sqlite.',
             ]],
         ];
@@ -186,7 +186,7 @@ class CheckCommandTest extends TestCase
         $this->sqliteLibrary(null, extension: false);
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('Databases: MySQL only (backed up with '.$this->layout->base.'/tools/mysqldump), which needs a MySQL server, 8.0.17 or later and not MariaDB. SQLite needs pdo_sqlite on SQLite 3.26.0 or later, and PHP\'s sqlite3 extension.')
+            ->expectsOutputToContain('Databases: MySQL or MariaDB only (backed up with '.$this->layout->base.'/tools/mysqldump), which needs a MySQL server 8.0.17 or later, or a MariaDB server 10.11 or later. SQLite needs pdo_sqlite on SQLite 3.26.0 or later, and PHP\'s sqlite3 extension.')
             ->doesntExpectOutputToContain('SQLite cannot be used here')
             ->expectsOutputToContain('Warnings: 0.')
             ->assertSuccessful();
@@ -197,7 +197,7 @@ class CheckCommandTest extends TestCase
         $this->sqliteLibrary(null, pdo: true);
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('Databases: SQLite (backed up through PHP\'s sqlite3 extension) or MySQL')
+            ->expectsOutputToContain('Databases: SQLite (backed up through PHP\'s sqlite3 extension), MySQL or MariaDB')
             ->doesntExpectOutputToContain('SQLite cannot be used here')
             ->assertSuccessful();
         if ($this->sqlite()) {
@@ -220,7 +220,7 @@ class CheckCommandTest extends TestCase
         $this->sqliteLibrary('3.25.3', extension: false);
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('Databases: MySQL only')
+            ->expectsOutputToContain('Databases: MySQL or MariaDB only')
             ->doesntExpectOutputToContain('SQLite cannot be used here')
             ->assertSuccessful();
     }
@@ -417,12 +417,24 @@ class CheckCommandTest extends TestCase
     {
         $this->installEnv();
         Artisan::call('openpne:install');
-        $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204');
+        $this->fakeDatabaseServer('10.6.28-MariaDB-ubu2204');
 
         $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
             ->expectsOutputToContain('[ OK ] The database (')
-            ->expectsOutputToContain('[FAIL] The database server is MariaDB 10.11.19, and OpenPNE does not run on MariaDB yet')
+            ->expectsOutputToContain('[FAIL] The database server is MariaDB 10.6.28, and OpenPNE runs on MariaDB 10.11 or later only')
             ->expectsOutputToContain('[ OK ] Every migration has run.')
+            ->assertFailed();
+    }
+
+    public function test_a_driver_that_does_not_fit_the_server_fails(): void
+    {
+        $this->installEnv();
+        Artisan::call('openpne:install');
+        $driver = (string) DB::connection()->getDriverName();
+        $this->fakeDatabaseServer($driver === 'mariadb' ? '8.4.11' : '10.11.19-MariaDB-ubu2204');
+
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('[FAIL] The database server is '.($driver === 'mariadb' ? 'MySQL 8.4.11, but DB_CONNECTION is mariadb' : "MariaDB 10.11.19, but DB_CONNECTION is {$driver}"))
             ->assertFailed();
     }
 

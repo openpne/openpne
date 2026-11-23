@@ -26,6 +26,15 @@ class CopyDatabaseTest extends TestCase
     /** @var list<array{0: string, 1: string}> connection name, database file */
     private array $temporary = [];
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (DB::connection()->getDriverName() === 'mariadb' && $this->name() !== 'test_a_mariadb_site_is_refused_as_the_source') {
+            $this->markTestSkipped('The command does not copy MariaDB yet.');
+        }
+    }
+
     protected function tearDown(): void
     {
         foreach ($this->temporary as [$connection, $path]) {
@@ -93,14 +102,14 @@ class CopyDatabaseTest extends TestCase
         $this->assertGreaterThan($deleted->id, $this->insertMember('copy_target'));
     }
 
-    #[TestWith(['pgsql'])]
-    #[TestWith(['mariadb'])]
-    public function test_it_refuses_a_driver_other_than_sqlite_and_mysql_before_touching_it(string $driver): void
+    #[TestWith(['pgsql', '[copy_target] uses the [pgsql] driver; only SQLite and MySQL are supported.'])]
+    #[TestWith(['mariadb', '[copy_target] uses the [mariadb] driver, which this command does not copy to or from yet.'])]
+    public function test_it_refuses_a_driver_other_than_sqlite_and_mysql_before_touching_it(string $driver, string $refusal): void
     {
         config(['database.connections.copy_target' => ['driver' => $driver, 'host' => '203.0.113.1', 'database' => 'openpne']]);
 
         $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
-            ->expectsOutputToContain('only SQLite and MySQL are supported')
+            ->expectsOutputToContain($refusal)
             ->assertFailed();
     }
 
@@ -110,7 +119,7 @@ class CopyDatabaseTest extends TestCase
         $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204', 'copy_target');
 
         $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
-            ->expectsOutputToContain('[copy_target] is MariaDB 10.11.19, which OpenPNE does not run on yet.')
+            ->expectsOutputToContain('[copy_target] is MariaDB 10.11.19, which this command does not copy to or from yet.')
             ->assertFailed();
         $this->assertFalse(DB::connection('copy_target')->getSchemaBuilder()->hasTable('migrations'));
 
@@ -118,7 +127,22 @@ class CopyDatabaseTest extends TestCase
         $this->fakeDatabaseServer('11.8.9-MariaDB-ubu2404', $from);
 
         $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
-            ->expectsOutputToContain("[{$from}] is MariaDB 11.8.9, which OpenPNE does not run on yet.")
+            ->expectsOutputToContain("[{$from}] is MariaDB 11.8.9, which this command does not copy to or from yet.")
+            ->assertFailed();
+        $this->assertFalse(DB::connection('copy_target')->getSchemaBuilder()->hasTable('migrations'));
+    }
+
+    public function test_a_mariadb_site_is_refused_as_the_source(): void
+    {
+        if (DB::connection()->getDriverName() !== 'mariadb') {
+            $this->markTestSkipped('Needs the MariaDB test connection.');
+        }
+
+        $this->temporaryConnection('copy_target');
+        $from = (string) config('database.default');
+
+        $this->artisan('openpne:copy-database', ['--to' => 'copy_target'])
+            ->expectsOutputToContain("[{$from}] uses the [mariadb] driver, which this command does not copy to or from yet.")
             ->assertFailed();
         $this->assertFalse(DB::connection('copy_target')->getSchemaBuilder()->hasTable('migrations'));
     }

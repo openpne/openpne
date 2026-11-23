@@ -150,7 +150,7 @@ class SetupCommandTest extends TestCase
         $copy = null;
 
         $this->answerSite($this->runSetup())
-            ->expectsChoice('Database', 'sqlite', ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL (the host\'s database server)'])
+            ->expectsChoice('Database', 'sqlite', ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL or MariaDB (the host\'s database server)'])
             ->expectsChoice('Mail', 'later', ['later' => 'Later (nothing is sent until then)', 'smtp' => 'An SMTP server'])
             ->expectsOutputToContain('none is kept in the log either')
             ->expectsChoice('Background work', 'deferred', $this->queueChoices())
@@ -219,15 +219,15 @@ class SetupCommandTest extends TestCase
         $this->tools('mysqldump');
 
         $this->answerSite($this->runSetup())
-            ->expectsConfirmation('Go on with MySQL?', 'yes')
+            ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
             ->expectsOutputToContain('SQLite cannot be used here: PHP on the command line has no sqlite3 extension, which the backup uses.')
-            ->expectsOutputToContain('The database is MySQL, as SQLite cannot be used here (the check above says why). It needs a database on the host\'s MySQL server, 8.0.17 or later and not MariaDB.')
-            ->expectsQuestion('MySQL server', '127.0.0.1')
+            ->expectsOutputToContain('The database is MySQL or MariaDB, as SQLite cannot be used here (the check above says why). It needs a database on the host\'s MySQL server 8.0.17 or later, or MariaDB server 10.11 or later.')
+            ->expectsQuestion('Database server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
             ->expectsQuestion('User name', 'site')
             ->expectsQuestion('Password', 'Sekret-9x')
-            ->expectsOutputToContain('MySQL refused')
+            ->expectsOutputToContain('The database server refused')
             ->doesntExpectOutputToContain('Sekret-9x')
             ->expectsConfirmation('Enter them again?', 'no')
             ->assertFailed();
@@ -239,14 +239,14 @@ class SetupCommandTest extends TestCase
     public function test_mysql_answers_that_connect_are_written(): void
     {
         $settings = (array) config('database.connections.'.$this->connection);
-        if (($settings['driver'] ?? null) !== 'mysql') {
-            $this->markTestSkipped('Needs the MySQL test connection.');
+        if (! in_array($settings['driver'] ?? null, ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('Needs the MySQL or MariaDB test connection.');
         }
         $this->tools('mysqldump');
 
         $this->answerSite($this->runSetup())
-            ->expectsConfirmation('Go on with MySQL?', 'yes')
-            ->expectsQuestion('MySQL server', (string) $settings['host'])
+            ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
+            ->expectsQuestion('Database server', (string) $settings['host'])
             ->expectsQuestion('Port', (string) $settings['port'])
             ->expectsQuestion('Database name', (string) $settings['database'])
             ->expectsQuestion('User name', (string) $settings['username'])
@@ -256,25 +256,55 @@ class SetupCommandTest extends TestCase
             ->assertSuccessful();
 
         $env = EnvFile::read((string) file_get_contents($this->layout->envFile));
-        $this->assertSame(['mysql', (string) $settings['database']], [$env['DB_CONNECTION'], $env['DB_DATABASE']]);
+        $this->assertSame([(string) $settings['driver'], (string) $settings['database']], [$env['DB_CONNECTION'], $env['DB_DATABASE']]);
+    }
+
+    public function test_a_mysql_database_holding_a_site_is_not_set_up_over(): void
+    {
+        $settings = (array) config('database.connections.'.$this->connection);
+        if (! in_array($settings['driver'] ?? null, ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('Needs the MySQL or MariaDB test connection.');
+        }
+        $this->tools('mysqldump');
+        // Committed past the test's transaction, as setup reads through a connection of its own.
+        $site = new \PDO("mysql:host={$settings['host']};port={$settings['port']};dbname={$settings['database']}", (string) $settings['username'], (string) $settings['password']);
+        $site->exec("INSERT INTO admin_users (username, password) VALUES ('holds-a-site', 'x')");
+
+        try {
+            $this->answerSite($this->runSetup())
+                ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
+                ->expectsQuestion('Database server', (string) $settings['host'])
+                ->expectsQuestion('Port', (string) $settings['port'])
+                ->expectsQuestion('Database name', (string) $settings['database'])
+                ->expectsQuestion('User name', (string) $settings['username'])
+                ->expectsQuestion('Password', (string) $settings['password'])
+                ->expectsOutputToContain("The database {$settings['database']} holds a site already.")
+                ->expectsConfirmation('Enter them again?', 'no')
+                ->assertFailed()
+                ->run();
+        } finally {
+            $site->exec("DELETE FROM admin_users WHERE username = 'holds-a-site'");
+        }
+
+        $this->assertFileDoesNotExist($this->layout->envFile);
     }
 
     public function test_a_mariadb_server_given_for_mysql_is_named_and_sqlite_offered_again(): void
     {
         $this->sqliteState['extension'] = true;
         $this->tools('mysqldump');
-        $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204');
-        $databases = ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL (the host\'s database server)'];
+        $this->fakeDatabaseServer('10.6.28-MariaDB-ubu2204');
+        $databases = ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL or MariaDB (the host\'s database server)'];
 
         $this->answerSite($this->runSetup())
             ->expectsChoice('Database', 'mysql', $databases)
-            ->expectsQuestion('MySQL server', 'db.example.com')
+            ->expectsQuestion('Database server', 'db.example.com')
             ->expectsQuestion('Port', '3306')
             ->expectsQuestion('Database name', 'site_db')
             ->expectsQuestion('User name', 'site')
             ->expectsQuestion('Password', 'Sekret-9x')
-            ->expectsOutputToContain('The server is MariaDB 10.11.19, and OpenPNE does not run on MariaDB yet. Choose SQLite.')
-            ->doesntExpectOutputToContain('MySQL refused')
+            ->expectsOutputToContain('The server is MariaDB 10.6.28, and OpenPNE runs on MariaDB 10.11 or later only. Choose SQLite.')
+            ->doesntExpectOutputToContain('The database server refused')
             ->expectsChoice('Database', 'sqlite', $databases)
             ->expectsChoice('Mail', 'later', ['later' => 'Later (nothing is sent until then)', 'smtp' => 'An SMTP server'])
             ->expectsChoice('Background work', 'deferred', $this->queueChoices())
@@ -288,16 +318,16 @@ class SetupCommandTest extends TestCase
     public function test_a_mariadb_server_on_a_host_without_sqlite_asks_for_another_server(): void
     {
         $this->tools('mysqldump');
-        $this->fakeDatabaseServer('10.11.19-MariaDB-ubu2204');
+        $this->fakeDatabaseServer('10.6.28-MariaDB-ubu2204');
 
         $this->answerSite($this->runSetup())
-            ->expectsConfirmation('Go on with MySQL?', 'yes')
-            ->expectsQuestion('MySQL server', 'db.example.com')
+            ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
+            ->expectsQuestion('Database server', 'db.example.com')
             ->expectsQuestion('Port', '3306')
             ->expectsQuestion('Database name', 'site_db')
             ->expectsQuestion('User name', 'site')
             ->expectsQuestion('Password', 'Sekret-9x')
-            ->expectsOutputToContain('The server is MariaDB 10.11.19, and OpenPNE does not run on MariaDB yet. Enter a MySQL server, 8.0.17 or later, if the host has one.')
+            ->expectsOutputToContain('The server is MariaDB 10.6.28, and OpenPNE runs on MariaDB 10.11 or later only. Enter a MySQL server 8.0.17 or later, or a MariaDB server 10.11 or later, if the host has one.')
             ->expectsConfirmation('Enter them again?', 'no')
             ->assertFailed();
 
@@ -332,14 +362,14 @@ class SetupCommandTest extends TestCase
         $this->sqliteState['library'] = $library;
 
         $setup = $this->runSetup()
-            ->expectsOutputToContain('Databases: MySQL only')
+            ->expectsOutputToContain('Databases: MySQL or MariaDB only')
             ->expectsOutputToContain("SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite {$library}, and OpenPNE needs 3.26.0 or later.");
         foreach (['has no pdo_sqlite', 'has no sqlite3 extension'] as $line) {
             $setup->doesntExpectOutputToContain($line);
         }
         $this->answerSite($setup)
-            ->expectsOutputToContain('The database is MySQL, as SQLite cannot be used here')
-            ->expectsConfirmation('Go on with MySQL?', 'no')
+            ->expectsOutputToContain('The database is MySQL or MariaDB, as SQLite cannot be used here')
+            ->expectsConfirmation('Go on with MySQL or MariaDB?', 'no')
             ->expectsOutputToContain('.env has not been written.')
             ->assertFailed();
 
@@ -396,8 +426,8 @@ class SetupCommandTest extends TestCase
         $this->hostState['hide'] = false;
 
         $this->answerSite($this->runSetup())
-            ->expectsConfirmation('Go on with MySQL?', 'yes')
-            ->expectsQuestion('MySQL server', '127.0.0.1')
+            ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
+            ->expectsQuestion('Database server', '127.0.0.1')
             ->expectsQuestion('Port', '3306')
             ->expectsQuestion('Database name', 'site_db')
             ->expectsQuestion('User name', 'site')
@@ -414,9 +444,9 @@ class SetupCommandTest extends TestCase
         $this->hostState['spawn'] = false;
         $this->hostState['hide'] = false;
 
-        $command = $this->answerSite($this->runSetup())->expectsConfirmation('Go on with MySQL?', 'yes');
+        $command = $this->answerSite($this->runSetup())->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes');
         foreach ([true, false] as $first) {
-            $command->expectsQuestion('MySQL server', '127.0.0.1')
+            $command->expectsQuestion('Database server', '127.0.0.1')
                 ->expectsQuestion('Port', '1')
                 ->expectsQuestion('Database name', 'site_db')
                 ->expectsQuestion('User name', 'site');
@@ -435,8 +465,8 @@ class SetupCommandTest extends TestCase
         $this->hostState['hide'] = false;
 
         $this->answerSite($this->runSetup())
-            ->expectsConfirmation('Go on with MySQL?', 'yes')
-            ->expectsQuestion('MySQL server', '127.0.0.1')
+            ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
+            ->expectsQuestion('Database server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
             ->expectsQuestion('User name', 'site')
@@ -901,10 +931,30 @@ class SetupCommandTest extends TestCase
             ],
             'database.default' => 'setup_mysql',
         ]);
+        $this->fakeDatabaseServer('10.6.28-MariaDB-ubu2204');
+
+        $this->runSetup()
+            ->expectsOutputToContain('The database server is MariaDB 10.6.28, and OpenPNE runs on MariaDB 10.11 or later only. Change the DB_ settings in '.$this->layout->envFile)
+            ->doesntExpectOutputToContain('Creating the tables')
+            ->assertFailed();
+
+        $this->assertFileDoesNotExist($this->layout->mysqlOptionFile());
+    }
+
+    public function test_an_env_naming_the_mysql_driver_for_a_mariadb_server_is_told_the_driver(): void
+    {
+        $this->withEnv();
+        config([
+            'database.connections.setup_mysql' => [
+                'driver' => 'mysql', 'host' => '127.0.0.1', 'port' => 1, 'database' => 'site_db',
+                'username' => 'site', 'password' => '', 'unix_socket' => '', 'charset' => 'utf8mb4', 'prefix' => '',
+            ],
+            'database.default' => 'setup_mysql',
+        ]);
         $this->fakeDatabaseServer('11.8.9-MariaDB-ubu2404');
 
         $this->runSetup()
-            ->expectsOutputToContain('The database server is MariaDB 11.8.9, and OpenPNE does not run on MariaDB yet. Change the DB_ settings in '.$this->layout->envFile)
+            ->expectsOutputToContain('The database server is MariaDB 11.8.9. Set DB_CONNECTION=mariadb in '.$this->layout->envFile)
             ->doesntExpectOutputToContain('Creating the tables')
             ->assertFailed();
 

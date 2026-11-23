@@ -98,10 +98,12 @@ final class SetupValuesTest extends TestCase
         $connection = ['host' => 'db.example.com', 'port' => 3306, 'username' => 'site', 'password' => 'p"w', 'unix_socket' => ''];
 
         $this->assertSame(
-            "[client]\nhost=\"db.example.com\"\nport=\"3306\"\nuser=\"site\"\npassword=\"p\\\"w\"\nloose-get-server-public-key=1\n[client-mariadb]\nssl-verify-server-cert=0\n",
+            "[client]\nhost=\"db.example.com\"\nport=\"3306\"\nuser=\"site\"\npassword=\"p\\\"w\"\nloose-get-server-public-key=1\n[mysqldump]\nloose-column-statistics=0\n[client-mariadb]\nssl-verify-server-cert=0\n",
             MysqlOptionFile::contents($connection, '/usr/bin/mysqldump'),
         );
-        $this->assertStringNotContainsString('get-server-public-key', MysqlOptionFile::contents($connection, '/usr/bin/mariadb-dump'));
+        foreach (['get-server-public-key', 'column-statistics'] as $option) {
+            $this->assertStringNotContainsString($option, MysqlOptionFile::contents($connection, '/usr/bin/mariadb-dump'));
+        }
         $this->assertStringContainsString("socket=\"/run/mysqld.sock\"\n", MysqlOptionFile::contents(['unix_socket' => '/run/mysqld.sock'] + $connection, '/usr/bin/mysqldump'));
     }
 

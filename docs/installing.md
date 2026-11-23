@@ -35,8 +35,10 @@ A server you administer is what the steps assume. A host where you cannot is cov
   `pcntl` on the command line.
 - **A database**: SQLite 3.26.0 or later, as the library `pdo_sqlite` runs on, or MySQL 8.4. Any
   MySQL from 8.0.17 works too: that is the first with the `utf8mb4_0900_bin` collation the tables
-  use. MariaDB does not work yet. A SQLite site also needs the `sqlite3` extension on the command
-  line, which takes the backup [updating.md](updating.md) asks for.
+  use. MariaDB 10.11 or later works as well, through a connection of its own
+  ([Or: MySQL or MariaDB](#or-mysql-or-mariadb)); its search and name order differ from MySQL's
+  ([MariaDB](internals/text-comparison.md#mariadb)). A SQLite site also needs the `sqlite3`
+  extension on the command line, which takes the backup [updating.md](updating.md) asks for.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
 - **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
   runs without, and offers it as one way to run the queue.
@@ -187,7 +189,7 @@ Of the four `.env` lines, the site needs the first two. The other two are how a 
 people runs on SQLite ([changing-database-engine.md](changing-database-engine.md)): set them
 before it does.
 
-### Or: MySQL
+### Or: MySQL or MariaDB
 
 Instead of the section above: skip this if you chose SQLite.
 
@@ -213,6 +215,10 @@ DB_DATABASE=openpne
 DB_USERNAME=openpne
 DB_PASSWORD=...
 ```
+
+On MariaDB 10.11 or later, make the database with `COLLATE utf8mb4_nopad_bin` and write
+`DB_CONNECTION=mariadb`: the `mariadb` connection names MariaDB's own collations, which every MariaDB
+from 10.11 has, while 10.11 has no `utf8mb4_0900_bin`.
 
 ## 3. Create the site
 
@@ -614,7 +620,7 @@ too, when it gives you:
 - a shell (SSH), to unpack the archive and run `php artisan`;
 - PHP 8.3 or later, for the web and on the command line, with the extensions
   [above](#what-the-server-needs), `intl` among them;
-- MySQL 8.0.17 or later (not MariaDB), or SQLite as [above](#what-the-server-needs);
+- MySQL 8.0.17 or later, MariaDB 10.11 or later, or SQLite as [above](#what-the-server-needs);
 - Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
 - PHP for the web running as your own account, as the command line does. Where it runs as a user
   the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.

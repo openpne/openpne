@@ -57,7 +57,7 @@ docker compose exec app php artisan openpne:member:invite you@example.com
 
 実際に運営するサイトには、`main` ブランチではなく、タグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))をインストールします。`main` ブランチは開発用で、変更を取り込むたびに内容が変わります。
 
-サーバへのインストール方法は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3 以降、SQLite か MySQL、Web サーバ、キューのジョブを実行する手段です。リリースにアーカイブが付いていれば、サーバに Composer や Node.js がなくてもインストールできます。アーカイブが付いていないリリースや、独自の変更を加えるサイトは、タグからインストールします。その場合は、両方が必要です。次のリリースへの更新手順は [docs/updating.md](docs/updating.md)(英語)にあります。
+サーバへのインストール方法は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3 以降、SQLite・MySQL・MariaDB のいずれか、Web サーバ、キューのジョブを実行する手段です。リリースにアーカイブが付いていれば、サーバに Composer や Node.js がなくてもインストールできます。アーカイブが付いていないリリースや、独自の変更を加えるサイトは、タグからインストールします。その場合は、両方が必要です。次のリリースへの更新手順は [docs/updating.md](docs/updating.md)(英語)にあります。
 
 バージョンに `-alpha` が付いている間は、互換性を保つ手段なしに、動作や保存データが変わることがあります。修正は新しいリリースとして公開し、以前の alpha には適用しません。
 
