@@ -460,8 +460,8 @@ Key invariants:
 
 ## Database server
 
-`openpne:setup`, `openpne:check` and `openpne:copy-database` read the server behind a MySQL or
-MariaDB connection from its `VERSION()`, through
+`openpne:setup`, `openpne:check`, `openpne:install` and `openpne:copy-database` read the server
+behind a MySQL or MariaDB connection from its `VERSION()`, through
 [`DatabaseServerProbe`](../../app/Database/DatabaseServerProbe.php), and
 [`DatabaseServer`](../../app/Database/DatabaseServer.php) is the one place that decides which servers
 they take, MariaDB from 10.11 (`supported()`), and which driver each takes: `mariadb` for MariaDB,
@@ -474,6 +474,9 @@ session that names no collation.
   `DB_CONNECTION`. A `.env` naming a server below the floor, or a driver other than the server's,
   stops it before `openpne:install`.
 - Check fails the site on either, even where the connection works.
+- Install stops on either before it migrates, saying what setup says. It reads the server through a
+  session that names no database, as `migrate` creates a database that is missing; a server that
+  does not answer is left to `migrate` to report.
 - Copy-database refuses the `mariadb` driver and a MariaDB server on either side before writing
   anything.
 

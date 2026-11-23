@@ -2,8 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Database\DatabaseServer;
+use App\Database\DatabaseServerProbe;
 use Database\Seeders\InstallSeeder;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\Console\Formatter\OutputFormatter;
+use Throwable;
 
 class InstallCommand extends Command
 {
@@ -11,8 +16,19 @@ class InstallCommand extends Command
 
     protected $description = 'Create the schema and the initial data of a new site';
 
-    public function handle(): int
+    private const PROBE = 'openpne_install_probe';
+
+    public function handle(DatabaseServerProbe $servers): int
     {
+        $connection = DB::connection();
+        $server = $this->server($servers, $connection->getConfig());
+        if ($server?->supported() === false) {
+            return $this->refuse('db_mariadb', ['server' => $server->name(), 'path' => $this->laravel->environmentFilePath(), 'minimum' => DatabaseServer::MARIADB_MINIMUM]);
+        }
+        if ($server !== null && $server->driver() !== $connection->getDriverName()) {
+            return $this->refuse('db_driver', ['server' => $server->name(), 'driver' => $server->driver(), 'path' => $this->laravel->environmentFilePath()]);
+        }
+
         // Both return FAILURE rather than throwing when refused, so each exit code is checked.
         if ($this->call('migrate', ['--force' => true]) !== self::SUCCESS) {
             return self::FAILURE;
@@ -24,5 +40,32 @@ class InstallCommand extends Command
         $this->info('OpenPNE is installed. Next: php artisan openpne:admin:create <username> creates the first administrator.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Asked through a session naming no database, as migrate creates a database that is missing (docs/internals/runtime.md, "Database server").
+     * Null where the server does not answer, which migrate then reports as it did before this check.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function server(DatabaseServerProbe $servers, array $config): ?DatabaseServer
+    {
+        config(['database.connections.'.self::PROBE => [...$config, 'name' => self::PROBE, 'url' => null, 'database' => null]]);
+        try {
+            return $servers->behind(self::PROBE);
+        } catch (Throwable) {
+            return null;
+        } finally {
+            DB::purge(self::PROBE);
+        }
+    }
+
+    /** @param array<string, string> $replace */
+    private function refuse(string $key, array $replace): int
+    {
+        $locale = CheckCommand::shellLocale() ?? (config('app.locale') === 'ja' ? 'ja' : 'en');
+        $this->error(OutputFormatter::escape(CheckCommand::translate('setup.'.$key, $replace, $locale)));
+
+        return self::FAILURE;
     }
 }
