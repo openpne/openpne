@@ -596,9 +596,9 @@ limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist
 proxy deployments where the per-IP limb should be relaxed or turned off; the read limb counts a
 tip each time it is held open without names still good for it, so behind a shared address it is
 the first to relax. A guest has no member id, so a guest's search counts the client IP in both
-limbs: behind a shared address the per-member figure (`OPENPNE_THROTTLE_SEARCH`) is the one to
-raise, and without trusted-proxy configuration every guest shares one address. A throttled request
-renders the framework default 429 page.
+limbs and stops at the lower of `OPENPNE_THROTTLE_SEARCH` and `OPENPNE_THROTTLE_SEARCH_IP`: behind
+a shared address both are raised, and without trusted-proxy configuration every guest shares one
+address. A throttled request renders the framework default 429 page.
 
 Authentication and credential-mutation events (login, MFA, password/email change, ban, withdrawal)
 are recorded on a dedicated `security` log channel — the event vocabulary, PII/injection contract,
