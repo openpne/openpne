@@ -10,15 +10,16 @@ default, which needs MySQL 8.0.17), apart from the identifiers below and `push_s
 which is `ascii_bin`; SQLite compares `BINARY`. An `=`, an `IN`, a join, a
 `GROUP BY` and a unique index compare code points on both engines, and `utf8mb4_0900_bin` is NO PAD,
 so a trailing space is part of the value. Two group names, two profile item names or two values of a
-unique profile item that differ in case, kana or width are two values. The `mariadb` connection's
-default is `utf8mb4_nopad_bin`, which compares the same way.
+unique profile item that differ in case, kana or width are two values. MariaDB uses other names for
+the same comparisons ([MariaDB](#mariadb)).
 
 ## Identifiers
 
 Five columns hold what a person signs in with or is reached at, and compare without case through
 [`IdentifierCollation`](../../app/Support/Database/IdentifierCollation.php): `members.email`,
 `registration_tokens.email`, `password_reset_tokens.email`, `email_change_requests.new_email` and
-`admin_users.username`. MySQL uses `utf8mb4_0900_as_ci`, which also treats as one hiragana and
+`admin_users.username`. MySQL uses `utf8mb4_0900_as_ci` and MariaDB `utf8mb4_uca1400_nopad_as_ci`,
+which compare them the same way: they also treat as one hiragana and
 katakana, small and full-size kana, full- and half-width forms, compatibility forms (`①` is `1`) and
 the kinds of space inside a value, tells accents and voiced marks apart (`é` is not `e`, `が` is not
 `か`) and is NO PAD; SQLite uses `NOCASE`, which folds ASCII letters only. A migration that adds such
@@ -70,9 +71,8 @@ the prolonged sound mark (`ｺｰﾋｰ` is not `コーヒー`) and the middle d
 On MariaDB a search lowers both sides through that collation's case table, which reaches past ASCII
 (`ẞ` finds `ß`) but maps letters to lowercase rather than folding case (`ς` does not find `Σ`, nor `ſ`
 find `S`), and tells apart hiragana and katakana, full- and half-width forms, the voiced marks, small kana,
-accents and emoji; a
-name order puts kanji not by reading but in code point order, the CJK Unified Ideographs block ahead
-of its extensions (`㐂`, U+3402, after `一`, U+4E00).
+accents and emoji; a name order puts kanji not by reading but in code point order, the CJK Unified
+Ideographs block ahead of its extensions (`㐂`, U+3402, after `一`, U+4E00).
 SQLite's `LIKE` folds the case of ASCII letters and nothing else, and `NOCASE` orders the same way.
 
 The caller builds the pattern, so whether `%` and `_` in a term are wildcards is the screen's choice:
@@ -105,6 +105,17 @@ of Filament's own and take no query (`MorphToSelect`, `SelectColumn`, the attach
 actions, the query builder's text and relationship constraints), unless listed with a reason. A
 name order that skips the helper is not caught; it falls back to the column's own order.
 
+## MariaDB
+
+MariaDB 10.11 has none of MySQL's `0900` collations, so the `mariadb` connection names ones that
+compare the same: `utf8mb4_nopad_bin` for stored text, which is NO PAD and in code point order, and
+`utf8mb4_uca1400_nopad_as_ci` for the identifiers. Its JSON is `LONGTEXT` held to a column
+`CHECK (json_valid(...))`, and the three JSON columns (`passkeys.credential`,
+`home_issue_items.stats`, `openpne4_upgrade_state.metadata`) keep the `utf8mb4_bin` MariaDB gives
+them, since changing a column's collation redefines it without the check. A search and a name order
+go through `utf8mb4_uca1400_as_cs` ([Search and name order](#search-and-name-order)): no 10.11
+collation treats kana and width as one without also taking small kana for full-size ones.
+
 ## Converting an existing site
 
 A site made before the switch has `utf8mb4_unicode_ci` tables.
@@ -115,18 +126,21 @@ on SQLite rebuilds the five identifier tables.
 - **Which tables.** The OpenPNE 4 tables it names, not the database: an upgraded site keeps
   OpenPNE 3's tables beside them, and the upgrade reads those as OpenPNE 3 compared them. `file_bin`
   is left out, since on such a site it is OpenPNE 3's own table. Each named table's default changes
-  too, so a column a later migration adds inherits `utf8mb4_0900_bin`.
-- **When.** On MySQL only while the connection's collation is `utf8mb4_0900_bin`. A site that sets
+  too, so a column a later migration adds inherits the binary collation.
+- **When.** On MySQL only while the connection's collation is `utf8mb4_0900_bin`, and on MariaDB
+  only while it is `utf8mb4_nopad_bin`. A site that sets
   `DB_COLLATION` to anything else keeps its tables, and unsetting it later converts nothing, since the
   migration has already run. Such a site is outside what later migrations assume: one that adds an
-  identifier column names `utf8mb4_0900_as_ci` through `IdentifierCollation::for()` whatever the
-  tables hold. On MariaDB it stops before changing anything and is not recorded as run.
+  identifier column names the identifier collation through `IdentifierCollation::for()` whatever the
+  tables hold.
 - **What stops it.** Before changing anything it refuses when a unique identifier column holds two
   values `IdentifierCollation` treats as one, or a value with whitespace at either end. The message
   names the column and the row ids, never the values. `email_change_requests.new_email` is not
-  checked: two members may ask for the same address.
-- **How.** MySQL gets one `ALTER TABLE` per table that copies each column's type, nullability and
-  default, built for every table before the first runs. MySQL does not roll DDL back, so a failure
+  checked: two members may ask for the same address. On MariaDB it also refuses when a text column has
+  a check other than a JSON column's `json_valid()`, even a column already in the wanted collation.
+- **How.** MySQL and MariaDB get one `ALTER TABLE` per table that copies each column's type,
+  nullability and default, built for every table before the first runs, and MariaDB's JSON columns
+  are left out. Neither rolls DDL back, so a failure
   midway leaves some tables converted, and running it again converts the rest. SQLite rebuilds the
   five identifier tables in one transaction, with foreign keys off before it opens, and puts back
   their triggers and their AUTOINCREMENT high-water marks, so a deleted id is not handed out again.
