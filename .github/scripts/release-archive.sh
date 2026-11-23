@@ -571,7 +571,7 @@ shared_update() {
   php artisan down --render="errors::503"
   if [ "$mode" = mysql ]; then
     # What the guide has the reader do in the host's database tool.
-    tables=$(mysql --defaults-extra-file="$data/mysql-backup.cnf" -N -e 'SELECT GROUP_CONCAT(CONCAT("`", table_name, "`")) FROM information_schema.tables WHERE table_schema = DATABASE()' "$database")
+    tables=$(mysql --defaults-extra-file="$data/mysql-backup.cnf" -N -e 'SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(CONCAT("`", table_name, "`")) FROM information_schema.tables WHERE table_schema = DATABASE()' "$database")
     mysql --defaults-extra-file="$data/mysql-backup.cnf" -e "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE $tables" "$database"
   fi
   cd "$home"
