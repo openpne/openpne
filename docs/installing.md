@@ -23,7 +23,7 @@ needs** from **what is yours** to set for your server. The names `openpne` and `
 this guide's own: others do as well, used throughout.
 
 A server you administer is what the steps assume. A host where you cannot is covered by
-[On a shared host](#on-a-shared-host).
+[installing-on-a-shared-host.md](installing-on-a-shared-host.md).
 
 ## What the server needs
 
@@ -614,28 +614,7 @@ there. All of those send mail.
 
 ## On a shared host
 
-A host where you cannot make users, install packages or configure the web server can run a site
-too, when it gives you:
-
-- a shell (SSH), to unpack the archive and run `php artisan`;
-- PHP 8.3 or later, for the web and on the command line, with the extensions
-  [above](#what-the-server-needs), `intl` among them;
-- MySQL 8.0.17 or later, MariaDB 10.11 or later, or SQLite as [above](#what-the-server-needs);
-- Apache honouring `.htaccess`, and a way to make a directory of yours the site's document root;
-- PHP for the web running as your own account, as the command line does. Where it runs as a user
-  the host's sites share, the `chmod` lines of step 2 lock the site out of its own files.
-
-The steps then shrink. Your account is the site user, and there is none to make. Steps 1 to 3 are as
-written, in a directory of yours, without the `sudo apt install` lines; where `php` on the command
-line is older than 8.3, use the name the host gives a newer one (`php8.3`, say) wherever the guide
-says `php`. Step 4 is the host's own setting that makes the release's `public/` the document root;
-nothing outside `public/` may be reachable from the web. PHP's two upload sizes of step 4 are set by
-whatever means the host gives (the PHP settings of its control panel, where it has them). Step 5 is
-as written: a host that ends TLS in front of your site is a proxy in front, which may hand the site
-each visitor's own address all the same ([how to tell](#5-https-and-a-proxy-in-front)). Step 6 is
-the way of working the queue that the host allows, and the scheduler if the host has cron. Where its
-control panel asks for a cron line's time and command apart, the first five fields are the time
-(minute, hour, day of the month, month, day of the week) and the rest, from `cd`, is the command. An
-update is [updating.md](updating.md), in the directories you have.
-
-This guide does not walk through any one host.
+A host where you cannot make users, install packages or configure the web server, and where you
+sign in over SSH, has a guide of its own: [installing-on-a-shared-host.md](installing-on-a-shared-host.md).
+It says what such a host needs, installs through `php artisan openpne:setup`, which asks for the
+settings instead of having `.env` edited, and updates in the directories that command sets up.
