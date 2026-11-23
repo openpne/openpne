@@ -18,7 +18,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use PDOException;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -215,7 +214,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
             }
             DB::table('file_bin')->insert(['file_id' => File::factory()->create()->getKey(), 'bin' => 'bytes', 'created_at' => now(), 'updated_at' => now()]);
             $this->seedOneOfEach();
-            // MariaDB reports these defaults as SQL literals that the conversion writes back as they are; MySQL refuses an expression default as an attribute.
+            // MariaDB reports these defaults as SQL literals that the conversion writes back as they are; on MySQL an expression default is DEFAULT_GENERATED, an attribute the conversion refuses.
             DB::statement("ALTER TABLE profiles ADD COLUMN quoted VARCHAR(16) NOT NULL DEFAULT 'it''s \\\\ x', ADD COLUMN null_word VARCHAR(8) NULL DEFAULT 'NULL', ADD COLUMN sql_null VARCHAR(8) NULL DEFAULT NULL");
             if (DB::connection()->getDriverName() === 'mariadb') {
                 DB::statement('ALTER TABLE profiles ADD COLUMN expression VARCHAR(36) NULL DEFAULT (uuid())');
@@ -293,20 +292,18 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         }
     }
 
-    /** Without the refusal this changes the schema: MariaDB's quoted defaults are quoted again and its JSON columns lose their check. */
-    public function test_a_mysql_connection_to_mariadb_stops_it(): void
+    /** The other driver borrows this session, since its collation would refuse to connect; without the refusal the conversion reads one engine's information_schema as the other's. */
+    public function test_a_connection_of_the_other_engines_driver_stops_it(): void
     {
-        $this->onlyOn('mariadb');
-        config(['database.connections.mysql_on_mariadb' => [...DB::connection()->getConfig(), 'name' => 'mysql_on_mariadb', 'driver' => 'mysql', 'collation' => 'utf8mb4_0900_bin']]);
+        $driver = DB::connection()->getDriverName();
 
-        try {
-            DB::connection('mysql_on_mariadb')->getPdo();
-        } catch (PDOException $e) {
-            DB::purge('mysql_on_mariadb');
-            $this->assertSame(1273, $e->errorInfo[1] ?? null, $e->getMessage());
-            $this->markTestSkipped('this MariaDB has no utf8mb4_0900_bin, so a mysql connection cannot reach it');
+        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('mysql and mariadb only');
         }
 
+        [$other, $collation, $server] = $driver === 'mariadb' ? ['mysql', 'utf8mb4_0900_bin', 'MariaDB'] : ['mariadb', 'utf8mb4_nopad_bin', 'MySQL'];
+        config(['database.connections.other_engine' => [...DB::connection()->getConfig(), 'name' => 'other_engine', 'driver' => $other, 'collation' => $collation]]);
+        DB::connection('other_engine')->setPdo(DB::connection()->getPdo());
         $default = config('database.default');
         $tables = $this->migration()::TABLES;
         $definitions = $this->mysqlDefinitions($tables);
@@ -314,16 +311,16 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $stopped = null;
 
         try {
-            config(['database.default' => 'mysql_on_mariadb']);
+            config(['database.default' => 'other_engine']);
             $this->migration()->up();
         } catch (RuntimeException $e) {
             $stopped = $e;
         } finally {
             config(['database.default' => $default]);
-            DB::purge('mysql_on_mariadb');
+            DB::purge('other_engine');
         }
 
-        $this->assertSame('Nothing was converted: the mysql connection reaches a MariaDB server, which takes the mariadb one.', $stopped?->getMessage());
+        $this->assertSame("Nothing was converted: the {$other} connection reaches a {$server} server, which takes the {$driver} one.", $stopped?->getMessage());
         $this->assertSame($definitions, $this->mysqlDefinitions($tables));
         $this->assertSame($checks, $this->checks());
     }

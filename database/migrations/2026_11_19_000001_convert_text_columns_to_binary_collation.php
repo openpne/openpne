@@ -1,6 +1,5 @@
 <?php
 
-use App\Database\DatabaseServer;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
@@ -111,7 +110,7 @@ return new class extends Migration
             return;
         }
 
-        $mariaDb = DatabaseServer::fromVersion((string) DB::getPdo()->getAttribute(PDO::ATTR_SERVER_VERSION))->mariaDb;
+        $mariaDb = str_contains((string) DB::getPdo()->getAttribute(PDO::ATTR_SERVER_VERSION), 'MariaDB');
 
         if ($mariaDb !== (DB::getDriverName() === 'mariadb')) {
             throw new RuntimeException('Nothing was converted: the '.DB::getDriverName().' connection reaches a '.($mariaDb ? 'MariaDB server, which takes the mariadb one.' : 'MySQL server, which takes the mysql one.'));
