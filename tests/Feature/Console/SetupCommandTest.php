@@ -319,8 +319,8 @@ class SetupCommandTest extends TestCase
     public static function sqliteTooOld(): array
     {
         return [
-            'as on Enterprise Linux 8' => ['3.26.0'],
-            'just below' => ['3.31.1'],
+            'as on Enterprise Linux 7' => ['3.7.17'],
+            'just below' => ['3.25.3'],
         ];
     }
 
@@ -333,7 +333,7 @@ class SetupCommandTest extends TestCase
 
         $setup = $this->runSetup()
             ->expectsOutputToContain('Databases: MySQL only')
-            ->expectsOutputToContain("SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite {$library}, and OpenPNE needs 3.32.0 or later.");
+            ->expectsOutputToContain("SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite {$library}, and OpenPNE needs 3.26.0 or later.");
         foreach (['has no pdo_sqlite', 'has no sqlite3 extension'] as $line) {
             $setup->doesntExpectOutputToContain($line);
         }
@@ -349,7 +349,7 @@ class SetupCommandTest extends TestCase
     public function test_sqlite_at_the_versions_it_needs_is_chosen_without_a_question_about_mysql(): void
     {
         $this->sqliteState['extension'] = true;
-        $this->sqliteState['library'] = '3.32.0';
+        $this->sqliteState['library'] = '3.26.0';
 
         $this->answerSite($this->runSetup())
             ->doesntExpectOutputToContain('SQLite cannot be used here')

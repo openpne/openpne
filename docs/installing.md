@@ -33,7 +33,7 @@ A server you administer is what the steps assume. A host where you cannot is cov
   `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes
   [push notifications](#8-push-notifications-optional) faster; the queue worker's job timeouts need
   `pcntl` on the command line.
-- **A database**: SQLite 3.32.0 or later, as the library `pdo_sqlite` runs on, or MySQL 8.4. Any
+- **A database**: SQLite 3.26.0 or later, as the library `pdo_sqlite` runs on, or MySQL 8.4. Any
   MySQL from 8.0.17 works too: that is the first with the `utf8mb4_0900_bin` collation the tables
   use. MariaDB does not work yet. A SQLite site also needs the `sqlite3` extension on the command
   line, which takes the backup [updating.md](updating.md) asks for.
