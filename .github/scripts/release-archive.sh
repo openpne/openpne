@@ -508,8 +508,8 @@ shared_update() {
   unset DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD
   export HOME=$home
   probe() { php tests/release-archive-probe.php "$1" "$work/probe.json"; }
-  # walk <version> [--arm-only] <heading>...: the guide's commands under those headings, run in order
-  # by one shell that stops at the first that fails.
+  # walk <version> <heading>...: the guide's commands under those headings, run in order by one shell
+  # that stops at the first that fails, as the guide has its reader do.
   walk() {
     local version=$1
     shift
@@ -575,7 +575,7 @@ shared_update() {
     mysql --defaults-extra-file="$data/mysql-backup.cnf" -e "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE $tables" "$database"
   fi
   cd "$home"
-  walk "$new_version" --arm-only "If a step fails"
+  walk "$new_version" "From step 4 on"
   cd "$site"
   [ -e "$marker" ] || die "going back did not bring back the old release's code"
   [ -d "$home/openpne/site-failed-$new_version" ] || die "the failed release is not at site-failed-$new_version"

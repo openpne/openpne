@@ -9,13 +9,16 @@ domain's document root and its PHP version in the host's control panel. Installi
 ## What the host needs
 
 Compare these with the host's own pages, or ask the host. On a host with a trial period,
-`php artisan openpne:setup` (step 3) checks most of them before anything is written.
+`php artisan openpne:setup` (step 3) checks the command line's side of them before it writes
+anything, and the web's once the document root is set.
 
 - SSH, to run commands.
 - PHP 8.3 or later, for the web and on the command line, with the extensions
   [installing.md](installing.md#what-the-server-needs) lists.
 - A database: SQLite, or a MySQL or MariaDB database the host makes for you, each from the version
-  [installing.md](installing.md#what-the-server-needs) names.
+  [installing.md](installing.md#what-the-server-needs) names. MySQL and MariaDB need `mysqldump` or
+  `mariadb-dump` on the command line, and a database for the site alone: its backup and going
+  back take the whole database.
 - Apache honouring `.htaccess`, and a domain whose document root you choose yourself, or whose
   folder can be [replaced by a link](#where-the-host-fixes-the-document-root).
 - PHP for the web running as your own account, as it does over SSH.
@@ -35,8 +38,10 @@ name such as `php8.3` or by its full path: write that wherever this guide says `
 
 Make a folder for the site, outside the folders the host already serves where it lets you choose
 (`~/openpne` here). Where a document root has to be inside a served folder, make it there, and read
-its path for `~/openpne` throughout. `4.0.0-alpha.N` is the release: write its version, from
-[Releases](https://github.com/openpne/openpne/releases), in each line.
+its path for `~/openpne` throughout. Where the host serves the domain from a folder it names and
+offers no other, make it beside that folder, as [the section after this
+step](#where-the-host-fixes-the-document-root) says. `4.0.0-alpha.N` is the release: write its
+version, from [Releases](https://github.com/openpne/openpne/releases), in each line.
 
 ```
 mkdir ~/openpne
@@ -60,15 +65,16 @@ tar -xzf openpne-4.0.0-alpha.N.tar.gz
 mv openpne-4.0.0-alpha.N site
 ```
 
-Where the host serves the domain from a folder it names and offers no other, the next section comes
-before step 3.
+On a host that fixes the document root, the next section comes before step 3.
 
 ## Where the host fixes the document root
 
 The folder the host serves the domain from can give way to a link to `site/public`. `~/openpne`
 then has to be outside that folder: beside it, as `~/example.com/openpne` for a host serving
 `~/example.com/public_html`, the names used here; read `~/example.com/openpne` for `~/openpne` in
-the rest of this guide. Keep the host's folder under another name, and put the link in its place:
+the rest of this guide. A folder made elsewhere in step 2 moves there first, with
+`mv ~/openpne ~/example.com/openpne`. Keep the host's folder under another name, and put the link in
+its place:
 
 ```
 cd ~/example.com
@@ -79,7 +85,8 @@ readlink -f public_html
 
 A relative target is read from the folder the link is in, not from where the command ran:
 `readlink -f` has to print the full path of `site/public`. Where it prints nothing or another
-path, remove the link with `rm public_html` and make it again.
+path, `openpne` is not beside the link: remove the link with `rm public_html`, put `openpne` there,
+and make the link again.
 
 - The web server has to follow the link. Where every page answers 403 once the change has shown,
   the host's does not, and the site cannot be served this way there.
@@ -88,8 +95,8 @@ path, remove the link with `rm public_html` and make it again.
 - Anything written into the document root from then on, by you or by the control panel, lands in
   `site/public`, and an update leaves it behind unless it is carried along (step 3 of
   [Updating](#updating)).
-- Nothing serves `~/example.com/openpne`, so `--parent-url` (step 4) is not needed. Once the site
-  answers, check from any machine that its files cannot be read: `curl -sI
+- Where the host serves no address from `~/example.com` itself, `--parent-url` (step 4) is not
+  needed. Once the site answers, check from any machine that its files cannot be read: `curl -sI
   https://example.com/.env` has to answer 404.
 
 ## 3. Run setup
@@ -102,8 +109,8 @@ cd ~/openpne/site
 php artisan openpne:setup
 ```
 
-It first says what the host lacks, if anything, and stops there until it is put right. Then it
-asks for the language of its questions, the site's address (`https://` and the domain), the site's
+It asks for the language of its questions, then says what the host lacks, if anything, and stops
+there until it is put right. Then it asks for the site's address (`https://` and the domain), the site's
 name, the time zone, the database, mail (later, or the host's SMTP server) and the background work:
 on a shared host, keep the answer it offers, that nothing can be kept running. It writes `.env`,
 makes `~/openpne/openpne-data/` beside the site, for the SQLite database and the backups, and asks
@@ -143,8 +150,8 @@ the last two.
   that shows `~/openpne`, so that it checks nothing can be read through it:
   `php artisan openpne:check --parent-url=https://www.example.net/openpne`.
 
-Lost the two lines? `php artisan openpne:setup` on an installed site prints them again; answer No
-when it offers a link for a first member.
+Lost the two lines? `php artisan openpne:setup` on an installed site prints them again once its check
+from the web passes; answer No when it offers a link for a first member.
 
 ## Updating
 
@@ -152,7 +159,9 @@ when it offers a link for a first member.
   for a step of its own.
 - **Make room**: the update needs space for a second release, a copy of `site/storage` and a copy of
   the database.
-- With a queue worker of your own, stop it before step 2 and start it again after step 4.
+- **Stop the cron jobs** in the control panel before step 2, the scheduler's and the backup's, so
+  that nothing opens the database, and start them again once the site is open. A queue worker of
+  your own stops and starts with them.
 
 `4.0.0-alpha.N` below is the release you are moving to.
 
@@ -208,8 +217,9 @@ cp -a site/storage openpne-4.0.0-alpha.N/storage
 chmod o-rwx openpne-4.0.0-alpha.N/bootstrap/cache
 ```
 
-A theme or any other file you or the host added to the release comes along as
-[updating.md](updating.md#from-a-release-archive) says.
+Where a line prints an error, a full disk for one, stop: [If a step fails](#if-a-step-fails) says
+how to open the site again. A theme or any other file you or the host added to the release comes
+along as [updating.md](updating.md#from-a-release-archive) says.
 
 ### 4. Put it in place and open the site
 
@@ -218,6 +228,12 @@ mv site site-before-4.0.0-alpha.N
 mv openpne-4.0.0-alpha.N site
 cd site
 php artisan migrate --force
+```
+
+Where a line prints an error, leave the site down and go to [If a step fails](#if-a-step-fails).
+Otherwise open it:
+
+```
 php artisan up
 ```
 
@@ -227,15 +243,22 @@ archive and the copy of the database can be removed.
 
 ### If a step fails
 
-Leave the site down. Before step 4, nothing has changed but that: open it again in `~/openpne/site`.
+Leave the site down.
+
+#### Before step 4
+
+Nothing has changed but that: open the site again.
 
 ```
 cd ~/openpne/site
 php artisan up
 ```
 
-From step 4 on, put the release you came from back in place, and the database as it was. For
-SQLite, the database is `openpne-data/database.sqlite` unless setup gave it another name:
+#### From step 4 on
+
+Put the release you came from back in place, and the database as it was. `site-failed-4.0.0-alpha.N`
+must not exist yet: rename one an earlier attempt left. For SQLite, the database is
+`openpne-data/database.sqlite` unless setup gave it another name:
 
 ```
 cd ~/openpne
@@ -244,12 +267,11 @@ mv site-before-4.0.0-alpha.N site
 rm -f openpne-data/database.sqlite-wal openpne-data/database.sqlite-shm
 cp openpne-data/before-4.0.0-alpha.N.sqlite openpne-data/database.sqlite
 cd site
-php artisan up
 ```
 
-For MySQL or MariaDB, remove every table from the database in the host's database tool first: the
-copy puts back only the tables it holds, and one the failed update made would stop the next attempt.
-Then, with `mariadb` for `mysql` where the backup line runs `mariadb-dump`:
+For MySQL or MariaDB, remove every table from the site's database in the host's database tool first:
+the copy puts back only the tables it holds, and one the failed update made would stop the next
+attempt. Then, with `mariadb` for `mysql` where the backup line runs `mariadb-dump`:
 
 ```
 cd ~/openpne
@@ -257,6 +279,11 @@ mv site site-failed-4.0.0-alpha.N
 mv site-before-4.0.0-alpha.N site
 cd site
 mysql --defaults-extra-file=../openpne-data/mysql-backup.cnf DATABASE < ../openpne-data/before-4.0.0-alpha.N.sql
+```
+
+Where no line printed an error, open the site:
+
+```
 php artisan up
 ```
 
@@ -264,7 +291,8 @@ php artisan up
 
 - **`Composer detected issues in your platform`**: the command ran on a PHP older than 8.3. Use the
   newer one, as [step 1](#1-check-the-php-of-the-command-line) says.
-- **Every page answers 403**: the document root is `site` or the folder above it, not `site/public`.
+- **Every page answers 403**: the document root is `site`, not `site/public`, or the web server does
+  not follow a [link in its place](#where-the-host-fixes-the-document-root).
 - **Every page answers 500**: `php artisan openpne:check` says why where it can, and
   `site/storage/logs/` holds the error. A web PHP older than 8.3 is one cause: choose a newer one in
   the control panel.
