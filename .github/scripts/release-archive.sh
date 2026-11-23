@@ -8,12 +8,16 @@
 #   update <old dir> <old version> <new dir> <new version>
 #                                    install the old archive, give it a member, an entry and a
 #                                    stored file, then walk docs/updating.md to the new one
+#   shared-update <old dir> <old version> <new dir> <new version>
+#                                    the same through docs/installing-on-a-shared-host.md: its
+#                                    commands, taken from the guide, and openpne:setup in a terminal
 #
 # `update` reads ARCHIVE_DB: sqlite-default (database/database.sqlite in WAL mode, the default),
 # sqlite-outside (WAL too, at an absolute path outside the tree), relocated (that, with .env and
 # storage/ outside the tree too) or mysql (DB_* from the environment, an empty database). ARCHIVE_NEW_MARK,
 # when set, is text only the new release's login page has: the page must have it after the update
-# and must have lost it after going back.
+# and must have lost it after going back. `shared-update` reads ARCHIVE_DB too: sqlite (the default)
+# or mysql, with DB_* as for `update`.
 set -euo pipefail
 
 port=${ARCHIVE_PORT:-8141}
@@ -406,10 +410,188 @@ update() {
   printf '\nupdate: a site on %s reached %s from its archive, kept its data, and could go back (%s)\n' "$old_version" "$new_version" "$mode"
 }
 
-usage='usage: release-archive.sh build <ref> <dir> <version> | verify <dir> <version> <ref> | update <old dir> <old version> <new dir> <new version>'
+# setup_in_a_terminal <sqlite|mysql> <host> <port> <database> <user> <password>: openpne:setup in the
+# current directory, answered as the guide's reader answers it, up to the wait for the domain.
+setup_in_a_terminal() {
+  python3 - "$@" <<'PY'
+import fcntl, os, pty, re, select, struct, sys, termios, time
+db, host, port, database, user, password = sys.argv[1:7]
+ansi = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][A-Z0-9]|\x1b[=>78]')
+pid, fd = pty.fork()
+if pid == 0:
+    os.environ.update(TERM='xterm-256color', LANG='C.UTF-8')
+    os.execvp('php', ['php', 'artisan', 'openpne:setup', '--lang=en'])
+fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 50, 140, 0, 0))
+raw, pos = b'', 0
+def screen():
+    return ansi.sub(b'', raw).replace(b'\r', b'').decode('utf-8', 'replace')
+def pump(wait):
+    global raw
+    if select.select([fd], [], [], wait)[0]:
+        try:
+            data = os.read(fd, 65536)
+        except OSError:
+            return None
+        raw += data
+        return data
+    return b''
+def expect(pattern, timeout=180):
+    global pos
+    end = time.time() + timeout
+    while time.time() < end:
+        found = re.compile(pattern).search(screen(), pos)
+        if found:
+            pos = found.end()
+            return found
+        if pump(0.2) is None:
+            break
+    sys.stdout.write(screen())
+    sys.exit(f'::error::openpne:setup did not ask {pattern!r}')
+def send(keys):
+    time.sleep(0.3)
+    while pump(0.05):
+        pass
+    os.write(fd, keys.encode())
+expect(r"The site's address"); send('https://site.invalid\r')
+expect(r"The site's name"); send('Archive SNS\r')
+expect(r'Time zone'); send('\r')
+# A host with one database it can use is told which, not asked.
+if expect(r'┌ Database |The database is ').group(0) != 'The database is ':
+    if db == 'mysql':
+        send('\x1b[B')
+    send('\r')
+if db == 'mysql':
+    expect(r'Database server'); send(host + '\r')
+    expect(r'Port'); send('\r')
+    expect(r'Database name'); send(database + '\r')
+    expect(r'User name'); send(user + '\r')
+    expect(r'Password'); send(password + '\r')
+expect(r'Mail'); send('\r')
+expect(r'Background work'); send('\r')
+expect(r"The first administrator's user name"); send('admin\r')
+expect(r'Password'); send('correct horse battery staple\r')
+expect(r'Confirm password'); send('correct horse battery staple\r')
+expect(r'Check again\?', 300); send('n\r')
+end = time.time() + 120
+while pump(1) is not None and time.time() < end:
+    pass
+sys.stdout.write(screen())
+os.kill(pid, 9) if os.waitpid(pid, os.WNOHANG) == (0, 0) else None
+PY
+}
+
+shared_update() {
+  local old_dir=$1 old_version=$2 new_dir=$3 new_version=$4 mode=${ARCHIVE_DB:-sqlite}
+  local repo doc home site data marker key database=DATABASE host="" dbport="" user="" password="" tables
+  repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+  doc=$repo/docs/installing-on-a-shared-host.md
+  old_dir=$(cd "$old_dir" && pwd)
+  new_dir=$(cd "$new_dir" && pwd)
+  work=$(cd "$(mktemp -d)" && pwd -P)
+  home=$work/home
+  site=$home/openpne/site
+  data=$home/openpne/openpne-data
+  mkdir "$home"
+  without_build_tools
+  case "$mode" in
+    sqlite) ;;
+    mysql)
+      for key in DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD; do
+        [ -n "${!key:-}" ] || die "ARCHIVE_DB=mysql needs $key in the environment"
+      done
+      [ "$DB_PORT" = 3306 ] || die "shared-update takes setup's port, 3306, not $DB_PORT"
+      host=$DB_HOST dbport=$DB_PORT database=$DB_DATABASE user=$DB_USERNAME password=$DB_PASSWORD
+      ;;
+    *) die "ARCHIVE_DB is sqlite or mysql for shared-update, not $mode" ;;
+  esac
+  # Setup refuses a DB_ value of the shell's that differs from .env's, which alone the web reads.
+  unset DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD
+  export HOME=$home
+  probe() { php tests/release-archive-probe.php "$1" "$work/probe.json"; }
+  # walk <version> <heading>...: the guide's commands under those headings, run in order by one shell
+  # that stops at the first that fails, as the guide has its reader do.
+  walk() {
+    local version=$1
+    shift
+    python3 -I "$repo/.github/scripts/doc-blocks.py" "$doc" "$mode" "$version" "$database" "$work/files" "$@" >"$work/walk.sh"
+    sed 's/^/$ /' "$work/walk.sh"
+    (cd "$home" && bash -euo pipefail "$work/walk.sh")
+  }
+
+  step "the guide's step 2: $old_version unpacked as ~/openpne/site ($mode)"
+  mkdir "$work/files"
+  cp "$old_dir/openpne-$old_version.tar.gz" "$old_dir/SHA256SUMS" "$work/files/"
+  walk "$old_version" "2. Put the release in place"
+
+  step "the guide's step 3: openpne:setup, stopped at the wait for the domain"
+  (cd "$site" && setup_in_a_terminal "$mode" "$host" "$dbport" "$database" "$user" "$password")
+  [ -f "$site/.env" ] || die "openpne:setup wrote no .env"
+  case "$mode" in
+    sqlite) [ -f "$data/database.sqlite" ] || die "openpne:setup made no openpne-data/database.sqlite" ;;
+    mysql) [ -f "$data/mysql-backup.cnf" ] || die "openpne:setup wrote no openpne-data/mysql-backup.cnf" ;;
+  esac
+
+  step "what the members have put in it"
+  cd "$site"
+  # The site answers its own address alone, and `expect` asks over plain HTTP on 127.0.0.1.
+  set_env .env APP_URL "http://127.0.0.1:$port"
+  set_env .env OPENPNE_FORCE_HTTPS false
+  marker=app/OnlyInTheOldRelease.php
+  printf '<?php\n' >"$marker"
+  probe seed
+  probe check
+  expect 200 /login
+
+  step "the guide's update to $new_version"
+  cd "$home"
+  rm -f "$work/files"/*
+  cp "$new_dir/openpne-$new_version.tar.gz" "$new_dir/SHA256SUMS" "$work/files/"
+  walk "$new_version" "1. Download the release" "2. Stop the site and back it up" \
+    "3. Carry the site's own files into the release" "4. Put it in place and open the site"
+
+  step "the site after the update"
+  cd "$site"
+  expect 200 /login
+  probe check
+  grep -qxF "version=$new_version" RELEASE || die "RELEASE is not the new release's"
+  [ ! -e "$marker" ] || die "a file only the old release had is still there"
+  [ -e "$home/openpne/site-before-$new_version/$marker" ] || die "the old release is not at site-before-$new_version"
+  [ -z "$(find bootstrap/cache -maxdepth 0 -perm /o=rwx)" ] || die "bootstrap/cache, where cached settings go, is open to other users"
+  case "$mode" in
+    sqlite)
+      [ "$(sqlite3 "$data/before-$new_version.sqlite" 'SELECT count(*) FROM members')" = 1 ] \
+        || die "the copy taken before the update does not hold the member"
+      ;;
+    mysql)
+      grep -q '^CREATE TABLE `members`' "$data/before-$new_version.sql" || die "the copy taken before the update has no members table"
+      ;;
+  esac
+
+  step "the guide's going back, from step 4 on"
+  php artisan down --render="errors::503"
+  if [ "$mode" = mysql ]; then
+    # What the guide has the reader do in the host's database tool.
+    tables=$(mysql --defaults-extra-file="$data/mysql-backup.cnf" -N -e 'SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(CONCAT("`", table_name, "`")) FROM information_schema.tables WHERE table_schema = DATABASE()' "$database")
+    mysql --defaults-extra-file="$data/mysql-backup.cnf" -e "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE $tables" "$database"
+  fi
+  cd "$home"
+  walk "$new_version" "From step 4 on"
+  cd "$site"
+  [ -e "$marker" ] || die "going back did not bring back the old release's code"
+  [ -d "$home/openpne/site-failed-$new_version" ] || die "the failed release is not at site-failed-$new_version"
+  [ "$mode" != sqlite ] || [ "$(sqlite3 "$data/database.sqlite" 'PRAGMA integrity_check')" = ok ] \
+    || die "the database put back does not pass its integrity check"
+  expect 200 /login
+  probe check
+
+  printf '\nshared-update: a site set up by openpne:setup on %s reached %s by the guide, kept its data, and could go back (%s)\n' "$old_version" "$new_version" "$mode"
+}
+
+usage='usage: release-archive.sh build <ref> <dir> <version> | verify <dir> <version> <ref> | update|shared-update <old dir> <old version> <new dir> <new version>'
 case "${1:-}" in
   build) [ $# = 4 ] || die "$usage"; cd "$(git rev-parse --show-toplevel)"; build "$2" "$3" "$4" ;;
   verify) [ $# = 4 ] || die "$usage"; cd "$(git rev-parse --show-toplevel)"; verify "$2" "$3" "$4" ;;
   update) [ $# = 5 ] || die "$usage"; update "$2" "$3" "$4" "$5" ;;
+  shared-update) [ $# = 5 ] || die "$usage"; shared_update "$2" "$3" "$4" "$5" ;;
   *) die "$usage" ;;
 esac

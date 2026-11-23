@@ -236,6 +236,9 @@ first read after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so th
 scheduled run only moves publication from that first visit to 06:00 itself.
 `php artisan schedule:list` shows what is registered.
 
+Every task is due at a minute that is a multiple of five, so cron every five minutes, the line
+`openpne:setup` prints, reaches each one.
+
 Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
 operator running many sites on one host gets them together and has no lever here
 to stagger them.

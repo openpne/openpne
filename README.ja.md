@@ -59,6 +59,8 @@ docker compose exec app php artisan openpne:member:invite you@example.com
 
 サーバへのインストール方法は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3 以降、SQLite・MySQL・MariaDB のいずれか、Web サーバ、キューのジョブを実行する手段です。リリースにアーカイブが付いていれば、サーバに Composer や Node.js がなくてもインストールできます。アーカイブが付いていないリリースや、独自の変更を加えるサイトは、タグからインストールします。その場合は、両方が必要です。次のリリースへの更新手順は [docs/updating.md](docs/updating.md)(英語)にあります。
 
+SSH でログインでき、Web サーバはホストが管理する共用のレンタルサーバには、[docs/installing-on-a-shared-host.md](docs/installing-on-a-shared-host.md)(英語)の短い手順があります。コマンドが設定を質問し、その答えでサイトをセットアップします。更新の手順も同じ文書にあります。
+
 バージョンに `-alpha` が付いている間は、互換性を保つ手段なしに、動作や保存データが変わることがあります。修正は新しいリリースとして公開し、以前の alpha には適用しません。
 
 ## OpenPNE 3 からのアップグレード

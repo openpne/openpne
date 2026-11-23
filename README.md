@@ -75,6 +75,10 @@ MySQL or MariaDB, a web server, and a way to run queued work. Where a release ha
 it needs neither Composer nor Node.js on the server. A release without one, or a site that will
 carry changes of its own, is installed from its tag, which needs both. Moving from one release to the next is [docs/updating.md](docs/updating.md).
 
+On a shared host, a rental server where you sign in over SSH and the host runs the web server,
+[docs/installing-on-a-shared-host.md](docs/installing-on-a-shared-host.md) is the shorter way: a
+command asks for the settings and sets the site up, and the guide covers updating there too.
+
 While the version carries `-alpha`, a release may change behaviour or stored data without a
 compatibility path, and a fix is published as a new release: an earlier alpha is not patched.
 

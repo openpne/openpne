@@ -25,7 +25,8 @@ jobs:
   # are skipped (via `if`, never paths-ignore) on a docs-only change. A job skipped by `if` reports
   # a "skipped" conclusion, which branch protection treats as satisfied — a paths-ignore filter
   # would instead never report the status, so a required check would wait forever on a docs-only PR.
-  # A file is "docs" iff it is a *.md (any depth), under docs/, or LICENSE; anything else is code.
+  # A file is "docs" iff it is a *.md (any depth), under docs/, or LICENSE; anything else is code,
+  # as is docs/installing-on-a-shared-host.md, whose commands the release-archive job runs.
   # On an unknown base (first push / force-push) or no diff, fall back to running the full CI.
   #
   # NOTE: the required-checks set must include this "Detect changed paths" job, not just the lanes:
@@ -79,7 +80,7 @@ jobs:
           if [ -z "$files" ]; then
             echo "no changed files; running full CI"
             echo "code=true" >> "$GITHUB_OUTPUT"
-          elif printf '%s\n' "$files" | grep -qvE "$docs_re"; then
+          elif printf '%s\n' "$files" | grep -qvE "$docs_re" || printf '%s\n' "$files" | grep -qxF docs/installing-on-a-shared-host.md; then
             echo "non-docs change detected; running code lanes"
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
@@ -280,8 +281,9 @@ jobs:
     env:
       # Pinned by digest, which Dependabot does not read here: bump the tag and digest together from
       # `docker buildx imagetools inspect mysql:8.4` (the trailing comment is the version it resolves to),
-      # here, in release-compat.yml and in release.yml's archive job. release.yml's oldest-mysql job
-      # and mariadb-shard below repeat this job's steps: a change to them goes there too.
+      # here, in release-compat.yml, in release.yml's archive job and in the release-archive job below.
+      # release.yml's oldest-mysql job and mariadb-shard below repeat this job's steps: a change to
+      # them goes there too.
       MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
@@ -509,7 +511,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true' && inputs.ref == ''
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      # The image the mysql-shard job pins, and bumps here with it.
+      MYSQL_IMAGE: mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 # 8.4.11
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
@@ -523,6 +528,50 @@ jobs:
       - run: .github/scripts/release-archive.sh build HEAD "$RUNNER_TEMP/archive" 0.0.0-ci
       - run: .github/scripts/release-archive.sh verify "$RUNNER_TEMP/archive" 0.0.0-ci HEAD
       - run: .github/scripts/release-archive.sh update "$RUNNER_TEMP/archive" 0.0.0-ci "$RUNNER_TEMP/archive" 0.0.0-ci
+      - run: .github/scripts/release-archive.sh shared-update "$RUNNER_TEMP/archive" 0.0.0-ci "$RUNNER_TEMP/archive" 0.0.0-ci
+      - name: Start MySQL
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if docker pull "$MYSQL_IMAGE"; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              echo "::error::could not pull $MYSQL_IMAGE after 5 attempts"
+              exit 1
+            fi
+            echo "pull attempt $attempt failed; retrying in $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+          docker run -d --name mysql -p 3306:3306 --tmpfs /var/lib/mysql:rw \
+            -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=openpne_archive \
+            --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -psecret" \
+            --health-interval=5s --health-timeout=5s --health-retries=20 \
+            "$MYSQL_IMAGE"
+          for _ in $(seq 1 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' mysql)
+            if [ "$status" = healthy ]; then
+              exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' mysql)" != true ]; then
+              echo "::error::MySQL exited during startup"
+              docker logs mysql
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::MySQL did not become healthy within 200s (last status: $status)"
+          docker logs mysql
+          exit 1
+      - name: Update by docs/installing-on-a-shared-host.md (MySQL)
+        env:
+          ARCHIVE_DB: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: openpne_archive
+          DB_USERNAME: root
+          DB_PASSWORD: secret
+        run: .github/scripts/release-archive.sh shared-update "$RUNNER_TEMP/archive" 0.0.0-ci "$RUNNER_TEMP/archive" 0.0.0-ci
 
   lint:
     name: Lint (Pint)
