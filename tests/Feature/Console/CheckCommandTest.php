@@ -144,7 +144,7 @@ class CheckCommandTest extends TestCase
         unlink($this->layout->base.'/tools/mysqldump');
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.26.0 or later, and PHP\'s sqlite3 extension; MySQL needs')
+            ->expectsOutputToContain('No database can be chosen for a new site here: SQLite needs pdo_sqlite on SQLite 3.26.0 or later, and PHP\'s sqlite3 extension; MySQL and MariaDB need')
             ->assertFailed();
     }
 
@@ -152,7 +152,7 @@ class CheckCommandTest extends TestCase
     public static function sqliteVersions(): array
     {
         return [
-            'the library setup takes, and the extension' => ['3.26.0', true, 'Databases: SQLite (backed up through PHP\'s sqlite3 extension) or MySQL', []],
+            'the library setup takes, and the extension' => ['3.26.0', true, 'Databases: SQLite (backed up through PHP\'s sqlite3 extension), MySQL or MariaDB', []],
             'the library too old' => ['3.25.3', true, 'Databases: MySQL or MariaDB only', [
                 'SQLite cannot be used here: pdo_sqlite on the command line runs on SQLite 3.25.3, and OpenPNE needs 3.26.0 or later.',
             ]],
@@ -197,7 +197,7 @@ class CheckCommandTest extends TestCase
         $this->sqliteLibrary(null, pdo: true);
 
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-            ->expectsOutputToContain('Databases: SQLite (backed up through PHP\'s sqlite3 extension) or MySQL')
+            ->expectsOutputToContain('Databases: SQLite (backed up through PHP\'s sqlite3 extension), MySQL or MariaDB')
             ->doesntExpectOutputToContain('SQLite cannot be used here')
             ->assertSuccessful();
         if ($this->sqlite()) {
