@@ -140,8 +140,9 @@ the last two.
 - **Cron** is optional: setup's line, registered as it printed it, runs the scheduler every five
   minutes, and [installing.md](installing.md#the-scheduler) says what a site without it does
   differently. Where the control panel takes a cron job's time and its command in separate fields,
-  with no field for the whole line, the five fields before `cd` are the time (minute, hour, day of
-  the month, month, day of the week) and the rest, from `cd` on, is the command.
+  with no field for the whole line, the first five fields, `*/5 * * * *` in setup's line and
+  `0 4 * * *` for the backup, are the time (minute, hour, day of the month, month, day of the
+  week), and the rest is the command.
 - **Mail**, answered "later", is set in `.env` as [installing.md](installing.md#7-mail) says, with
   the control panel's file manager or an editor over SSH. Until then the site sends none, and what
   needs it, a forgotten password and an invitation by mail among them, does not work.
@@ -209,6 +210,7 @@ fails](#if-a-step-fails) says how to open the site again.
 ### 3. Carry the site's own files into the release
 
 ```
+cd ~/openpne/site
 php artisan view:clear
 cd ~/openpne
 cp -a site/.env openpne-4.0.0-alpha.N/.env
@@ -269,9 +271,9 @@ cp openpne-data/before-4.0.0-alpha.N.sqlite openpne-data/database.sqlite
 cd site
 ```
 
-For MySQL or MariaDB, remove every table from the site's database in the host's database tool first:
-the copy puts back only the tables it holds, and one the failed update made would stop the next
-attempt. Then, with `mariadb` for `mysql` where the backup line runs `mariadb-dump`:
+For MySQL or MariaDB, remove every table from the site's database in the host's database tool first,
+with its foreign key checks off, or again until none is left: the copy puts back only the tables it
+holds, and one the failed update made would stop the next attempt. Then, with `mariadb` for `mysql` where the backup line runs `mariadb-dump`:
 
 ```
 cd ~/openpne
