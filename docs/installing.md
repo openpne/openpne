@@ -27,7 +27,7 @@ A server you administer is what the steps assume. A host where you cannot is cov
 
 ## What the server needs
 
-- **PHP 8.3 or later**, for the web server and on the command line, with the extensions `ctype`,
+- **PHP 8.3, 8.4 or 8.5**, for the web server and on the command line, with the extensions `ctype`,
   `curl`, `dom`, `exif`, `fileinfo`, `filter`, `gd`, `hash`, `iconv`, `intl`, `libxml`, `mbstring`,
   `openssl`, `pcre`, `session`, `tokenizer`, `xml`, `xmlreader`, `zip`, `zlib`, and
   `pdo_sqlite` or `pdo_mysql` for the database. `bcmath` or `gmp` makes

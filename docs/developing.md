@@ -47,7 +47,7 @@ Notes:
 
 ## Without Docker
 
-Requires PHP 8.3+, Composer 2.x, and Node.js 26+ on the host:
+Requires PHP 8.3, 8.4 or 8.5, Composer 2.x, and Node.js 26+ on the host:
 
 ```bash
 composer install
