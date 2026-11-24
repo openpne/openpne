@@ -3,9 +3,9 @@ import type { ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { LayoutHook } from '@/components/layout-hook';
-import { STANDARD_COLUMN } from '@/components/member-frame';
 import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
+import { STANDARD_COLUMN } from '@/lib/member-column';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 

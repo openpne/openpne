@@ -9,11 +9,10 @@ import { ActionLink } from '@/components/ui/action-link';
 import { hasPlaceBar, headerOf } from '@/lib/member-chrome';
 import type { Chrome, ChromeLabel } from '@/lib/member-chrome';
 import { badgePhrase } from '@/lib/count-phrase';
+import { STANDARD_COLUMN } from '@/lib/member-column';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
-
-export const STANDARD_COLUMN = 'max-w-[45rem]';
 
 const GAP: Record<Chrome['gap'], string> = {
     '4': 'space-y-4',
