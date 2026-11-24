@@ -13,8 +13,8 @@ export interface HomePhoto {
 
 const LEAD = 2;
 
-const LEAD_SIZES = '(min-width: 40rem) 21.5rem, 46vw';
-const TILE_SIZES = '(min-width: 40rem) 14.25rem, 31vw';
+const LEAD_SIZES = '(min-width: 40rem) 20rem, 46vw';
+const TILE_SIZES = '(min-width: 40rem) 13.25rem, 31vw';
 
 /**
  * A tile opens the content the picture was posted with rather than the picture alone: there is no

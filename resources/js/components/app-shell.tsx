@@ -86,7 +86,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                 className={cn(
                     'mx-auto flex min-h-dvh',
                     // The frame is the sidebar plus the content column, so the pair centers as one block.
-                    'max-w-6xl lg:max-w-[64rem]',
+                    'max-w-6xl lg:max-w-[61rem]',
                     // The phone header's height, its 4px site-color line included; at desk width no
                     // bar stands, and the var answers for the line alone.
                     '[--modern-top-offset:calc(3rem+4px+env(safe-area-inset-top))] lg:[--modern-top-offset:4px]',

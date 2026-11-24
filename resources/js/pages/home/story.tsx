@@ -19,11 +19,11 @@ import type { IssueStory } from './types';
 const INSET = 'space-y-2 px-4 py-4 sm:px-5';
 
 /**
- * The content column is capped at 48rem by the member frame, so the lead runs the column's width and
+ * The content column is capped at 45rem by the member frame, so the lead runs the column's width and
  * a second half of it from `sm` up, where the pair splits into two.
  */
-const LEAD_SIZES = 'min(48rem, 100vw)';
-const SECOND_SIZES = '(min-width: 40rem) 24rem, 100vw';
+const LEAD_SIZES = 'min(45rem, 100vw)';
+const SECOND_SIZES = '(min-width: 40rem) 22.5rem, 100vw';
 const THUMB_SIZES = '6rem';
 
 /**
