@@ -13,7 +13,7 @@ Compare these with the host's own pages, or ask the host. On a host with a trial
 anything, and the web's once the document root is set.
 
 - SSH, to run commands.
-- PHP 8.3 or later, for the web and on the command line, with the extensions
+- PHP 8.3, 8.4 or 8.5, for the web and on the command line, with the extensions
   [installing.md](installing.md#what-the-server-needs) lists.
 - A database: SQLite, or a MySQL or MariaDB database the host makes for you, each from the version
   [installing.md](installing.md#what-the-server-needs) names. MySQL and MariaDB need `mysqldump` or
@@ -31,7 +31,7 @@ Cron, a process kept running and `sudo` are not needed.
 php -v
 ```
 
-At 8.3 or later, go on. Where it is older, or not found, the host's guide names a newer PHP, by a
+At 8.3, 8.4 or 8.5, go on. Where it is another version, or not found, the host's guide names one of these, by a
 name such as `php8.3` or by its full path: write that wherever this guide says `php`.
 
 ## 2. Put the release in place
@@ -120,7 +120,7 @@ Then it shows what to set in the control panel, and waits:
 
 1. the domain's document root: the full path of `~/openpne/site/public`, as setup prints it, which a
    [link in the host's folder](#where-the-host-fixes-the-document-root) has already seen to;
-2. PHP 8.3 or later for the web;
+2. PHP 8.3, 8.4 or 8.5 for the web;
 3. HTTPS for the domain.
 
 A change there can take tens of minutes to show. Setup can be stopped while you wait: the same two
