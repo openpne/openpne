@@ -51,7 +51,7 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 // (frame → card body → field box) and gives up 4px of the usual 16 to the inner two.
                 'mx-auto px-3 py-8 sm:px-4',
                 hasPlaceBar(header) && 'lg:pt-(--modern-top-offset)',
-                chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
+                chrome.width === 'narrow' ? 'max-w-md' : 'max-w-3xl',
                 GAP[chrome.gap],
                 // The sheet's heading takes more air above than below it, so proximity groups it
                 // with the form it heads rather than with the bar.

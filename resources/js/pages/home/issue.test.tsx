@@ -116,7 +116,7 @@ test('the lead is one block: a hero over the headline, and nothing else in it to
     const hero = card.querySelector('img[srcset]');
 
     expect(hero?.getAttribute('srcset')).toBe('/f/1/w640 640w');
-    expect(hero?.getAttribute('sizes')).toBe('min(42rem, 100vw)');
+    expect(hero?.getAttribute('sizes')).toBe('min(48rem, 100vw)');
     expect(hero?.getAttribute('alt')).toBe('');
 
     const headline = screen.getByRole('heading', { level: 2, name: 'Morning walk' });
@@ -169,7 +169,7 @@ test('the two after the lead are cards side by side, a rank down', () => {
 
     // A board entry's group is named once, in its mark and not again in the byline.
     expect(within(grid).getAllByText('Book club')).toHaveLength(2);
-    expect(grid.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('(min-width: 40rem) 21rem, 100vw');
+    expect(grid.querySelector('img[srcset]')?.getAttribute('sizes')).toBe('(min-width: 40rem) 24rem, 100vw');
 });
 
 test('a lone second takes the width rather than half of it', () => {
@@ -180,7 +180,7 @@ test('a lone second takes the width rather than half of it', () => {
     expect(container.querySelector('.sm\\:grid-cols-2')).toBeNull();
     expect(screen.getByRole('heading', { level: 2, name: 'Second story' })).toBeTruthy();
     const pictures = Array.from(container.querySelectorAll('img[srcset]'));
-    expect(pictures.map((picture) => picture.getAttribute('sizes'))).toEqual(['min(42rem, 100vw)', 'min(42rem, 100vw)']);
+    expect(pictures.map((picture) => picture.getAttribute('sizes'))).toEqual(['min(48rem, 100vw)', 'min(48rem, 100vw)']);
 });
 
 test('rank four and below are rows, with the picture beside the words where there is one', () => {
