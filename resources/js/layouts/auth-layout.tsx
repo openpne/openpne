@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { LayoutHook } from '@/components/layout-hook';
+import { STANDARD_COLUMN } from '@/components/member-frame';
 import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,7 @@ const POLICY_LINKS: { href: string; label: string }[] = [
 // account exists as it does in the profile editor afterwards.
 const WIDTH = {
     standard: 'max-w-sm',
-    wide: 'max-w-2xl',
+    wide: STANDARD_COLUMN,
 } as const;
 
 interface AuthLayoutProps {

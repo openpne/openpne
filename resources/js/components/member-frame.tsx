@@ -13,6 +13,8 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
+export const STANDARD_COLUMN = 'max-w-[45rem]';
+
 const GAP: Record<Chrome['gap'], string> = {
     '4': 'space-y-4',
     '6': 'space-y-6',
@@ -51,7 +53,7 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 // (frame → card body → field box) and gives up 4px of the usual 16 to the inner two.
                 'mx-auto px-3 py-8 sm:px-4',
                 hasPlaceBar(header) && 'lg:pt-(--modern-top-offset)',
-                chrome.width === 'narrow' ? 'max-w-md' : 'max-w-[45rem]',
+                chrome.width === 'narrow' ? 'max-w-md' : STANDARD_COLUMN,
                 GAP[chrome.gap],
                 // The sheet's heading takes more air above than below it, so proximity groups it
                 // with the form it heads rather than with the bar.
