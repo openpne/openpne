@@ -31,8 +31,8 @@ Cron, a process kept running and `sudo` are not needed.
 php -v
 ```
 
-At 8.3, 8.4 or 8.5, go on. Where it is another version, or not found, the host's guide names one of these, by a
-name such as `php8.3` or by its full path: write that wherever this guide says `php`.
+At 8.3, 8.4 or 8.5, go on. Where it is another version, or not found, the host's guide names one
+of these, by a name such as `php8.3` or by its full path: write that wherever this guide says `php`.
 
 ## 2. Put the release in place
 
@@ -293,13 +293,13 @@ php artisan up
 
 ## When something goes wrong
 
-- **`Composer detected issues in your platform`**: the command ran on a PHP older than 8.3. Use the
-  newer one, as [step 1](#1-check-the-php-of-the-command-line) says.
+- **`Composer detected issues in your platform`**: the command ran on a PHP older than 8.3. Use 8.3,
+  8.4 or 8.5, as [step 1](#1-check-the-php-of-the-command-line) says.
 - **Every page answers 403**: the document root is `site`, not `site/public`, or the web server does
   not follow a [link in its place](#where-the-host-fixes-the-document-root).
 - **Every page answers 500**: `php artisan openpne:check` says why where it can, and
-  `site/storage/logs/` holds the error. A web PHP older than 8.3 is one cause: choose a newer one in
-  the control panel.
+  `site/storage/logs/` holds the error. A web PHP older than 8.3 is one cause: choose 8.3, 8.4 or 8.5
+  in the control panel.
 - **A command stops with `Killed`**: the host limits how long one may run. Run it again with `nice`
   in front (`nice php artisan openpne:setup`); setup goes on from where it stopped.
 - **Setup says creating the tables failed**: put right the cause it shows first and run it again.
