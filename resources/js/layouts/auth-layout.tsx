@@ -5,6 +5,7 @@ import { BrandName } from '@/components/brand-name';
 import { LayoutHook } from '@/components/layout-hook';
 import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
+import { STANDARD_COLUMN } from '@/lib/member-column';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
@@ -24,7 +25,7 @@ const POLICY_LINKS: { href: string; label: string }[] = [
 // account exists as it does in the profile editor afterwards.
 const WIDTH = {
     standard: 'max-w-sm',
-    wide: 'max-w-2xl',
+    wide: STANDARD_COLUMN,
 } as const;
 
 interface AuthLayoutProps {

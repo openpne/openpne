@@ -25,7 +25,7 @@ export type ImageGridVariant = 'post' | 'boxed';
 // `boxed` is read by link-card.tsx too, where the card's own padding makes this over-declare by at
 // most one rung, and under-declaring would cost a blurry pick.
 export const HERO_SIZES: Record<ImageGridVariant, string> = {
-    post: '(min-width: 40rem) 37.5rem, 92vw',
+    post: '(min-width: 40rem) 40.5rem, 92vw',
     boxed: 'min(24rem, 92vw)',
 };
 
@@ -39,7 +39,7 @@ export function boxedPictureMaxWidth(ownWidth: number | null, ratio: string): st
 }
 
 const CELL_SIZES: Record<ImageGridVariant, string> = {
-    post: '(min-width: 40rem) 18.75rem, 46vw',
+    post: '(min-width: 40rem) 20.25rem, 46vw',
     boxed: '12rem',
 };
 

@@ -102,7 +102,7 @@ test('the shell paints the one ground, the color line and the offsets that clear
     expect(/lg:\[--modern-place-bar:[^\]]+\]/.exec(shell.className)?.[0] ?? null).toBe(null);
     // The frame is sidebar + content: a width left over from the retired third column would stand
     // as a dead band beside the page.
-    expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe('max-w-6xl lg:max-w-[58rem]');
+    expect(shell.className.match(/(?:[\w.]+:)?max-w-\S+/g)?.join(' ')).toBe('max-w-6xl lg:max-w-[61rem]');
     expect(shell.className).toContain('[--modern-bottom-offset:calc(3.625rem+1px+env(safe-area-inset-bottom))]');
 });
 

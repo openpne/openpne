@@ -25,8 +25,8 @@ export interface HeaderProfile {
     age?: number | null;
 }
 
-/** The content column is `max-w-2xl`; below that the cover runs the full width of the screen. */
-const COVER_SIZES = '(min-width: 42rem) 42rem, 100vw';
+/** The content column is `max-w-[45rem]`; below that the cover runs the full width of the screen. */
+const COVER_SIZES = '(min-width: 45rem) 45rem, 100vw';
 
 /**
  * The card rises back over the photo's foot, so no text ever has to survive whatever was uploaded
