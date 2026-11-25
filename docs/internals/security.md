@@ -574,9 +574,11 @@ The framework decodes a JSON body while it captures the request, so a limit on i
 middleware: `public/index.php` asks [`JsonBodyLimit`](../../app/Http/JsonBodyLimit.php) before it
 loads `bootstrap/app.php`. A JSON body is answered 413 with a JSON `message` when it is longer than
 `MAX_BYTES` (8 MiB), holds more than `MAX_SEPARATORS` (50,000) of `,` `:` `[` `{`, or holds so
-many `:` that their count times the body's length, taken as at least `MAX_KEYS_LENGTH` (512 KiB),
-passes `MAX_KEYS` (15,000) times `MAX_KEYS_LENGTH`; characters inside strings count too. The answer writes no log row, and
-its only security header is `X-Content-Type-Options`.
+many `"` followed by `:` with only whitespace between, as every object key is, that their count
+times the body's length, taken as at least `MAX_KEYS_LENGTH` (512 KiB), passes `MAX_KEYS` (15,000)
+times `MAX_KEYS_LENGTH`. Both counts take in characters inside strings too, and a body that cannot
+be read is refused. The answer writes no log row, and its only security header is
+`X-Content-Type-Options`.
 
 - **JSON is wider than either reader of the body:** a `Content-Type` with `/json` or `+json`
   anywhere (Laravel's `isJson()`), or `json` in its media type (Symfony's `json` format, which adds
@@ -584,6 +586,8 @@ its only security header is `X-Content-Type-Options`.
 - **The body is never read whole to be measured.** A declared `Content-Length` over the cap is
   refused unread, and otherwise at most one byte past the cap is read.
 - **The limits are constants**, since the check runs before `.env` is read.
+- **Text can meet the separator cap.** A Modern diary whose title and body, each at its 65,535-byte
+  cap, are a one-digit CSV (`1,2,3`) is refused; one of times (`09:30,`) fits.
 - **MCP pictures travel inside it**, base64-encoded, so for several pictures near
   `OPENPNE_IMAGE_MAX_UPLOAD_KB`, or a cap raised past the default, the request cap binds first
   ([images](images.md)).

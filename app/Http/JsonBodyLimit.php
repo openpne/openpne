@@ -17,11 +17,12 @@ final class JsonBodyLimit
 
     public const MAX_KEYS = 15_000;
 
-    /** Past this length the key cap shrinks in proportion, so colons times length stays within MAX_KEYS times this. */
+    /** Past this length the key cap shrinks in proportion, so keys times length stays within MAX_KEYS times this. */
     public const MAX_KEYS_LENGTH = 512 * 1024;
 
     /**
      * Reads at most one byte past MAX_BYTES of the body, and nothing when the type is not JSON or the declared length is already over.
+     * A body it cannot read is refused.
      *
      * @param  array<string, mixed>  $server
      * @param  resource|null  $body  the request body, php://input when null
@@ -38,17 +39,21 @@ final class JsonBodyLimit
             return true;
         }
 
-        $read = (string) stream_get_contents($body ?? fopen('php://input', 'rb'), self::MAX_BYTES + 1);
+        $stream = $body ?? fopen('php://input', 'rb');
+        $read = is_resource($stream) ? stream_get_contents($stream, self::MAX_BYTES + 1) : false;
 
-        if (strlen($read) > self::MAX_BYTES) {
+        if ($read === false || strlen($read) > self::MAX_BYTES) {
             return true;
         }
 
-        // Every JSON value but the first follows one of these, and every object key precedes a colon.
-        $keys = substr_count($read, ':');
+        // Every object key ends in a quote that only JSON whitespace parts from its colon.
+        $keys = substr_count(str_replace([' ', "\t", "\n", "\r"], '', $read), '":');
+
+        // Every JSON value but the first follows one of these.
+        $separators = substr_count($read, ':') + substr_count($read, ',') + substr_count($read, '[') + substr_count($read, '{');
 
         return $keys * max(strlen($read), self::MAX_KEYS_LENGTH) > self::MAX_KEYS * self::MAX_KEYS_LENGTH
-            || $keys + substr_count($read, ',') + substr_count($read, '[') + substr_count($read, '{') > self::MAX_SEPARATORS;
+            || $separators > self::MAX_SEPARATORS;
     }
 
     /** @param  array<string, mixed>  $server */

@@ -6,6 +6,7 @@ namespace Tests\Unit\Http;
 
 use App\Files\UploadLimit;
 use App\Http\JsonBodyLimit;
+use App\Http\Requests\Diary\StoreDiaryRequest;
 use App\Mcp\Tools\DiaryTool;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -75,6 +76,14 @@ final class JsonBodyLimitTest extends TestCase
         $this->assertLessThanOrEqual(JsonBodyLimit::MAX_BYTES + 1 + CountedByteStream::SLACK, CountedByteStream::consumed());
     }
 
+    public function test_a_body_that_cannot_be_read_is_refused(): void
+    {
+        $stream = fopen('php://memory', 'rb');
+        fclose($stream);
+
+        $this->assertTrue(JsonBodyLimit::exceeded(self::JSON, $stream));
+    }
+
     public function test_the_length_cap_admits_its_own_size(): void
     {
         $this->assertFalse($this->exceeded(self::JSON, self::string(JsonBodyLimit::MAX_BYTES)));
@@ -90,7 +99,7 @@ final class JsonBodyLimitTest extends TestCase
     /** @return array<string, array{string}> */
     public static function separatorCharacters(): array
     {
-        return ['comma' => [','], 'bracket' => ['['], 'brace' => ['{']];
+        return ['comma' => [','], 'colon' => [':'], 'bracket' => ['['], 'brace' => ['{']];
     }
 
     /** Inside a string, so the body stays one valid value whichever character it is. */
@@ -101,10 +110,25 @@ final class JsonBodyLimitTest extends TestCase
         $this->assertTrue($this->exceeded(self::JSON, '"'.str_repeat($character, JsonBodyLimit::MAX_SEPARATORS + 1).'"'));
     }
 
-    public function test_the_key_cap_counts_colons_inside_a_string_too(): void
+    public function test_the_key_cap_counts_a_quote_before_a_colon_inside_a_string_too(): void
     {
-        $this->assertFalse($this->exceeded(self::JSON, '"'.str_repeat(':', JsonBodyLimit::MAX_KEYS).'"'));
-        $this->assertTrue($this->exceeded(self::JSON, '"'.str_repeat(':', JsonBodyLimit::MAX_KEYS + 1).'"'));
+        $this->assertFalse($this->exceeded(self::JSON, self::keys(JsonBodyLimit::MAX_KEYS, 3 * JsonBodyLimit::MAX_KEYS + 2)));
+        $this->assertTrue($this->exceeded(self::JSON, self::keys(JsonBodyLimit::MAX_KEYS + 1, 3 * JsonBodyLimit::MAX_KEYS + 5)));
+    }
+
+    /** @return array<string, array{string}> */
+    public static function whitespace(): array
+    {
+        return ['a space' => [' '], 'a tab' => ["\t"], 'a line break' => ["\r\n"], 'several' => [" \n\t "]];
+    }
+
+    #[DataProvider('whitespace')]
+    public function test_whitespace_between_a_key_and_its_colon_still_counts(string $whitespace): void
+    {
+        $object = fn (int $keys): string => '{'.implode(',', array_fill(0, $keys, '"a"'.$whitespace.':0')).'}';
+
+        $this->assertFalse($this->exceeded(self::JSON, $object(JsonBodyLimit::MAX_KEYS)));
+        $this->assertTrue($this->exceeded(self::JSON, $object(JsonBodyLimit::MAX_KEYS + 1)));
     }
 
     /** @return array<string, array{int}> */
@@ -122,15 +146,15 @@ final class JsonBodyLimitTest extends TestCase
     {
         $keys = intdiv(JsonBodyLimit::MAX_KEYS * JsonBodyLimit::MAX_KEYS_LENGTH, $length);
 
-        $this->assertFalse($this->exceeded(self::JSON, self::colons($keys, $length)));
-        $this->assertTrue($this->exceeded(self::JSON, self::colons($keys + 1, $length)));
+        $this->assertFalse($this->exceeded(self::JSON, self::keys($keys, $length)));
+        $this->assertTrue($this->exceeded(self::JSON, self::keys($keys + 1, $length)));
     }
 
     /** @return array<string, array{int, int}> */
     public static function keyLimitsInNumbers(): array
     {
         return [
-            'a short body' => [15_001, 15_003],
+            'a short body' => [15_001, 45_005],
             'a mebibyte' => [7_501, 1024 * 1024],
             'eight mebibytes' => [938, 8 * 1024 * 1024],
         ];
@@ -140,15 +164,28 @@ final class JsonBodyLimitTest extends TestCase
     #[DataProvider('keyLimitsInNumbers')]
     public function test_the_key_limits_refuse_these_counts(int $keys, int $length): void
     {
-        $this->assertTrue($this->exceeded(self::JSON, self::colons($keys, $length)));
+        $this->assertTrue($this->exceeded(self::JSON, self::keys($keys, $length)));
     }
 
     /** A stylesheet at the setting's byte cap three times: the snapshot and the update, and a head HTML field holding it again in a style tag. */
-    public function test_the_key_cap_admits_a_full_custom_stylesheet_saved_from_the_admin_form(): void
+    public function test_the_caps_admit_a_full_custom_stylesheet_saved_from_the_admin_form(): void
     {
         $css = str_repeat('.a{color:#000}', intdiv(65535, 14));
 
         $this->assertFalse($this->exceeded(self::JSON, (string) json_encode([$css, $css, $css])));
+    }
+
+    /** Title and body at their byte cap, as the Modern form posts them: a timetable fits, a one-digit CSV is refused. */
+    public function test_a_full_modern_diary_is_refused_once_half_of_it_is_separators(): void
+    {
+        $cap = (int) (new ReflectionClassConstant(StoreDiaryRequest::class, 'BODY_MAX_BYTES'))->getValue();
+        $diary = fn (string $unit): string => (string) json_encode([
+            'title' => substr(str_repeat($unit, intdiv($cap, strlen($unit)) + 1), 0, $cap),
+            'body' => substr(str_repeat($unit, intdiv($cap, strlen($unit)) + 1), 0, $cap),
+        ]);
+
+        $this->assertFalse($this->exceeded(self::JSON, $diary('09:30,')));
+        $this->assertTrue($this->exceeded(self::JSON, $diary('1,')));
     }
 
     public function test_colons_also_count_toward_the_separator_cap(): void
@@ -202,12 +239,12 @@ final class JsonBodyLimitTest extends TestCase
         $this->assertTrue($autoload < $gate && $gate < $framework);
     }
 
-    /** Title and body at their byte cap, each byte escaped to six as json_encode() writes a control character, but for 900 colons in the body, the fewest the caps must still admit beside it. */
+    /** Title and body at their byte cap, each byte escaped to six as json_encode() writes a control character, but for 1,000 quotes before a colon in the body, the fewest the caps must still admit beside it. */
     public function test_an_mcp_post_with_one_picture_at_the_shipped_cap_fits(): void
     {
         $cap = (int) (new ReflectionClassConstant(DiaryTool::class, 'BODY_MAX_BYTES'))->getValue();
         $title = str_repeat("\x01", $cap);
-        $body = str_repeat(':', 900).str_repeat("\x01", $cap - 900);
+        $body = str_repeat('":', 1000).str_repeat("\x01", $cap - 2000);
         $picture = str_repeat('A', intdiv(UploadLimit::DEFAULT_KILOBYTES * 1024 + 2, 3) * 4);
 
         $request = (string) json_encode(['jsonrpc' => '2.0', 'id' => PHP_INT_MAX, 'method' => 'tools/call', 'params' => [
@@ -248,10 +285,10 @@ final class JsonBodyLimitTest extends TestCase
         return '['.implode(',', array_fill(0, $count, '0')).']';
     }
 
-    /** A JSON string $length bytes long holding $count colons. */
-    private static function colons(int $count, int $length): string
+    /** A JSON string $length bytes long holding $count escaped quotes, each before a colon. */
+    private static function keys(int $count, int $length): string
     {
-        return '"'.str_repeat(':', $count).str_repeat('x', $length - $count - 2).'"';
+        return '"'.str_repeat('\\":', $count).str_repeat('x', $length - 3 * $count - 2).'"';
     }
 
     private static function string(int $length): string
