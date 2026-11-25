@@ -4,6 +4,7 @@ namespace App\Auth;
 
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable as UserContract;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -15,6 +16,18 @@ use Illuminate\Support\Facades\Hash;
  */
 class LegacyEloquentUserProvider extends EloquentUserProvider
 {
+    /**
+     * An administrator without a password is left out of every guard lookup, so no session, remember
+     * cookie or credential can produce one (docs/internals/security.md, "Administrator password links").
+     *
+     * @param  Model|null  $model
+     * @return \Illuminate\Database\Eloquent\Builder<*>
+     */
+    protected function newModelQuery($model = null)
+    {
+        return parent::newModelQuery($model)->whereNotNull('password')->where('password', '!=', '');
+    }
+
     public function retrieveByCredentials(#[\SensitiveParameter] array $credentials)
     {
         $user = parent::retrieveByCredentials($credentials);
@@ -66,17 +79,34 @@ class LegacyEloquentUserProvider extends EloquentUserProvider
         return false;
     }
 
+    /**
+     * Conditional on the hash this login read, so a password set meanwhile (a used setup link) is
+     * never overwritten; on a lost race the user keeps the old hash, which AuthenticateSession then
+     * rejects on the next request.
+     */
     public function rehashPasswordIfRequired(UserContract $user, #[\SensitiveParameter] array $credentials, bool $force = false)
     {
-        if (! $this->usesWrappedScheme($user)) {
-            parent::rehashPasswordIfRequired($user, $credentials, $force);
+        $wrapped = $this->usesWrappedScheme($user);
+        $read = $user->getAuthPassword();
 
+        if (! $wrapped && ! $force && ! $this->hasher->needsRehash($read)) {
             return;
         }
 
-        // The save also clears password_scheme (ClearsPasswordScheme), so the next login verifies
-        // the plain bcrypt directly.
-        $user->forceFill(['password' => Hash::make($credentials['password'])])->save();
+        $values = [$user->getAuthPasswordName() => $this->hasher->make($credentials['password'])];
+        if ($wrapped) {
+            $values['password_scheme'] = null;
+        }
+
+        $written = $user->newQuery()
+            ->whereKey($user->getKey())
+            ->where($user->getAuthPasswordName(), $read)
+            ->update($values);
+
+        // The guard stores the in-memory hash in the session next, which must match the row.
+        if ($written === 1) {
+            $user->forceFill($values)->syncOriginalAttributes(array_keys($values));
+        }
     }
 
     private function usesWrappedScheme(UserContract $user): bool

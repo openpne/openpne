@@ -49,7 +49,9 @@ refreshing.
 
 `APP_TIMEZONE` (IANA name, default `UTC`) is the site's single clock. There is no
 per-member timezone: stored wall-clock time and displayed wall-clock time are the
-same value read in the same zone, on both surfaces.
+same value read in the same zone, on both surfaces. An administrator password
+link's expiry holds Unix seconds instead: it is an elapsed time that a
+daylight-saving change must not stretch or shrink ([security.md](security.md#administrator-password-links)).
 
 That makes it a **deployment-time setting, not a runtime one**. Changing it on a
 live site does not re-render existing rows into the new zone — it reinterprets
@@ -227,7 +229,7 @@ A deployment should run Laravel's scheduler — `php artisan schedule:run` every
 minute from cron (or a systemd timer). Without it the weekly prune of unreferenced
 link cards and the image each holds ([`routes/console.php`](../../routes/console.php))
 never runs, and those rows accumulate. The daily prune of expired pending tokens —
-registration, email-change and MFA-reset links — is registered here too but does
+registration, email-change, MFA-reset and administrator password links — is registered here too but does
 not depend on it: the first signed-in request of each site day runs the same prune
 after its response (`TickHousekeeping`, one cache lock per day), as does the sweep of
 spent OAuth codes, tokens and never-used clients (`openpne:prune-oauth`). Nor does the daily

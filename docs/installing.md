@@ -232,6 +232,10 @@ php artisan openpne:admin:create admin    # asks for the password of the first a
 php artisan passport:keys                 # optional: lets AI clients sign in to the MCP server
 ```
 
+For an administrator who should choose their own password, create them with
+`--without-password` and hand them the link `php artisan openpne:admin:password-link <username>`
+prints (valid for 60 minutes and one use; `--minutes` changes that).
+
 `key:generate` writes `APP_KEY` into `.env`. Sessions and everything the site encrypts depend on
 it: keep it with your backups, and do not generate it again.
 

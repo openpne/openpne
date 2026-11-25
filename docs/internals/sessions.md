@@ -158,6 +158,9 @@ and stay out only because their scripts send `X-Requested-With` — a fragment
 endpoint fetched without it would be recorded for a client without Fetch
 Metadata.
 
+A route with [`NoStore`](../../app/Http/Middleware/NoStore.php) is never recorded: its URL carries
+a secret, which the session store (a database row by default) would otherwise keep.
+
 The framework's other guards stand (GET, a matched route, not a prefetch, not
 precognitive).
 

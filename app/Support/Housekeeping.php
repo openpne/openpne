@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Models\AdminPasswordSetupToken;
 use App\Models\EmailChangeRequest;
 use App\Models\MfaResetRequest;
 use App\Models\RegistrationToken;
@@ -19,7 +20,7 @@ class Housekeeping
     public function run(): int
     {
         $pruned = 0;
-        foreach ([RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class] as $model) {
+        foreach ([RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class, AdminPasswordSetupToken::class] as $model) {
             // One statement per model; these rows have nothing to tear down, so pruneAll's row-by-row walk is not needed.
             $pruned += (new $model)->prunable()->delete();
         }

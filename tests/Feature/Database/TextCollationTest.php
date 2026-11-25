@@ -24,6 +24,7 @@ class TextCollationTest extends TestCase
      * (docs/internals/text-comparison.md, "Identifiers"): an identifier compares without case, the rest compare binary.
      */
     private const UNIQUE_TEXT = [
+        'admin_password_setup_tokens(token)' => 'machine',
         'admin_sessions(id)' => 'machine',
         'admin_users(username)' => 'identifier',
         'banners(name)' => 'constant',

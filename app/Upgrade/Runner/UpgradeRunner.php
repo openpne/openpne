@@ -680,6 +680,11 @@ final class UpgradeRunner
         }
 
         try {
+            // Not a step target, and with MySQL's checks off the cascade from admin_users would not run.
+            if (in_array('admin_users', $this->targetTables(), true)) {
+                DB::table('admin_password_setup_tokens')->delete();
+            }
+
             foreach ($this->targetTables() as $table) {
                 DB::table($table)->delete();
             }

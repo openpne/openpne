@@ -513,6 +513,54 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
   (`RequestEmailChange`) repairs it unless someone reading the wrong mailbox cancels first: the change waits for a
   confirmation from the new address, and until then a link mailed to the current one cancels it.
 
+## Administrator password links
+
+An administrator can be created without a password (`openpne:admin:create <username>
+--without-password`) and choose one through a link the operator prints with
+`openpne:admin:password-link <username>`. The same link recovers a locked-out administrator without
+the operator choosing their password. [`AdminPasswords`](../../app/Auth/AdminPasswords.php) makes
+every password change (the panel's, the link's, `openpne:admin:reset-password`) and issues and
+consumes the links.
+
+- **No password, no sign-in.** `LegacyEloquentUserProvider` leaves an administrator with a NULL or
+  empty password out of every lookup, so no credential, remember cookie or session resolves to one;
+  a refused sign-in still burns an equal bcrypt. Two-factor authentication is asked only after the
+  password.
+- **The link.** `/admin/password-setup/{token}`, a 40-character token of which
+  `admin_password_setup_tokens` keeps a SHA-256 hash, one row per administrator. It expires after
+  `--minutes` (60 by default, at most 1440) and works once; the expiry is stored in Unix seconds, so
+  the minutes hold across a daylight-saving change in `APP_TIMEZONE`. A new link replaces the old
+  one; until a link is used, the current password and sessions stay. Opening it changes neither the
+  link nor the password, so a mail scanner that opens it first leaves it usable. Only the command
+  issues one (`AdminPasswordLinkPrintersTest`); the security log records that one was printed
+  (`password.link_printed`), never the URL. A failed command prints nothing to stdout, though one
+  that fails after the issue may already have replaced the earlier link.
+- **Using it.** One transaction locks the administrator row, deletes the link row only if it is
+  still live, writes the password, clears `password_scheme`, and ends every session and remember
+  token of the administrator (`SessionRevocation`). The browser's session is then invalidated and
+  the administrator signs in, two-factor included. Every dead link (unknown, malformed, expired,
+  used, replaced, or its administrator deleted) gets the same 404 page, without the username.
+- **A change voids it.** The panel's own change and `openpne:admin:reset-password` delete the
+  unused link in the transaction that writes the password. Every writer locks the administrator row
+  before the link row, so concurrent ones wait instead of deadlocking. The panel's change compares the
+  locked row with the hash its current-password check read, and if a link or the CLI set a password
+  in between, writes nothing and signs the administrator out. A login's rehash is one UPDATE
+  conditional on the hash the login read, so it never overwrites a password set meanwhile.
+- **Where the token is.** In the URL, so in access logs and browser history until the link is used
+  or expires; the expiry bounds that window. Not in the session: the screen runs on the admin
+  session store under `/admin*`, carries `NoStore` and `NoReferrer` ([Response
+  headers](#response-headers)), and a refused submit is answered with the form and a 422 rather
+  than a redirect, which would flash the input. The page loads no script and nothing from another
+  origin.
+- **Rate limit.** `admin-password-setup`: 5 a minute per IP, opening and submitting counted apart.
+- **Asking the state.** `openpne:admin:list --json` gives each administrator's `password_set`,
+  `two_factor`, `link_expires_at` (a live link's expiry, else null) and `created_at`, as of the
+  moment asked. Both commands write their JSON raw, past the console formatter, so a username
+  arrives unchanged.
+- **Session rows.** They are deleted in the same transaction only while the session connection is
+  the default database connection; under another session driver, `AuthenticateSession` ends a
+  session holding the old password at its next request.
+
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in
@@ -522,7 +570,9 @@ admin panel forms, the admin CLI commands) validates through `Password::default(
 
 At the CLI, `openpne:admin:create` and `openpne:admin:reset-password` prompt twice, or read
 `OPENPNE_ADMIN_PASSWORD` for non-interactive provisioning; there is deliberately no `--password`
-option, which would leak the secret into shell history and the process list.
+option, which would leak the secret into shell history and the process list. An administrator
+can also choose their own through a link ([Administrator password
+links](#administrator-password-links)), whose screen validates the same way.
 
 - **Minimum 8 characters.** This meets ASVS 5.0 V6.2.1 (level 1).
   NIST SP 800-63B-4 §3.1.1.2 requires 15 characters for
@@ -636,13 +686,18 @@ ahead of the first middleware that can abort, with `PreventRequestForgery` joine
 list as that anchor ([`bootstrap/app.php`](../../bootstrap/app.php)).
 
 A screen whose URL or form carries a secret — the login and registration
-flows, password reset, and the email-change and MFA-reset landings — carries
+flows, password reset, the email-change and MFA-reset landings, and the administrator password
+link — carries
 [`NoReferrer`](../../app/Http/Middleware/NoReferrer.php) as route middleware:
 the baseline already withholds the path cross-origin, so what `no-referrer`
 closes is the same-origin channel — the landing's own subresources and
 follow-up requests, and `document.referrer`. It covers the responses the route
 returns, an abort inside it included; a response from middleware that runs ahead of it — the 419,
 the throttle's 429 — ships the baseline.
+
+The administrator password link also carries [`NoStore`](../../app/Http/Middleware/NoStore.php):
+`Cache-Control: no-store, no-transform, private`, and its URL is never recorded as the session's
+previous URL ([sessions.md](sessions.md#the-previous-url)).
 
 Deliberately not set:
 

@@ -13,12 +13,21 @@ class CreateAdminUserCommand extends Command
 {
     use ResolvesAdminPassword;
 
-    protected $signature = 'openpne:admin:create {username? : The administrator username}';
+    protected $signature = 'openpne:admin:create
+        {username? : The administrator username}
+        {--without-password : Leave the password unset, for the administrator to choose through openpne:admin:password-link}';
 
     protected $description = 'Create an administrator account for the admin panel';
 
     public function handle(): int
     {
+        $withoutPassword = (bool) $this->option('without-password');
+        if ($withoutPassword && $this->passwordFromEnvironment() !== null) {
+            $this->error('Both --without-password and OPENPNE_ADMIN_PASSWORD were given; pass only one.');
+
+            return self::FAILURE;
+        }
+
         $username = Str::trim((string) ($this->argument('username') ?? $this->ask('Username')));
 
         $validator = Validator::make(['username' => $username], [
@@ -31,6 +40,13 @@ class CreateAdminUserCommand extends Command
             }
 
             return self::FAILURE;
+        }
+
+        if ($withoutPassword) {
+            AdminUser::create(['username' => $username]);
+            $this->info("Administrator [{$username}] created without a password. Print a link to set one with: php artisan openpne:admin:password-link {$username}");
+
+            return self::SUCCESS;
         }
 
         $password = $this->resolveValidatedPassword($username);

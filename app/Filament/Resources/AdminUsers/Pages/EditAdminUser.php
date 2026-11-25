@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\AdminUsers\Pages;
 
-use App\Auth\SessionRevocation;
+use App\Auth\AdminPasswords;
 use App\Filament\Resources\AdminUsers\AdminUserResource;
 use App\Models\AdminUser;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -67,22 +68,28 @@ class EditAdminUser extends EditRecord
             ])
             ->action(function (array $data): void {
                 $record = $this->getRecord();
-                // The `password` cast hashes the plaintext on save.
-                $record->update(['password' => $data['password']]);
+                // current_password checked this copy of the hash, so a password set since (a used link, the CLI) refuses the change.
+                $authUser = auth('admin')->user();
+                // Every other foothold for this administrator ends — other devices' sessions and all
+                // remember-me cookies — while the session that just proved the current password stays.
+                $changed = app(AdminPasswords::class)->change($record, $data['password'], session()->getId(), (string) $authUser?->getAuthPassword());
+                if (! $changed) {
+                    auth('admin')->logoutCurrentDevice();
+                    session()->invalidate();
+                    session()->regenerateToken();
+                    Notification::make()->danger()->title(__('The password was changed while you were entering it. Sign in with the new password.'))->send();
+                    $this->redirect(Filament::getLoginUrl());
+
+                    return;
+                }
 
                 // AuthenticateSession logs out when the session's stored password hash differs from
                 // the user's, so both the in-memory user (re-stored at request end) and the session
                 // value get the new hash.
-                $authUser = auth('admin')->user();
                 if ($authUser instanceof AdminUser && $authUser->getKey() === $record->getKey()) {
                     $authUser->forceFill(['password' => $record->getAuthPassword()]);
                     session()->put('password_hash_admin', $record->getAuthPassword());
                 }
-
-                // A changed credential must end every other authenticated foothold for this
-                // administrator — other devices' sessions and all remember-me cookies — while
-                // the session that just proved the current password stays signed in.
-                SessionRevocation::revokeAdmin($record, session()->getId());
 
                 Notification::make()->success()->title(__('Password updated'))->send();
             });

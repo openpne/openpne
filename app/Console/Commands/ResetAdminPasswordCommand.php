@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Auth\SessionRevocation;
+use App\Auth\AdminPasswords;
 use App\Console\Commands\Concerns\ResolvesAdminPassword;
 use App\Models\AdminUser;
 use App\Support\SecurityLog;
@@ -21,7 +21,7 @@ class ResetAdminPasswordCommand extends Command
 
     protected $description = "Reset an administrator's password (lockout recovery)";
 
-    public function handle(): int
+    public function handle(AdminPasswords $passwords): int
     {
         $username = Str::trim((string) $this->argument('username'));
 
@@ -37,12 +37,9 @@ class ResetAdminPasswordCommand extends Command
             return self::FAILURE;
         }
 
-        // The `password` cast hashes the plaintext on save.
-        $admin->update(['password' => $password]);
-
-        // Lockout recovery doubles as compromise recovery: end every existing session
-        // and remember-me cookie so only the holder of the new password gets back in.
-        SessionRevocation::revokeAdmin($admin);
+        // Lockout recovery doubles as compromise recovery: every session, remember-me cookie and
+        // unused setup link ends, so only the holder of the new password gets back in.
+        $passwords->change($admin, $password);
 
         SecurityLog::event('password.changed', ['guard' => 'admin', 'username' => $username, 'via' => 'cli']);
 

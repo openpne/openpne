@@ -237,6 +237,9 @@ class FortifyServiceProvider extends ServiceProvider
                 ? Limit::perMinute(5)->by('password-reset|'.$request->ip())
                 : Limit::none();
         });
+
+        // Opening and submitting count apart, so reloading the form cannot use up the submits.
+        RateLimiter::for('admin-password-setup', fn (Request $request) => Limit::perMinute(5)->by('admin-password-setup|'.$request->route()?->getName().'|'.$request->ip()));
     }
 
     /**
