@@ -34,6 +34,9 @@ final class FakeAuthenticator
 
     public bool $backedUp = true;
 
+    /** @var array<string, string> */
+    public array $clientDataExtras = [];
+
     /** The id inside the attestation object, which a browser always makes equal to `rawId`. */
     public ?string $attestedCredentialId = null;
 
@@ -120,6 +123,7 @@ final class FakeAuthenticator
             'challenge' => $challenge,
             'origin' => $this->origin,
             'crossOrigin' => false,
+            ...$this->clientDataExtras,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
     }
 

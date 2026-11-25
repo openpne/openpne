@@ -278,6 +278,15 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   ceremony — the member retries. The client re-arms the browser's passkey
   picker on page load only; after a dismissed button prompt the button remains
   the way in until the page reloads.
+- **A posted credential is capped before it is read.** The package decodes
+  the credential, CBOR included, while validating the request, before any
+  challenge is checked — on sign-in, before the visitor is anyone. Each field
+  it decodes (`id`, `rawId`, and the response's `clientDataJSON`,
+  `authenticatorData`, `signature`, `userHandle`, `attestationObject`) is
+  refused past 16,384 characters by a validation rule
+  (`App\Http\Requests\Concerns\LimitsCredentialLength`, on the sign-in,
+  re-authentication and registration requests), with the unreadable-passkey
+  message and, like a malformed body, no log row.
 - **Adding one is a step-up**
   ([Member re-authentication](#member-re-authentication)). Registration opens
   a 15-minute window (`App\Features\Member\PasskeyReauth`, distinct from the
