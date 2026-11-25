@@ -32,6 +32,8 @@ class PostDiaryCommentTool extends DiaryTool
             return Response::error(self::MISSING_WRITE);
         }
 
+        self::refuseImages($request);
+
         /** @var array{diary_id: int, body: string} $validated */
         $validated = Validator::make(
             [
@@ -39,14 +41,11 @@ class PostDiaryCommentTool extends DiaryTool
                 // Both ends, which is what TrimStrings and OpenPNE 3's own rtrim
                 // (opValidatorString) together leave the web form storing.
                 'body' => self::trimmed($request, 'body'),
-                'images' => $request->get('images'),
             ],
             [
                 'diary_id' => ['required', 'integer', 'min:1'],
                 'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
-                'images' => ['prohibited'],
             ],
-            self::NO_IMAGES,
         )->validate();
 
         $diary = $show($member, (int) $validated['diary_id']);

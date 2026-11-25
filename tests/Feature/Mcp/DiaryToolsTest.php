@@ -650,14 +650,24 @@ class DiaryToolsTest extends McpTestCase
         $this->acting(Member::factory()->create());
         $this->app->setLocale('en');
 
-        // A client still holding the old schema must not have its post go out without the pictures.
-        OpenPneServer::tool(PostDiaryTool::class, ['title' => 'Look', 'body' => 'attached', 'images' => ['aGVsbG8=']])
-            ->assertHasErrors(['does not take pictures']);
-        OpenPneServer::tool(PostDiaryCommentTool::class, ['diary_id' => $diary->getKey(), 'body' => 'attached', 'images' => ['aGVsbG8=']])
-            ->assertHasErrors(['does not take pictures']);
+        // Blank strings included: validation rules read them as absent.
+        foreach ([['aGVsbG8='], 'aGVsbG8=', '', '   ', [''], 0, false] as $images) {
+            OpenPneServer::tool(PostDiaryTool::class, ['title' => 'Look', 'body' => 'attached', 'visibility' => 'private', 'images' => $images])
+                ->assertHasErrors(['does not take pictures']);
+            OpenPneServer::tool(PostDiaryCommentTool::class, ['diary_id' => $diary->getKey(), 'body' => 'attached', 'images' => $images])
+                ->assertHasErrors(['does not take pictures']);
+        }
 
         $this->assertSame([$diary->getKey()], Diary::query()->pluck('id')->all());
         $this->assertSame(0, DiaryComment::query()->count());
+
+        foreach ([null, []] as $images) {
+            OpenPneServer::tool(PostDiaryTool::class, ['title' => 'Look', 'body' => 'no pictures', 'visibility' => 'private', 'images' => $images])->assertOk();
+            OpenPneServer::tool(PostDiaryCommentTool::class, ['diary_id' => $diary->getKey(), 'body' => 'no pictures', 'images' => $images])->assertOk();
+        }
+
+        $this->assertSame(3, Diary::query()->count());
+        $this->assertSame(2, DiaryComment::query()->count());
 
         foreach ([PostDiaryTool::class, PostDiaryCommentTool::class] as $tool) {
             $this->assertArrayNotHasKey('images', app($tool)->toArray()['inputSchema']['properties']);

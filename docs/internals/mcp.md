@@ -380,9 +380,9 @@ them is judged, and never a row id. The `id` reported beside it is the attachmen
 comment picture's with the `comment_id` that reported it. `comment_id` is looked up **within** the entry the caller has
 just passed `ShowDiary` on, so a comment of another entry refuses exactly as one that is not there.
 
-**The post tools take no pictures**: a picture would ride inside the JSON body as base64, and the
-whole body is decoded before anything can bound it. A call that still sends `images` is refused,
-not posted without them.
+**The diary post tools take no pictures**: a picture would ride inside the JSON body as base64, and
+the whole body is decoded before the app can bound any one picture. A call that still sends `images` is refused,
+not posted without them; only `null` and an empty list pass, as "no pictures" did before.
 
 ## Prompt injection
 

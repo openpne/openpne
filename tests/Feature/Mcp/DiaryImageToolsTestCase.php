@@ -28,9 +28,6 @@ abstract class DiaryImageToolsTestCase extends McpTestCase
     /** A copy of the trait's own cap, which is private to it. */
     protected const CAP = 8 * 1024 * 1024;
 
-    /** Written out rather than recomputed: four characters per three bytes of the shipped 5120 KB cap. */
-    protected const MAX_ENCODED = 6990508;
-
     protected function setUp(): void
     {
         parent::setUp();

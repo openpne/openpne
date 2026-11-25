@@ -36,6 +36,8 @@ class PostDiaryTool extends DiaryTool
             return Response::error(self::MISSING_WRITE);
         }
 
+        self::refuseImages($request);
+
         // Accepting a slug is the same act as resolving it, so a tier the site does not offer cannot
         // arrive by another spelling.
         $offered = self::offeredBySlug();
@@ -47,7 +49,7 @@ class PostDiaryTool extends DiaryTool
                 'body' => self::trimmed($request, 'body'),
                 // Only when they were actually sent: `sometimes` treats a key holding null as an
                 // argument to check, and null is neither an audience nor a format.
-                ...$request->only(['visibility', 'format', 'images']),
+                ...$request->only(['visibility', 'format']),
             ],
             [
                 'title' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
@@ -57,9 +59,7 @@ class PostDiaryTool extends DiaryTool
                 'visibility' => ['sometimes', 'string', Rule::in(array_keys($offered))],
                 // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
                 'format' => ['sometimes', 'string', Rule::in([BodyFormat::Plain->value, BodyFormat::Markdown->value])],
-                'images' => ['prohibited'],
             ],
-            self::NO_IMAGES,
         )->validate();
 
         $visibility = isset($validated['visibility'])

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp\Tools;
 
 use App\Support\Feature;
+use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 
 abstract class DiaryTool extends McpTool
@@ -14,12 +15,22 @@ abstract class DiaryTool extends McpTool
     /** Bytes, not characters: the TEXT column's own size, which MySQL enforces at insert time. */
     protected const BODY_MAX_BYTES = 65535;
 
-    /** Refused rather than ignored: an entry or comment written without the pictures its caller meant to attach is announced all the same. */
-    protected const NO_IMAGES = ['images.prohibited' => 'This tool does not take pictures: post the text alone.'];
-
     public function shouldRegister(): bool
     {
         return Feature::Diary->enabled();
+    }
+
+    /**
+     * Refused rather than ignored, as an entry or comment written without the pictures its caller meant
+     * to attach is announced all the same; only absent, null and [] read as "no pictures".
+     *
+     * @throws ValidationException
+     */
+    protected static function refuseImages(Request $request): void
+    {
+        if (! in_array($request->get('images'), [null, []], true)) {
+            throw ValidationException::withMessages(['images' => ['This tool does not take pictures: post the text alone.']]);
+        }
     }
 
     /**
