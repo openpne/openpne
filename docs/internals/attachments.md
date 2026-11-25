@@ -42,8 +42,7 @@ is rather than becoming a download; anything else is a file under
 default). There is no extension or type allow list: the browser never interprets the stored
 bytes (below), an allow list blocks the spreadsheets and archives people share, and a deny list is
 undone by renaming. The picture cap stays smaller than the file cap because it bounds a decode, not
-only storage. The MCP post tools keep the picture-only rules (`PostImageRules::imagesOnly()`), as
-their readers fetch pictures and only count files.
+only storage.
 
 ## Delivery
 

@@ -202,8 +202,8 @@ unshown and listed.
 
 ## Upload size
 
-Every image upload — a member's avatar or post images, an admin's banner, logo or public asset, and
-a picture posted over MCP — is held to one per-file cap,
+Every image upload — a member's avatar or post images, an admin's banner, logo or public asset — is
+held to one per-file cap,
 [`UploadLimit`](../../app/Files/UploadLimit.php): `OPENPNE_IMAGE_MAX_UPLOAD_KB`, 5120 by default,
 the favicon alone keeping its own 1 MB ceiling under it. The admin forms
 upload through Livewire's temporary endpoint before Filament validates, so
@@ -241,11 +241,6 @@ files plus its fields, so it must hold the cap times that count with room for th
 over it the answer is a bare 413 from `ValidatePostSize`, the composed post lost with it. The proxy's
 body limit (nginx `client_max_body_size`, 1 MB unconfigured) sits in front of both and fails the same
 way, out of the app's sight.
-
-The MCP wire carries pictures as base64 inside a JSON body, 4/3 the bytes again; it never touches
-`$_FILES`, and the decoded file is then run through the compose forms' own rules, so the same cap
-is applied to the encoded length before the decode. That pre-decode bound scales with the cap: the
-base64 of up to `MAX_IMAGES` pictures at the cap is in memory before any of it is refused.
 
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.

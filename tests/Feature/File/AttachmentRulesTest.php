@@ -64,11 +64,6 @@ class AttachmentRulesTest extends TestCase
         $this->assertFalse($this->passes([$heic]));
     }
 
-    public function test_the_picture_only_shape_still_refuses_a_document(): void
-    {
-        $this->assertFalse(Validator::make(['images' => [UploadedFile::fake()->create('report.pdf', 10, 'application/pdf')]], PostImageRules::imagesOnly())->passes());
-    }
-
     /** A PNG well over 1 KB: random pixels defeat the compression a flat fake image enjoys. */
     private function noisyPng(): string
     {

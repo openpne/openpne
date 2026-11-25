@@ -8,7 +8,6 @@ use App\Features\Diary\Actions\CreateComment;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\McpDiarySerializer;
 use App\Mcp\McpAbilities;
-use App\Mcp\Tools\Concerns\DecodesImageUploads;
 use App\Rules\MaxBytes;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
@@ -25,8 +24,6 @@ use Laravel\Mcp\Server\Attributes\Title;
 #[Description('Add a comment to a diary you can read, as yourself. The entry\'s author is notified, as is everyone who has already commented on it. Comments cannot be edited afterwards.')]
 class PostDiaryCommentTool extends DiaryTool
 {
-    use DecodesImageUploads;
-
     public function handle(Request $request, ShowDiary $show, CreateComment $create): Response|ResponseFactory
     {
         $member = $this->member($request);
@@ -34,6 +31,8 @@ class PostDiaryCommentTool extends DiaryTool
         if (! $member->tokenCan(McpAbilities::WRITE)) {
             return Response::error(self::MISSING_WRITE);
         }
+
+        self::refuseImages($request);
 
         /** @var array{diary_id: int, body: string} $validated */
         $validated = Validator::make(
@@ -54,12 +53,10 @@ class PostDiaryCommentTool extends DiaryTool
             return $this->refused();
         }
 
-        return $this->withImageUploads($request, function (array $images) use ($create, $member, $diary, $validated): Response|ResponseFactory {
-            $comment = $create($member, $diary, $validated['body'], $images);
-            $comment->setRelation('member', $member);
+        $comment = $create($member, $diary, $validated['body']);
+        $comment->setRelation('member', $member);
 
-            return Response::structured(['comment' => McpDiarySerializer::comment($comment)]);
-        });
+        return Response::structured(['comment' => McpDiarySerializer::comment($comment)]);
     }
 
     /**
@@ -72,7 +69,6 @@ class PostDiaryCommentTool extends DiaryTool
                 ->description('The diary to comment on, as list-diaries reports it in diaryId.'),
             'body' => $schema->string()->required()
                 ->description('The comment text, at most '.self::BODY_MAX_BYTES.' bytes — bytes, not characters, so a Japanese one costs about three each.'),
-            'images' => $this->imagesSchema($schema),
         ];
     }
 }

@@ -643,6 +643,37 @@ class DiaryToolsTest extends McpTestCase
         $this->assertSame(0, DiaryComment::query()->count());
     }
 
+    public function test_pictures_are_neither_offered_nor_accepted(): void
+    {
+        Notification::fake();
+        $diary = $this->diary(Member::factory()->create());
+        $this->acting(Member::factory()->create());
+        $this->app->setLocale('en');
+
+        // Blank strings included: validation rules read them as absent.
+        foreach ([['aGVsbG8='], 'aGVsbG8=', '', '   ', [''], 0, false] as $images) {
+            OpenPneServer::tool(PostDiaryTool::class, ['title' => 'Look', 'body' => 'attached', 'visibility' => 'private', 'images' => $images])
+                ->assertHasErrors(['does not take pictures']);
+            OpenPneServer::tool(PostDiaryCommentTool::class, ['diary_id' => $diary->getKey(), 'body' => 'attached', 'images' => $images])
+                ->assertHasErrors(['does not take pictures']);
+        }
+
+        $this->assertSame([$diary->getKey()], Diary::query()->pluck('id')->all());
+        $this->assertSame(0, DiaryComment::query()->count());
+
+        foreach ([null, []] as $images) {
+            OpenPneServer::tool(PostDiaryTool::class, ['title' => 'Look', 'body' => 'no pictures', 'visibility' => 'private', 'images' => $images])->assertOk();
+            OpenPneServer::tool(PostDiaryCommentTool::class, ['diary_id' => $diary->getKey(), 'body' => 'no pictures', 'images' => $images])->assertOk();
+        }
+
+        $this->assertSame(3, Diary::query()->count());
+        $this->assertSame(2, DiaryComment::query()->count());
+
+        foreach ([PostDiaryTool::class, PostDiaryCommentTool::class] as $tool) {
+            $this->assertArrayNotHasKey('images', app($tool)->toArray()['inputSchema']['properties']);
+        }
+    }
+
     public function test_switching_diaries_off_takes_the_tools_away(): void
     {
         $diary = $this->diary(Member::factory()->create());
