@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 use SensitiveParameter;
 
 /**
- * The one writer of an administrator's password and setup link: every operation locks the
+ * Changes an administrator's password and issues and consumes setup links: every operation locks the
  * administrator row before the link row, and a password change voids the unused link and the
  * administrator's sessions in the same commit (docs/internals/security.md, "Administrator password links").
  */
@@ -34,7 +34,7 @@ final class AdminPasswords
         DB::transaction(function () use ($admin, $raw, $now, $expiresAt): void {
             $this->lock($admin);
             AdminPasswordSetupToken::upsert(
-                [['admin_user_id' => $admin->getKey(), 'token' => hash('sha256', $raw), 'expires_at' => $expiresAt, 'created_at' => $now]],
+                [['admin_user_id' => $admin->getKey(), 'token' => hash('sha256', $raw), 'expires_at' => $expiresAt->getTimestamp(), 'created_at' => $now]],
                 ['admin_user_id'],
                 ['token', 'expires_at', 'created_at'],
             );
@@ -51,7 +51,7 @@ final class AdminPasswords
     }
 
     /**
-     * Null when the link was not live at commit time, with nothing written.
+     * Null, with nothing written, when the link is no longer live once the administrator row is locked.
      */
     public function consumeSetupLink(#[SensitiveParameter] string $token, #[SensitiveParameter] string $password): ?AdminUser
     {
@@ -60,7 +60,9 @@ final class AdminPasswords
             return null;
         }
 
-        return DB::transaction(function () use ($link, $password): ?AdminUser {
+        $hash = $this->hash($password);
+
+        return DB::transaction(function () use ($link, $hash): ?AdminUser {
             $admin = AdminUser::whereKey($link->admin_user_id)->lockForUpdate()->first();
             if ($admin === null) {
                 return null;
@@ -68,13 +70,13 @@ final class AdminPasswords
 
             $consumed = AdminPasswordSetupToken::whereKey($admin->getKey())
                 ->where('token', $link->token)
-                ->where('expires_at', '>', now())
+                ->where('expires_at', '>', now()->getTimestamp())
                 ->delete();
             if ($consumed !== 1) {
                 return null;
             }
 
-            $this->write($admin, $password);
+            $this->write($admin, $hash);
             SessionRevocation::revokeAdmin($admin);
 
             return $admin;
@@ -83,19 +85,32 @@ final class AdminPasswords
 
     /**
      * Ends every session of the administrator except $keepSessionId, and leaves $admin holding the new hash.
+     * With $provenHash, writes nothing and returns false when the locked row no longer holds the hash the caller verified.
      */
-    public function change(AdminUser $admin, #[SensitiveParameter] string $password, ?string $keepSessionId = null): void
+    public function change(AdminUser $admin, #[SensitiveParameter] string $password, ?string $keepSessionId = null, ?string $provenHash = null): bool
     {
-        $locked = DB::transaction(function () use ($admin, $password, $keepSessionId): AdminUser {
+        $hash = $this->hash($password);
+
+        $locked = DB::transaction(function () use ($admin, $hash, $keepSessionId, $provenHash): ?AdminUser {
             $locked = $this->lock($admin);
+            if ($provenHash !== null && $locked->getAuthPassword() !== $provenHash) {
+                return null;
+            }
+
             AdminPasswordSetupToken::whereKey($locked->getKey())->delete();
-            $this->write($locked, $password);
+            $this->write($locked, $hash);
             SessionRevocation::revokeAdmin($locked, $keepSessionId);
 
             return $locked;
         });
 
+        if ($locked === null) {
+            return false;
+        }
+
         $admin->setRawAttributes($locked->getAttributes(), sync: true);
+
+        return true;
     }
 
     private function liveLink(string $token): ?AdminPasswordSetupToken
@@ -104,7 +119,7 @@ final class AdminPasswords
             return null;
         }
 
-        return AdminPasswordSetupToken::where('token', hash('sha256', $token))->where('expires_at', '>', now())->first();
+        return AdminPasswordSetupToken::where('token', hash('sha256', $token))->where('expires_at', '>', now()->getTimestamp())->first();
     }
 
     private function lock(AdminUser $admin): AdminUser
@@ -112,9 +127,14 @@ final class AdminPasswords
         return AdminUser::whereKey($admin->getKey())->lockForUpdate()->firstOrFail();
     }
 
-    /** Hashed here rather than by the cast, which stores as-is a value already shaped like a hash. */
-    private function write(AdminUser $admin, #[SensitiveParameter] string $password): void
+    /** Before the lock, so bcrypt does not hold it, and here rather than by the cast, which stores as-is a value already shaped like a hash. */
+    private function hash(#[SensitiveParameter] string $password): string
     {
-        $admin->forceFill(['password' => Hash::make($password)])->save();
+        return Hash::make($password);
+    }
+
+    private function write(AdminUser $admin, string $hash): void
+    {
+        $admin->forceFill(['password' => $hash])->save();
     }
 }

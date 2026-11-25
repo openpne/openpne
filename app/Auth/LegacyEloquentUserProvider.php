@@ -4,6 +4,7 @@ namespace App\Auth;
 
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable as UserContract;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -15,6 +16,18 @@ use Illuminate\Support\Facades\Hash;
  */
 class LegacyEloquentUserProvider extends EloquentUserProvider
 {
+    /**
+     * An administrator without a password is left out of every guard lookup, so no session, remember
+     * cookie or credential can produce one (docs/internals/security.md, "Administrator password links").
+     *
+     * @param  Model|null  $model
+     * @return \Illuminate\Database\Eloquent\Builder<*>
+     */
+    protected function newModelQuery($model = null)
+    {
+        return parent::newModelQuery($model)->whereNotNull('password')->where('password', '!=', '');
+    }
+
     public function retrieveByCredentials(#[\SensitiveParameter] array $credentials)
     {
         $user = parent::retrieveByCredentials($credentials);

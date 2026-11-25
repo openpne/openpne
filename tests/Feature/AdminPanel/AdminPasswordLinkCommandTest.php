@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminPanel;
 
+use App\Auth\AdminPasswords;
 use App\Models\AdminPasswordSetupToken;
 use App\Models\AdminUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LogicException;
+use RuntimeException;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -82,7 +85,7 @@ class AdminPasswordLinkCommandTest extends TestCase
         $token = Str::afterLast(trim($stdout), '/');
         $row = AdminPasswordSetupToken::sole();
         $this->assertSame(hash('sha256', $token), $row->token);
-        $this->assertTrue($row->expires_at->equalTo(now()->addMinutes(60)));
+        $this->assertSame(now()->addMinutes(60)->getTimestamp(), $row->expires_at);
 
         $logged = $this->assertOneSecurityEvent('password.link_printed');
         $this->assertSame(['admin', 'amy', 'cli', now()->addMinutes(60)->toIso8601ZuluString()], [$logged['guard'], $logged['username'], $logged['via'], $logged['expires_at']]);
@@ -104,6 +107,56 @@ class AdminPasswordLinkCommandTest extends TestCase
         $this->assertSame('Amy', $json['username']);
         $this->assertStringStartsWith('http://localhost/admin/password-setup/', $json['url']);
         $this->assertSame(now()->addMinutes(15)->toIso8601ZuluString(), $json['expires_at']);
+    }
+
+    public function test_a_username_that_looks_like_console_markup_reaches_every_output_unchanged(): void
+    {
+        $names = ['<info>amy</info>', '<fg=nope>bob'];
+        foreach ($names as $name) {
+            AdminUser::factory()->create(['username' => $name]);
+
+            [$exit, $stdout] = $this->runCommand('openpne:admin:password-link', ['username' => $name, '--json' => true]);
+            $this->assertSame([0, $name], [$exit, json_decode($stdout, true, flags: JSON_THROW_ON_ERROR)['username']]);
+
+            [$exit, , $stderr] = $this->runCommand('openpne:admin:password-link', ['username' => $name]);
+            $this->assertSame(0, $exit);
+            $this->assertStringContainsString("[{$name}]", $stderr);
+        }
+
+        [$exit, $stdout] = $this->runCommand('openpne:admin:list', ['--json' => true]);
+        $this->assertSame([0, $names], [$exit, array_column(json_decode($stdout, true, flags: JSON_THROW_ON_ERROR), 'username')]);
+
+        [$exit, $stdout] = $this->runCommand('openpne:admin:list');
+        $this->assertSame(0, $exit);
+        $this->assertStringContainsString('<fg=nope>bob', $stdout);
+    }
+
+    public function test_a_link_lasts_its_minutes_across_a_daylight_saving_change(): void
+    {
+        $original = date_default_timezone_get();
+        config(['app.timezone' => 'America/New_York']);
+        date_default_timezone_set('America/New_York');
+
+        try {
+            AdminUser::factory()->create(['username' => 'amy']);
+            // Two hours from 00:45 EDT is 01:45 EST, a wall-clock time 01:50 EDT has passed; no instant here is in the repeated hour's second pass, which Carbon's test clock misreads.
+            $this->travelTo(Carbon::parse('2026-11-01 04:45:00', 'UTC'));
+
+            [, $stdout] = $this->runCommand('openpne:admin:password-link', ['username' => 'amy', '--minutes' => '120', '--json' => true]);
+            $printed = json_decode($stdout, true, flags: JSON_THROW_ON_ERROR);
+            $token = Str::afterLast($printed['url'], '/');
+            $this->assertSame('2026-11-01T06:45:00Z', $printed['expires_at']);
+
+            $this->travelTo(Carbon::parse('2026-11-01 05:50:00', 'UTC'));
+            $this->assertNotNull(app(AdminPasswords::class)->setupLinkOwner($token));
+            [, $listed] = $this->runCommand('openpne:admin:list', ['--json' => true]);
+            $this->assertSame($printed['expires_at'], json_decode($listed, true, flags: JSON_THROW_ON_ERROR)[0]['link_expires_at']);
+
+            $this->travelTo(Carbon::parse('2026-11-01 07:00:00', 'UTC'));
+            $this->assertNull(app(AdminPasswords::class)->setupLinkOwner($token));
+        } finally {
+            date_default_timezone_set($original);
+        }
     }
 
     public function test_a_new_link_replaces_the_old_and_leaves_the_password_and_sessions(): void
@@ -134,6 +187,21 @@ class AdminPasswordLinkCommandTest extends TestCase
         foreach (['1', '1440'] as $minutes) {
             $this->assertSame(0, $this->runCommand('openpne:admin:password-link', ['username' => 'amy', '--minutes' => $minutes])[0]);
         }
+    }
+
+    public function test_an_exception_goes_to_stderr_with_nothing_on_stdout(): void
+    {
+        AdminUser::factory()->create(['username' => 'amy']);
+        DB::beforeExecuting(function (string $query): void {
+            if (str_contains($query, 'admin_password_setup_tokens')) {
+                throw new RuntimeException('link table unavailable');
+            }
+        });
+
+        [$exit, $stdout, $stderr] = $this->runCommand('openpne:admin:password-link', ['username' => 'amy', '--json' => true]);
+
+        $this->assertSame([1, ''], [$exit, $stdout]);
+        $this->assertStringContainsString('link table unavailable', $stderr);
     }
 
     public function test_an_unknown_username_fails_with_nothing_on_stdout(): void

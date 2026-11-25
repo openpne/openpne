@@ -64,7 +64,7 @@ class AdminPasswordSetupTest extends TestCase
         $this->assertStringContainsString('no-transform', $cacheControl);
     }
 
-    public function test_the_link_shows_a_form_for_its_administrator_and_writes_nothing(): void
+    public function test_the_link_shows_a_form_for_its_administrator_and_changes_neither_the_link_nor_the_password(): void
     {
         $admin = $this->newAdmin();
         $token = $this->issue($admin);

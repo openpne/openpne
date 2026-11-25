@@ -1540,6 +1540,7 @@
     "The passkey prompt was cancelled.": "パスキーの操作がキャンセルされました。",
     "The password must not contain your name, your email address, or the name of this site.": "パスワードに自分の名前・メールアドレス・このサイトの名前を含めることはできません。",
     "The password reset URL.": "パスワード再設定 URL。",
+    "The password was changed while you were entering it. Sign in with the new password.": "入力のあいだにパスワードが変更されました。新しいパスワードでログインしてください。",
     "The posted content.": "投稿された内容。",
     "The poster’s name.": "投稿者の名前。",
     "The provided password does not match your current password.": "パスワードが現在のパスワードと一致しません。",

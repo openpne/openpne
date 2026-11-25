@@ -10,14 +10,12 @@ use App\Filament\Pages\Auth\Login;
 use App\Filament\Resources\AdminUsers\Pages\EditAdminUser;
 use App\Models\AdminUser;
 use Filament\Facades\Filament;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 use Livewire\Livewire;
+use RuntimeException;
 use Tests\TestCase;
 
 class AdminPasswordsTest extends TestCase
@@ -56,12 +54,22 @@ class AdminPasswordsTest extends TestCase
         }
         $this->assertGuest('admin');
 
-        // A forged remember-me cookie meets a NULL remember_token.
-        $recaller = Auth::guard('admin')->getRecallerName();
-        $this->withCookie($recaller, $admin->getKey().'|'.Str::random(60).'|'.Str::random(60))
-            ->get('/admin')
-            ->assertRedirect(url('/admin/login'));
-        $this->assertGuest('admin');
+        // A session naming the administrator, and a remember cookie carrying their stored token: neither
+        // the session hash check nor the cookie's hash segment has a password to compare against.
+        $guard = Auth::guard('admin');
+        foreach ([null, ''] as $password) {
+            DB::table('admin_users')->where('id', $admin->getKey())->update(['password' => $password, 'remember_token' => 'stored-token']);
+
+            $this->app['auth']->forgetGuards();
+            $this->withSession([$guard->getName() => $admin->getKey()])->get('/admin')->assertRedirect(url('/admin/login'));
+            $this->flushSession();
+
+            $this->app['auth']->forgetGuards();
+            $this->withCookie($guard->getRecallerName(), $admin->getKey().'|stored-token|'.$password)
+                ->get('/admin')
+                ->assertRedirect(url('/admin/login'));
+            $this->assertGuest('admin');
+        }
     }
 
     public function test_a_failure_part_way_leaves_the_password_the_link_and_the_sessions_as_they_were(): void
@@ -72,14 +80,17 @@ class AdminPasswordsTest extends TestCase
         [$token] = $this->passwords()->issueSetupLink($admin, 60);
 
         // The session purge is the last write, so the password and link writes before it must roll back.
-        Schema::rename('admin_sessions', 'admin_sessions_away');
+        DB::beforeExecuting(function (string $query): void {
+            if (preg_match('/^delete from ["`]admin_sessions["`]/', $query) === 1) {
+                throw new RuntimeException('session purge refused');
+            }
+        });
 
         try {
             $this->passwords()->consumeSetupLink($token, 'new-pass-1234');
             $this->fail('the purge should have failed');
-        } catch (QueryException) {
-        } finally {
-            Schema::rename('admin_sessions_away', 'admin_sessions');
+        } catch (RuntimeException $e) {
+            $this->assertSame('session purge refused', $e->getMessage());
         }
 
         $this->assertEquals($before, DB::table('admin_users')->where('id', $admin->getKey())->first());
@@ -97,7 +108,7 @@ class AdminPasswordsTest extends TestCase
         $this->assertTrue(Hash::check('first-choice-1', $admin->fresh()->password));
     }
 
-    public function test_a_link_that_expires_between_the_lookup_and_the_commit_is_not_used(): void
+    public function test_a_link_that_expires_between_the_lookup_and_the_locked_delete_is_not_used(): void
     {
         $admin = $this->passwordless();
         [$token] = $this->passwords()->issueSetupLink($admin, 1);
@@ -149,6 +160,26 @@ class AdminPasswordsTest extends TestCase
         // The next request loads the administrator afresh, as a real one would.
         Auth::guard('admin')->setUser($me->fresh());
         $this->get('/admin')->assertOk();
+    }
+
+    public function test_the_panel_change_writes_nothing_when_a_link_set_the_password_after_the_current_one_was_checked(): void
+    {
+        $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
+        $this->actingAs($me, 'admin');
+        // The guard keeps the hash it loaded, as a request already past its current-password check does.
+        [$token] = $this->passwords()->issueSetupLink($me, 60);
+        $this->passwords()->consumeSetupLink($token, 'set-by-link-1');
+
+        Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
+            ->callAction('changePassword', [
+                'current_password' => 'original-pass-1',
+                'password' => 'new-strong-pass-1',
+                'password_confirmation' => 'new-strong-pass-1',
+            ])
+            ->assertRedirect(Filament::getLoginUrl());
+
+        $this->assertTrue(Hash::check('set-by-link-1', $me->fresh()->password));
+        $this->assertGuest('admin');
     }
 
     public function test_an_imported_administrator_stays_signed_in_after_the_first_login_rewrites_the_hash(): void

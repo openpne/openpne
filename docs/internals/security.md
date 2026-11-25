@@ -518,19 +518,23 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
 An administrator can be created without a password (`openpne:admin:create <username>
 --without-password`) and choose one through a link the operator prints with
 `openpne:admin:password-link <username>`. The same link recovers a locked-out administrator without
-the operator choosing their password. [`AdminPasswords`](../../app/Auth/AdminPasswords.php) is the
-one writer of an administrator's password and link.
+the operator choosing their password. [`AdminPasswords`](../../app/Auth/AdminPasswords.php) makes
+every password change (the panel's, the link's, `openpne:admin:reset-password`) and issues and
+consumes the links.
 
-- **No password, no sign-in.** `LegacyEloquentUserProvider` refuses a NULL or empty stored password
-  after burning an equal bcrypt, and a new administrator's NULL `remember_token` matches no cookie.
-  Two-factor authentication is asked only after the password.
+- **No password, no sign-in.** `LegacyEloquentUserProvider` leaves an administrator with a NULL or
+  empty password out of every lookup, so no credential, remember cookie or session resolves to one;
+  a refused sign-in still burns an equal bcrypt. Two-factor authentication is asked only after the
+  password.
 - **The link.** `/admin/password-setup/{token}`, a 40-character token of which
   `admin_password_setup_tokens` keeps a SHA-256 hash, one row per administrator. It expires after
-  `--minutes` (60 by default, at most 1440) and works once. A new link replaces the old one; until
-  a link is used, the current password and sessions stay. Opening it writes nothing, so a mail
-  scanner that opens it first leaves it usable. Only the command issues one
-  (`AdminPasswordLinkPrintersTest`); the security log records that one was printed
-  (`password.link_printed`), never the URL.
+  `--minutes` (60 by default, at most 1440) and works once; the expiry is stored in Unix seconds, so
+  the minutes hold across a daylight-saving change in `APP_TIMEZONE`. A new link replaces the old
+  one; until a link is used, the current password and sessions stay. Opening it changes neither the
+  link nor the password, so a mail scanner that opens it first leaves it usable. Only the command
+  issues one (`AdminPasswordLinkPrintersTest`); the security log records that one was printed
+  (`password.link_printed`), never the URL. A failed command prints nothing to stdout, though one
+  that fails after the issue may already have replaced the earlier link.
 - **Using it.** One transaction locks the administrator row, deletes the link row only if it is
   still live, writes the password, clears `password_scheme`, and ends every session and remember
   token of the administrator (`SessionRevocation`). The browser's session is then invalidated and
@@ -538,8 +542,10 @@ one writer of an administrator's password and link.
   used, replaced, or its administrator deleted) gets the same 404 page, without the username.
 - **A change voids it.** The panel's own change and `openpne:admin:reset-password` delete the
   unused link in the transaction that writes the password. Every writer locks the administrator row
-  before the link row, so concurrent ones wait instead of deadlocking. A login's rehash is one
-  UPDATE conditional on the hash the login read, so it never overwrites a password set meanwhile.
+  before the link row, so concurrent ones wait instead of deadlocking. The panel's change compares the
+  locked row with the hash its current-password check read, and if a link or the CLI set a password
+  in between, writes nothing and signs the administrator out. A login's rehash is one UPDATE
+  conditional on the hash the login read, so it never overwrites a password set meanwhile.
 - **Where the token is.** In the URL, so in access logs and browser history until the link is used
   or expires; the expiry bounds that window. Not in the session: the screen runs on the admin
   session store under `/admin*`, carries `NoStore` and `NoReferrer` ([Response
@@ -549,7 +555,8 @@ one writer of an administrator's password and link.
 - **Rate limit.** `admin-password-setup`: 5 a minute per IP, opening and submitting counted apart.
 - **Asking the state.** `openpne:admin:list --json` gives each administrator's `password_set`,
   `two_factor`, `link_expires_at` (a live link's expiry, else null) and `created_at`, as of the
-  moment asked.
+  moment asked. Both commands write their JSON raw, past the console formatter, so a username
+  arrives unchanged.
 - **Session rows.** They are deleted in the same transaction only while the session connection is
   the default database connection; under another session driver, `AuthenticateSession` ends a
   session holding the old password at its next request.

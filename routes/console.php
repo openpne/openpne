@@ -29,7 +29,7 @@ try {
 }
 
 if ($offset !== null) {
-    // Sweep expired pending tokens (see each model's prunable()): registration, email-change, and MFA-reset links.
+    // Sweep expired pending tokens (see each model's prunable()): registration, email-change, MFA-reset and administrator password links.
     Schedule::command('model:prune', ['--model' => [RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class, AdminPasswordSetupToken::class]])->cron(ScheduleOffset::daily('00:00', $offset));
 
     // Spent OAuth codes, tokens and never-used clients; also run by TickHousekeeping.
