@@ -13,14 +13,12 @@ use Laravel\Passkeys\Actions\StorePasskey;
 use Laravel\Passkeys\Support\WebAuthn;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Tests\Concerns\CapturesSecurityLog;
 use Tests\Support\FakeAuthenticator;
 use Tests\TestCase;
 use Webauthn\PublicKeyCredential;
 
 class PasskeyCredentialLengthTest extends TestCase
 {
-    use CapturesSecurityLog;
     use RefreshDatabase;
 
     public const MAX = 16384;
@@ -28,7 +26,6 @@ class PasskeyCredentialLengthTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->captureSecurityLog();
         Notification::fake();
     }
 
@@ -151,8 +148,8 @@ class PasskeyCredentialLengthTest extends TestCase
         $undecodable = '!';
         foreach ([$registration, $assertion] as $credential) {
             $credential['authenticatorAttachment'] = $undecodable;
-            $credential['clientExtensionResults'] = ['credProps' => $undecodable];
-            $credential['response'] += ['publicKey' => $undecodable, 'publicKeyAlgorithm' => $undecodable, 'transports' => [$undecodable]];
+            $credential['clientExtensionResults'] = ['credProps' => $undecodable, 'prf' => ['results' => ['first' => $undecodable]], 'largeBlob' => ['blob' => $undecodable]];
+            $credential['response'] = array_replace($credential['response'], ['publicKey' => $undecodable, 'publicKeyAlgorithm' => $undecodable, 'transports' => [$undecodable]]);
 
             $this->assertInstanceOf(PublicKeyCredential::class, WebAuthn::fromJson(json_encode($credential), PublicKeyCredential::class));
         }

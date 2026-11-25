@@ -31,13 +31,13 @@ class PasskeyCredentialLengthSeamTest extends TestCase
                 $type = $parameter->getType();
                 if ($type instanceof ReflectionNamedType
                     && (is_a($type->getName(), PasskeyVerificationRequest::class, true) || is_a($type->getName(), PasskeyRegistrationRequest::class, true))) {
-                    $found[$route->uri()] = $this->refusedFields($this->resolvedClass($type->getName()), $fields);
+                    $found[implode('|', $route->methods()).' '.$route->uri()] = $this->refusedFields($this->resolvedClass($type->getName()), $fields);
                 }
             }
         }
         ksort($found);
 
-        $this->assertSame(array_fill_keys(['member/config/passkeys', 'member/reauth/passkey', 'passkeys/login'], $fields), $found);
+        $this->assertSame(array_fill_keys(['POST member/config/passkeys', 'POST member/reauth/passkey', 'POST passkeys/login'], $fields), $found);
     }
 
     /** The container may bind a type-hinted package request to the app's subclass, so the class is read off the resolved instance. */
@@ -73,6 +73,6 @@ class PasskeyCredentialLengthSeamTest extends TestCase
         $validator = (new ReflectionMethod($request, 'getValidatorInstance'))->invoke($request);
         $validator->fails();
 
-        return array_values(array_intersect($fields, array_keys($validator->errors()->messages())));
+        return array_values(array_filter($fields, fn (string $field): bool => isset($validator->failed()[$field]['Max'])));
     }
 }
