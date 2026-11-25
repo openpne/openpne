@@ -28,6 +28,20 @@ final class AltchaCaptchaTest extends TestCase
         $this->assertTrue($captcha->verify($this->padded($this->solved($captcha), AltchaCaptcha::MAX_PAYLOAD_BYTES)));
     }
 
+    /** Its decode takes far more memory than its length, so a check after the decode shows in the peak. */
+    public function test_a_payload_past_the_cap_is_refused_before_it_is_decoded(): void
+    {
+        $captcha = $this->captcha();
+        $payload = base64_encode('['.str_repeat('[[[0]]],', 8192).'0]');
+
+        gc_collect_cycles();
+        $before = memory_get_usage();
+        memory_reset_peak_usage();
+
+        $this->assertFalse($captcha->verify($payload));
+        $this->assertLessThan(1 << 20, memory_get_peak_usage() - $before);
+    }
+
     private function captcha(): AltchaCaptcha
     {
         return new AltchaCaptcha('test-key', cost: 100, maxNumber: 100, expiresSeconds: 600);

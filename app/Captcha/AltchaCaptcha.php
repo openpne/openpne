@@ -54,7 +54,7 @@ class AltchaCaptcha implements Captcha
 
     public function verify(?string $payload): bool
     {
-        if (! filled($payload) || strlen($payload) > self::MAX_PAYLOAD_BYTES) {
+        if ($payload === null || strlen($payload) > self::MAX_PAYLOAD_BYTES || ! filled($payload)) {
             return false;
         }
 
