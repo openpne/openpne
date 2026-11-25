@@ -12,6 +12,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\TickHousekeeping;
 use App\Http\Middleware\UseAdminSessionStore;
+use App\Models\Member;
 use App\Support\ClassicErrorPage;
 use App\Support\GuestLoginRedirect;
 use App\Support\SecurityLog;
@@ -123,7 +124,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 // The limiter key is never logged: login keys embed the attempted email.
                 SecurityLog::event('throttle.hit', [
                     'route' => request()->route()?->getName(),
-                    'member_id' => request()->user()?->getKey(),
+                    // The default guard is the realm's, so on an admin route user() is an administrator.
+                    'member_id' => ($user = request()->user()) instanceof Member ? $user->getKey() : null,
                 ]);
             }
         })->stop();

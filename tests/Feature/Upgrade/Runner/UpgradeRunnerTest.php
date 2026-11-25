@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
+use App\Auth\AdminPasswords;
+use App\Models\AdminUser;
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
@@ -190,6 +192,17 @@ class UpgradeRunnerTest extends TestCase
         $runner->reset();
 
         $this->assertTrue($runner->claimNamingEpoch());
+    }
+
+    public function test_a_reset_leaves_no_setup_link_for_an_administrator_id_the_upgrade_reuses(): void
+    {
+        // Teeth on the MySQL lane only: the reset turns foreign key checks off there, so no cascade runs.
+        app(AdminPasswords::class)->issueSetupLink(AdminUser::factory()->create(), 60);
+
+        (new UpgradeRunner(new InsertSelectCompiler))->reset();
+
+        $this->assertDatabaseCount('admin_users', 0);
+        $this->assertDatabaseCount('admin_password_setup_tokens', 0);
     }
 
     public function test_checkpoints_without_a_marker_are_refused_as_legacy_state(): void

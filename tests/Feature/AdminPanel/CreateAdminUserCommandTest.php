@@ -42,6 +42,31 @@ class CreateAdminUserCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_without_password_leaves_the_password_unset(): void
+    {
+        $this->artisan('openpne:admin:create', ['username' => 'new', '--without-password' => true])
+            ->expectsOutputToContain('openpne:admin:password-link new')
+            ->assertSuccessful();
+
+        $admin = AdminUser::sole();
+        $this->assertSame('new', $admin->username);
+        $this->assertNull($admin->getRawOriginal('password'));
+        $this->assertNull($admin->getRawOriginal('remember_token'));
+    }
+
+    public function test_without_password_refuses_a_password_in_the_environment_too(): void
+    {
+        putenv('OPENPNE_ADMIN_PASSWORD=strong-pass-1');
+
+        try {
+            $this->artisan('openpne:admin:create', ['username' => 'new', '--without-password' => true])->assertFailed();
+        } finally {
+            putenv('OPENPNE_ADMIN_PASSWORD');
+        }
+
+        $this->assertDatabaseCount('admin_users', 0);
+    }
+
     public function test_rejects_a_weak_password(): void
     {
         $this->artisan('openpne:admin:create', ['username' => 'weak'])

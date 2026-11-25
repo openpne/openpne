@@ -47,6 +47,7 @@ use App\Features\Timeline\TimelineController;
 use App\Features\Timeline\TimelineReactionController;
 use App\Files\AppIcon;
 use App\Http\Controllers\Admin\AdminFileController;
+use App\Http\Controllers\Admin\PasswordSetupController;
 use App\Http\Controllers\Admin\SiteIconRasterController;
 use App\Http\Controllers\AppIconController;
 use App\Http\Controllers\BannerImageController;
@@ -66,6 +67,7 @@ use App\Http\Middleware\EnsureOpenRegistration;
 use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\EnsureWebPublicDiaryEnabled;
 use App\Http\Middleware\NoReferrer;
+use App\Http\Middleware\NoStore;
 use App\Http\Middleware\SetLocale;
 use App\Mcp\OAuth\ApproveController;
 use App\Mcp\OAuth\AuthorizeController;
@@ -76,6 +78,7 @@ use App\Support\ClassicErrorPage;
 use App\Support\Feature;
 use App\Support\GuestLoginRedirect;
 use App\Support\SurfaceResolver;
+use Filament\Http\Middleware\SetUpPanel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -129,6 +132,13 @@ Route::post('/admin/locale/session', function (Request $request) {
 
 // Under /admin for the same reason; the admin guard is checked in the action.
 Route::post('/admin/site-icon/raster', [SiteIconRasterController::class, 'store'])->middleware('auth.session')->name('admin.site_icon.raster');
+
+// Under /admin for the admin session store, with no token pattern so a link cut short reaches the
+// same dead-link page (docs/internals/security.md, "Administrator password links").
+Route::middleware([NoReferrer::class, NoStore::class, 'throttle:admin-password-setup', SetUpPanel::class.':admin'])->group(function () {
+    Route::get('/admin/password-setup/{token?}', [PasswordSetupController::class, 'show'])->name('admin.password_setup');
+    Route::post('/admin/password-setup/{token?}', [PasswordSetupController::class, 'store'])->name('admin.password_setup.store');
+});
 
 // Public, yet auth.session: without it a session whose password hash is stale keeps a non-null
 // viewer here, and every gate downstream reads that viewer's clearance.

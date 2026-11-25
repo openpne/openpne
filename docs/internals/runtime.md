@@ -227,7 +227,7 @@ A deployment should run Laravel's scheduler — `php artisan schedule:run` every
 minute from cron (or a systemd timer). Without it the weekly prune of unreferenced
 link cards and the image each holds ([`routes/console.php`](../../routes/console.php))
 never runs, and those rows accumulate. The daily prune of expired pending tokens —
-registration, email-change and MFA-reset links — is registered here too but does
+registration, email-change, MFA-reset and administrator password links — is registered here too but does
 not depend on it: the first signed-in request of each site day runs the same prune
 after its response (`TickHousekeeping`, one cache lock per day), as does the sweep of
 spent OAuth codes, tokens and never-used clients (`openpne:prune-oauth`). Nor does the daily

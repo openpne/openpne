@@ -19,6 +19,7 @@ use Illuminate\Testing\TestResponse;
 use Laravel\Mcp\Server\Middleware\ValidateOrigin;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use ReflectionProperty;
+use Tests\Concerns\CapturesSecurityLog;
 
 /**
  * The gate is pinned on the two 405 stubs as well: the package registers them beside the POST,
@@ -26,6 +27,8 @@ use ReflectionProperty;
  */
 class McpEndpointTest extends McpTestCase
 {
+    use CapturesSecurityLog;
+
     /** @param  array<string, mixed>  $params */
     private function rpc(string $token, string $method, array $params = []): TestResponse
     {
@@ -223,11 +226,15 @@ class McpEndpointTest extends McpTestCase
 
     public function test_the_per_token_cap_applies_once_a_credential_is_accepted(): void
     {
+        $this->captureSecurityLog();
         config(['openpne.throttle.mcp' => 1, 'openpne.throttle.mcp_ip' => 100]);
-        $token = $this->token(Member::factory()->create());
+        $member = Member::factory()->create();
+        $token = $this->token($member);
 
         $this->rpc($token, 'tools/list')->assertOk();
         $this->rpc($token, 'tools/list')->assertStatus(429);
+        // The bearer's member, though no member session guard resolved it.
+        $this->assertEquals($member->getKey(), $this->assertOneSecurityEvent('throttle.hit')['member_id']);
     }
 
     public function test_the_gate_runs_in_the_declared_order_on_every_method(): void

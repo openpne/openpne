@@ -39,6 +39,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `mfa.failed` | listener `LogTwoFactorFailure` (member TOTP) | `guard`, `member_id` |
 | `member.registered` | listener `LogMemberRegistered` (`MemberRegistered`) | `guard`, `member_id` |
 | `registration.link_printed` | seam: `InviteMemberCommand` — a mailed link logs nothing | `email`, `via` (cli) |
+| `password.link_printed` | seam: `AdminPasswordLinkCommand` — an administrator password link was printed; never the URL | `guard`, `username`, `via` (cli), `expires_at` |
 | `mfa.enabled` | seam: `MemberMfaController::confirm`, `AdminAppAuthentication` set-up | `guard`, `member_id`\|`username` |
 | `mfa.disabled` | seam: `MemberMfaController::disable` (live), `AdminAppAuthentication` disable, `DisableMemberMfaCommand`, `DisableAdminMfaCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
 | `mfa.recovery_codes_regenerated` | seam: `MemberMfaController::regenerate`, `AdminAppAuthentication` regenerate | `guard`, `member_id`\|`username` |
@@ -49,14 +50,14 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `passkey.verified` | listener `LogPasskeyVerified` (`PasskeyVerified`) — the assertion verified, before the login gate; a refused (banned) member logs this with no `login.success`. A step-up assertion adds `via` (`reauth`) and `purpose` | `guard`, `member_id`, `passkey_id`, `via`, `purpose` |
 | `passkey.refused` | seam: the passkey login gate (`FortifyServiceProvider`) — a verified assertion refused for a banned or AI-account member | `guard`, `member_id` |
 | `passkey.failed` | seam: `App\Features\Auth\PasskeyLoginController::store` — an assertion the ceremony refused (unknown credential, stale challenge, bad signature, a counter that went backwards); the gate's refusal is not doubled here. `ReauthPasskeyController::store` logs the same for a step-up assertion, with `via` (`reauth`) | `guard`, `credential_id`, `member_id` (when the credential is known), `via` |
-| `password.changed` | seam: `MemberConfigController::updatePassword`, `ResetAdminPasswordCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
+| `password.changed` | seam: `MemberConfigController::updatePassword`, `ResetAdminPasswordCommand`, `PasswordSetupController` (an administrator password link used) | `guard`, `member_id`\|`username`, `via` (cli\|link) |
 | `email.change_requested` | seam: `RequestEmailChange` (action) | `guard`, `member_id`, `new_email` |
 | `email.changed` | seam: `EmailChangeLinkController::confirmEmail` | `guard`, `member_id`, `old_email`, `new_email` |
 | `email.change_cancelled` | seam: `EmailChangeLinkController::cancelEmail` | `guard`, `member_id`, `new_email` |
 | `member.withdrawn` | seam: `WithdrawMember` | `member_id`, `actor` (self\|admin), `admin_username` |
 | `member.banned` / `member.unbanned` | seam: `RejectMemberLogin` / `AllowMemberLogin` (actions) | `member_id`, `admin_username` |
 | `ai_account.created` / `ai_account.deleted` | seam: `CreateAiAccount` / `DeleteAiAccount` (actions) | `member_id`, `owner_id` |
-| `throttle.hit` | `bootstrap/app.php` report hook; `SendDirectMessageTool`, whose limit answers as a tool error rather than a 429 | `route`, `member_id`, `tool` (the MCP tool only) |
+| `throttle.hit` | `bootstrap/app.php` report hook; `SendDirectMessageTool`, whose limit answers as a tool error rather than a 429 | `route`, `member_id` (a member only, never an administrator), `tool` (the MCP tool only) |
 
 ## PII / injection contract
 

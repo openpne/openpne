@@ -20,6 +20,8 @@ class StartSession extends FrameworkStartSession
 {
     private const RESPONSE = 'app.start_session.response';
 
+    private const UNRECORDED = 'app.start_session.unrecorded';
+
     private ?Request $request = null;
 
     /**
@@ -50,6 +52,7 @@ class StartSession extends FrameworkStartSession
         // The framework's own guards, minus the XHR one that isPageNavigation now decides.
         if (! $request->isMethod('GET')
             || ! $route instanceof Route
+            || $request->attributes->get(self::UNRECORDED) === true
             || $request->prefetch()
             || $request->isPrecognitive()
             || ! $this->isPageNavigation($request)
@@ -63,6 +66,12 @@ class StartSession extends FrameworkStartSession
         if (method_exists($session, 'setPreviousRoute')) {
             $session->setPreviousRoute($route->getName());
         }
+    }
+
+    /** For a screen whose URL carries a secret, which the session store must not keep. */
+    public static function keepUrlOut(Request $request): void
+    {
+        $request->attributes->set(self::UNRECORDED, true);
     }
 
     /** A signed-in member's cookie outlives the framework's (docs/internals/sessions.md, "Lifetimes"). */

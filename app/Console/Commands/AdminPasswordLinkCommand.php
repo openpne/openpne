@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Auth\AdminPasswords;
+use App\Models\AdminUser;
+use App\Support\SecurityLog;
+use Illuminate\Console\Command;
+use Illuminate\Support\Str;
+
+/**
+ * Stdout carries only the link (or its JSON) so a caller can capture it; failures, and the note
+ * unless --json, go to stderr (docs/internals/security.md, "Administrator password links").
+ */
+class AdminPasswordLinkCommand extends Command
+{
+    public const DEFAULT_MINUTES = 60;
+
+    public const MAX_MINUTES = 1440;
+
+    protected $signature = 'openpne:admin:password-link
+        {username : The administrator username}
+        {--minutes=60 : Minutes until the link expires, 1 to 1440}
+        {--json : Print {"username","url","expires_at"} on one line instead of the bare URL}';
+
+    protected $description = 'Print a one-time link through which an administrator sets their password';
+
+    public function handle(AdminPasswords $passwords): int
+    {
+        $stderr = $this->getOutput()->getErrorStyle();
+
+        $minutes = (string) $this->option('minutes');
+        if (! ctype_digit($minutes) || (int) $minutes < 1 || (int) $minutes > self::MAX_MINUTES) {
+            $stderr->error('--minutes must be a whole number from 1 to '.self::MAX_MINUTES.'.');
+
+            return self::FAILURE;
+        }
+
+        $username = Str::trim((string) $this->argument('username'));
+        $admin = AdminUser::where('username', $username)->first();
+        if ($admin === null) {
+            $stderr->error("Administrator [{$username}] not found.");
+
+            return self::FAILURE;
+        }
+
+        [$token, $expiresAt] = $passwords->issueSetupLink($admin, (int) $minutes);
+        $url = route('admin.password_setup', ['token' => $token]);
+        $expires = $expiresAt->toIso8601ZuluString();
+
+        SecurityLog::event('password.link_printed', ['guard' => 'admin', 'username' => $admin->username, 'via' => 'cli', 'expires_at' => $expires]);
+
+        $this->line($this->option('json')
+            ? json_encode(['username' => $admin->username, 'url' => $url, 'expires_at' => $expires], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
+            : $url);
+
+        if (! $this->option('json')) {
+            $stderr->writeln("Link for administrator [{$admin->username}], valid until {$expires} and for one use, built from APP_URL. It replaces any earlier link; the current password and sessions stay until it is used.");
+        }
+
+        return self::SUCCESS;
+    }
+}

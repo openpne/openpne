@@ -66,17 +66,34 @@ class LegacyEloquentUserProvider extends EloquentUserProvider
         return false;
     }
 
+    /**
+     * Conditional on the hash this login read, so a password set meanwhile (a used setup link) is
+     * never overwritten; on a lost race the user keeps the old hash, which AuthenticateSession then
+     * rejects on the next request.
+     */
     public function rehashPasswordIfRequired(UserContract $user, #[\SensitiveParameter] array $credentials, bool $force = false)
     {
-        if (! $this->usesWrappedScheme($user)) {
-            parent::rehashPasswordIfRequired($user, $credentials, $force);
+        $wrapped = $this->usesWrappedScheme($user);
+        $read = $user->getAuthPassword();
 
+        if (! $wrapped && ! $force && ! $this->hasher->needsRehash($read)) {
             return;
         }
 
-        // The save also clears password_scheme (ClearsPasswordScheme), so the next login verifies
-        // the plain bcrypt directly.
-        $user->forceFill(['password' => Hash::make($credentials['password'])])->save();
+        $values = [$user->getAuthPasswordName() => $this->hasher->make($credentials['password'])];
+        if ($wrapped) {
+            $values['password_scheme'] = null;
+        }
+
+        $written = $user->newQuery()
+            ->whereKey($user->getKey())
+            ->where($user->getAuthPasswordName(), $read)
+            ->update($values);
+
+        // The guard stores the in-memory hash in the session next, which must match the row.
+        if ($written === 1) {
+            $user->forceFill($values)->syncOriginalAttributes(array_keys($values));
+        }
     }
 
     private function usesWrappedScheme(UserContract $user): bool

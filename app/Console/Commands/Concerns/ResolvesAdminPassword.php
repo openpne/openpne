@@ -13,8 +13,8 @@ trait ResolvesAdminPassword
 {
     private function resolveValidatedPassword(string $username): ?string
     {
-        $fromEnv = getenv('OPENPNE_ADMIN_PASSWORD');
-        if (is_string($fromEnv) && $fromEnv !== '') {
+        $fromEnv = $this->passwordFromEnvironment();
+        if ($fromEnv !== null) {
             $password = $confirmation = $fromEnv;
         } else {
             $password = (string) $this->secret('Password');
@@ -36,5 +36,12 @@ trait ResolvesAdminPassword
         }
 
         return $password;
+    }
+
+    private function passwordFromEnvironment(): ?string
+    {
+        $fromEnv = getenv('OPENPNE_ADMIN_PASSWORD');
+
+        return is_string($fromEnv) && $fromEnv !== '' ? $fromEnv : null;
     }
 }

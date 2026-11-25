@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\AdminUsers\Pages;
 
-use App\Auth\SessionRevocation;
+use App\Auth\AdminPasswords;
 use App\Filament\Resources\AdminUsers\AdminUserResource;
 use App\Models\AdminUser;
 use Filament\Actions\Action;
@@ -67,8 +67,9 @@ class EditAdminUser extends EditRecord
             ])
             ->action(function (array $data): void {
                 $record = $this->getRecord();
-                // The `password` cast hashes the plaintext on save.
-                $record->update(['password' => $data['password']]);
+                // Every other foothold for this administrator ends — other devices' sessions and all
+                // remember-me cookies — while the session that just proved the current password stays.
+                app(AdminPasswords::class)->change($record, $data['password'], session()->getId());
 
                 // AuthenticateSession logs out when the session's stored password hash differs from
                 // the user's, so both the in-memory user (re-stored at request end) and the session
@@ -78,11 +79,6 @@ class EditAdminUser extends EditRecord
                     $authUser->forceFill(['password' => $record->getAuthPassword()]);
                     session()->put('password_hash_admin', $record->getAuthPassword());
                 }
-
-                // A changed credential must end every other authenticated foothold for this
-                // administrator — other devices' sessions and all remember-me cookies — while
-                // the session that just proved the current password stays signed in.
-                SessionRevocation::revokeAdmin($record, session()->getId());
 
                 Notification::make()->success()->title(__('Password updated'))->send();
             });
