@@ -509,7 +509,7 @@ Recommended, not required. A line in the site user's cron (as above):
 ```
 
 A site without it runs, with two differences. The front page's issue of the day is published when
-the page is first opened after 06:00, not at 06:00. And link cards that nothing refers to any more
+the page is first opened after 06:00, not by the schedule. And link cards that nothing refers to any more
 are never removed: their rows and images pile up
 ([runtime.md](internals/runtime.md#scheduled-tasks)).
 

@@ -1,8 +1,8 @@
 # Home issues
 
 Once a day the site publishes an **issue**: a front page of what has happened since the last one.
-It is built by the publisher — run by the schedule at 06:00, or by the first read of the front page
-after it ([below](#publish-on-read)) — stored as a numbered row plus a ledger of what it featured, and
+It is built by the publisher — run by the schedule at 06:00 (later by the host's offset, if it sets one),
+or by the first read of the front page after 06:00 ([below](#publish-on-read)) — stored as a numbered row plus a ledger of what it featured, and
 re-resolved from its sources every time it is read.
 
 ## An issue is a ledger, never a copy
@@ -168,8 +168,8 @@ a feature toggle promises everywhere else.
 ## Schedule and idempotency
 
 [`openpne:publish-home-issue`](../../app/Console/Commands/PublishHomeIssueCommand.php) runs daily at
-06:00 on the site's clock ([`routes/console.php`](../../routes/console.php),
-[runtime.md](runtime.md#scheduled-tasks)). It runs inline and in the foreground: a handful of capped
+06:00 on the site's clock, later by the host's offset if it sets one ([`routes/console.php`](../../routes/console.php),
+[runtime.md](runtime.md#scheduled-tasks)): the run moves, the boundary does not. It runs inline and in the foreground: a handful of capped
 reads and one insert, seconds rather than minutes.
 
 Nothing guards a double run but the database. `home_issues.issue_date` is unique, and that uniqueness
@@ -207,7 +207,7 @@ one. A chained issue inside the stretch becomes one issue per day; an issue reac
 boundary (published before windows snapped to it), is every day back to the first: rebuild such an
 archive whole. The whole rebuild is one transaction, which is what makes `--dry-run` exact: it runs
 the rebuild, numbers included, and rolls it back. Nothing locks out the schedule, so run it away
-from 06:00.
+from the scheduled run.
 
 ### Publish on read
 
@@ -215,7 +215,7 @@ The schedule is not what the front page depends on. Before the front page ([Rout
 [`PublishDueHomeIssue`](../../app/Features/Home/Actions/PublishDueHomeIssue.php) compares the latest
 issue's `published_at` with the last 06:00 boundary, and when that boundary has passed unpublished it
 runs the publisher as of the boundary — the same window, the same date, the same `published_at` the
-06:00 run would have written. A host with no cron therefore has the same front page as one with it;
+scheduled run would have written. A host with no cron therefore has the same front page as one with it;
 a day's issue appears on the first visit after 06:00 rather than at 06:00, and the first reader of
 the day pays the publication, seconds. A reader who arrives before anyone else in a week publishes
 one issue spanning the week, which is the chained window above.

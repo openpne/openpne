@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\SiteCheck;
 
+use App\Console\ScheduleOffset;
 use App\Database\DatabaseServer;
 use App\Database\DatabaseServerProbe;
 use Database\Seeders\InstallSeeder;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
+use InvalidArgumentException;
 use Throwable;
 
 /** What the command line can tell about a site whose `.env` exists; never prints a secret's value. */
@@ -48,6 +50,7 @@ final class InstalledCheck
                 : Finding::fail('tree.htaccess', 'tree_htaccess_missing', ['path' => $this->layout->base]),
             ...$this->dataDirectory(),
             $this->queue(),
+            $this->scheduleOffset(),
             $this->mail(),
         ]));
     }
@@ -245,6 +248,20 @@ final class InstalledCheck
         return $stale === 0
             ? Finding::ok('queue', 'queue_database')
             : Finding::fail('queue', 'queue_stale', ['count' => $stale]);
+    }
+
+    private function scheduleOffset(): ?Finding
+    {
+        try {
+            $minutes = ScheduleOffset::minutes(config('openpne.schedule.offset_minutes'));
+        } catch (InvalidArgumentException) {
+            return Finding::fail('schedule.offset', 'schedule_offset_invalid', [
+                'env' => ScheduleOffset::ENV,
+                'max' => ScheduleOffset::MAX_MINUTES,
+            ]);
+        }
+
+        return $minutes === 0 ? null : Finding::ok('schedule.offset', 'schedule_offset', ['minutes' => $minutes]);
     }
 
     private function mail(): Finding

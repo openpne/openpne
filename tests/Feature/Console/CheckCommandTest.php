@@ -462,6 +462,22 @@ class CheckCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_a_schedule_offset_is_reported_and_a_bad_one_fails(): void
+    {
+        $this->installEnv();
+        Artisan::call('openpne:install');
+
+        config(['openpne.schedule.offset_minutes' => '30']);
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('Scheduled tasks run 30 minutes after their times.')
+            ->assertSuccessful();
+
+        config(['openpne.schedule.offset_minutes' => '7']);
+        $this->artisan('openpne:check', ['--only' => 'installed', '--lang' => 'en'])
+            ->expectsOutputToContain('[FAIL] OPENPNE_SCHEDULE_OFFSET_MINUTES is not a multiple of 5 from 0 to 1435')
+            ->assertFailed();
+    }
+
     public function test_mail_written_to_the_log_is_a_warning_and_says_when_the_log_drops_it(): void
     {
         $this->installEnv();

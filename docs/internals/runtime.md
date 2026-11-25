@@ -231,17 +231,27 @@ registration, email-change and MFA-reset links — is registered here too but do
 not depend on it: the first signed-in request of each site day runs the same prune
 after its response (`TickHousekeeping`, one cache lock per day), as does the sweep of
 spent OAuth codes, tokens and never-used clients (`openpne:prune-oauth`). Nor does the daily
-06:00 home issue: the Modern front page publishes the issue that is due when it is
+home issue: the Modern front page publishes the issue that is due when it is
 first read after 06:00 ([home-issues.md](home-issues.md#publish-on-read)), so the
-scheduled run only moves publication from that first visit to 06:00 itself.
+scheduled run only moves publication from that first visit to the scheduled time.
 `php artisan schedule:list` shows what is registered.
 
 Every task is due at a minute that is a multiple of five, so cron every five minutes, the line
 `openpne:setup` prints, reaches each one.
 
-Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), so an
-operator running many sites on one host gets them together and has no lever here
-to stagger them.
+Each runs at a fixed time read in the site's own clock (`APP_TIMEZONE`), moved later by
+`OPENPNE_SCHEDULE_OFFSET_MINUTES` (0 when unset or empty): a multiple of five from 0 to 1435, the
+same for every task, so a host running many sites on one machine can give each site its own. The
+home issue's day still turns over at 06:00; only the run moves, and a run at any time before the
+next 06:00 publishes the same issue ([home-issues.md](home-issues.md#a-day-runs-0600--0600)). Any
+other value stops the `schedule:*` commands with a message naming the variable, and
+`openpne:check` reports it; every other command, the queue worker included, runs as before. In a
+zone with daylight saving time, an offset that lands a task inside the hour the clocks skip loses
+that day's run.
+
+A host may run the tasks itself rather than through `schedule:run`, each command at a time of its
+own choosing: `schedule:list` is the list to run, and none of them depends on running at its
+scheduled minute.
 
 ## Initial data
 

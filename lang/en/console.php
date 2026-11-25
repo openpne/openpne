@@ -65,6 +65,8 @@ return [
         'queue_driver' => 'The queue runs on :driver.',
         'queue_database' => 'No job has waited in the queue longer than ten minutes.',
         'queue_stale' => 'Jobs that have waited in the queue longer than ten minutes: :count. Nothing works the queue: run a worker (docs/installing.md, step 6), or set QUEUE_CONNECTION=deferred in .env.',
+        'schedule_offset' => 'Scheduled tasks run :minutes minutes after their times.',
+        'schedule_offset_invalid' => ':env is not a multiple of 5 from 0 to :max, so the scheduler refuses to run: correct it in .env or remove it.',
         'mail' => 'Mail is sent through :transport.',
         'mail_log' => 'Mail is not sent: MAIL_MAILER=log only writes it to the log. Set up SMTP in .env to send it.',
         'mail_log_discarded' => 'Mail is neither sent nor kept: MAIL_MAILER=log writes it at the debug level, which LOG_LEVEL discards. Set up SMTP in .env to send it.',
