@@ -7,7 +7,7 @@ namespace App\Files;
 /**
  * What a processor will read and decode of a stored image, which an OpenPNE 3 row never had checked
  * at upload. Blank or non-positive is at least the upload cap in bytes and, under GD, the pixels PHP's
- * default 128M memory_limit decodes (the sidecar's budget otherwise); a set value is taken as given.
+ * default 128M memory_limit decodes with OPcache on (the sidecar's budget otherwise); a set value is taken as given.
  */
 final class ImageSourceLimit
 {

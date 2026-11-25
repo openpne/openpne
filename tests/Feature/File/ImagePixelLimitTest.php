@@ -14,7 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /**
- * Under the shipped side limit the pixel limit is the one that refuses; each entry point answers it as a field error, not a 500.
+ * Under the shipped side limit the pixel limit is the one that refuses; a member's upload answers it as a field error, not a 500.
  */
 class ImagePixelLimitTest extends TestCase
 {

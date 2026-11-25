@@ -758,16 +758,18 @@ pixel cap is 12,600,000, or the per-side limit squared where that counts as less
 
 The GD processor counts a header the way the bundled libgd allocates: each row is taken from PHP's
 allocator, which hands a request over 3 KB whole 4 KB pages, so a row costs its width rounded up to
-1024 pixels at 4 bytes each, and a JPEG whose EXIF orientation is a quarter turn counts as its turned
-shape too, the turn holding the source and the result at once. A canonical costs about 8 bytes per
-counted pixel (the decode and one image more: the turn, a palette's expansion to truecolor, or libgd's PNG writer),
-the source twice over and a few MB, so the shipped cap is decoded within PHP's default 128M and
-25,600,000, which takes every picture up to the 5000 px side limit, within 256M. `openpne:check`
-states the cap a web `memory_limit` holds, `(memory_limit − 2 × upload cap − 21 MB) / 8`, 48 MB less where the web PHP runs
-without OPcache and holds its compiled code in the request, which covers an upload and the canonical and variants of a source no larger than the upload cap; a stored
-source over the upload cap (an OpenPNE 3 row, read up to the byte cap) costs 2 MB more per MB.
-A system libgd takes the same memory outside `memory_limit`, where nothing but this cap bounds it.
-Under `imgproxy` the cap counts plain pixels.
+1024 pixels at 4 bytes each, and a JPEG whose EXIF orientation is a quarter turn counts as its
+turned shape too, the turn holding the source and the result at once. A canonical costs about 8
+bytes per counted pixel (the decode and one image more: the turn, a palette's expansion to
+truecolor, or libgd's PNG writer), the source twice over and a few MB, so, with OPcache on, the
+shipped cap is decoded within PHP's default 128M and 25,600,000, which takes every picture up to the
+5000 px side limit, within 256M. `openpne:check` states the cap a web `memory_limit` holds,
+`(memory_limit − 2 × upload cap − 21 MB) / 8`, which covers an upload and the canonical and variants
+of a source no larger than the upload cap; a stored source over the upload cap (an OpenPNE 3 row,
+read up to the byte cap) costs 2 MB more per MB. A web PHP without OPcache holds its compiled code
+in the request, and the check takes 48 MB more from its `memory_limit` before dividing. A system
+libgd takes the same memory outside `memory_limit`, where nothing but this cap bounds it. Under
+`imgproxy` the cap counts plain pixels.
 
 The processor writes a JPEG, PNG or GIF canonical from the decoded image itself rather than through
 intervention/image's encoder, which copies every pixel first, and turns a JPEG upright with

@@ -53,12 +53,13 @@ sudo apt install php-cli php-curl php-mbstring php-xml php-intl php-zip php-gd p
 The database's packages come in [step 2](#2-write-the-settings) and the web server's in
 [step 4](#4-serve-it), each with the way you choose there.
 
-GD decodes a picture in the PHP process, at about 8 bytes for each pixel `OPENPNE_IMAGE_MAX_SOURCE_PIXELS`
-counts (each row at its width rounded up to 1024). Its default, 12,600,000, a 12 MP phone photo, fits
-PHP's default `memory_limit` of 128M with OPcache on, as PHP's packages ship it; with 256M or more, `25600000` takes every picture up to the
-5000 px side limit, and `php artisan openpne:check` states the most a web `memory_limit` holds. Set a
-larger value before the site first meets such a picture: one refused under a lower value comes back
-only with `php artisan openpne:image-cache warm --retry-failed`, the site's icons with `rebuild`. The
+GD decodes a picture in the PHP process, at about 8 bytes for each pixel
+`OPENPNE_IMAGE_MAX_SOURCE_PIXELS` counts (each row at its width rounded up to 1024). Its default,
+12,600,000, a 12 MP phone photo, fits PHP's default `memory_limit` of 128M with OPcache on, as PHP's
+packages ship it; with 256M or more and OPcache on, `25600000` takes every picture up to the 5000 px
+side limit, and `php artisan openpne:check` states the most a web `memory_limit` holds. Set a larger
+value before the site first meets such a picture: one refused under a lower value comes back only
+with `php artisan openpne:image-cache warm --retry-failed`, the site's icons with `rebuild`. The
 packages above build PHP against the system's libgd, which takes that memory outside `memory_limit`:
 leave the server room for it.
 

@@ -94,16 +94,16 @@ final class ImageIntake
         return $this->pixelLimit;
     }
 
-    /**
-     * Held against pixelLimit(): in process a row costs its width rounded up to 1024 pixels, as the bundled libgd takes each
-     * row from Zend in whole 4 KB pages, and a quarter-turn orientation counts the turned shape too (docs/internals/security.md, "Decoding an upload").
-     */
     /** Whether pixelCost() uses a quarter turn, so the EXIF is read only where it is. */
     public function countsTurns(): bool
     {
         return $this->countsRows;
     }
 
+    /**
+     * Held against pixelLimit(): in process a row costs its width rounded up to 1024 pixels, as the bundled libgd takes each
+     * row from Zend in whole 4 KB pages, and a quarter-turn orientation counts the turned shape too (docs/internals/security.md, "Decoding an upload").
+     */
     public function pixelCost(int $width, int $height, bool $quarterTurn): int
     {
         return $this->countsRows ? self::gdPixelCost($width, $height, $quarterTurn) : $width * $height;

@@ -88,9 +88,23 @@ class GdCanonicalBytesTest extends TestCase
         imagefilledrectangle($keyed, 6, 4, 17, 11, $key);
         imagecolortransparent($keyed, $key);
 
+        $gif = $this->encode($keyed, 'gif');
+        $packed = ord($gif[10]);
+        $afterTable = 13 + (($packed & 0x80) !== 0 ? 3 << (($packed & 0x07) + 1) : 0);
+
+        // A colour of 44 in the table's second half is the image descriptor's byte where a table counted at half its length ends.
+        $comma = imagecreate(24, 16);
+        imagecolorallocate($comma, 10, 200, 30);
+        $commaKey = (int) imagecolorallocate($comma, 250, 0, 250);
+        imagefilledrectangle($comma, 0, 0, 23, 1, (int) imagecolorallocate($comma, 44, 44, 44));
+        imagefilledrectangle($comma, 6, 4, 17, 11, $commaKey);
+        imagecolortransparent($comma, $commaKey);
+
         $sources = [
             'alpha png' => [$this->encode($alpha, 'png'), 'image/png', 'png'],
-            'keyed gif' => [$this->encode($keyed, 'gif'), 'image/gif', 'gif'],
+            'keyed gif' => [$gif, 'image/gif', 'gif'],
+            'keyed gif after a stray byte' => [substr($gif, 0, $afterTable)."\x00".substr($gif, $afterTable), 'image/gif', 'gif'],
+            'keyed gif with a colour of 44' => [$this->encode($comma, 'gif'), 'image/gif', 'gif'],
         ];
 
         foreach ($sources as $name => [$bytes, $mime, $format]) {
@@ -133,7 +147,7 @@ class GdCanonicalBytesTest extends TestCase
         $this->assertSame($orientation >= 5, $turned);
     }
 
-    public function test_a_quality_outside_the_encoders_range_is_a_processing_failure_on_the_native_path(): void
+    public function test_a_quality_outside_the_jpeg_encoders_range_fails_a_jpeg_and_leaves_a_png_and_gif(): void
     {
         $jpeg = $this->encode($this->pattern(8, 8), 'jpg');
 
@@ -144,6 +158,11 @@ class GdCanonicalBytesTest extends TestCase
                 $this->fail("Quality {$quality} was written.");
             } catch (ImageProcessingException) {
                 $this->addToAssertionCount(1);
+            }
+
+            foreach (['png' => 'image/png', 'gif' => 'image/gif'] as $format => $mime) {
+                $source = $this->encode($this->pattern(8, 8), $format);
+                $this->assertSame(sha1($this->reference($source, $format)), sha1($this->canonical($source, $mime, $format)), "{$format} at quality {$quality}");
             }
         }
     }

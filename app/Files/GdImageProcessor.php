@@ -76,22 +76,22 @@ final class GdImageProcessor implements ImageProcessor
 
         // The decoded content's own type, as an OpenPNE 3 row's stored type may name another.
         if ($spec->isCanonical() && in_array($spec->format, ['jpg', 'png', 'gif'], true) && (string) $image->origin()->mediaType() === $media) {
-            $native = $image->core()->native();
-            $key = imagecolortransparent($native);
-
-            // An RGB PNG's opaque tRNS key becomes alpha only through the encoder's copy, made here before the source is let go so the two never meet libgd's writer.
-            if ($spec->format === 'png' && $key !== -1 && ($key >> 24 & 0x7F) === 0) {
-                $copy = Cloner::clone($native);
-                unset($native);
-                $image->core()->setNative($copy);
-            }
-
-            // The encoder's own range, which imagejpeg() would answer with a ValueError or, for -1, its default.
-            if ($quality < 0 || $quality > 100) {
+            // The JPEG encoder's own range, which imagejpeg() would answer with a ValueError or, for -1, its default.
+            if ($spec->format === 'jpg' && ($quality < 0 || $quality > 100)) {
                 throw new ImageProcessingException("The quality {$quality} is outside 0 to 100.");
             }
 
             try {
+                $native = $image->core()->native();
+                $key = imagecolortransparent($native);
+
+                // An RGB PNG's opaque tRNS key becomes alpha only through the encoder's copy, made here before the source is let go so the two never meet libgd's writer.
+                if ($spec->format === 'png' && $key !== -1 && ($key >> 24 & 0x7F) === 0) {
+                    $copy = Cloner::clone($native);
+                    unset($native);
+                    $image->core()->setNative($copy);
+                }
+
                 $written = $this->writeNative($image->core()->native(), $spec->format, $quality, $bytes);
             } catch (ImageProcessingException $e) {
                 throw $e;
