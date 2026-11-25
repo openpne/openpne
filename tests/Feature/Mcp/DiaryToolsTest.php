@@ -643,6 +643,27 @@ class DiaryToolsTest extends McpTestCase
         $this->assertSame(0, DiaryComment::query()->count());
     }
 
+    public function test_pictures_are_neither_offered_nor_accepted(): void
+    {
+        Notification::fake();
+        $diary = $this->diary(Member::factory()->create());
+        $this->acting(Member::factory()->create());
+        $this->app->setLocale('en');
+
+        // A client still holding the old schema must not have its post go out without the pictures.
+        OpenPneServer::tool(PostDiaryTool::class, ['title' => 'Look', 'body' => 'attached', 'images' => ['aGVsbG8=']])
+            ->assertHasErrors(['does not take pictures']);
+        OpenPneServer::tool(PostDiaryCommentTool::class, ['diary_id' => $diary->getKey(), 'body' => 'attached', 'images' => ['aGVsbG8=']])
+            ->assertHasErrors(['does not take pictures']);
+
+        $this->assertSame([$diary->getKey()], Diary::query()->pluck('id')->all());
+        $this->assertSame(0, DiaryComment::query()->count());
+
+        foreach ([PostDiaryTool::class, PostDiaryCommentTool::class] as $tool) {
+            $this->assertArrayNotHasKey('images', app($tool)->toArray()['inputSchema']['properties']);
+        }
+    }
+
     public function test_switching_diaries_off_takes_the_tools_away(): void
     {
         $diary = $this->diary(Member::factory()->create());

@@ -14,6 +14,9 @@ abstract class DiaryTool extends McpTool
     /** Bytes, not characters: the TEXT column's own size, which MySQL enforces at insert time. */
     protected const BODY_MAX_BYTES = 65535;
 
+    /** Refused rather than ignored: an entry or comment written without the pictures its caller meant to attach is announced all the same. */
+    protected const NO_IMAGES = ['images.prohibited' => 'This tool does not take pictures: post the text alone.'];
+
     public function shouldRegister(): bool
     {
         return Feature::Diary->enabled();

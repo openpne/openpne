@@ -10,7 +10,6 @@ use App\Files\ImageCache;
 use App\Files\ImageTransform;
 use App\Mcp\McpAbilities;
 use App\Mcp\Servers\OpenPneServer;
-use App\Mcp\Tools\PostDiaryTool;
 use App\Mcp\Tools\ReadDiaryImagesTool;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -160,31 +159,5 @@ abstract class DiaryImageToolsTestCase extends McpTestCase
     protected function read(array $arguments): TestResponse
     {
         return OpenPneServer::tool(ReadDiaryImagesTool::class, $arguments);
-    }
-
-    protected function encodedImage(int $width = 40, int $height = 30): string
-    {
-        // Held in a variable: a fake upload deletes its temporary file with the object.
-        $image = UploadedFile::fake()->image('shot.png', $width, $height);
-
-        return base64_encode((string) file_get_contents((string) $image->getRealPath()));
-    }
-
-    protected function fixture(string $name): string
-    {
-        return (string) file_get_contents(base_path("tests/Fixtures/images/{$name}"));
-    }
-
-    /**
-     * @param  array<string, mixed>  $arguments
-     */
-    protected function postDiary(array $arguments): TestResponse
-    {
-        return OpenPneServer::tool(PostDiaryTool::class, [
-            'title' => 'With pictures',
-            'body' => 'See attached.',
-            'visibility' => 'private',
-            ...$arguments,
-        ]);
     }
 }
