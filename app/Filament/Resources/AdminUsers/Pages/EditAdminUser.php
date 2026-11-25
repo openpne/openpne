@@ -74,7 +74,7 @@ class EditAdminUser extends EditRecord
                 // remember-me cookies — while the session that just proved the current password stays.
                 $changed = app(AdminPasswords::class)->change($record, $data['password'], session()->getId(), (string) $authUser?->getAuthPassword());
                 if (! $changed) {
-                    auth('admin')->logout();
+                    auth('admin')->logoutCurrentDevice();
                     session()->invalidate();
                     session()->regenerateToken();
                     Notification::make()->danger()->title(__('The password was changed while you were entering it. Sign in with the new password.'))->send();

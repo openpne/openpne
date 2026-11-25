@@ -7,6 +7,7 @@ namespace Tests\Feature\AdminPanel;
 use App\Auth\AdminPasswords;
 use App\Models\AdminPasswordSetupToken;
 use App\Models\AdminUser;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
@@ -20,6 +21,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
+use Throwable;
 
 class AdminPasswordLinkCommandTest extends TestCase
 {
@@ -189,12 +191,36 @@ class AdminPasswordLinkCommandTest extends TestCase
         }
     }
 
-    public function test_an_exception_goes_to_stderr_with_nothing_on_stdout(): void
+    public function test_an_exception_goes_to_stderr_with_nothing_on_stdout_even_when_no_log_is_writable(): void
     {
         AdminUser::factory()->create(['username' => 'amy']);
         DB::beforeExecuting(function (string $query): void {
             if (str_contains($query, 'admin_password_setup_tokens')) {
                 throw new RuntimeException('link table unavailable');
+            }
+        });
+        $this->app->instance(ExceptionHandler::class, new class($this->app->make(ExceptionHandler::class)) implements ExceptionHandler
+        {
+            public function __construct(private ExceptionHandler $inner) {}
+
+            public function report(Throwable $e): void
+            {
+                throw new RuntimeException('log not writable');
+            }
+
+            public function shouldReport(Throwable $e): bool
+            {
+                return true;
+            }
+
+            public function render($request, Throwable $e)
+            {
+                return $this->inner->render($request, $e);
+            }
+
+            public function renderForConsole($output, Throwable $e): void
+            {
+                $this->inner->renderForConsole($output, $e);
             }
         });
 

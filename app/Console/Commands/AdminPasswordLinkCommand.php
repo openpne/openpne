@@ -33,9 +33,12 @@ class AdminPasswordLinkCommand extends Command
         try {
             return $this->issue($passwords);
         } catch (Throwable $e) {
-            // The console kernel would render it to stdout.
-            $exceptions->report($e);
+            // The console kernel would render it to stdout, also when report() throws because no log is writable.
             $exceptions->renderForConsole($this->getOutput()->getErrorStyle(), $e);
+            try {
+                $exceptions->report($e);
+            } catch (Throwable) {
+            }
 
             return self::FAILURE;
         }

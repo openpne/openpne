@@ -164,11 +164,12 @@ class AdminPasswordsTest extends TestCase
 
     public function test_the_panel_change_writes_nothing_when_a_link_set_the_password_after_the_current_one_was_checked(): void
     {
-        $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
+        $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1', 'remember_token' => 'shared-token']);
         $this->actingAs($me, 'admin');
         // The guard keeps the hash it loaded, as a request already past its current-password check does.
         [$token] = $this->passwords()->issueSetupLink($me, 60);
         $this->passwords()->consumeSetupLink($token, 'set-by-link-1');
+        $rowBefore = DB::table('admin_users')->where('id', $me->getKey())->first();
 
         Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
             ->callAction('changePassword', [
@@ -178,6 +179,7 @@ class AdminPasswordsTest extends TestCase
             ])
             ->assertRedirect(Filament::getLoginUrl());
 
+        $this->assertEquals($rowBefore, DB::table('admin_users')->where('id', $me->getKey())->first(), 'only this device is signed out');
         $this->assertTrue(Hash::check('set-by-link-1', $me->fresh()->password));
         $this->assertGuest('admin');
     }

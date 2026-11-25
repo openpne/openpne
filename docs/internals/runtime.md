@@ -49,8 +49,8 @@ refreshing.
 
 `APP_TIMEZONE` (IANA name, default `UTC`) is the site's single clock. There is no
 per-member timezone: stored wall-clock time and displayed wall-clock time are the
-same value read in the same zone, on both surfaces. One column holds Unix seconds
-instead: an administrator password link's expiry, an elapsed time that a
+same value read in the same zone, on both surfaces. An administrator password
+link's expiry holds Unix seconds instead: it is an elapsed time that a
 daylight-saving change must not stretch or shrink ([security.md](security.md#administrator-password-links)).
 
 That makes it a **deployment-time setting, not a runtime one**. Changing it on a
