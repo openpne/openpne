@@ -741,7 +741,7 @@ Everything that decodes a stored image goes through the
 dependency, is [`GdImageProcessor`](../../app/Files/GdImageProcessor.php): GD in
 the PHP process. Each decoded frame is held as a full-canvas buffer, so decoding
 an animation costs frames × width × height however small the encoded file is, and
-GD allocates those buffers outside PHP's `memory_limit`; a 31 KB 1000×1000 GIF of
+the bundled libgd takes those buffers from PHP's `memory_limit` and a system libgd from outside it; a 31 KB 1000×1000 GIF of
 150 frames would cost ~650 MB. GD is therefore built with intervention/image's
 `decodeAnimation` off, so **a decode allocates one frame, never the frame count**,
 and a variant is a still whatever its URL asks for, as in OpenPNE 3.
@@ -754,12 +754,30 @@ a source over [`ImageSourceLimit`](../../app/Files/ImageSourceLimit.php) —
 `OPENPNE_IMAGE_MAX_SOURCE_KB` bytes, a declared side over `max_upload_dimension`,
 or more declared pixels than `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` — without
 allocating anything. Left blank, the byte cap is the larger of 20480 KB and the upload cap, and the
-pixel cap is the per-side limit squared (25 MP at the shipped 5000), so neither falls below what an
-upload may be. What this bounds is one decode at `max_source_pixels × 4` bytes,
-100 MB at the shipped default; a host sized below that sets the pixel cap lower,
-and a stored image over it then yields no variant (a 404, or the generated icon), while an upload
-over it is refused as an upload, since its canonical is produced before
-the row is saved. The cache disk remembers a refused canonical, and the icons refused with it,
+pixel cap is 12,600,000, or the per-side limit squared where that counts as less.
+
+The GD processor counts a header the way the bundled libgd allocates: each row is taken from PHP's
+allocator, which hands a request over 3 KB whole 4 KB pages, so a row costs its width rounded up to
+1024 pixels at 4 bytes each, and a JPEG whose EXIF orientation is a quarter turn counts as its turned
+shape too, the turn holding the source and the result at once. A canonical costs about 8 bytes per
+counted pixel (the decode and one image more: the turn, or a PNG's or GIF's expansion to truecolor),
+the source twice over and a few MB, so the shipped cap is decoded within PHP's default 128M and
+25,600,000, which takes every picture up to the 5000 px side limit, within 256M. `openpne:check`
+states the cap a web `memory_limit` holds, `(memory_limit − 2 × upload cap − 21 MB) / 8`, which
+covers an upload and the canonical and variants of a source no larger than the upload cap; a stored
+source over the upload cap (an OpenPNE 3 row, read up to the byte cap) costs 2 MB more per MB.
+A system libgd takes the same memory outside `memory_limit`, where nothing but this cap bounds it.
+Under `imgproxy` the cap counts plain pixels.
+
+The processor writes a JPEG, PNG or GIF canonical from the decoded image itself rather than through
+intervention/image's encoder, which copies every pixel first, and turns a JPEG upright with
+`imagerotate` alone rather than intervention/image's turn, which keeps a third copy; the bytes are
+the encoder's for a JPEG and an opaque PNG or GIF, and a transparent PNG or GIF keeps its visible
+pixels and alpha.
+
+A stored image over the cap yields no variant not already cached (a 404, or the generated icon), and
+`openpne:image-cache rebuild` discards what it had, while an upload over it is refused as an upload
+(a field error), since its canonical is produced before the row is saved. The cache disk remembers a refused canonical, and the icons refused with it,
 until the file is replaced or `openpne:image-cache warm --retry-failed` / `rebuild` asks again; an
 icon refused while its canonical stands is remembered until the file is replaced or `rebuild` runs.
 An out-of-memory kill is not catchable, so

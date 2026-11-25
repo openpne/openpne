@@ -12,6 +12,7 @@ use App\Files\ImageCache;
 use App\Files\ImageCachePublishException;
 use App\Files\ImageIntake;
 use App\Files\ImageProcessingException;
+use App\Files\ImageTooLargeException;
 use App\Files\ImageProcessor;
 use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
@@ -226,7 +227,7 @@ class ImageCanonicalTest extends TestCase
             ['Accept' => 'application/json'],
         );
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['images.0' => ImageProcessingException::userMessage()]);
+        $response->assertStatus(422)->assertJsonValidationErrors(['images.0' => ImageTooLargeException::userMessage()]);
         $this->assertSame(0, File::count());
         $this->assertSame(0, Diary::count());
     }

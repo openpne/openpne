@@ -24,8 +24,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use RuntimeException;
 use Tests\Support\FrameKeepingProcessor;
 use Tests\TestCase;
@@ -122,7 +120,7 @@ class ImageCanonicalDeliveryTest extends TestCase
         // A HEIC uploaded under the sidecar: typed image/jpeg, its canonical under the sidecar's encoder directory.
         $owner = Member::factory()->create();
         $file = $this->stored('image/jpeg', $this->fixture('heic-gps-orientation.heic'), ['related_entity_type' => 'member', 'related_entity_id' => $owner->getKey()]);
-        $gd = new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false));
+        $gd = new GdImageProcessor;
         $this->switchTo('imgproxy', new FrameKeepingProcessor);
         app(ImageCache::class)->putCanonical($file, $gd->process($this->fixture('jpeg-gps-orientation.jpg'), 'image/jpeg', ImageSpec::canonical('jpg')));
 

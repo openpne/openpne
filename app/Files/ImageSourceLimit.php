@@ -6,13 +6,20 @@ namespace App\Files;
 
 /**
  * What a processor will read and decode of a stored image, which an OpenPNE 3 row never had checked
- * at upload. Blank or non-positive follows the upload rules (the upload cap in bytes, the per-side
- * limit squared in pixels under GD, the sidecar's budget otherwise) so a stored upload never fails it;
- * a set value is taken as given.
+ * at upload. Blank or non-positive is at least the upload cap in bytes and, under GD, the pixels PHP's
+ * default 128M memory_limit decodes (the sidecar's budget otherwise); a set value is taken as given.
  */
 final class ImageSourceLimit
 {
     public const DEFAULT_KILOBYTES = 20480;
+
+    /** 4096 x 3072, a 12 MP phone photo turned upright inside PHP's default 128M (docs/internals/security.md, "Decoding an upload"). */
+    public const DEFAULT_GD_PIXELS = 12_600_000;
+
+    /** What a GD canonical costs beyond its pixels at 8 bytes each and its source twice over, with a margin for the rest of the request. */
+    private const OVERHEAD_BYTES = 21 * 1024 * 1024;
+
+    private const BYTES_PER_PIXEL = 8;
 
     /** Enough of a file for libmagic to name any raster container, the same window the admin raw route reads. */
     public const SNIFF_BYTES = 4096;
@@ -29,7 +36,19 @@ final class ImageSourceLimit
         $configured = (int) config('openpne.images.max_source_pixels');
         $side = UploadLimit::dimension();
 
-        return $configured > 0 ? $configured : $side * $side;
+        return $configured > 0 ? $configured : min(self::DEFAULT_GD_PIXELS, ImageIntake::gdPixelCost($side, $side));
+    }
+
+    /** The GD pixel limit a memory_limit of $memoryBytes holds an upload of up to the upload cap within; 0 or less when it holds none. */
+    public static function pixelsFor(int $memoryBytes): int
+    {
+        return intdiv($memoryBytes - 2 * UploadLimit::bytes() - self::OVERHEAD_BYTES, self::BYTES_PER_PIXEL);
+    }
+
+    /** The memory_limit, in whole megabytes, that pixelsFor() answers $pixels or more for. */
+    public static function megabytesFor(int $pixels): int
+    {
+        return (int) ceil(($pixels * self::BYTES_PER_PIXEL + 2 * UploadLimit::bytes() + self::OVERHEAD_BYTES) / (1024 * 1024));
     }
 
     /**
@@ -43,7 +62,7 @@ final class ImageSourceLimit
         $maxBytes = self::bytes();
 
         if (strlen($bytes) > $maxBytes) {
-            throw new ImageProcessingException(sprintf('The image is %d bytes, over the %d byte source limit.', strlen($bytes), $maxBytes));
+            throw new ImageTooLargeException(sprintf('The image is %d bytes, over the %d byte source limit.', strlen($bytes), $maxBytes));
         }
 
         $info = @getimagesizefromstring($bytes);
@@ -63,13 +82,39 @@ final class ImageSourceLimit
         $side = $intake->sideLimit();
 
         if ($side !== null && ($info[0] > $side || $info[1] > $side)) {
-            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d px side limit.', $info[0], $info[1], $side));
+            throw new ImageTooLargeException(sprintf('The image declares %dx%d, over the %d px side limit.', $info[0], $info[1], $side));
         }
 
         $pixels = $intake->pixelLimit();
+        $cost = $intake->pixelCost($info[0], $info[1], $info[2] === IMAGETYPE_JPEG && self::turnsAQuarter($bytes));
 
-        if ($pixels < $info[0] * $info[1]) {
-            throw new ImageProcessingException(sprintf('The image declares %dx%d, over the %d pixel limit.', $info[0], $info[1], $pixels));
+        if ($pixels < $cost) {
+            throw new ImageTooLargeException(sprintf('The image declares %dx%d, counted as %d pixels, over the %d pixel limit.', $info[0], $info[1], $cost, $pixels));
         }
+    }
+
+    /** Read as intervention/image reads it for the decode, which turns a JPEG only when ext-exif is loaded. */
+    private static function turnsAQuarter(string $bytes): bool
+    {
+        // Every APP1 EXIF segment opens with this signature; a canonical has none, and is then not copied to a stream.
+        if (! function_exists('exif_read_data') || ! str_contains($bytes, "Exif\0\0")) {
+            return false;
+        }
+
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, $bytes);
+        rewind($stream);
+
+        try {
+            $exif = @exif_read_data($stream, null, true);
+        } catch (\Throwable) {
+            $exif = false;
+        } finally {
+            fclose($stream);
+        }
+
+        $orientation = is_array($exif) ? ($exif['IFD0']['Orientation'] ?? null) : null;
+
+        return is_numeric($orientation) && in_array((int) $orientation, [5, 6, 7, 8], true);
     }
 }

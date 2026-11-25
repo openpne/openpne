@@ -20,8 +20,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Gif\Builder;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use Mockery;
 use Tests\Support\FrameKeepingProcessor;
 use Tests\Support\ImageBytes;
@@ -315,7 +313,7 @@ class ImageCacheCommandTest extends TestCase
     public function test_a_picture_viewed_after_a_switch_to_a_frame_keeping_processor_is_recorded_by_the_next_warm(): void
     {
         // Uploaded under GD, then viewed once under the sidecar before the operator warms: the view makes the canonical.
-        $this->useProcessor('gd', new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->useProcessor('gd', new GdImageProcessor);
         $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
         $this->useProcessor('imgproxy', $this->keepingFrames());
         app(ImageCache::class)->canonical($file);
@@ -327,7 +325,7 @@ class ImageCacheCommandTest extends TestCase
 
     public function test_under_gd_warm_leaves_a_gif_unjudged_without_reading_its_canonical(): void
     {
-        $this->useProcessor('gd', new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->useProcessor('gd', new GdImageProcessor);
         $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
         $this->assertNull($file->animated);
         $cache = Mockery::mock(app(ImageCache::class))->makePartial();
@@ -343,7 +341,7 @@ class ImageCacheCommandTest extends TestCase
 
     public function test_a_gd_rebuild_keeps_the_fact_a_frame_keeping_processor_recorded(): void
     {
-        $this->useProcessor('gd', new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->useProcessor('gd', new GdImageProcessor);
         $file = app(FileUploader::class)->store(UploadedFile::fake()->createWithContent('a.gif', $this->animatedGif()));
         $file->update(['animated' => true]);
 

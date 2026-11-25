@@ -274,6 +274,15 @@ pm.max_spare_servers = 3
 The two sizes follow the upload caps in `.env` (`OPENPNE_IMAGE_MAX_UPLOAD_KB`,
 `OPENPNE_FILE_MAX_UPLOAD_KB`): PHP's default of 2M refuses most photos.
 
+PHP's default `memory_limit` of 128M takes pictures of up to 12,600,000 pixels, a 12 MP phone photo
+(`OPENPNE_IMAGE_MAX_SOURCE_PIXELS`, which counts each row at its width rounded up to 1024). With 256M
+or more, `OPENPNE_IMAGE_MAX_SOURCE_PIXELS=25600000` takes every picture up to the 5000 px side limit;
+`php artisan openpne:check` states the most a web `memory_limit` holds. A picture already refused
+under a lower value comes back after raising it only with `php artisan openpne:image-cache warm
+--retry-failed`, the site's icons with `rebuild`. The PHP these steps install
+is built against the system's libgd, which takes the same memory outside `memory_limit`: leave the
+server room for it.
+
 ```nginx
 # /etc/nginx/sites-available/openpne
 server {

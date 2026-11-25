@@ -16,8 +16,6 @@ use App\Files\VariantUrlSigner;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -60,7 +58,7 @@ class FilesServiceProvider extends ServiceProvider
             // An unrecognised value throws rather than falling back to GD, so a typo never looks like
             // it took effect.
             return match ($configured = config('openpne.images.processor')) {
-                'gd' => new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)),
+                'gd' => new GdImageProcessor,
                 'imgproxy' => ImgproxyImageProcessor::fromConfig(),
                 default => throw new InvalidArgumentException(
                     "Unsupported openpne.images.processor [{$configured}]; expected 'gd' or 'imgproxy'.",

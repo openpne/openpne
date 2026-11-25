@@ -52,9 +52,8 @@ final class PostImageRules
     }
 
     /**
-     * The types are the processor's (SVG, which can carry script, is never among them), and the pixel
-     * dimensions are bounded here only where the decode is in-process, since GD allocates
-     * width*height*4 bytes of whatever a small file declares.
+     * The types are the processor's (SVG, which can carry script, is never among them), and a side is
+     * bounded here only where the decode is in-process; the pixel limit is the processor's own check.
      *
      * @return array<int, mixed>
      */

@@ -10,8 +10,6 @@ use App\Files\ImageSpec;
 use App\Files\ImageTransform;
 use App\Files\ProcessedImage;
 use App\Models\File;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use InvalidArgumentException;
 use Tests\Support\FrameKeepingProcessor;
 use Tests\TestCase;
@@ -88,7 +86,7 @@ class ImageLadderTest extends TestCase
     {
         // GD bound by name rather than taken from the lane, which under imgproxy would keep frames: a
         // true recorded before a switch back must not produce an `_a` URL that answers with a still.
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor);
         $file = File::factory()->make(['type' => 'image/gif', 'animated' => true]);
 
         $this->assertSame([], ImageLadder::of($file)['animatedSources']);

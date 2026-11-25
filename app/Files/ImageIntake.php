@@ -26,6 +26,7 @@ final class ImageIntake
         private readonly bool $writesWebp,
         private readonly ?int $sideLimit,
         private readonly int $pixelLimit,
+        private readonly bool $countsRows,
     ) {}
 
     /**
@@ -34,7 +35,7 @@ final class ImageIntake
      */
     public static function gd(?bool $writesWebp = null): self
     {
-        return new self(self::STILL, $writesWebp ?? function_exists('imagewebp'), UploadLimit::dimension(), ImageSourceLimit::pixels());
+        return new self(self::STILL, $writesWebp ?? function_exists('imagewebp'), UploadLimit::dimension(), ImageSourceLimit::pixels(), true);
     }
 
     /** Out-of-process decoding: no per-side cap, and the pixel cap is the sidecar's budget unless one is configured. */
@@ -42,7 +43,7 @@ final class ImageIntake
     {
         $configured = (int) config('openpne.images.max_source_pixels');
 
-        return new self(self::STILL + self::SIDECAR_ONLY, true, null, $configured > 0 ? $configured : self::SIDECAR_MEGAPIXELS * 1_000_000);
+        return new self(self::STILL + self::SIDECAR_ONLY, true, null, $configured > 0 ? $configured : self::SIDECAR_MEGAPIXELS * 1_000_000, false);
     }
 
     /** Whether a variant may be asked for as WebP whatever its source is; a processor that cannot write it never offers one. */
@@ -91,5 +92,21 @@ final class ImageIntake
     public function pixelLimit(): int
     {
         return $this->pixelLimit;
+    }
+
+    /**
+     * Held against pixelLimit(): in process a row costs its width rounded up to 1024 pixels, as libgd takes each
+     * row from Zend in whole 4 KB pages, and a quarter-turn orientation counts the turned shape too (docs/internals/security.md, "Decoding an upload").
+     */
+    public function pixelCost(int $width, int $height, bool $quarterTurn): int
+    {
+        return $this->countsRows ? self::gdPixelCost($width, $height, $quarterTurn) : $width * $height;
+    }
+
+    public static function gdPixelCost(int $width, int $height, bool $quarterTurn = false): int
+    {
+        $rows = fn (int $w, int $h): int => (int) ceil($w / 1024) * 1024 * $h;
+
+        return $quarterTurn ? max($rows($width, $height), $rows($height, $width)) : $rows($width, $height);
     }
 }

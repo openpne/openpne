@@ -215,8 +215,8 @@ A stored image has a second pair of caps, [`ImageSourceLimit`](../../app/Files/I
 `OPENPNE_IMAGE_MAX_SOURCE_KB` and `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` bound what the image processor
 will read and decode, whatever the upload rules were when the bytes arrived — a row imported from
 OpenPNE 3 met none of them ([security](security.md), "Decoding an upload"). Blank or non-positive,
-the byte cap is at least 20480 KB or the upload cap, and the pixel cap is the per-side limit squared
-under `gd` or the sidecar's 50 MP budget under `imgproxy` (`IMGPROXY_MAX_SRC_RESOLUTION`, the one
+the byte cap is at least 20480 KB or the upload cap, and the pixel cap is 12,600,000 (or the per-side
+limit squared, if less) under `gd`, counted as GD allocates, or the sidecar's 50 MP budget under `imgproxy` (`IMGPROXY_MAX_SRC_RESOLUTION`, the one
 setting a sidecar of the operator's own must keep, since the app cannot tell when it is unset), never
 no cap; a set value is taken as given. The per-side limit itself, `OPENPNE_IMAGE_MAX_DIMENSION`, and
 the `dimensions` rule that enforces it at upload apply where the decode is in-process; the sidecar
@@ -302,7 +302,7 @@ is a still unless its URL asks for the frames with `_a`, and a header over the p
 | | `gd` | `imgproxy` |
 |---|---|---|
 | Formats read | JPEG, PNG, GIF, WebP | those, and HEIC / HEIF (answered as JPEG) and AVIF (answered as WebP, the format a browser and the MCP tools can take everywhere); an upload of either is refused under `gd` |
-| Source limits | a header over `max_upload_dimension` a side or `max_source_pixels` (25 MP unconfigured) is refused before the decode, and so is a header PHP cannot read | no per-side limit; the pixel limit is the sidecar's 50 MP budget unless `max_source_pixels` is set; a header PHP cannot read is refused too, unless the bytes are a container only the sidecar reads (a HEIC before PHP 8.5), which is left to the sidecar's own budget |
+| Source limits | a header over `max_upload_dimension` a side or `max_source_pixels` (12.6 MP unconfigured, each row counted at its width rounded up to 1024) is refused before the decode, and so is a header PHP cannot read | no per-side limit; the pixel limit is the sidecar's 50 MP budget unless `max_source_pixels` is set; a header PHP cannot read is refused too, unless the bytes are a container only the sidecar reads (a HEIC before PHP 8.5), which is left to the sidecar's own budget |
 | Colour | the ICC profile is dropped, so a wide-gamut photo shifts | converted to sRGB |
 | Animation | the canonical and every variant are stills, and an animated WebP is refused outright, libgd reading none (the browser-side shrink sends a still of it, "Shrinking in the browser") | a GIF or animated WebP canonical keeps up to `ImgproxyImageProcessor::MAX_FRAMES` frames within the sidecar's 50 MP in total, over that a still, and a fit variant asked for with `_a` does the same (a crop never); an APNG is a still under both, libvips reading its first frame like libpng |
 | Where the decode runs | the php-fpm worker | the sidecar |

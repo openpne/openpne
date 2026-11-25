@@ -1504,6 +1504,7 @@
     "The home URL.": "ホーム URL。",
     "The host name of this site.": "このサイトのホスト名。",
     "The image could not be processed safely. Re-saving it with an image editor may fix it.": "この画像は安全に処理できませんでした。画像編集アプリ等で保存し直すと解決する場合があります。",
+    "The image is too large. Make it smaller and send it again.": "画像が大きすぎます。縮小してから送り直してください。",
     "The inviter’s name (member or admin invitations).": "招待者の名前（メンバー／管理者招待）。",
     "The joining member’s ID.": "参加するメンバーの ID。",
     "The joining member’s name.": "参加するメンバーの名前。",
