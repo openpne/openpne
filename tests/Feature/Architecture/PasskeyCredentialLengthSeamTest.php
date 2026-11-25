@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
-use App\Http\Requests\Concerns\LimitsCredentialLength;
+use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Route;
 use Laravel\Passkeys\Http\Requests\PasskeyRegistrationRequest;
 use Laravel\Passkeys\Http\Requests\PasskeyVerificationRequest;
 use ReflectionMethod;
 use ReflectionNamedType;
+use Tests\Feature\Auth\PasskeyCredentialLengthTest;
 use Tests\TestCase;
 use Throwable;
 
-/** A route that reads a posted passkey credential resolves a request that caps it before the package decodes it (docs/internals/security.md, "Member passkeys"). */
+/** A route whose controller takes one of the package's passkey requests gets one whose validation refuses every decoded field past the cap (docs/internals/security.md, "Member passkeys"). */
 class PasskeyCredentialLengthSeamTest extends TestCase
 {
-    public function test_every_route_that_reads_a_credential_caps_it(): void
+    public function test_every_route_taking_a_passkey_request_refuses_an_oversized_field(): void
     {
-        $capped = [];
-        $uncapped = [];
+        $fields = array_keys(PasskeyCredentialLengthTest::decodedFields());
+        $found = [];
         foreach (Route::getRoutes() as $route) {
             $action = $route->getAction('uses');
             if (! is_string($action) || ! str_contains($action, '@')) {
@@ -28,21 +29,15 @@ class PasskeyCredentialLengthSeamTest extends TestCase
             [$class, $method] = explode('@', $action);
             foreach ((new ReflectionMethod($class, $method))->getParameters() as $parameter) {
                 $type = $parameter->getType();
-                if (! $type instanceof ReflectionNamedType
-                    || ! (is_a($type->getName(), PasskeyVerificationRequest::class, true) || is_a($type->getName(), PasskeyRegistrationRequest::class, true))) {
-                    continue;
-                }
-                if (in_array(LimitsCredentialLength::class, class_uses_recursive($this->resolvedClass($type->getName())), true)) {
-                    $capped[] = $route->uri();
-                } else {
-                    $uncapped[] = $route->uri();
+                if ($type instanceof ReflectionNamedType
+                    && (is_a($type->getName(), PasskeyVerificationRequest::class, true) || is_a($type->getName(), PasskeyRegistrationRequest::class, true))) {
+                    $found[$route->uri()] = $this->refusedFields($this->resolvedClass($type->getName()), $fields);
                 }
             }
         }
-        sort($capped);
+        ksort($found);
 
-        $this->assertSame([], $uncapped);
-        $this->assertSame(['member/config/passkeys', 'member/reauth/passkey', 'passkeys/login'], $capped);
+        $this->assertSame(array_fill_keys(['member/config/passkeys', 'member/reauth/passkey', 'passkeys/login'], $fields), $found);
     }
 
     /** The container may bind a type-hinted package request to the app's subclass, so the class is read off the resolved instance. */
@@ -60,5 +55,24 @@ class PasskeyCredentialLengthSeamTest extends TestCase
         }
 
         return $resolved;
+    }
+
+    /**
+     * @param  list<string>  $fields
+     * @return list<string>
+     */
+    private function refusedFields(string $class, array $fields): array
+    {
+        $credential = [];
+        foreach ($fields as $field) {
+            data_set($credential, substr($field, strlen('credential.')), str_repeat('A', PasskeyCredentialLengthTest::MAX + 1));
+        }
+        $request = $class::create('/', 'POST', ['credential' => $credential]);
+        $request->setContainer($this->app)->setRedirector($this->app->make(Redirector::class));
+
+        $validator = (new ReflectionMethod($request, 'getValidatorInstance'))->invoke($request);
+        $validator->fails();
+
+        return array_values(array_intersect($fields, array_keys($validator->errors()->messages())));
     }
 }

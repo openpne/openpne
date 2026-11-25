@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
+use Laravel\Passkeys\Actions\GenerateVerificationOptions;
 use Laravel\Passkeys\Actions\StorePasskey;
 use Laravel\Passkeys\Support\WebAuthn;
 use ParagonIE\ConstantTime\Base64UrlSafe;
@@ -22,7 +23,7 @@ class PasskeyCredentialLengthTest extends TestCase
     use CapturesSecurityLog;
     use RefreshDatabase;
 
-    private const MAX = 16384;
+    public const MAX = 16384;
 
     protected function setUp(): void
     {
@@ -123,7 +124,6 @@ class PasskeyCredentialLengthTest extends TestCase
 
         $field = 'credential.response.authenticatorData';
         $this->assertRefusedBeforeDecoding($this->postJson('/member/reauth/passkey', ['credential' => $this->withField($authenticator->assert($options), $field, self::MAX + 1)]), $field);
-        $this->assertSame([], $this->securityRecords('passkey.failed'));
     }
 
     public function test_a_registration_past_the_cap_is_refused_before_decoding_and_one_at_it_is_stored(): void
@@ -139,5 +139,22 @@ class PasskeyCredentialLengthTest extends TestCase
         $this->postJson('/member/config/passkeys', ['credential' => $this->atTheCap($authenticator, fn (): array => $authenticator->attest($options))])
             ->assertOk();
         $this->assertSame(1, $member->passkeys()->count());
+    }
+
+    public function test_the_members_a_browser_adds_beyond_the_capped_fields_are_never_decoded(): void
+    {
+        $authenticator = FakeAuthenticator::forApp();
+        $registration = $authenticator->attest(WebAuthn::toBrowserArray(app(GenerateRegistrationOptions::class)(Member::factory()->create())));
+        $assertion = $authenticator->assert(WebAuthn::toBrowserArray(app(GenerateVerificationOptions::class)()));
+
+        // Not base64, so a member the package decoded would throw.
+        $undecodable = '!';
+        foreach ([$registration, $assertion] as $credential) {
+            $credential['authenticatorAttachment'] = $undecodable;
+            $credential['clientExtensionResults'] = ['credProps' => $undecodable];
+            $credential['response'] += ['publicKey' => $undecodable, 'publicKeyAlgorithm' => $undecodable, 'transports' => [$undecodable]];
+
+            $this->assertInstanceOf(PublicKeyCredential::class, WebAuthn::fromJson(json_encode($credential), PublicKeyCredential::class));
+        }
     }
 }

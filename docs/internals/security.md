@@ -286,10 +286,7 @@ while its trait would infer `member_id` — `Member::passkeys()` pins `user_id`.
   refused past 16,384 characters by a validation rule
   (`App\Http\Requests\Concerns\LimitsCredentialLength`, on the sign-in,
   re-authentication and registration requests), with the unreadable-passkey
-  message and, like a malformed body, no log row. Under the offered algorithms
-  (ES256, RS256) the longest field, a registration's attestation object,
-  stays under 2,300 characters even with WebAuthn's largest credential id
-  (1,023 bytes) and a 4,096-bit RSA key.
+  message and, like a malformed body, no log row.
 - **Adding one is a step-up**
   ([Member re-authentication](#member-re-authentication)). Registration opens
   a 15-minute window (`App\Features\Member\PasskeyReauth`, distinct from the
