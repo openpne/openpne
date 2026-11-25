@@ -309,5 +309,7 @@ php artisan up
   `php -d` option given to it does not reach.
 - **The backup fails later with error 1045, through `mariadb-dump`**: on a MySQL 8 server without
   TLS, that tool cannot always sign in. Ask the host for `mysqldump`, or for TLS on the server.
+- **Deleting a post, an image or a member fails with error 1615**: the host's MySQL needs a larger
+  table definition cache ([runtime.md](internals/runtime.md#table-definition-cache)). Ask the host.
 - **An archive or a file uploaded by FTP** goes in binary mode: in text mode, `.htaccess` gains line
   endings that `openpne:check` refuses. Running setup again puts `openpne-data/.htaccess` right.

@@ -13,7 +13,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // exists() first, so a new site's empty database never sends the DELETE (docs/internals/runtime.md, "Table definition cache").
+        // exists() first, so the DELETE is never sent to a new site's empty database (docs/internals/runtime.md, "Table definition cache").
         while (DB::table('timeline_posts')->whereNotNull('community_id')->exists()) {
             // Chunked so a large fixture set does not build one enormous transaction; the FK cascade does the dependent tables.
             DB::table('timeline_posts')
