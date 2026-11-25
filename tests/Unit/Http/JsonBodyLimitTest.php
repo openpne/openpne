@@ -143,12 +143,12 @@ final class JsonBodyLimitTest extends TestCase
         $this->assertTrue($this->exceeded(self::JSON, self::colons($keys, $length)));
     }
 
-    /** A stylesheet at the setting's byte cap, twice, as an admin save carries it in the snapshot and the update. */
+    /** A stylesheet at the setting's byte cap three times: the snapshot and the update, and a head HTML field holding it again in a style tag. */
     public function test_the_key_cap_admits_a_full_custom_stylesheet_saved_from_the_admin_form(): void
     {
         $css = str_repeat('.a{color:#000}', intdiv(65535, 14));
 
-        $this->assertFalse($this->exceeded(self::JSON, (string) json_encode([$css, $css])));
+        $this->assertFalse($this->exceeded(self::JSON, (string) json_encode([$css, $css, $css])));
     }
 
     public function test_colons_also_count_toward_the_separator_cap(): void
@@ -202,15 +202,17 @@ final class JsonBodyLimitTest extends TestCase
         $this->assertTrue($autoload < $gate && $gate < $framework);
     }
 
-    /** Title and body at their byte cap, each byte escaped to six as json_encode() writes a control character. */
+    /** Title and body at their byte cap, each byte escaped to six as json_encode() writes a control character, but for 900 colons in the body as code or a log would have. */
     public function test_an_mcp_post_with_one_picture_at_the_shipped_cap_fits(): void
     {
-        $text = str_repeat("\x01", (int) (new ReflectionClassConstant(DiaryTool::class, 'BODY_MAX_BYTES'))->getValue());
+        $cap = (int) (new ReflectionClassConstant(DiaryTool::class, 'BODY_MAX_BYTES'))->getValue();
+        $title = str_repeat("\x01", $cap);
+        $body = str_repeat(':', 900).str_repeat("\x01", $cap - 900);
         $picture = str_repeat('A', intdiv(UploadLimit::DEFAULT_KILOBYTES * 1024 + 2, 3) * 4);
 
         $request = (string) json_encode(['jsonrpc' => '2.0', 'id' => PHP_INT_MAX, 'method' => 'tools/call', 'params' => [
             'name' => 'post-diary',
-            'arguments' => ['title' => $text, 'body' => $text, 'images' => [$picture]],
+            'arguments' => ['title' => $title, 'body' => $body, 'images' => [$picture]],
         ]]);
 
         // A kilobyte left for the arguments not written here.

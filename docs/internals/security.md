@@ -573,9 +573,9 @@ window.
 The framework decodes a JSON body while it captures the request, so a limit on it cannot be a
 middleware: `public/index.php` asks [`JsonBodyLimit`](../../app/Http/JsonBodyLimit.php) before it
 loads `bootstrap/app.php`. A JSON body is answered 413 with a JSON `message` when it is longer than
-`MAX_BYTES` (8 MiB), holds more than `MAX_SEPARATORS` (50,000) of `,` `:` `[` `{`, or holds more
-than `MAX_KEYS` (15,000) of `:`, a number that shrinks in proportion once the body is longer than
-`MAX_KEYS_LENGTH` (512 KiB); characters inside strings count too. The answer writes no log row, and
+`MAX_BYTES` (8 MiB), holds more than `MAX_SEPARATORS` (50,000) of `,` `:` `[` `{`, or holds so
+many `:` that their count times the body's length, taken as at least `MAX_KEYS_LENGTH` (512 KiB),
+passes `MAX_KEYS` (15,000) times `MAX_KEYS_LENGTH`; characters inside strings count too. The answer writes no log row, and
 its only security header is `X-Content-Type-Options`.
 
 - **JSON is wider than either reader of the body:** a `Content-Type` with `/json` or `+json`

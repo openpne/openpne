@@ -245,9 +245,10 @@ way, out of the app's sight.
 The MCP wire carries pictures as base64 inside a JSON body, 4/3 the bytes again; it never touches
 `$_FILES`, and the decoded file is then run through the compose forms' own rules, so the same cap
 is applied to the encoded length before the decode. The JSON body as a whole is capped first,
-before the framework reads it ([security](security.md), "JSON request bodies"); that cap holds one
-picture at the shipped cap beside the largest title and body, so over MCP it is the bound that
-holds for several pictures near the cap or for a raised cap, and the tools' description states it.
+before the framework reads it ([security](security.md), "JSON request bodies"). One picture at the
+shipped cap fits beside the largest title and body when their text is not dense with `:`; several
+pictures near the cap, a raised cap, or `:`-dense text such as code or a log beside a picture meet
+that cap first, and the tools' description says so.
 
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.

@@ -66,7 +66,8 @@ trait DecodesImageUploads
                 'Pictures to attach, at most '.PostImages::MAX_IMAGES.'. Each is the file\'s own bytes as standard '
                 .'base64 — no data: prefix, no url-safe substitutions — and at most '
                 .UploadLimit::kilobytes().' KB once decoded. The whole JSON request, pictures and text '
-                .'together, is refused over '.intdiv(JsonBodyLimit::MAX_BYTES, 1024 * 1024).' MiB. '
+                .'together, is refused over '.intdiv(JsonBodyLimit::MAX_BYTES, 1024 * 1024).' MiB, and beside a large picture '
+                .'text dense with colons, such as code or a log, can be refused too. '
                 .implode(', ', $types).': what a picture is is decided by reading it, whatever it is called.',
             );
     }
