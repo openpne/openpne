@@ -663,7 +663,7 @@ class CheckCommandTest extends TestCase
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
             ->expectsOutputToContain('[FAIL] The web runs PHP 8.2.29 (the command line runs '.PHP_VERSION.')')
             ->expectsOutputToContain('[FAIL] PHP extensions missing on the web: intl, pdo_')
-            ->expectsOutputToContain('[ OK ] memory_limit on the web: 128M. Pictures of up to 12,713,984 pixels fit in it and this site takes up to 12,600,000')
+            ->expectsOutputToContain('[ OK ] memory_limit on the web: 128M. An upload of up to 12,713,984 pixels fits in it and this site takes up to 12,600,000')
             ->expectsOutputToContain('[WARN] Upload sizes on the web are too small (upload_max_filesize 2M, post_max_size 8M): set them to at least 10M and 31M')
             ->expectsOutputToContain('[WARN] The web runs PHP as CGI (cgi-fcgi)')
             ->assertFailed();
@@ -676,7 +676,7 @@ class CheckCommandTest extends TestCase
 
         $this->fakeHost(['php' => ['ini' => ['memory_limit' => '64M']]]);
         $output = $this->runCheck(['--only' => 'web']);
-        $this->assertStringContainsString('[WARN] memory_limit on the web is 64M, which pictures of up to 4,325,376 pixels fit in, but this site takes up to 12,600,000', $output);
+        $this->assertStringContainsString('[WARN] memory_limit on the web is 64M, which an upload of up to 4,325,376 pixels fits in, but this site takes up to 12,600,000', $output);
         $this->assertStringContainsString('Set OPENPNE_IMAGE_MAX_SOURCE_PIXELS to 4,325,376 or less, or memory_limit to 128M or more', $output);
 
         // Nothing fits, so no pixel limit is offered: a value of 0 or less would mean the default again.
@@ -688,7 +688,20 @@ class CheckCommandTest extends TestCase
         config(['openpne.images.max_source_pixels' => 25_600_000]);
         $this->fakeHost(['php' => ['ini' => ['memory_limit' => '256M']]]);
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
-            ->expectsOutputToContain('[ OK ] memory_limit on the web: 256M. Pictures of up to 29,491,200 pixels fit in it and this site takes up to 25,600,000');
+            ->expectsOutputToContain('[ OK ] memory_limit on the web: 256M. An upload of up to 29,491,200 pixels fits in it and this site takes up to 25,600,000');
+
+        // Without OPcache the compiled code is held in the request too.
+        config(['openpne.images.max_source_pixels' => 0]);
+        $this->fakeHost(['php' => ['ini' => ['memory_limit' => '128M', 'opcache.enable' => '0']]]);
+        $output = $this->runCheck(['--only' => 'web']);
+        $this->assertStringContainsString('which an upload of up to 6,422,528 pixels fits in, but this site takes up to 12,600,000', $output);
+        $this->assertStringContainsString('or memory_limit to 176M or more', $output);
+        $this->fakeHost(['php' => ['ini' => ['memory_limit' => '256M']]]);
+
+        // Above what the side limit lets a picture count as, the cap is never met.
+        config(['openpne.images.max_source_pixels' => 50_000_000]);
+        $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
+            ->expectsOutputToContain('[ OK ] memory_limit on the web: 256M. An upload of up to 29,491,200 pixels fits in it and this site takes up to 25,600,000');
 
         config(['openpne.images.processor' => 'imgproxy']);
         $this->fakeHost(['php' => ['ini' => ['memory_limit' => '128M']]]);

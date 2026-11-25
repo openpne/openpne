@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\SiteCheck;
 
 use App\Files\AttachmentLimit;
+use App\Files\ImageIntake;
 use App\Files\ImageSourceLimit;
 use App\Files\PostImages;
 use App\Files\UploadLimit;
@@ -210,7 +211,7 @@ final class WebCheck
                 ? Finding::fail('web.php', 'web_php_old', ['version' => $version, 'cli' => PHP_VERSION])
                 : Finding::ok('web.php', 'web_php', ['version' => $version, 'sapi' => $sapi, 'cli' => PHP_VERSION]),
             $this->extensions(is_array($data['extensions'] ?? null) ? $data['extensions'] : []),
-            $this->memory((string) ($ini['memory_limit'] ?? '')),
+            $this->memory((string) ($ini['memory_limit'] ?? ''), filter_var($ini['opcache.enable'] ?? false, FILTER_VALIDATE_BOOLEAN)),
             $this->upload((string) ($ini['upload_max_filesize'] ?? ''), (string) ($ini['post_max_size'] ?? '')),
             str_starts_with($sapi, 'cgi') && ($ini['opcache.file_cache'] ?? '') === ''
                 ? Finding::warn('web.opcache', 'web_cgi_opcache', ['sapi' => $sapi])
@@ -239,7 +240,7 @@ final class WebCheck
     }
 
     /** Under GD a decode runs in the worker, so the memory_limit is judged against the pixel limit it must hold. */
-    private function memory(string $value): Finding
+    private function memory(string $value, bool $opcache): Finding
     {
         $bytes = BeforeInstallCheck::bytes($value);
 
@@ -249,9 +250,10 @@ final class WebCheck
                 : Finding::warn('web.memory', 'web_memory_low', ['value' => $value]);
         }
 
-        $cap = ImageSourceLimit::pixels();
-        $fits = ImageSourceLimit::pixelsFor($bytes);
-        $replace = ['value' => $value, 'cap' => number_format($cap), 'fits' => number_format(max($fits, 0)), 'needed' => ImageSourceLimit::megabytesFor($cap).'M'];
+        // A picture within the side limit costs no more than its square, so a cap above that is never met.
+        $cap = min(ImageSourceLimit::pixels(), ImageIntake::gdPixelCost(UploadLimit::dimension(), UploadLimit::dimension()));
+        $fits = ImageSourceLimit::pixelsFor($bytes, $opcache);
+        $replace = ['value' => $value, 'cap' => number_format($cap), 'fits' => number_format(max($fits, 0)), 'needed' => ImageSourceLimit::megabytesFor($cap, $opcache).'M'];
 
         return match (true) {
             $fits <= 0 => Finding::warn('web.memory', 'web_memory_images_none', $replace),

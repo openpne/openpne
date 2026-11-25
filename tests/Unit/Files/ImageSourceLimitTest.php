@@ -79,8 +79,8 @@ class ImageSourceLimitTest extends TestCase
             ImageSourceLimit::preflight($this->jpeg($w, $h, 6), ImageIntake::gd());
         }
 
-        // 4096 x 3077 rounded, or with the turn 3073 px wide rows of 4096.
-        foreach ([[$this->jpeg(3073, 3077, 1), 'plain'], [$this->jpeg(3080, 4097, 6), 'turned']] as [$bytes, $name]) {
+        // 4096 x 3077 rounded; 3072 x 4097 passes upright but turned is 5120 x 3072.
+        foreach ([[$this->jpeg(3073, 3077, 1), 'plain'], [$this->jpeg(3072, 4097, 6), 'turned']] as [$bytes, $name]) {
             try {
                 ImageSourceLimit::preflight($bytes, ImageIntake::gd());
                 $this->fail("{$name}: over the rounded limit was let through.");

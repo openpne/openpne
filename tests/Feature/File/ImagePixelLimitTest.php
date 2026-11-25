@@ -14,8 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /**
- * Under the shipped side limit the pixel limit is now the one that refuses, which no entry point met
- * before; each must answer it as a field error, not a 500.
+ * Under the shipped side limit the pixel limit is the one that refuses; each entry point answers it as a field error, not a 500.
  */
 class ImagePixelLimitTest extends TestCase
 {
@@ -53,17 +52,16 @@ class ImagePixelLimitTest extends TestCase
             ->assertJsonValidationErrors(['image' => ImageTooLargeException::userMessage()]);
     }
 
-    public function test_the_uploader_the_admin_pages_call_refuses_it_with_the_same_message(): void
+    public function test_the_uploader_the_admin_pages_call_refuses_it_as_too_large(): void
     {
-        // The admin pages catch ImageProcessingException and notify its userMessage(); Livewire's temporary upload is not drivable here.
+        // Livewire's temporary upload is not drivable here, so this stops at the uploader the admin pages catch around.
+        $this->expectException(ImageTooLargeException::class);
+
         try {
             app(FileUploader::class)->store($this->tooLarge(), explicitVisibility: File::VISIBILITY_PUBLIC);
-            $this->fail('A picture over the pixel limit was stored.');
-        } catch (ImageTooLargeException $e) {
-            $this->assertSame(ImageTooLargeException::userMessage(), $e::userMessage());
+        } finally {
+            $this->assertSame(0, File::count());
         }
-
-        $this->assertSame(0, File::count());
     }
 
     /** Within the 5000 px side limit, 4000 x 4000 counts as 4096 x 4000, over the 12.6 M default. */

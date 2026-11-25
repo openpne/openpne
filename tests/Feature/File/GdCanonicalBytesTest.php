@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\File;
 
 use App\Files\GdImageProcessor;
+use App\Files\ImageProcessingException;
 use App\Files\ImageSpec;
 use App\Files\ImageTooLargeException;
 use GdImage;
@@ -32,8 +33,10 @@ class GdCanonicalBytesTest extends TestCase
             $this->markTestSkipped('Orientation is read only with ext-exif.');
         }
 
-        // Non-square and patterned, so a swapped side or a mirrored row changes the bytes.
-        $jpeg = $this->withOrientation($this->encode($this->pattern(37, 23), 'jpg'), $orientation);
+        // Non-square and patterned, so a swapped side or a mirrored row changes the bytes; 72 dpi, as imagerotate() leaves its result at GD's 96.
+        $source = $this->pattern(37, 23);
+        imageresolution($source, 72);
+        $jpeg = $this->withOrientation($this->encode($source, 'jpg'), $orientation);
 
         $this->assertSame(sha1($this->reference($jpeg, 'jpg')), sha1($this->canonical($jpeg, 'image/jpeg', 'jpg')));
     }
@@ -128,6 +131,21 @@ class GdCanonicalBytesTest extends TestCase
 
         $this->assertSame($turned, $counted);
         $this->assertSame($orientation >= 5, $turned);
+    }
+
+    public function test_a_quality_outside_the_encoders_range_is_a_processing_failure_on_the_native_path(): void
+    {
+        $jpeg = $this->encode($this->pattern(8, 8), 'jpg');
+
+        foreach ([101, -1] as $quality) {
+            config(['openpne.images.quality' => $quality]);
+            try {
+                $this->canonical($jpeg, 'image/jpeg', 'jpg');
+                $this->fail("Quality {$quality} was written.");
+            } catch (ImageProcessingException) {
+                $this->addToAssertionCount(1);
+            }
+        }
     }
 
     private function canonical(string $bytes, string $mime, string $format): string

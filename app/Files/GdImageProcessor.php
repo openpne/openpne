@@ -48,7 +48,13 @@ final class GdImageProcessor implements ImageProcessor
             throw new ImageProcessingException('The image could not be decoded: '.$e->getMessage(), 0, $e);
         }
 
-        $this->orient($image);
+        try {
+            $this->orient($image);
+        } catch (ImageProcessingException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            throw new ImageProcessingException('The image could not be turned upright: '.$e->getMessage(), 0, $e);
+        }
 
         if ($image->isAnimated()) {
             $image->removeAnimation();
@@ -80,7 +86,20 @@ final class GdImageProcessor implements ImageProcessor
                 $image->core()->setNative($copy);
             }
 
-            return new ProcessedImage($this->writeNative($image->core()->native(), $spec->format, $quality, $bytes), $media, $image->width(), $image->height(), AnimationProbe::mayAnimate($media) ? null : false);
+            // The encoder's own range, which imagejpeg() would answer with a ValueError or, for -1, its default.
+            if ($quality < 0 || $quality > 100) {
+                throw new ImageProcessingException("The quality {$quality} is outside 0 to 100.");
+            }
+
+            try {
+                $written = $this->writeNative($image->core()->native(), $spec->format, $quality, $bytes);
+            } catch (ImageProcessingException $e) {
+                throw $e;
+            } catch (Throwable $e) {
+                throw new ImageProcessingException('The image could not be encoded: '.$e->getMessage(), 0, $e);
+            }
+
+            return new ProcessedImage($written, $media, $image->width(), $image->height(), AnimationProbe::mayAnimate($media) ? null : false);
         }
 
         try {
@@ -106,7 +125,7 @@ final class GdImageProcessor implements ImageProcessor
             imagesavealpha($gd, true);
         }
 
-        // The encoder's copy keys transparent white, which drops a GIF's transparency; libgd gives a transparent pixel this value.
+        // A transparent pixel decodes to this value, which a white key, the encoder's copy's, would leave opaque on the decoded image itself.
         if ($format === 'gif') {
             imagecolortransparent($gd, self::gifHasTransparency($source) ? 0x7F000000 : imagecolorallocatealpha($gd, 255, 255, 255, 127));
         }
@@ -139,7 +158,14 @@ final class GdImageProcessor implements ImageProcessor
         $at = 13 + (($packed & 0x80) !== 0 ? 3 << (($packed & 0x07) + 1) : 0);
         $length = strlen($bytes);
 
-        while ($at < $length && $bytes[$at] === "\x21") {
+        // libgd's reader skips any other byte until an extension or the image descriptor.
+        while ($at < $length && $bytes[$at] !== "\x2C" && $bytes[$at] !== "\x3B") {
+            if ($bytes[$at] !== "\x21") {
+                $at++;
+
+                continue;
+            }
+
             if (($bytes[$at + 1] ?? '') === "\xF9" && (ord($bytes[$at + 3] ?? "\0") & 0x01) === 1) {
                 return true;
             }

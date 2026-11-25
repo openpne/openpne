@@ -21,6 +21,9 @@ final class ImageSourceLimit
 
     private const BYTES_PER_PIXEL = 8;
 
+    /** A request's compiled code, which without OPcache is held in memory_limit rather than shared memory. */
+    private const WITHOUT_OPCACHE_BYTES = 48 * 1024 * 1024;
+
     /** Enough of a file for libmagic to name any raster container, the same window the admin raw route reads. */
     public const SNIFF_BYTES = 4096;
 
@@ -40,15 +43,20 @@ final class ImageSourceLimit
     }
 
     /** The GD pixel limit a memory_limit of $memoryBytes holds an upload of up to the upload cap within; 0 or less when it holds none. */
-    public static function pixelsFor(int $memoryBytes): int
+    public static function pixelsFor(int $memoryBytes, bool $opcache = true): int
     {
-        return intdiv($memoryBytes - 2 * UploadLimit::bytes() - self::OVERHEAD_BYTES, self::BYTES_PER_PIXEL);
+        return intdiv($memoryBytes - 2 * UploadLimit::bytes() - self::overhead($opcache), self::BYTES_PER_PIXEL);
     }
 
     /** The memory_limit, in whole megabytes, that pixelsFor() answers $pixels or more for. */
-    public static function megabytesFor(int $pixels): int
+    public static function megabytesFor(int $pixels, bool $opcache = true): int
     {
-        return (int) ceil(($pixels * self::BYTES_PER_PIXEL + 2 * UploadLimit::bytes() + self::OVERHEAD_BYTES) / (1024 * 1024));
+        return (int) ceil(($pixels * self::BYTES_PER_PIXEL + 2 * UploadLimit::bytes() + self::overhead($opcache)) / (1024 * 1024));
+    }
+
+    private static function overhead(bool $opcache): int
+    {
+        return self::OVERHEAD_BYTES + ($opcache ? 0 : self::WITHOUT_OPCACHE_BYTES);
     }
 
     /**
@@ -86,14 +94,14 @@ final class ImageSourceLimit
         }
 
         $pixels = $intake->pixelLimit();
-        $cost = $intake->pixelCost($info[0], $info[1], $info[2] === IMAGETYPE_JPEG && self::turnsAQuarter($bytes));
+        $cost = $intake->pixelCost($info[0], $info[1], $intake->countsTurns() && $info[2] === IMAGETYPE_JPEG && self::turnsAQuarter($bytes));
 
         if ($pixels < $cost) {
             throw new ImageTooLargeException(sprintf('The image declares %dx%d, counted as %d pixels, over the %d pixel limit.', $info[0], $info[1], $cost, $pixels));
         }
     }
 
-    /** Read as intervention/image reads it for the decode, which turns a JPEG only when ext-exif is loaded. */
+    /** Read as intervention/image reads it for the processor, which turns a JPEG only when ext-exif is loaded. */
     private static function turnsAQuarter(string $bytes): bool
     {
         // Every APP1 EXIF segment opens with this signature; a canonical has none, and is then not copied to a stream.

@@ -30,7 +30,7 @@ final class ImageIntake
     ) {}
 
     /**
-     * In-process decoding: the four types libgd reads, bounded by the upload rules. Whether it writes
+     * In-process decoding: the four types libgd reads, under the GD pixel limit. Whether it writes
      * WebP is the host's libgd build, read unless a test says otherwise.
      */
     public static function gd(?bool $writesWebp = null): self
@@ -95,9 +95,15 @@ final class ImageIntake
     }
 
     /**
-     * Held against pixelLimit(): in process a row costs its width rounded up to 1024 pixels, as libgd takes each
+     * Held against pixelLimit(): in process a row costs its width rounded up to 1024 pixels, as the bundled libgd takes each
      * row from Zend in whole 4 KB pages, and a quarter-turn orientation counts the turned shape too (docs/internals/security.md, "Decoding an upload").
      */
+    /** Whether pixelCost() uses a quarter turn, so the EXIF is read only where it is. */
+    public function countsTurns(): bool
+    {
+        return $this->countsRows;
+    }
+
     public function pixelCost(int $width, int $height, bool $quarterTurn): int
     {
         return $this->countsRows ? self::gdPixelCost($width, $height, $quarterTurn) : $width * $height;
