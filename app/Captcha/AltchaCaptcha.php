@@ -20,6 +20,9 @@ use Throwable;
  */
 class AltchaCaptcha implements Captcha
 {
+    /** Checked before the decode, which runs for a guest; a solved payload is under a kilobyte. */
+    public const MAX_PAYLOAD_BYTES = 4096;
+
     private readonly Altcha $altcha;
 
     private readonly Pbkdf2 $algorithm;
@@ -51,7 +54,7 @@ class AltchaCaptcha implements Captcha
 
     public function verify(?string $payload): bool
     {
-        if (! filled($payload)) {
+        if (! filled($payload) || strlen($payload) > self::MAX_PAYLOAD_BYTES) {
             return false;
         }
 
