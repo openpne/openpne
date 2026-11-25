@@ -4,6 +4,7 @@ namespace App\Http\Requests\Member;
 
 use App\Auth\Reauth\ReauthPurpose;
 use App\Features\Member\ReauthPasskeyController;
+use App\Http\Requests\Concerns\LimitsCredentialLength;
 use App\Http\Requests\Concerns\RewordsUnreadableCredential;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passkeys\Http\Requests\PasskeyVerificationRequest;
@@ -12,6 +13,7 @@ use Webauthn\PublicKeyCredentialRequestOptions;
 
 class PasskeyProofRequest extends PasskeyVerificationRequest
 {
+    use LimitsCredentialLength;
     use RewordsUnreadableCredential;
 
     /**
