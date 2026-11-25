@@ -92,6 +92,11 @@ return [
         'max_upload_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_UPLOAD_KB', UploadLimit::DEFAULT_KILOBYTES),
     ],
 
+    // Minutes every scheduled task runs after its time, read raw so App\Console\ScheduleOffset can refuse a bad value.
+    'schedule' => [
+        'offset_minutes' => env('OPENPNE_SCHEDULE_OFFSET_MINUTES'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Surface mode (Classic / Modern)

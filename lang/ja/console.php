@@ -65,6 +65,8 @@ return [
         'queue_driver' => 'キューは :driver で動きます。',
         'queue_database' => 'キューに、10 分より長く待っている仕事はありません。',
         'queue_stale' => 'キューに、10 分より長く待っている仕事が :count 件あります。キューを処理するものがありません。worker を動かすか(docs/installing.md の手順 6)、.env で QUEUE_CONNECTION=deferred にしてください。',
+        'schedule_offset' => '定期タスクは、決まった時刻の :minutes 分あとに走ります。',
+        'schedule_offset_invalid' => ':env が 0 から :max までの 5 の倍数でないので、スケジューラが動きません。.env で直すか、行を消してください。',
         'mail' => 'メールは :transport で送ります。',
         'mail_log' => 'メールは送られません。MAIL_MAILER=log は、ログに書くだけです。送るには、.env に SMTP の設定を書いてください。',
         'mail_log_discarded' => 'メールは送られず、ログにも残りません。MAIL_MAILER=log は debug の段でログに書きますが、LOG_LEVEL がそれを捨てます。送るには、.env に SMTP の設定を書いてください。',
