@@ -25,8 +25,6 @@ use App\Support\SnsSettingKey;
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
@@ -397,7 +395,7 @@ class FetchLinkCardTest extends TestCase
         $this->travelTo(CarbonImmutable::now()->addHours(2));
         $this->assertTrue($card->fresh()?->isDueForFetch());
 
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor);
         $this->queueHtml($page);
         $this->queueBinary($this->png(), 'image/png');
         $this->runJob($card->fresh());

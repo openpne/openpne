@@ -19,7 +19,8 @@ class ImageIntakeTest extends TestCase
         $this->assertNull($intake->canonicalFormat('image/heic'));
         $this->assertNull($intake->canonicalFormat('image/avif'));
         $this->assertSame(3000, $intake->sideLimit());
-        $this->assertSame(9_000_000, $intake->pixelLimit());
+        // 3000 x 3000 counted as 3072 x 3000, so a square at the side limit is not refused by pixels.
+        $this->assertSame(9_216_000, $intake->pixelLimit());
         $this->assertSame('image/jpeg,image/png,image/gif,image/webp', $intake->accept());
     }
 

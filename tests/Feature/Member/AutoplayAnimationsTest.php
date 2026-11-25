@@ -8,8 +8,6 @@ use App\Models\Member;
 use App\Support\Autoplay;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use Tests\Support\FrameKeepingProcessor;
 use Tests\TestCase;
 
@@ -62,7 +60,7 @@ class AutoplayAnimationsTest extends TestCase
         $member = Member::factory()->create();
 
         // Under GD nothing animates, so there is nothing for the switch to stop.
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor);
         $this->actingAs($member)->get('/member/config')
             ->assertInertia(fn (Assert $page) => $page->missing('form.autoplayAnimations'));
 

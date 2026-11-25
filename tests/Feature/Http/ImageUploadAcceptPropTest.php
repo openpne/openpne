@@ -14,8 +14,6 @@ use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use Tests\TestCase;
 
 /** Both surfaces take their `<input accept>` from the processor, so a picker never offers what the server refuses. */
@@ -26,7 +24,7 @@ class ImageUploadAcceptPropTest extends TestCase
     public function test_the_shared_prop_and_the_helper_follow_the_processor(): void
     {
         $member = Member::factory()->create();
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor);
 
         $this->assertSame('image/jpeg,image/png,image/gif,image/webp', image_upload_accept());
         $this->actingAs($member)->get('/dashboard')
@@ -45,7 +43,7 @@ class ImageUploadAcceptPropTest extends TestCase
         $member = Member::factory()->create();
         config(['openpne.images.browser_shrink' => ['max_edge' => 1600, 'passthrough_kb' => 1024, 'jpeg_quality' => 75]]);
 
-        $this->app->instance(ImageProcessor::class, new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false)));
+        $this->app->instance(ImageProcessor::class, new GdImageProcessor);
         $this->actingAs($member)->get('/dashboard')
             ->assertInertia(fn ($page) => $page->where('imageUpload.shrink', ['maxEdge' => 1600, 'passthroughBytes' => 1048576, 'maxBytes' => 5242880, 'quality' => 0.75, 'keepsFrames' => false]));
 

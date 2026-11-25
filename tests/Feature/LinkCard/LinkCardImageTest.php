@@ -20,8 +20,6 @@ use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Intervention\Gif\Builder;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\ImageManager;
 use RuntimeException;
 use Tests\Concerns\FakesOutboundTransport;
 use Tests\TestCase;
@@ -158,7 +156,7 @@ class LinkCardImageTest extends TestCase
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary((string) file_get_contents(base_path('tests/Fixtures/images/webp-animated-3frames.webp')), 'image/webp');
-        $gd = new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false));
+        $gd = new GdImageProcessor;
 
         $this->assertNull($this->importer($gd)->import('https://cdn.example.com/anim.webp', $card->id));
         $this->assertSame(0, File::count());
@@ -180,7 +178,7 @@ class LinkCardImageTest extends TestCase
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
         $this->queueBinary($this->pngHeaderClaiming(10, 10), 'image/png');
-        $gd = new GdImageProcessor(new ImageManager(GdDriver::class, decodeAnimation: false));
+        $gd = new GdImageProcessor;
 
         $this->assertNull($this->importer($gd)->import('https://cdn.example.com/hollow.png', $card->id));
         $this->assertSame(0, File::count());

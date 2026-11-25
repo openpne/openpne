@@ -305,7 +305,8 @@ php artisan up
 - **Setup says creating the tables failed**: put right the cause it shows first and run it again.
   Only where it stops at the same place again, do as it says to start over.
 - **Memory or upload sizes too small**: set them in the host's PHP settings (the `php.ini` settings
-  of its control panel, where it has them). Setup runs itself again after writing `.env`, which a
+  of its control panel, where it has them). Where `memory_limit` cannot go above 128M, keep
+  `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` at most what `openpne:check` states. Setup runs itself again after writing `.env`, which a
   `php -d` option given to it does not reach.
 - **The backup fails later with error 1045, through `mariadb-dump`**: on a MySQL 8 server without
   TLS, that tool cannot always sign in. Ask the host for `mysqldump`, or for TLS on the server.
