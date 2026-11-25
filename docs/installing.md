@@ -220,6 +220,9 @@ On MariaDB 10.11 or later, make the database with `COLLATE utf8mb4_nopad_bin` an
 `DB_CONNECTION=mariadb`: the `mariadb` connection names MariaDB's own collations, which every MariaDB
 from 10.11 has, while 10.11 has no `utf8mb4_0900_bin`.
 
+A MySQL server shared by many sites needs `table_definition_cache` above `table_open_cache`
+([runtime.md](internals/runtime.md#table-definition-cache)).
+
 ## 3. Create the site
 
 ```bash

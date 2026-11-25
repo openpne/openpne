@@ -496,6 +496,18 @@ session that names no collation.
 Elsewhere in these internals, MySQL also means MariaDB 10.11 or later unless a passage says
 otherwise.
 
+### Table definition cache
+
+A MySQL server that holds many sites' databases needs `table_definition_cache` larger than
+`table_open_cache`, with room to spare. Otherwise, once the open tables hold more table definitions
+than `table_definition_cache` allows (`Open_table_definitions` above it), a prepared `DELETE` on a
+table whose children are `ON DELETE CASCADE` or `SET NULL` fails with error 1615 (`Prepared
+statement needs to be re-prepared`), as does an `UPDATE` on a parent of an `ON UPDATE CASCADE` child.
+Retrying does not help; `FLUSH TABLES` clears it only until the tables fill the cache again. This
+passage was measured on MySQL 8.4, not on MariaDB.
+
+A new site's `migrate` sends no such statement to its empty database.
+
 ## Bound parameters
 
 SQLite before 3.32 takes at most 999 bound parameters in one statement by default, and the limit

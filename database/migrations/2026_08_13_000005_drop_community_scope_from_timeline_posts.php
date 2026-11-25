@@ -13,14 +13,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Chunked so a large fixture set does not build one enormous transaction; the FK cascade
-        // does the dependent tables.
-        do {
-            $deleted = DB::table('timeline_posts')
+        // exists() first, so a new site's empty database never sends the DELETE (docs/internals/runtime.md, "Table definition cache").
+        while (DB::table('timeline_posts')->whereNotNull('community_id')->exists()) {
+            // Chunked so a large fixture set does not build one enormous transaction; the FK cascade does the dependent tables.
+            DB::table('timeline_posts')
                 ->whereNotNull('community_id')
                 ->limit(1000)
                 ->delete();
-        } while ($deleted > 0);
+        }
 
         // The posts' image Files and their bytes are left behind: a migration does not delete disk objects.
 
