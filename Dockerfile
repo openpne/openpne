@@ -2,7 +2,7 @@
 # only reads FROM lines, keeps this pin updated too.
 FROM composer:2.11.1 AS composer
 
-FROM php:8.5.12-fpm-bookworm
+FROM php:8.6.0RC7-fpm-bookworm
 
 # git + unzip let `composer install` fall back to a git source checkout (and extract dist
 # archives) when GitHub's dist zipballs are temporarily unavailable (504). The slim php-fpm
