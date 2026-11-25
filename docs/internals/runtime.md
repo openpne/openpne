@@ -500,10 +500,11 @@ otherwise.
 
 A MySQL server that holds many sites' databases needs `table_definition_cache` larger than
 `table_open_cache`, with room to spare. Otherwise, once the open tables hold more table definitions
-than `table_definition_cache` allows (`Open_table_definitions` above it), a prepared `DELETE` on a
-table whose children are `ON DELETE CASCADE` or `SET NULL` fails with error 1615 (`Prepared
-statement needs to be re-prepared`), as does an `UPDATE` on a parent of an `ON UPDATE CASCADE` child.
-Retrying does not help; `FLUSH TABLES` clears it only until the tables fill the cache again. This
+than `table_definition_cache` allows (`Open_table_definitions` above it), a server-side prepared
+`DELETE` on a table whose children are `ON DELETE CASCADE` or `SET NULL` fails with error 1615
+(`Prepared statement needs to be re-prepared`) whenever no open table holds a child's definition, as
+does an `UPDATE` on a parent of an `ON UPDATE CASCADE` child. Retrying does not help; `FLUSH TABLES`
+clears it only until the tables fill the cache again. This
 passage was measured on MySQL 8.4, not on MariaDB.
 
 A new site's `migrate` sends no such statement to its empty database.

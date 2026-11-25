@@ -8,3 +8,4 @@
 #
 # A further edit to the same file needs a line of its own. A line stops matching once a release
 # ships the edited file, and can be removed then.
+29fb69e0f7681e805127ab7bd94d0fabb2935b8d 1ede2172b4ccf3d6f5d92c93fe28e22e92d32dd3 database/migrations/2026_08_13_000005_drop_community_scope_from_timeline_posts.php
