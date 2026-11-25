@@ -17,6 +17,9 @@ final class JsonBodyLimit
 
     public const MAX_KEYS = 15_000;
 
+    /** Past this length the key cap shrinks in proportion, so colons times length stays within MAX_KEYS times this. */
+    public const MAX_KEYS_LENGTH = 512 * 1024;
+
     /**
      * Reads at most one byte past MAX_BYTES of the body, and nothing when the type is not JSON or the declared length is already over.
      *
@@ -41,10 +44,10 @@ final class JsonBodyLimit
             return true;
         }
 
-        // Every JSON value but the first follows one of these, and every object key a colon.
+        // Every JSON value but the first follows one of these, and every object key precedes a colon.
         $keys = substr_count($read, ':');
 
-        return $keys > self::MAX_KEYS
+        return $keys * max(strlen($read), self::MAX_KEYS_LENGTH) > self::MAX_KEYS * self::MAX_KEYS_LENGTH
             || $keys + substr_count($read, ',') + substr_count($read, '[') + substr_count($read, '{') > self::MAX_SEPARATORS;
     }
 

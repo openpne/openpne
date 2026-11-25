@@ -107,12 +107,48 @@ final class JsonBodyLimitTest extends TestCase
         $this->assertTrue($this->exceeded(self::JSON, '"'.str_repeat(':', JsonBodyLimit::MAX_KEYS + 1).'"'));
     }
 
-    /** Three copies of a stylesheet at the setting's byte cap, as an admin save carries it in the snapshot, the update and the previous-version field. */
+    /** @return array<string, array{int}> */
+    public static function longBodies(): array
+    {
+        return [
+            'at the key length' => [JsonBodyLimit::MAX_KEYS_LENGTH],
+            'twice the key length' => [2 * JsonBodyLimit::MAX_KEYS_LENGTH],
+            'at the length cap' => [JsonBodyLimit::MAX_BYTES],
+        ];
+    }
+
+    #[DataProvider('longBodies')]
+    public function test_past_the_key_length_the_key_cap_shrinks_in_proportion(int $length): void
+    {
+        $keys = intdiv(JsonBodyLimit::MAX_KEYS * JsonBodyLimit::MAX_KEYS_LENGTH, $length);
+
+        $this->assertFalse($this->exceeded(self::JSON, self::colons($keys, $length)));
+        $this->assertTrue($this->exceeded(self::JSON, self::colons($keys + 1, $length)));
+    }
+
+    /** @return array<string, array{int, int}> */
+    public static function keyLimitsInNumbers(): array
+    {
+        return [
+            'a short body' => [15_001, 15_003],
+            'a mebibyte' => [7_501, 1024 * 1024],
+            'eight mebibytes' => [938, 8 * 1024 * 1024],
+        ];
+    }
+
+    /** In numbers, so that raising a key limit has to change this test too. */
+    #[DataProvider('keyLimitsInNumbers')]
+    public function test_the_key_limits_refuse_these_counts(int $keys, int $length): void
+    {
+        $this->assertTrue($this->exceeded(self::JSON, self::colons($keys, $length)));
+    }
+
+    /** A stylesheet at the setting's byte cap, twice, as an admin save carries it in the snapshot and the update. */
     public function test_the_key_cap_admits_a_full_custom_stylesheet_saved_from_the_admin_form(): void
     {
         $css = str_repeat('.a{color:#000}', intdiv(65535, 14));
 
-        $this->assertFalse($this->exceeded(self::JSON, (string) json_encode([$css, $css, $css])));
+        $this->assertFalse($this->exceeded(self::JSON, (string) json_encode([$css, $css])));
     }
 
     public function test_colons_also_count_toward_the_separator_cap(): void
@@ -125,7 +161,7 @@ final class JsonBodyLimitTest extends TestCase
     }
 
     /** The decode alone, as the framework's copies of the body and its strings come on top whatever the caps are. */
-    public function test_the_largest_body_the_caps_admit_decodes_within_sixteen_mebibytes(): void
+    public function test_a_body_at_both_caps_decodes_within_sixteen_mebibytes(): void
     {
         $nested = str_repeat('[0],', intdiv(JsonBodyLimit::MAX_SEPARATORS, 2) - 1);
         $body = '['.$nested.'"'.str_repeat('x', JsonBodyLimit::MAX_BYTES - strlen($nested) - 6).'"]';
@@ -208,6 +244,12 @@ final class JsonBodyLimitTest extends TestCase
     private static function separators(int $count): string
     {
         return '['.implode(',', array_fill(0, $count, '0')).']';
+    }
+
+    /** A JSON string $length bytes long holding $count colons. */
+    private static function colons(int $count, int $length): string
+    {
+        return '"'.str_repeat(':', $count).str_repeat('x', $length - $count - 2).'"';
     }
 
     private static function string(int $length): string
