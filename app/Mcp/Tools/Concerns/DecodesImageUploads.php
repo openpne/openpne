@@ -7,6 +7,7 @@ namespace App\Mcp\Tools\Concerns;
 use App\Files\ImageProcessor;
 use App\Files\PostImages;
 use App\Files\UploadLimit;
+use App\Http\JsonBodyLimit;
 use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\UploadedFile;
@@ -64,8 +65,9 @@ trait DecodesImageUploads
             ->description(
                 'Pictures to attach, at most '.PostImages::MAX_IMAGES.'. Each is the file\'s own bytes as standard '
                 .'base64 — no data: prefix, no url-safe substitutions — and at most '
-                .UploadLimit::kilobytes().' KB once decoded. '.implode(', ', $types).': what a '
-                .'picture is is decided by reading it, whatever it is called.',
+                .UploadLimit::kilobytes().' KB once decoded. The whole JSON request, pictures and text '
+                .'together, is refused over '.intdiv(JsonBodyLimit::MAX_BYTES, 1024 * 1024).' MiB. '
+                .implode(', ', $types).': what a picture is is decided by reading it, whatever it is called.',
             );
     }
 

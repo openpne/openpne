@@ -568,6 +568,27 @@ ambiguous (unknown account, or one already on the default cost). The signal
 disappears on the account's first login and is accepted for the migration
 window.
 
+## JSON request bodies
+
+The framework decodes a JSON body while it captures the request, so a limit on it cannot be a
+middleware: `public/index.php` asks [`JsonBodyLimit`](../../app/Http/JsonBodyLimit.php) before it
+loads `bootstrap/app.php`. A JSON body is answered 413 with a JSON `message` when it is longer than
+`MAX_BYTES` (8 MiB), holds more than `MAX_SEPARATORS` (50,000) of `,` `:` `[` `{`, or more than
+`MAX_KEYS` (15,000) of `:`; characters inside strings count too. The answer writes no log row, and
+its only security header is `X-Content-Type-Options`.
+
+- **JSON is wider than either reader of the body:** a `Content-Type` with `/json` or `+json`
+  anywhere (Laravel's `isJson()`), or `json` in its media type (Symfony's `json` format, which adds
+  `application/x-json` and is what Passport's PSR-7 conversion decodes).
+- **The body is never read whole to be measured.** A declared `Content-Length` over the cap is
+  refused unread, and otherwise at most one byte past the cap is read.
+- **The limits are constants**, since the check runs before `.env` is read.
+- **MCP pictures travel inside it**, base64-encoded, so for several pictures near
+  `OPENPNE_IMAGE_MAX_UPLOAD_KB`, or a cap raised past the default, the request cap binds first
+  ([images](images.md)).
+- JSON decoded out of a single field is outside this check, so such a field needs a length rule of
+  its own, as the [passkey credential](#member-passkeys) has.
+
 ## Rate limits on member requests
 
 Content-posting and mail-triggering member writes, the keystroke-driven endpoints a compose form

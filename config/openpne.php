@@ -88,7 +88,7 @@ return [
         'max_source_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_KB', 0),
         'max_source_pixels' => (int) env('OPENPNE_IMAGE_MAX_SOURCE_PIXELS', 0),
         // Per-file cap for every image upload, in kilobytes; keep PHP's upload_max_filesize at or
-        // above it (App\Files\UploadLimit, docs/internals/images.md).
+        // above it, and over MCP the JSON request cap can bind first (docs/internals/images.md, "Upload size").
         'max_upload_kilobytes' => (int) env('OPENPNE_IMAGE_MAX_UPLOAD_KB', UploadLimit::DEFAULT_KILOBYTES),
     ],
 

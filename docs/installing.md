@@ -268,7 +268,9 @@ pm.max_spare_servers = 3
 ```
 
 The two sizes follow the upload caps in `.env` (`OPENPNE_IMAGE_MAX_UPLOAD_KB`,
-`OPENPNE_FILE_MAX_UPLOAD_KB`): PHP's default of 2M refuses most photos.
+`OPENPNE_FILE_MAX_UPLOAD_KB`): PHP's default of 2M refuses most photos. A JSON request has a smaller
+cap of its own inside the app, whatever these say
+([security.md](internals/security.md#json-request-bodies)).
 
 ```nginx
 # /etc/nginx/sites-available/openpne
@@ -339,8 +341,8 @@ PHP answers with:
     # Yours: the name and the port the site answers on, and its certificate.
     ServerName sns.example.com
 
-    # What the site needs: the release's public/ as the root with its .htaccess in force, and
-    # uploads this large.
+    # What the site needs: the release's public/ as the root with its .htaccess in force, uploads
+    # this large, and no request body larger.
     DocumentRoot /srv/openpne/site/public
     <Directory /srv/openpne/site/public>
         AllowOverride All
@@ -348,6 +350,7 @@ PHP answers with:
     </Directory>
     php_admin_value upload_max_filesize 16M
     php_admin_value post_max_size 32M
+    LimitRequestBody 33554432
 
     # What a site should have, though it runs without: the pages PHP answers with left
     # uncompressed.

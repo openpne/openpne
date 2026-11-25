@@ -56,7 +56,8 @@ class McpEndpointTest extends McpTestCase
             ->assertSee('list-talk-rooms')
             ->assertSee('post-talk-message')
             // The picture cap is stated in KB: a cap under 1 MB must not read as "0 MB".
-            ->assertSee('at most 5120 KB once decoded');
+            ->assertSee('at most 5120 KB once decoded')
+            ->assertSee('is refused over 8 MiB');
     }
 
     public function test_the_tool_list_is_one_page(): void

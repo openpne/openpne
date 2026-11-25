@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\JsonBodyLimit;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
@@ -22,6 +23,11 @@ if (openpne_image_fast_path_serve($_SERVER, $_GET, $_COOKIE, $storagePath)) {
 
 // Register the Composer autoloader...
 require __DIR__.'/../vendor/autoload.php';
+
+if (JsonBodyLimit::exceeded($_SERVER)) {
+    JsonBodyLimit::refusal($_SERVER)->send();
+    exit;
+}
 
 // Bootstrap Laravel and handle the request...
 /** @var Application $app */
