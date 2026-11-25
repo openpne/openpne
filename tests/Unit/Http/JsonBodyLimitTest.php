@@ -202,7 +202,7 @@ final class JsonBodyLimitTest extends TestCase
         $this->assertTrue($autoload < $gate && $gate < $framework);
     }
 
-    /** Title and body at their byte cap, each byte escaped to six as json_encode() writes a control character, but for 900 colons in the body as code or a log would have. */
+    /** Title and body at their byte cap, each byte escaped to six as json_encode() writes a control character, but for 900 colons in the body, the fewest the caps must still admit beside it. */
     public function test_an_mcp_post_with_one_picture_at_the_shipped_cap_fits(): void
     {
         $cap = (int) (new ReflectionClassConstant(DiaryTool::class, 'BODY_MAX_BYTES'))->getValue();
