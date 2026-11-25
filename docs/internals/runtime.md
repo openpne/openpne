@@ -246,8 +246,8 @@ home issue's day still turns over at 06:00; only the run moves, and a run at any
 next 06:00 publishes the same issue ([home-issues.md](home-issues.md#a-day-runs-0600--0600)). Any
 other value stops the `schedule:*` commands with a message naming the variable, and
 `openpne:check` reports it; every other command, the queue worker included, runs as before. In a
-zone with daylight saving time, an offset that lands a task inside the hour the clocks skip loses
-that day's run.
+zone with daylight saving time, a task the offset lands in the hour the clocks skip runs an hour
+late that day, and one in the hour they repeat runs twice.
 
 A host may run the tasks itself rather than through `schedule:run`, each command at a time of its
 own choosing: `schedule:list` is the list to run, and none of them depends on running at its

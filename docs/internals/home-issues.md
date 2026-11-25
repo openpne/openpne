@@ -216,7 +216,7 @@ The schedule is not what the front page depends on. Before the front page ([Rout
 issue's `published_at` with the last 06:00 boundary, and when that boundary has passed unpublished it
 runs the publisher as of the boundary — the same window, the same date, the same `published_at` the
 scheduled run would have written. A host with no cron therefore has the same front page as one with it;
-a day's issue appears on the first visit after 06:00 rather than at 06:00, and the first reader of
+a day's issue appears on the first visit after 06:00 rather than at the scheduled run, and the first reader of
 the day pays the publication, seconds. A reader who arrives before anyone else in a week publishes
 one issue spanning the week, which is the chained window above.
 

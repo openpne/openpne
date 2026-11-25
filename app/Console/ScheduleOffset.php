@@ -6,10 +6,7 @@ namespace App\Console;
 
 use InvalidArgumentException;
 
-/**
- * Cron expressions for the scheduled tasks, each moved later by the host's offset
- * (docs/internals/runtime.md, "Scheduled tasks").
- */
+/** See docs/internals/runtime.md, "Scheduled tasks". */
 final class ScheduleOffset
 {
     public const ENV = 'OPENPNE_SCHEDULE_OFFSET_MINUTES';
@@ -40,7 +37,7 @@ final class ScheduleOffset
                 self::ENV,
                 self::MAX_MINUTES,
                 self::STEP,
-                is_scalar($value) ? (string) $value : get_debug_type($value),
+                is_bool($value) ? var_export($value, true) : (is_scalar($value) ? (string) $value : get_debug_type($value)),
             ));
         }
 
