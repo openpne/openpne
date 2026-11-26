@@ -158,8 +158,7 @@ final class LinkCardImage
         $pixels = (int) config('openpne.outbound.max_image_pixels');
 
         // Both, because either alone leaves a hole: a 1 x 50000000 strip passes a pixel-count check
-        // on neither side, and a 5000 x 5000 square passes the per-side check while decoding to
-        // 100 MB.
+        // on neither side, and a 5000 x 5000 square passes the per-side check.
         return $dimensions[0] <= $side
             && $dimensions[1] <= $side
             && $pixels >= $dimensions[0] * $dimensions[1];

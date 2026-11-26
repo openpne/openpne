@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\SiteCheck;
 
 use App\Database\DatabaseServer;
+use App\Files\ImageSourceLimit;
 
-/** What the command line can tell before `.env` exists; reads neither `.env` nor the database. */
+/** What the command line can tell before `.env` exists; needs neither `.env` nor the database, the image limits read at their defaults without one. */
 final class BeforeInstallCheck
 {
     /** docs/installing.md, "What the server needs", less the database's own. */
@@ -15,7 +16,8 @@ final class BeforeInstallCheck
         'mbstring', 'openssl', 'pcre', 'session', 'tokenizer', 'xml', 'xmlreader', 'zip', 'zlib',
     ];
 
-    public const MEMORY_BYTES = 256 * 1024 * 1024;
+    /** PHP's own default, the floor where no GD decode runs inside memory_limit. */
+    public const MEMORY = '128M';
 
     private const WRITABLE = [
         'storage/app/private', 'storage/app/public', 'storage/framework/cache/data',
@@ -104,18 +106,40 @@ final class BeforeInstallCheck
 
     private function memory(): Finding
     {
-        $limit = (string) ini_get('memory_limit');
+        return self::commandMemory((string) ini_get('memory_limit'), defined('GD_BUNDLED') && (bool) constant('GD_BUNDLED'), self::opcacheOnTheCommandLine(), $this->php->word());
+    }
+
+    /** A command such as `openpne:image-cache warm` decodes in its own process, where a system libgd allocates outside memory_limit. */
+    public static function commandMemory(string $limit, bool $bundledGd, bool $opcache, string $php): Finding
+    {
+        $bytes = self::bytes($limit);
+        $replace = ['value' => $limit, 'php' => $php];
+
+        if ($bundledGd && $bytes !== null && $bytes >= 0 && config('openpne.images.processor') === 'gd') {
+            $cap = ImageSourceLimit::reachablePixels();
+
+            return ImageSourceLimit::pixelsFor($bytes, $opcache) >= $cap
+                ? Finding::ok('cli.memory', 'cli_memory', $replace)
+                : Finding::warn('cli.memory', 'cli_memory_images_low', $replace + ['cap' => number_format($cap), 'needed' => ImageSourceLimit::megabytesFor($cap, $opcache).'M']);
+        }
 
         return self::enoughMemory($limit)
-            ? Finding::ok('cli.memory', 'cli_memory', ['value' => $limit])
-            : Finding::warn('cli.memory', 'cli_memory_low', ['value' => $limit, 'php' => $this->php->word()]);
+            ? Finding::ok('cli.memory', 'cli_memory', $replace)
+            : Finding::warn('cli.memory', 'cli_memory_low', $replace + ['minimum' => self::MEMORY]);
     }
 
     public static function enoughMemory(string $limit): bool
     {
         $bytes = self::bytes($limit);
 
-        return $bytes === null || $bytes < 0 || $bytes >= self::MEMORY_BYTES;
+        return $bytes === null || $bytes < 0 || $bytes >= ini_parse_quantity(self::MEMORY);
+    }
+
+    private static function opcacheOnTheCommandLine(): bool
+    {
+        return extension_loaded('Zend OPcache')
+            && filter_var(ini_get('opcache.enable'), FILTER_VALIDATE_BOOLEAN)
+            && filter_var(ini_get('opcache.enable_cli'), FILTER_VALIDATE_BOOLEAN);
     }
 
     /** An ini size in bytes, -1 for unlimited, or null when it does not read as one. */

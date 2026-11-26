@@ -42,6 +42,14 @@ final class ImageSourceLimit
         return $configured > 0 ? $configured : min(self::DEFAULT_GD_PIXELS, ImageIntake::gdPixelCost($side, $side));
     }
 
+    /** pixels(), or less where no picture within the side limit counts as many under GD. */
+    public static function reachablePixels(): int
+    {
+        $side = UploadLimit::dimension();
+
+        return min(self::pixels(), ImageIntake::gdPixelCost($side, $side));
+    }
+
     /** The GD pixel limit a memory_limit of $memoryBytes holds an upload of up to the upload cap within; 0 or less when it holds none. */
     public static function pixelsFor(int $memoryBytes, bool $opcache = true): int
     {
