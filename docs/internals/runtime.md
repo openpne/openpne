@@ -406,7 +406,8 @@ Key invariants:
    `APP_KEY` set, through a file beside it at 0600 that is renamed into place once `Dotenv::parse`
    reads every answer back. An answer `Env` or Dotenv would read otherwise (`true`, a quoted value,
    `${`, a control character, `"` with `\` or `'`, a lone `"` right after `=`) is refused before it
-   is written. The later writes are `APP_KEY` and `TRUSTED_PROXIES`, each only while `.env` holds it
+   is written, and so is an `APP_URL` other than `https://` and a host with nothing after it, as the
+   Modern pages link from the root of the host. The later writes are `APP_KEY` and `TRUSTED_PROXIES`, each only while `.env` holds it
    empty and through the same file beside it, the first never over a database that holds an
    administrator and the second typed by the operator, never taken from what the web check saw;
    every other key must read back unchanged. A `.env` without `APP_URL` or `DB_CONNECTION` is not

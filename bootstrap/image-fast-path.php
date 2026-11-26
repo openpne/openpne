@@ -35,7 +35,6 @@ function openpne_image_fast_path(array $server, array $query, array $cookies, st
             return null;
         }
 
-        // Anchored at the end only, so a site served under a sub-path matches too.
         $path = explode('?', $uri, 2)[0];
         if (preg_match('#/cache/img/(jpg|png|gif|webp)/(w[0-9]+_h[0-9]+(?:_sq|_a)?)/([A-Za-z0-9_-]{1,255})\.\1$#D', $path, $m) !== 1) {
             return null;

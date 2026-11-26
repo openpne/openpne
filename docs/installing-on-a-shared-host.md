@@ -315,9 +315,9 @@ php artisan up
   `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` at most what `openpne:check` states. Setup runs itself again after writing `.env`, which a
   `php -d` option given to it does not reach.
 - **The backup fails later with error 1045, through `mariadb-dump`**: on a MySQL 8 server without
-  TLS, that tool can sign in as a `caching_sha2_password` user only once another client has since
-  the server started, so on that host the backup works at some times and fails at others, and
-  cannot be relied on.
+  TLS, that tool can sign in as a `caching_sha2_password` user only once another client has signed
+  in since the server started, so on that host the backup works at some times and fails at others,
+  and cannot be relied on. A site on SQLite does not meet it.
 - **Deleting a post, an image or a member fails with error 1615**: the MySQL server's
   `table_definition_cache` is too small for the databases it holds
   ([runtime.md](internals/runtime.md#table-definition-cache)). Retrying does not help, and the

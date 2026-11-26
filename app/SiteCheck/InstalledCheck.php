@@ -61,13 +61,13 @@ final class InstalledCheck
         return self::appUrlPath($url) === '';
     }
 
-    /** Whether APP_URL would be usable but for a path after the host, under which the Modern pages do not work. */
+    /** Whether APP_URL would be usable but for a path after the host. */
     public static function subpathAppUrl(string $url): bool
     {
         return ! in_array(self::appUrlPath($url), [null, ''], true);
     }
 
-    /** The path of an https URL with a host and nothing else after it, '' for none; null for any other URL. */
+    /** The path after the host of an https URL without a query, fragment or user, '' for none; null for any other URL. */
     private static function appUrlPath(string $url): ?string
     {
         $parts = parse_url($url);
@@ -92,11 +92,11 @@ final class InstalledCheck
     private function appUrl(): Finding
     {
         $url = (string) config('app.url');
-        if (self::usableAppUrl($url)) {
+        if (self::usableAppUrl(rtrim($url, '/'))) {
             return Finding::ok('app.url', 'app_url', ['url' => $url]);
         }
 
-        return Finding::fail('app.url', self::subpathAppUrl($url) ? 'app_url_subpath' : 'app_url_unusable', ['url' => self::shownUrl($url)]);
+        return Finding::fail('app.url', self::subpathAppUrl(rtrim($url, '/')) ? 'app_url_subpath' : 'app_url_unusable', ['url' => self::shownUrl($url)]);
     }
 
     /** A URL with a user in it may carry a password, so only a URL without one is repeated. */
