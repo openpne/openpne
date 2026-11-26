@@ -167,9 +167,9 @@ year of public caching. A test enumerates them. Such a page's form cannot go bac
 recorded it and `no-referrer` withholds the Referer, so a refused submit redirects to the form by
 name, and `token` is never flashed with the old input (the password-reset form posts it). An Inertia
 location response (the 409 for a stale asset version, or a Modern tab under `classic_only`) replaces
-the route's response or comes before it, so
-[`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php) gives every one the
-same two headers.
+the route's response or comes before it (a route middleware's exception answers one too), so
+[`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php), outermost in the `web` group,
+gives every one the same two headers.
 
 The framework's other guards stand (GET, a matched route, not a prefetch, not
 precognitive).

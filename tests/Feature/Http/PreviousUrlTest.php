@@ -430,4 +430,21 @@ class PreviousUrlTest extends TestCase
             ->assertStatus(409)
             ->assertHeader('X-Inertia-Location', url('/login'));
     }
+
+    public function test_a_stale_tab_the_limiter_turns_away_is_sent_on_with_the_headers_too(): void
+    {
+        [$url] = $this->secretLink('register');
+        config(['openpne.surface_mode' => 'classic_only']);
+        $headers = ['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'];
+
+        // The route's limiter throws before NoStore, NoReferrer and HandleInertiaRequests are entered.
+        for ($i = 0; $i < 10; $i++) {
+            $this->get($url);
+        }
+
+        $this->withHeaders($headers)->get($url)->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', url($url))
+            ->assertHeader('Cache-Control', 'no-store, no-transform, private')
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+    }
 }
