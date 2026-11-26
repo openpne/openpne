@@ -24,7 +24,7 @@ class JoinDefaultGroups
         }
 
         // The plain read may answer from the caller's REPEATABLE READ snapshot, older than an admin's unset;
-        // a locking read sees the latest commit.
+        // a locking read sees the latest commit, taken by key so the unindexed flag locks no other group.
         $groupIds = Group::query()->whereKey($candidates)->where('is_default', true)->orderBy('id')->sharedLock()->pluck('id');
 
         $now = now();

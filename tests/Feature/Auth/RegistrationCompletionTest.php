@@ -252,7 +252,7 @@ class RegistrationCompletionTest extends TestCase
             if (! $failed && str_contains($sql, 'insert') && str_contains($sql, 'group_members')) {
                 $failed = true;
 
-                throw new QueryException('testing', $sql, [], new \PDOException('Lock wait timeout exceeded'));
+                throw new QueryException('testing', $sql, [], new \PDOException('General error'));
             }
         });
 

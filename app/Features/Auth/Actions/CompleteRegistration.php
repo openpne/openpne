@@ -30,7 +30,7 @@ class CompleteRegistration
      * @param  array<string, mixed>  $input  the posted form (name, password, profile); email is ignored
      *
      * @throws ValidationException name/password/profile failed validation
-     * @throws QueryException the email was claimed between check and insert
+     * @throws QueryException the email was claimed between check and insert, or another write failed
      * @throws MemberCapacityReached no seat left; the token is kept so the link works once one frees up
      */
     public function __invoke(RegistrationToken $pending, array $input): Member

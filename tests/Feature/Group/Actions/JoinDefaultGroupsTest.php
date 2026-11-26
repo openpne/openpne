@@ -6,6 +6,7 @@ use App\Features\AiAccount\Actions\CreateAiAccount;
 use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Group\GroupJoinedNotification;
@@ -47,6 +48,18 @@ class JoinDefaultGroupsTest extends TestCase
         }
         $this->assertDatabaseMissing('group_members', ['group_id' => $other->getKey(), 'member_id' => $member->getKey()]);
         $this->assertDatabaseMissing('group_join_requests', ['member_id' => $member->getKey()]);
+    }
+
+    public function test_each_default_group_gets_its_own_talk_cursor(): void
+    {
+        $groups = Group::factory()->count(2)->create(['is_default' => true]);
+        $latest = $groups->map(fn (Group $group): int => GroupMessage::factory()->create(['group_id' => $group->getKey()])->getKey());
+
+        $member = $this->register();
+
+        foreach ($groups as $i => $group) {
+            $this->assertSame($latest[$i], (int) GroupMember::where('group_id', $group->getKey())->where('member_id', $member->getKey())->value('talk_read_message_id'));
+        }
     }
 
     public function test_the_group_admins_are_not_notified(): void
