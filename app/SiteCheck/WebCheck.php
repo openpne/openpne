@@ -43,7 +43,7 @@ final class WebCheck
     {
         $url = rtrim((string) config('app.url'), '/');
         if (! InstalledCheck::usableAppUrl($url)) {
-            return [Finding::unknown('web', 'web_no_app_url')];
+            return [Finding::unknown('web', InstalledCheck::subpathAppUrl($url) ? 'web_app_url_subpath' : 'web_no_app_url')];
         }
         if ($parentUrl !== null && ! in_array(parse_url($parentUrl, PHP_URL_SCHEME), ['http', 'https'], true)) {
             return [Finding::unknown('web', 'web_parent_url_unusable')];

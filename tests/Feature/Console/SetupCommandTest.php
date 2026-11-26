@@ -151,7 +151,7 @@ class SetupCommandTest extends TestCase
         $copy = null;
 
         $this->answerSite($this->runSetup())
-            ->expectsChoice('Database', 'sqlite', ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL or MariaDB (the host\'s database server)'])
+            ->expectsChoice('Database', 'sqlite', ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL or MariaDB (a database server)'])
             ->expectsChoice('Mail', 'later', ['later' => 'Later (nothing is sent until then)', 'smtp' => 'An SMTP server'])
             ->expectsOutputToContain('none is kept in the log either')
             ->expectsChoice('Background work', 'deferred', $this->queueChoices())
@@ -185,6 +185,8 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsQuestion('The site\'s address', 'https://sns.example.com/sns')
+            ->expectsOutputToContain('its Modern pages do not work under a path')
+            ->expectsQuestion('The site\'s address', 'http://sns.example.com')
             ->expectsOutputToContain('nothing after the domain')
             ->expectsQuestion('The site\'s address', self::URL.'/')
             ->expectsQuestion('The site\'s name', '(true)')
@@ -222,7 +224,7 @@ class SetupCommandTest extends TestCase
         $this->answerSite($this->runSetup())
             ->expectsConfirmation('Go on with MySQL or MariaDB?', 'yes')
             ->expectsOutputToContain('SQLite cannot be used here: PHP on the command line has no sqlite3 extension, which the backup uses.')
-            ->expectsOutputToContain('The database is MySQL or MariaDB, as SQLite cannot be used here (the check above says why). It needs a database on the host\'s MySQL server 8.0.17 or later, or MariaDB server 10.11 or later.')
+            ->expectsOutputToContain('The database is MySQL or MariaDB, as SQLite cannot be used here (the check above says why). It needs a database for the site on a MySQL server 8.0.17 or later, or a MariaDB server 10.11 or later.')
             ->expectsQuestion('Database server', '127.0.0.1')
             ->expectsQuestion('Port', '1')
             ->expectsQuestion('Database name', 'site_db')
@@ -295,7 +297,7 @@ class SetupCommandTest extends TestCase
         $this->sqliteState['extension'] = true;
         $this->tools('mysqldump');
         $this->fakeDatabaseServer('10.6.28-MariaDB-ubu2204');
-        $databases = ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL or MariaDB (the host\'s database server)'];
+        $databases = ['sqlite' => 'SQLite (a file in openpne-data/)', 'mysql' => 'MySQL or MariaDB (a database server)'];
 
         $this->answerSite($this->runSetup())
             ->expectsChoice('Database', 'mysql', $databases)
@@ -328,7 +330,7 @@ class SetupCommandTest extends TestCase
             ->expectsQuestion('Database name', 'site_db')
             ->expectsQuestion('User name', 'site')
             ->expectsQuestion('Password', 'Sekret-9x')
-            ->expectsOutputToContain('The server is MariaDB 10.6.28, and OpenPNE runs on MariaDB 10.11 or later only. Enter a MySQL server 8.0.17 or later, or a MariaDB server 10.11 or later, if the host has one.')
+            ->expectsOutputToContain('The server is MariaDB 10.6.28, and OpenPNE runs on MariaDB 10.11 or later only. Where a MySQL server 8.0.17 or later, or a MariaDB server 10.11 or later, can be used, enter its settings.')
             ->expectsConfirmation('Enter them again?', 'no')
             ->assertFailed();
 

@@ -36,6 +36,7 @@ return [
         'app_key_missing' => 'APP_KEY が空です: :php artisan key:generate',
         'app_url' => 'APP_URL は :url です。',
         'app_url_unusable' => 'APP_URL が :url です。https:// で始まり、ホスト名の後ろにパスの無い URL にしてください(例 https://sns.example.com)。',
+        'app_url_subpath' => 'APP_URL が :url で、ホスト名の後ろにパスがあります。OpenPNE はホスト名の直下でだけ動きます。パスの下では Modern の画面が動きません。サイト専用のホスト名(サブドメインなど。例 https://sns.example.com)を用意して、.env の APP_URL をその URL にしてください。',
         'db_backup_tool' => 'データベースのバックアップには :path を使います。',
         'db_backup_sqlite' => 'データベースのバックアップには :php artisan openpne:backup-sqlite を使います。',
         'db_backup_sqlite_missing' => 'コマンドの PHP に sqlite3 拡張がありません。SQLite のデータベースのバックアップ(:php artisan openpne:backup-sqlite、docs/updating.md)に要ります。',
@@ -73,7 +74,8 @@ return [
         'mail_log_discarded' => 'メールは送られず、ログにも残りません。MAIL_MAILER=log は debug レベルでログに書きますが、LOG_LEVEL の設定で出力されません。送るには、.env に SMTP の設定を書いてください。',
         'mail_array' => 'メールは送られません。MAIL_MAILER=array は、どこにも残しません。送るには、.env に SMTP の設定を書いてください。',
 
-        'web_no_app_url' => '確認していません。APP_URL が https:// で始まる URL ではありません。',
+        'web_no_app_url' => '確認していません。APP_URL が、https:// で始まり、ホスト名の後ろに何も付かない URL ではありません。',
+        'web_app_url_subpath' => '確認していません。APP_URL のホスト名の後ろにパスがあります。OpenPNE はホスト名の直下でだけ動きます。パスの下では Modern の画面が動きません。サイト専用のホスト名(サブドメインなど)を用意して、.env の APP_URL をその URL にしてください。',
         'web_parent_url_unusable' => '確認していません。--parent-url が http:// か https:// で始まる URL ではありません。',
         'web_cannot_write' => '確認していません。:path に書き込めません。',
         'web_busy' => '確認していません。別の Web からの確認が動いています。終わってから、もう一度実行してください。',
@@ -209,8 +211,9 @@ return [
         'done' => '完了しました。足りないものがあれば、:php artisan openpne:check が言います。',
 
         'url' => 'サイトの URL',
-        'url_hint' => 'https:// とドメインだけ(後ろに何も付けない)',
+        'url_hint' => 'https:// とドメインだけ(サブドメインでもよい。後ろに何も付けない)',
         'url_unusable' => 'https:// で始まり、ドメインの後ろに何も付かない URL を入力してください(https://sns.example.com)。',
+        'url_subpath' => 'OpenPNE はホスト名の直下でだけ動きます。パスの下では Modern の画面が動きません。サイト専用のホスト名(サブドメインなど)の、後ろに何も付かない URL を入力してください(https://sns.example.com)。',
         'name' => 'サイトの名前',
         'name_hint' => '管理画面で名前を設定するまで、これを表示します',
         'timezone' => 'タイムゾーン',

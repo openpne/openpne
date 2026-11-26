@@ -40,6 +40,11 @@ A server you administer is what the steps assume. A host where you cannot is cov
   ([MariaDB](internals/text-comparison.md#mariadb)). A SQLite site also needs the `sqlite3`
   extension on the command line, which takes the backup [updating.md](updating.md) asks for.
 - **A web server** that hands requests to PHP: nginx with PHP-FPM, or Apache.
+- **A host name for the site alone**, such as `sns.example.com`, with the site at its root. A
+  subdomain of a domain that serves something else does. Under a path, such as
+  `https://example.com/sns/`, the Modern pages do not work, and `php artisan openpne:check` refuses
+  such an `APP_URL`. A site that was at an address under a path redirects it, as
+  [Moving from an address under a path](#moving-from-an-address-under-a-path) says.
 - **A shell** on the server. Cron is not required: step 6 uses it for the scheduler, which a site
   runs without, and offers it as one way to run the queue.
 - Nothing to build with, when the release is installed from its archive. A release taken from git
@@ -648,6 +653,30 @@ there. All of those send mail.
   from an archive brings a new one, and [updating.md](updating.md) closes it again.
 - `storage/` and `.env` can live outside the release's directory as well
   ([runtime.md](internals/runtime.md)); an update then carries neither.
+
+## Moving from an address under a path
+
+A site that was served under a path, such as an OpenPNE 3 site at `https://example.com/sns/`, moves
+to a host name of its own (`https://sns.example.com` here). Links to the old address, in bookmarks,
+search results and the posts themselves (the upgrade leaves them as written), keep working where
+whatever answers for `example.com` redirects them, keeping the rest of the path and the query.
+
+On nginx, in the `server` block of `example.com`:
+
+```nginx
+rewrite ^/sns(/.*)?$ https://sns.example.com$1 permanent;
+```
+
+On Apache, and on a shared host, in an `.htaccess` in the folder that served the old site (`sns` in
+the document root of `example.com`), once the old site's files are out of it:
+
+```apache
+RewriteEngine On
+RewriteRule ^(.*)$ https://sns.example.com/$1 [R=301,L]
+```
+
+Both answer `301 Moved Permanently`, which browsers keep: `curl -sI https://example.com/sns/` shows
+the `Location` it sends.
 
 ## On a shared host
 

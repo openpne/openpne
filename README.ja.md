@@ -57,7 +57,7 @@ docker compose exec app php artisan openpne:member:invite you@example.com
 
 実際に運営するサイトには、`main` ブランチではなく、タグの付いたリリース(`v4.0.0-alpha.N`、[Releases](https://github.com/openpne/openpne/releases))をインストールします。`main` ブランチは開発用で、変更を取り込むたびに内容が変わります。
 
-サーバーへのインストール方法は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3・8.4・8.5 のいずれか、SQLite・MySQL・MariaDB のいずれか、Web サーバー、キューのジョブを実行する手段です。リリースにアーカイブが付いていれば、サーバーに Composer や Node.js がなくてもインストールできます。アーカイブが付いていないリリースや、独自の変更を加えるサイトは、タグからインストールします。その場合は、両方が必要です。次のリリースへの更新手順は [docs/updating.md](docs/updating.md)(英語)にあります。
+サーバーへのインストール方法は [docs/installing.md](docs/installing.md)(英語)にあります。必要なものは、PHP 8.3・8.4・8.5 のいずれか、SQLite・MySQL・MariaDB のいずれか、Web サーバー、キューのジョブを実行する手段です。サイトには専用のホスト名が要ります(`sns.example.com` のようなサブドメインでも構いません)。`https://example.com/sns/` のようなパスの下では、Modern の画面が動きません。リリースにアーカイブが付いていれば、サーバーに Composer や Node.js がなくてもインストールできます。アーカイブが付いていないリリースや、独自の変更を加えるサイトは、タグからインストールします。その場合は、両方が必要です。次のリリースへの更新手順は [docs/updating.md](docs/updating.md)(英語)にあります。
 
 SSH でログインでき、Web サーバーはホストが管理する共用のレンタルサーバーには、[docs/installing-on-a-shared-host.md](docs/installing-on-a-shared-host.md)(英語)の短い手順があります。コマンドが設定を質問し、その答えでサイトをセットアップします。更新の手順も同じ文書にあります。
 
