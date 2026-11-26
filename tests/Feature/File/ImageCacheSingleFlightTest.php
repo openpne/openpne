@@ -7,6 +7,7 @@ use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
 use App\Files\ImageDrawBusyException;
+use App\Files\ImageDrawLock;
 use App\Files\ImageIntake;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessor;
@@ -425,6 +426,71 @@ class ImageCacheSingleFlightTest extends TestCase
         Exceptions::assertReported(fn (RuntimeException $e): bool => str_contains($e->getMessage(), 'cannot be made'));
     }
 
+    public function test_an_unusable_lock_is_reported_once_for_a_variant_and_its_canonical(): void
+    {
+        Exceptions::fake();
+        $this->app->when(ImageCache::class)->needs('$lockDirectory')->give('/dev/null/image-locks');
+        $file = $this->picture();
+        $this->dropCanonical($file);
+
+        $this->assertNotSame('', $this->variant($file));
+        $this->assertSame(2, $this->draws);
+        Exceptions::assertReportedCount(1);
+    }
+
+    public function test_a_lock_file_that_cannot_be_opened_draws_as_before_and_is_reported(): void
+    {
+        Exceptions::fake();
+        $file = $this->picture();
+        mkdir($this->lockPath('v', $this->variantKey($file)), 0777, true);
+
+        $this->assertNotSame('', $this->variant($file));
+        $this->assertSame(1, $this->draws);
+        Exceptions::assertReported(fn (RuntimeException $e): bool => str_contains($e->getMessage(), 'cannot be opened'));
+    }
+
+    public function test_a_log_that_cannot_be_written_still_draws_without_an_unusable_lock(): void
+    {
+        $this->app->when(ImageCache::class)->needs('$lockDirectory')->give('/dev/null/image-locks');
+        $file = $this->picture();
+        $this->breakTheLog();
+
+        $this->assertNotSame('', $this->variant($file));
+        $this->assertSame(1, $this->draws);
+    }
+
+    public function test_a_log_that_cannot_be_written_still_gives_up_the_wait_as_busy(): void
+    {
+        $file = $this->picture();
+        $this->hold('v', $this->variantKey($file));
+        $this->breakTheLog();
+
+        $this->assertThrows(fn () => $this->variant($file), ImageDrawBusyException::class);
+    }
+
+    public function test_a_viewer_who_waits_out_the_deadline_is_answered_503_with_a_retry_hint(): void
+    {
+        $file = $this->picture();
+        $this->dropCanonical($file);
+        $this->hold('c', $this->canonicalKey($file));
+
+        $this->actingAs(Member::findOrFail($file->related_entity_id))
+            ->get(route('image.show', ['format' => 'png', 'geometry' => 'w_h', 'name' => $file->name, 'ext' => 'png']))
+            ->assertStatus(503)
+            ->assertHeader('Retry-After', '30');
+        $this->assertSame(0, $this->draws);
+    }
+
+    public function test_a_placed_check_that_throws_keeps_the_draw_and_leaves_the_note(): void
+    {
+        $drawn = (new ImageDrawLock($this->imageLockDirectory()))
+            ->run('v', 'key', fn (): ?string => null, fn (): string => 'drawn', fn (): bool => throw new RuntimeException('unreadable'));
+
+        $this->assertSame('drawn', $drawn);
+        $this->assertTrue($this->takeable('v', 'key'));
+        $this->assertMatchesRegularExpression('/\A'.sha1('key').'[0-9a-f]{16}\z/', (string) file_get_contents($this->lockPath('v', 'key')));
+    }
+
     private function drawing(): void
     {
         $this->draws++;
@@ -548,6 +614,11 @@ class ImageCacheSingleFlightTest extends TestCase
                 return $this->onGet === null ? parent::get($path) : ($this->onGet)($path, fn (string $p): ?string => parent::get($p));
             }
         });
+    }
+
+    private function breakTheLog(): void
+    {
+        config(['logging.default' => 'unwritable', 'logging.channels.unwritable' => ['driver' => 'single', 'path' => '/dev/null/laravel.log']]);
     }
 
     private function disk(): Filesystem

@@ -9,10 +9,10 @@ use RuntimeException;
 use Throwable;
 
 /**
- * One request's turn at drawing a cache key: an OS flock on one of 256 fixed files per set, waited for
- * until ten seconds after the request's first miss, every nested wait spending the same deadline
- * (docs/internals/images.md, "Drawing once"). A caller holds no write transaction, the holder's own
- * writes otherwise waiting on it.
+ * One ImageCache call's turn at drawing a cache key: an OS flock on one of 256 fixed files per set,
+ * waited for until ten seconds after the call's first miss, every nested wait spending the same
+ * deadline (docs/internals/images.md, "Drawing once"). The diagnostics are best effort, so a log that
+ * cannot be written still ends in a draw or in ImageDrawBusyException.
  */
 final class ImageDrawLock
 {
@@ -27,6 +27,8 @@ final class ImageDrawLock
     private readonly int $deadline;
 
     private int $slept = 0;
+
+    private bool $reported = false;
 
     public function __construct(private readonly string $directory)
     {
@@ -62,13 +64,13 @@ final class ImageDrawLock
 
         if (! $wouldBlock) {
             fclose($handle);
-            report(new RuntimeException("The image draw lock [{$path}] refused flock; drawing without it."));
+            $this->unusable("The image draw lock [{$path}] refused flock; drawing without it.");
 
             return $draw();
         }
 
         try {
-            $found = $this->wait($handle, $key, $find);
+            $found = $this->wait($handle, $path, $key, $find);
         } finally {
             fclose($handle);
         }
@@ -85,7 +87,7 @@ final class ImageDrawLock
      *
      * @throws ImageDrawBusyException
      */
-    private function wait($handle, string $key, Closure $find): ?string
+    private function wait($handle, string $path, string $key, Closure $find): ?string
     {
         $base = $this->read($handle);
         $mine = sha1($key);
@@ -108,8 +110,14 @@ final class ImageDrawLock
                 }
             }
 
-            if (@flock($handle, LOCK_SH | LOCK_NB)) {
+            if (@flock($handle, LOCK_SH | LOCK_NB, $wouldBlock)) {
                 @flock($handle, LOCK_UN);
+
+                return $find();
+            }
+
+            if (! $wouldBlock) {
+                $this->unusable("The image draw lock [{$path}] refused flock; drawing without it.");
 
                 return $find();
             }
@@ -139,7 +147,7 @@ final class ImageDrawLock
                 $note = true;
             }
 
-            // Overwritten in place at a fixed length and never truncated, so a full disk can still take it.
+            // Overwritten in place at a fixed length and never truncated, so once written a full disk can still take it.
             if ($note) {
                 rewind($handle);
                 @fwrite($handle, sha1($key).bin2hex(random_bytes(8)));
@@ -157,7 +165,7 @@ final class ImageDrawLock
     private function open(string $path)
     {
         if (! is_dir($this->directory) && ! @mkdir($this->directory, 0777, true) && ! is_dir($this->directory)) {
-            report(new RuntimeException("The image draw lock directory [{$this->directory}] cannot be made; drawing without it."));
+            $this->unusable("The image draw lock directory [{$this->directory}] cannot be made; drawing without it.");
 
             return null;
         }
@@ -165,7 +173,7 @@ final class ImageDrawLock
         $handle = @fopen($path, 'c+');
 
         if ($handle === false) {
-            report(new RuntimeException("The image draw lock [{$path}] cannot be opened; drawing without it."));
+            $this->unusable("The image draw lock [{$path}] cannot be opened; drawing without it.");
 
             return null;
         }
@@ -202,10 +210,18 @@ final class ImageDrawLock
         return min(intdiv($this->deadline - hrtime(true), 1000), self::WAIT_US - $this->slept);
     }
 
+    private function unusable(string $message): void
+    {
+        if (! $this->reported) {
+            $this->reported = true;
+            rescue(fn () => report(new RuntimeException($message)), report: false);
+        }
+    }
+
     /** @throws ImageDrawBusyException */
     private function busy(string $key): never
     {
-        Log::warning('An image draw outlasted the wait for it.', ['key' => $key]);
+        rescue(fn () => Log::warning('An image draw outlasted the wait for it.', ['key' => $key]), report: false);
 
         throw new ImageDrawBusyException("The draw of [{$key}] outlasted this request's wait for it.");
     }

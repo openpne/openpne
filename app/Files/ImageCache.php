@@ -136,6 +136,7 @@ class ImageCache
         return null;
     }
 
+    /** No caller of bytes() or canonical() holds a write transaction, the holder's own writes otherwise waiting on it (docs/internals/images.md, "Key invariants"). */
     private function lock(): ImageDrawLock
     {
         return new ImageDrawLock($this->lockDirectory ?? storage_path('framework/image-locks'));

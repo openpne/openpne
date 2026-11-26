@@ -376,13 +376,14 @@ would not, and is then refused like any other over it.
 
 ## Drawing once
 
-A request that misses a canonical or a variant draws it only after taking the cache key's lock
-([`ImageDrawLock`](../../app/Files/ImageDrawLock.php)): an OS `flock` on one of 256 fixed files under
+A request that misses a canonical or a variant takes the cache key's lock before drawing it, or waits
+for whoever holds it ([`ImageDrawLock`](../../app/Files/ImageDrawLock.php)): an OS `flock` on one of 256 fixed files under
 `storage/framework/image-locks/`, chosen by the key's hash, one set for canonicals and another for
 variants, so a variant's holder waiting on its canonical never waits on itself. The holder looks at
 the cache again, draws, stores, and does what a draw does (the `files` facts, the check for a delete
-that committed meanwhile) before letting go. The files are never deleted, and the operating system
-lets a lock go when its process ends, a fatal error or a kill included, so no lock has an expiry.
+that committed meanwhile) before letting go. The files are never deleted, and a lock goes when its
+process ends, a kill included, or when PHP closes the request's files after a fatal error, so no lock
+has an expiry.
 
 A request that finds the lock taken waits, and never takes it:
 
@@ -394,17 +395,24 @@ A request that finds the lock taken waits, and never takes it:
   draw at once. The note is a hint: a waiter that misses it waits on.
 - A waiter also reads its own key from the cache every half second, so a holder of another key on
   the same file is not waited out.
-- Ten seconds after the request's first miss the wait is given up, after a last look at the cache,
+- Ten seconds after the first miss of an `ImageCache::bytes()` or `canonical()` call the wait is
+  given up, after a last look at the cache,
   with `ImageDrawBusyException`, an `ImageProcessorUnavailableException`: a 503 with `Retry-After: 30`
   to a viewer, a stop to `DrawImageVariants`, a tool error to MCP, the default icon from `AppIcon`. A
-  variant's wait and its canonical's share the ten seconds. They bound the wait, not the answer: a
-  holder draws for as long as it takes.
+  variant's wait and its canonical's share the ten seconds; a job or a tool call drawing several
+  images has ten seconds for each. They bound the wait, not the answer: a holder draws for as long as
+  it takes.
 
 Not covered: `openpne:image-cache warm` / `rebuild` and an upload's write-through draw without the
-lock; a waiter drawing without it may overlap a new holder of the same key; web servers that do not
-share `storage/` draw once each; a filesystem whose `flock` does not exclude across processes (NFS)
-goes undetected. When the directory or a file cannot be made, or `flock` fails other than by being
-taken, the request draws without the lock as before and the failure is reported.
+lock; the waiters sent to draw by a let-go or a note draw alongside each other, and may overlap a new
+holder of the same key; web servers that do not share `storage/` draw once each; a filesystem whose
+`flock` does not exclude across processes (NFS) goes undetected.
+
+The lock holds only where the web server, the queue worker and the CLI open the same files: run them
+as the same user, and do not delete or replace `storage/framework/image-locks/` while the site runs.
+When the directory or a file cannot be made or opened (a lock file another user made), or `flock`
+fails other than by being taken, the call draws without the lock as before and the failure is
+reported once per call. A log that cannot be written is ignored, here and when a wait is given up.
 
 ## The fast path
 
@@ -486,9 +494,9 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
 ## Key invariants
 
 - A variant request is a source for a `srcset`, never the painted box — except on Classic.
-- A cache key is drawn by one request per host at a time, but for what [Drawing once](#drawing-once)
-  lists; a waiter never takes the exclusive lock, and no caller of `ImageCache::bytes()` or
-  `canonical()` holds a write transaction.
+- A cache key is drawn after taking its lock or after waiting for it, two requests drawing it at once
+  only where [Drawing once](#drawing-once) says so; a waiter never takes the exclusive lock, and no
+  caller of `ImageCache::bytes()` or `canonical()` holds a write transaction.
 - `w` descriptors only, and only ever a candidate's true intrinsic width. A fit ladder without
   `files.width`/`height` to derive from ships no `srcset` at all.
 - A cell is cropped server-side at its own ratio; CSS `cover` may scale that source but never
