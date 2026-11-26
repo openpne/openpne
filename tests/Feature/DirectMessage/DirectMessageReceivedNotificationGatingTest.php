@@ -9,6 +9,7 @@ use App\Models\Member;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -39,6 +40,16 @@ class DirectMessageReceivedNotificationGatingTest extends TestCase
         $recipient->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
 
         $this->assertSame(['mail', 'database'], $this->channelsFor($sender, $recipient));
+    }
+
+    public function test_with_friends_off_the_only_friends_variant_covers_no_one(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        [$sender, $recipient] = Member::factory()->count(2)->create()->all();
+        $this->makeFriends($sender, $recipient);
+        $recipient->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
+
+        $this->assertSame(['database'], $this->channelsFor($sender, $recipient));
     }
 
     public function test_both_kinds_off_drop_mail_even_for_a_friend_sender(): void

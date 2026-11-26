@@ -128,7 +128,8 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
             return true;
         }
 
-        return $notifiable->isFriendsWith($this->sender)
+        return NotificationKind::DirectMessageNewOnlyFriends->isAvailable()
+            && $notifiable->isFriendsWith($this->sender)
             && $notifiable->wantsNotification(NotificationKind::DirectMessageNewOnlyFriends, $channel);
     }
 }

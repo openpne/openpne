@@ -128,8 +128,9 @@ feature notification namespaces so a class added later cannot skip either half.
 
 Mark-all-read runs through the same filter, so **a hidden row stays unread** and returns exactly as
 the member left it. Opening one 404s rather than redirecting to a switched-off unit's screen. The
-member's notification settings drop a unit's kinds while it is off (`NotificationCategory::feature()`);
-the stored opt-ins stay and apply again when it returns.
+member's notification settings drop a unit's kinds while it is off (`NotificationKind::isAvailable()`:
+the category's unit, plus the friend unit for a friends-only variant); the stored opt-ins stay and
+apply again when it returns.
 
 ## File delivery
 
@@ -175,7 +176,9 @@ doctrine governs member-selectable audiences only.
 
 What does go is the **friend lenses other features own**, because a lens's purpose *is* the unit: the
 friend diary feed (`diary.list_friend`, gated as `diary` **and** `friend`), the diary hub tab and the
-dashboard digest of it, the friend-scoped gadgets, and the home feed's friend branch
+dashboard digest of it, the friend-scoped gadgets, the friends-only notification variants (neither
+offered nor delivered, so a member who kept only that variant hears nothing from the kind until the
+unit returns), and the home feed's friend branch
 ([`TimelineFeedScope::apply()`](../../app/Features/Timeline/TimelineFeedScope.php), so its three
 consumers follow from one place while the own-posts and all-members tiers stay). Two seams state the
 dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinTest`'s dependency map

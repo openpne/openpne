@@ -10,6 +10,7 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\Concerns\FakesWebPushTransport;
@@ -223,6 +224,27 @@ class NotificationSettingsPageTest extends TestCase
             ->assertSee(NotificationKind::GroupTalkMention->caption())
             // Dormant since the group-talk cutover: registered, but off the page.
             ->assertDontSee(NotificationKind::TimelineNewPostCommunity->caption());
+    }
+
+    public function test_with_friends_off_neither_surface_offers_a_friends_only_variant(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/member/config/notifications')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('form.groups', fn ($groups): bool => collect($groups)->flatMap(fn (array $group): array => $group['kinds'])
+                    ->every(fn (array $kind): bool => $kind['dependOnNot'] === null))
+                ->where('form.groups.0.kinds.0.kind', 'timeline_new_post')
+                ->where('form.groups.1.kinds.0.kind', 'diary_new_post')
+                ->where('form.groups.5.kinds.0.kind', 'direct_message_new'),
+            );
+
+        $classic = $this->actingAs($member)->get('/member/config?category=notification')
+            ->assertSee(NotificationKind::DirectMessageNew->caption());
+        foreach ([NotificationKind::TimelineNewPostOnlyFriends, NotificationKind::DiaryNewPostOnlyFriends, NotificationKind::DirectMessageNewOnlyFriends] as $kind) {
+            $classic->assertDontSee($kind->caption());
+        }
     }
 
     public function test_classic_category_page_explains_the_talk_settings_reach_and_lists_the_muted_rooms(): void

@@ -127,7 +127,8 @@ Every catalog item is registered so the one-shot upgrade can preserve stored cho
 `dependOnNot` encodes the extension's "(x only)" variants: `DirectMessageNewOnlyFriends` only takes
 effect while `DirectMessageNew` is off — an enabled broad kind already covers the narrower audience.
 Delivery reproduces the extension's chain: broad kind on → deliver; else narrow kind on and the
-relation holds (e.g. sender is a friend) → deliver.
+relation holds (e.g. sender is a friend) → deliver. The narrow step needs the friend unit on
+([feature-toggles.md](feature-toggles.md#what-a-disabled-unit-does-not-change)).
 
 ## Mail headers
 

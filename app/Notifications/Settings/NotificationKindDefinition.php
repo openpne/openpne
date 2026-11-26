@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications\Settings;
 
+use App\Support\Feature;
+
 /** Caption is an untranslated source string; __() is applied where it is displayed. */
 final readonly class NotificationKindDefinition
 {
@@ -26,5 +28,10 @@ final readonly class NotificationKindDefinition
          * from the settings UI.
          */
         public bool $isWired = false,
+        /**
+         * A second unit this kind needs beyond its category's: a friends-only variant is a lens the
+         * friend unit owns, so it is neither offered nor delivered while that unit is off.
+         */
+        public ?Feature $dependsOn = null,
     ) {}
 }

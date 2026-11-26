@@ -60,7 +60,7 @@ class BroadcastTimelinePosted implements ShouldQueue
         $audience->whereNotIn('id', $this->mentionedMemberIds);
 
         $author = $post->member;
-        $friendIds = $recipients->friendIds($author)->flip();
+        $friendIds = NotificationKind::TimelineNewPostOnlyFriends->isAvailable() ? $recipients->friendIds($author)->flip() : collect();
         // The shared posting template is admin-toggleable; resolved once per broadcast, not per recipient.
         $mailEnabled = $templates->isEnabled(MailTemplate::TimelinePostingNotified);
 

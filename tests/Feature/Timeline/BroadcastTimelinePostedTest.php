@@ -13,6 +13,7 @@ use App\Models\TimelinePost;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Notifications\Timeline\TimelinePostedNotification;
+use App\Support\Feature;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +165,20 @@ class BroadcastTimelinePostedTest extends TestCase
         $this->broadcast($this->newPost($author));
 
         Notification::assertNotSentTo($stranger, TimelinePostedNotification::class);
+    }
+
+    public function test_with_friends_off_the_friends_only_variant_reaches_no_one(): void
+    {
+        Notification::fake();
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        [$author, $friend] = Member::factory()->count(2)->create()->all();
+        $this->makeFriends($author, $friend);
+        $friend->setNotificationSetting(NotificationKind::TimelineNewPost, NotificationChannel::Mail, false);
+        $friend->setNotificationSetting(NotificationKind::TimelineNewPost, NotificationChannel::Web, false);
+
+        $this->broadcast($this->newPost($author));
+
+        Notification::assertNotSentTo($friend, TimelinePostedNotification::class);
     }
 
     public function test_both_kinds_off_drops_a_friend_entirely(): void
