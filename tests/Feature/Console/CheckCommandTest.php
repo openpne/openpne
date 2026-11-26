@@ -773,6 +773,14 @@ class CheckCommandTest extends TestCase
         $this->assertStringNotContainsString('not an https:// address', $output);
     }
 
+    public function test_an_app_url_ending_in_slashes_passes_as_setup_takes_it(): void
+    {
+        $this->installEnv();
+        config(['app.url' => self::URL.'//']);
+
+        $this->assertStringContainsString('[ OK ] APP_URL is '.self::URL.'//.', $this->runCheck(['--only' => 'installed']));
+    }
+
     public function test_the_parent_address_is_not_repeated_with_a_user_in_it(): void
     {
         $this->installEnv();
