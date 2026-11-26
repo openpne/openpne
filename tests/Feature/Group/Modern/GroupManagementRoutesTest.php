@@ -113,6 +113,17 @@ class GroupManagementRoutesTest extends TestCase
         ]);
     }
 
+    public function test_a_category_that_no_longer_exists_is_reported_by_its_label(): void
+    {
+        $this->actingAs(Member::factory()->create())->post('/groups/edit', [
+            'name' => 'Stale Category',
+            'register_policy' => 'open',
+            'topic_read_access' => 'everyone',
+            'topic_post_authority' => 'members',
+            'group_category_id' => 999,
+        ])->assertSessionHasErrors(['group_category_id' => 'The selected Category is invalid.']);
+    }
+
     public function test_modern_create_defaults_join_notifications_on(): void
     {
         $member = Member::factory()->create();

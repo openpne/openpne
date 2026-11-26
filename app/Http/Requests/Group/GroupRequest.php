@@ -46,6 +46,12 @@ class GroupRequest extends FormRequest
         ];
     }
 
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return ['group_category_id' => __('Category')];
+    }
+
     public function toData(): GroupFormData
     {
         $validated = $this->validated();

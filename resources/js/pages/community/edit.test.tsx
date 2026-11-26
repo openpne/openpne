@@ -76,7 +76,7 @@ test('an existing group is submitted with Save', () => {
     expect(screen.queryByRole('button', { name: 'Create' })).toBeNull();
 });
 
-// The field names are GroupRequest::rules(): a key the request does not validate is dropped silently.
+// Mirrors GroupRequest::rules() by hand: a key outside validated() is dropped without an error.
 test('the category is submitted under the key the server validates', () => {
     renderEdit({ ...existing, categoryId: 7 });
 
