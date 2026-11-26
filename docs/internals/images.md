@@ -393,8 +393,9 @@ A request that finds the lock taken waits, and never takes it:
 - A holder that leaves nothing in the cache (a refused write, a processor error, a read budget
   exceeded) first writes a note naming its key into the file, so the waiters behind the next holder
   draw at once. The note is a hint: a waiter that misses it waits on.
-- A waiter also reads its own key from the cache every half second, so a holder of another key on
-  the same file is not waited out.
+- A waiter also reads its own key from the cache every half second, so once its own key is placed a
+  holder of another key on the same file is not waited out. While its key is still missing, holders
+  of other keys taking turns on the file can keep it waiting until the deadline.
 - Ten seconds after the first miss of an `ImageCache::bytes()` or `canonical()` call the wait is
   given up, after a last look at the cache,
   with `ImageDrawBusyException`, an `ImageProcessorUnavailableException`: a 503 with `Retry-After: 30`
