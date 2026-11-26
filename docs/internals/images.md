@@ -316,7 +316,7 @@ canonical of a still picture, a GIF peaks at about 17 bytes a pixel (over 800 MB
 at about 4, and decodes running together take up to the sum of theirs, so a memory limit on the
 container has to hold `IMGPROXY_WORKERS` pictures at the pixel limit (the compose file sets neither);
 over it the container is killed and every picture in flight fails. `OPENPNE_IMAGE_MAX_SOURCE_PIXELS`
-lowers that limit for a still whose header PHP reads; an animation's frames and a HEIC PHP cannot read
+lowers that limit for a still whose header PHP reads; an animation's frames and a HEIC
 are bounded only by `IMGPROXY_MAX_SRC_RESOLUTION`, so size for those at the sidecar's budget.
 
 Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
