@@ -40,7 +40,7 @@ class SecretUrlRoutesTest extends TestCase
                 continue;
             }
 
-            $middleware = $route->gatherMiddleware();
+            $middleware = app('router')->gatherRouteMiddleware($route);
             $this->assertContains(NoStore::class, $middleware, "[{$name}] puts a secret in its URL but lacks NoStore.");
             $this->assertContains(NoReferrer::class, $middleware, "[{$name}] puts a secret in its URL but lacks NoReferrer.");
         }
