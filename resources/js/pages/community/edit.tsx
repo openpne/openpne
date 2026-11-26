@@ -51,7 +51,7 @@ export default function CommunityEdit() {
         name: group?.name ?? '',
         description: group?.description ?? '',
         register_policy: group?.registerPolicy ?? policies[0]?.slug ?? 'open',
-        community_category_id: group?.categoryId ? String(group.categoryId) : '',
+        group_category_id: group?.categoryId ? String(group.categoryId) : '',
         is_join_notification_enabled: group?.isJoinNotificationEnabled ?? true,
         topic_read_access: group?.topicReadAccess ?? topicReadChoices[0]?.slug ?? 'everyone',
         topic_post_authority: group?.topicPostAuthority ?? topicPostChoices[0]?.slug ?? 'members',
@@ -158,11 +158,11 @@ export default function CommunityEdit() {
                         {t('Notify admins when a member joins.')}
                     </label>
 
-                    <Field label={t('Category')} htmlFor="community_category_id">
+                    <Field label={t('Category')} htmlFor="group_category_id" error={form.errors.group_category_id}>
                         <Select
-                            id="community_category_id"
-                            value={form.data.community_category_id}
-                            onChange={(e) => form.setData('community_category_id', e.target.value)}
+                            id="group_category_id"
+                            value={form.data.group_category_id}
+                            onChange={(e) => form.setData('group_category_id', e.target.value)}
                         >
                             <option value="">{t('No category')}</option>
                             {categories.map((category) => (
