@@ -318,9 +318,13 @@ class PreviousUrlTest extends TestCase
         $member->forceFill(['two_factor_confirmed_at' => now()])->save();
     }
 
-    private function storedSessions(): string
+    /** The test app reuses one session handler, which writes a row only for the first request. */
+    private function sessionHolds(string $raw): bool
     {
-        return DB::table('sessions')->pluck('payload')->map(fn (string $payload): string => base64_decode($payload))->implode("\n");
+        $stored = DB::table('sessions')->pluck('payload')->map(fn (string $payload): string => base64_decode($payload))->implode("\n");
+        $this->assertNotSame('', $stored, 'the session was not written, so this proves nothing');
+
+        return str_contains($stored, $raw) || str_contains(json_encode(session()->all(), JSON_THROW_ON_ERROR), $raw);
     }
 
     #[DataProvider('secretLinks')]
@@ -329,14 +333,14 @@ class PreviousUrlTest extends TestCase
         config(['session.driver' => 'database']);
         [$url, $raw] = $this->secretLink($kind);
 
-        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
         $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, no-transform, private');
+        $this->assertFalse($this->sessionHolds($raw));
 
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)->assertOk();
         $this->assertStringEndsWith('/login', (string) $this->previousUrl());
-        $this->assertNotSame('', $this->storedSessions(), 'the session was not written, so this proves nothing');
-        $this->assertStringNotContainsString($raw, $this->storedSessions());
     }
 
     public function test_a_refused_mfa_reset_returns_to_the_form(): void
@@ -360,19 +364,18 @@ class PreviousUrlTest extends TestCase
         [$url, $raw] = $this->secretLink('reset');
         $email = Member::sole()->email;
 
-        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
         $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)->assertOk();
 
         // Refused by the password rules, then by the broker for an address the token is not for.
         $this->post('/reset-password', ['token' => $raw, 'email' => $email, 'password' => 'Sufficiently-long-pw-1', 'password_confirmation' => 'different'])
             ->assertRedirect($url)
             ->assertSessionHasErrors('password');
-        $this->assertStringNotContainsString($raw, $this->storedSessions());
+        $this->assertFalse($this->sessionHolds($raw));
 
         $this->post('/reset-password', ['token' => $raw, 'email' => 'someone-else@example.com', 'password' => 'Sufficiently-long-pw-1', 'password_confirmation' => 'Sufficiently-long-pw-1'])
             ->assertRedirect("/reset-password/{$raw}?email=".urlencode('someone-else@example.com'))
             ->assertSessionHasErrors('email');
-        $this->assertStringNotContainsString($raw, $this->storedSessions());
+        $this->assertFalse($this->sessionHolds($raw));
 
         $this->post('/reset-password', ['email' => $email, 'password' => 'x'])
             ->assertRedirect('/forgot-password')
