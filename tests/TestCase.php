@@ -4,8 +4,10 @@ namespace Tests;
 
 use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Files\FileOwners;
+use App\Files\ImageCache;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -28,6 +30,9 @@ abstract class TestCase extends BaseTestCase
         // Every raster upload publishes a canonical, so the cache disk is faked for the whole suite.
         Storage::fake('image_cache');
 
+        // Per process and emptied after each test: a draw lock shared with a parallel process would turn a draw into a wait.
+        $this->app->when(ImageCache::class)->needs('$lockDirectory')->give($this->imageLockDirectory());
+
         // Seeded only for RefreshDatabase tests, which own an isolated per-process database; the others
         // share the base database across parallel processes and none depend on the seed.
         if ($this->usesRefreshDatabase() && Schema::hasTable('sns_settings')) {
@@ -37,6 +42,18 @@ abstract class TestCase extends BaseTestCase
             // members-only default is pinned by ProfileVisibilityPolicyTest itself.
             $this->setSnsSetting(SnsSettingKey::ProfileVisibilityPolicy, ProfileVisibilityPolicy::MemberChoice);
         }
+    }
+
+    protected function tearDown(): void
+    {
+        (new Filesystem)->deleteDirectory($this->imageLockDirectory());
+
+        parent::tearDown();
+    }
+
+    protected function imageLockDirectory(): string
+    {
+        return sys_get_temp_dir().'/openpne-image-locks-'.getmypid();
     }
 
     /**

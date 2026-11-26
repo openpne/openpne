@@ -76,7 +76,8 @@ same rung at the default quality.
 
 ## Drawn when posted
 
-A variant is otherwise drawn by the first request for it, inside that request. A picture attached to
+A variant is otherwise drawn by the first request for it, inside that request, and the requests for
+it that arrive meanwhile wait for that draw ([Drawing once](#drawing-once)). A picture attached to
 a post — a timeline post, a diary or its comment, a topic, an event or their comments, a talk
 message, a direct message — has the still rungs of its ladder (the 120px square, the three fit boxes
 and the four crops) drawn by a queued job
@@ -87,7 +88,7 @@ process, inside its `max_execution_time` ([runtime.md](runtime.md), "Queue"), th
 spawned per picture, and the last may fall back to either, so there the first view draws as before.
 A queue that refuses this job is reported, and the refusal does not fail the post. It is queued ten seconds ahead, so that a lone
 worker with nothing waiting takes the post's notifications first; a member who opens the post before the worker reaches
-it draws what they ask for themselves. It asks `ImageCache` for each rung as a view does and decides
+it draws what they ask for themselves, or waits for the job's draw of the same rung. It asks `ImageCache` for each rung as a view does and decides
 nothing about who may see the picture; a rung it does not reach — the worker stopped, the processor
 down, the file deleted meanwhile — is drawn by its first view, and nothing is retried. The `_a`
 rungs are left to the hero that asks for them, each costing about a canonical. The eight stills are
@@ -373,6 +374,38 @@ path is shown to the member as a temporary failure; on a read it is a 503 with `
 included, and every canonical already made keeps being served. A canonical that keeps its frames can outgrow the source cap where a GD still
 would not, and is then refused like any other over it.
 
+## Drawing once
+
+A request that misses a canonical or a variant draws it only after taking the cache key's lock
+([`ImageDrawLock`](../../app/Files/ImageDrawLock.php)): an OS `flock` on one of 256 fixed files under
+`storage/framework/image-locks/`, chosen by the key's hash, one set for canonicals and another for
+variants, so a variant's holder waiting on its canonical never waits on itself. The holder looks at
+the cache again, draws, stores, and does what a draw does (the `files` facts, the check for a delete
+that committed meanwhile) before letting go. The files are never deleted, and the operating system
+lets a lock go when its process ends, a fatal error or a kill included, so no lock has an expiry.
+
+A request that finds the lock taken waits, and never takes it:
+
+- Once the lock is let go, the waiter reads the cache: the bytes, a canonical's marker (a 404), or
+  nothing, and then it draws for itself without the lock — the holder failed, or held the file for
+  another key.
+- A holder that leaves nothing in the cache (a refused write, a processor error, a read budget
+  exceeded) first writes a note naming its key into the file, so the waiters behind the next holder
+  draw at once. The note is a hint: a waiter that misses it waits on.
+- A waiter also reads its own key from the cache every half second, so a holder of another key on
+  the same file is not waited out.
+- Ten seconds after the request's first miss the wait is given up, after a last look at the cache,
+  with `ImageDrawBusyException`, an `ImageProcessorUnavailableException`: a 503 with `Retry-After: 30`
+  to a viewer, a stop to `DrawImageVariants`, a tool error to MCP, the default icon from `AppIcon`. A
+  variant's wait and its canonical's share the ten seconds. They bound the wait, not the answer: a
+  holder draws for as long as it takes.
+
+Not covered: `openpne:image-cache warm` / `rebuild` and an upload's write-through draw without the
+lock; a waiter drawing without it may overlap a new holder of the same key; web servers that do not
+share `storage/` draw once each; a filesystem whose `flock` does not exclude across processes (NFS)
+goes undetected. When the directory or a file cannot be made, or `flock` fails other than by being
+taken, the request draws without the lock as before and the failure is reported.
+
 ## The fast path
 
 A generated variant costs a whole framework boot to serve, which on a small host is most of the time a
@@ -453,6 +486,9 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
 ## Key invariants
 
 - A variant request is a source for a `srcset`, never the painted box — except on Classic.
+- A cache key is drawn by one request per host at a time, but for what [Drawing once](#drawing-once)
+  lists; a waiter never takes the exclusive lock, and no caller of `ImageCache::bytes()` or
+  `canonical()` holds a write transaction.
 - `w` descriptors only, and only ever a candidate's true intrinsic width. A fit ladder without
   `files.width`/`height` to derive from ships no `srcset` at all.
 - A cell is cropped server-side at its own ratio; CSS `cover` may scale that source but never
