@@ -159,11 +159,17 @@ endpoint fetched without it would be recorded for a client without Fetch
 Metadata.
 
 A route with [`NoStore`](../../app/Http/Middleware/NoStore.php) is never recorded: its URL carries
-a secret, which the session store (a database row by default) would otherwise keep. Every GET route
+a secret, which the session store (a database row by default) would otherwise keep. Every route
 with a `{token}` parameter carries it, with `NoReferrer`, unless the token is no secret (the site
-icon's file name); a test enumerates them. Such a page's form cannot go back: the session never
+icon's file name, an access token's id); so do the password-reset submit, whose refusal redirects to
+a URL carrying the token, and Livewire's signed upload preview, which Livewire would answer with a
+year of public caching. A test enumerates them. Such a page's form cannot go back: the session never
 recorded it and `no-referrer` withholds the Referer, so a refused submit redirects to the form by
-name, and `token` is never flashed with the old input (the password-reset form posts it).
+name, and `token` is never flashed with the old input (the password-reset form posts it). An Inertia
+location response (the 409 for a stale asset version, or a Modern tab under `classic_only`) replaces
+the route's response or comes before it, so
+[`HandleInertiaRequests`](../../app/Http/Middleware/HandleInertiaRequests.php) gives every one the
+same two headers.
 
 The framework's other guards stand (GET, a matched route, not a prefetch, not
 precognitive).
