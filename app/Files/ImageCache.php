@@ -21,6 +21,7 @@ class ImageCache
     public function __construct(
         private readonly FileStorage $storage,
         private readonly ImageProcessor $processor,
+        private readonly ?string $lockDirectory = null,
     ) {}
 
     /**
@@ -54,7 +55,21 @@ class ImageCache
             $spec = $spec->animated();
         }
 
-        $bytes = $this->processor->process($this->canonical($file, $maxBytes), $file->type, $spec)->bytes;
+        $lock = $this->lock();
+
+        // A waiter reads only its own variant: a canonical's marker is judged by canonicalWithin(), after its hit.
+        return $lock->run(
+            'v',
+            $key,
+            fn (): ?string => $disk->exists($key) ? $disk->get($key) : null,
+            fn (): string => $this->drawVariant($file, $key, $spec, $maxBytes, $lock),
+            fn (): bool => $disk->exists($key),
+        );
+    }
+
+    private function drawVariant(File $file, string $key, ImageSpec $spec, ?int $maxBytes, ImageDrawLock $lock): string
+    {
+        $bytes = $this->processor->process($this->canonicalWithin($file, $maxBytes, $lock), $file->type, $spec)->bytes;
         $this->publishOrReport($key, $bytes);
 
         // Read after the publish, not before: a delete that committed while the variant was being drawn has already purged, and nothing else would remove this one (docs/internals/file-storage.md, "Deleting a file").
@@ -76,6 +91,35 @@ class ImageCache
      */
     public function canonical(File $file, ?int $maxBytes = null): string
     {
+        return $this->canonicalWithin($file, $maxBytes, null);
+    }
+
+    /** $lock carries the deadline of the variant this canonical is drawn for, so the two waits share it. */
+    private function canonicalWithin(File $file, ?int $maxBytes, ?ImageDrawLock $lock): string
+    {
+        $find = fn (): ?string => $this->canonicalHit($file, $maxBytes);
+
+        if (($found = $find()) !== null) {
+            return $found;
+        }
+
+        $disk = $this->disk();
+
+        return ($lock ?? $this->lock())->run(
+            'c',
+            $this->canonicalKey($file),
+            $find,
+            fn (): string => $this->generate($file, $maxBytes, strict: false, discard: false)->bytes,
+            fn (): bool => $disk->exists($this->canonicalKey($file)) || $disk->exists($this->markerKey($file)),
+        );
+    }
+
+    /**
+     * @throws CanonicalUnavailableException
+     * @throws ImageBytesOverLimitException
+     */
+    private function canonicalHit(File $file, ?int $maxBytes): ?string
+    {
         $disk = $this->disk();
         $key = $this->canonicalKey($file);
 
@@ -89,7 +133,13 @@ class ImageCache
             throw new CanonicalUnavailableException("File [{$file->id}] was refused: ".(string) $disk->get($marker));
         }
 
-        return $this->generate($file, $maxBytes, strict: false, discard: false)->bytes;
+        return null;
+    }
+
+    /** No caller of bytes() or canonical() holds a write transaction, the holder's own writes otherwise waiting on it (docs/internals/images.md, "Key invariants"). */
+    private function lock(): ImageDrawLock
+    {
+        return new ImageDrawLock($this->lockDirectory ?? storage_path('framework/image-locks'));
     }
 
     /**
