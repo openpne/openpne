@@ -116,11 +116,11 @@ class InstallCommandTest extends TestCase
 
         putenv('LANG=ja_JP.UTF-8');
         config(['app.locale' => 'en']);
-        $this->artisan('openpne:install')->expectsOutputToContain('データベースのサーバは MariaDB 11.4.13 です。')->assertFailed();
+        $this->artisan('openpne:install')->expectsOutputToContain('データベースのサーバーは MariaDB 11.4.13 です。')->assertFailed();
 
         putenv('LANG=C.UTF-8');
         config(['app.locale' => 'ja']);
-        $this->artisan('openpne:install')->expectsOutputToContain('データベースのサーバは MariaDB 11.4.13 です。')->assertFailed();
+        $this->artisan('openpne:install')->expectsOutputToContain('データベースのサーバーは MariaDB 11.4.13 です。')->assertFailed();
 
         config(['app.locale' => 'en']);
         $this->artisan('openpne:install')->expectsOutputToContain('The database server is MariaDB 11.4.13.')->assertFailed();
