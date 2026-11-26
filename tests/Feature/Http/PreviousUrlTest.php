@@ -431,4 +431,3 @@ class PreviousUrlTest extends TestCase
             ->assertHeader('X-Inertia-Location', url('/login'));
     }
 }
-
