@@ -61,8 +61,8 @@ side limit, and `php artisan openpne:check` states the most a web `memory_limit`
 value before the site first meets such a picture: one refused under a lower value comes back only
 with `php artisan openpne:image-cache warm --retry-failed`, the site's icons with `rebuild`. The
 packages above build PHP against the system's libgd, which takes that memory outside `memory_limit`,
-so the limit does not stop it: `openpne:check` states how large a PHP process grows instead, and the
-server needs room for it.
+so the limit does not stop it: the web lines of `openpne:check` state how large a PHP process grows
+instead, and the server needs room for it.
 
 ## The site user and its directory
 
@@ -291,13 +291,14 @@ The two sizes follow the upload caps in `.env` (`OPENPNE_IMAGE_MAX_UPLOAD_KB`,
 ([What the server needs](#what-the-server-needs)), and a page takes a few MB of it. Any process can
 reach it, with a picture to draw or a large request body, from someone signed in or not, so choose
 `pm.max_children` to fit that many times `memory_limit` in the memory you leave PHP: 10 at 128M is
-1.3 GB. With the system's libgd, count the size `openpne:check` states in place of `memory_limit`.
+1.3 GB. With the system's libgd, a picture's memory is held outside `memory_limit`: count each
+process at `memory_limit` or the size `openpne:check` states, whichever is larger.
 
 A request body is bounded in three places. The web server refuses one over `client_max_body_size`
-(Apache: `LimitRequestBody`) before PHP runs. PHP leaves a form over `post_max_size` unread, and the
+(Apache: `LimitRequestBody`) before PHP reads it. PHP leaves a form over `post_max_size` unread, and the
 site answers 413; a body that is not a form, such as JSON, is still read whole and decoded by the
 site before that answer, so only the web server's limit stops it. PHP writes a form's files to
-temporary files, but holds a form without files at about four times its size, and a JSON body at
+temporary files, but holds a form without files at three to five times its size, and a JSON body at
 50 times or more depending on its shape; a request past `memory_limit` fails alone. Keep the web
 server's limit at `post_max_size`, and lower both only as far as the upload caps allow.
 

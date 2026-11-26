@@ -242,7 +242,7 @@ final class WebCheck
             : Finding::fail('web.extensions', 'web_extensions_missing', ['list' => implode(', ', $missing)]);
     }
 
-    /** Under GD a decode runs in the worker, so the memory_limit is judged against the pixel limit it must hold. */
+    /** Under a bundled libgd a decode runs inside memory_limit, which is then judged against the pixel limit it must hold. */
     private function memory(string $value, bool $opcache, bool $bundled): Finding
     {
         $bytes = BeforeInstallCheck::bytes($value);
@@ -259,7 +259,9 @@ final class WebCheck
 
         // A system libgd allocates outside memory_limit, which then fails no decode while the process still grows.
         if (! $bundled) {
-            return Finding::ok('web.memory', 'web_memory_images_system', $replace);
+            return BeforeInstallCheck::enoughMemory($value)
+                ? Finding::ok('web.memory', 'web_memory_images_system', $replace)
+                : Finding::warn('web.memory', 'web_memory_low', ['value' => $value, 'minimum' => BeforeInstallCheck::MEMORY]);
         }
 
         return match (true) {

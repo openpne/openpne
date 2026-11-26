@@ -24,7 +24,12 @@ final class BeforeInstallCheck
         'storage/framework/sessions', 'storage/framework/views', 'storage/logs',
     ];
 
-    public function __construct(private readonly SiteLayout $layout, private readonly SqliteSupport $sqlite, private readonly PhpCommand $php) {}
+    public function __construct(
+        private readonly SiteLayout $layout,
+        private readonly SqliteSupport $sqlite,
+        private readonly PhpCommand $php,
+        private readonly ?string $memoryLimit = null,
+    ) {}
 
     /** @return list<Finding> */
     public function run(bool $installed): array
@@ -106,10 +111,10 @@ final class BeforeInstallCheck
 
     private function memory(): Finding
     {
-        return self::commandMemory((string) ini_get('memory_limit'), defined('GD_BUNDLED') && (bool) constant('GD_BUNDLED'), self::opcacheOnTheCommandLine(), $this->php->word());
+        return self::commandMemory($this->memoryLimit ?? (string) ini_get('memory_limit'), defined('GD_BUNDLED') && (bool) constant('GD_BUNDLED'), self::opcacheOnTheCommandLine(), $this->php->word());
     }
 
-    /** A command such as `openpne:image-cache warm` decodes in its own process, where a system libgd allocates outside memory_limit. */
+    /** A command decodes stored sources up to the source byte cap, OpenPNE 3 rows among them, in its own process; a system libgd allocates outside memory_limit. */
     public static function commandMemory(string $limit, bool $bundledGd, bool $opcache, string $php): Finding
     {
         $bytes = self::bytes($limit);
@@ -118,9 +123,11 @@ final class BeforeInstallCheck
         if ($bundledGd && $bytes !== null && $bytes >= 0 && config('openpne.images.processor') === 'gd') {
             $cap = ImageSourceLimit::reachablePixels();
 
-            return ImageSourceLimit::pixelsFor($bytes, $opcache) >= $cap
+            $source = ImageSourceLimit::bytes();
+
+            return ImageSourceLimit::pixelsFor($bytes, $opcache, $source) >= $cap
                 ? Finding::ok('cli.memory', 'cli_memory', $replace)
-                : Finding::warn('cli.memory', 'cli_memory_images_low', $replace + ['cap' => number_format($cap), 'needed' => ImageSourceLimit::megabytesFor($cap, $opcache).'M']);
+                : Finding::warn('cli.memory', 'cli_memory_images_low', $replace + ['cap' => number_format($cap), 'needed' => ImageSourceLimit::megabytesFor($cap, $opcache, $source).'M']);
         }
 
         return self::enoughMemory($limit)

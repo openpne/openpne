@@ -327,17 +327,10 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('backup of an SQLite database ('.$php.' artisan openpne:backup-sqlite, docs/updating.md)')
             ->assertFailed();
 
-        $limit = (string) ini_get('memory_limit');
-        // A refused ini_set warns, which the framework turns into an exception.
-        if (memory_get_usage(true) > 110 * 1024 * 1024 || @ini_set('memory_limit', '120M') === false) {
-            $this->markTestIncomplete('This process holds too much memory to lower its limit to 120M.');
-        }
-        try {
-            $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-                ->expectsOutputToContain('a command more with '.$php.' -d memory_limit=');
-        } finally {
-            ini_set('memory_limit', $limit);
-        }
+        $memory = (new BeforeInstallCheck($this->layout, $this->app->make(SqliteSupport::class), $this->app->make(PhpCommand::class), '100M'))->run(true);
+        $line = collect($memory)->firstWhere('id', 'cli.memory');
+        $this->assertSame($php, $line->replace['php']);
+        $this->assertStringContainsString($php.' -d memory_limit=', __('console.check.'.$line->message, $line->replace, 'en'));
         $this->assertFileDoesNotExist($this->layout->base.'/tools/ran');
     }
 
@@ -707,7 +700,10 @@ class CheckCommandTest extends TestCase
         config(['openpne.images.max_source_pixels' => 0]);
         $this->fakeHost(['php' => ['ini' => ['memory_limit' => '64M'], 'gd_bundled' => false]]);
         $output = $this->runCheck(['--only' => 'web']);
-        $this->assertStringContainsString('[ OK ] memory_limit on the web: 64M. This PHP\'s GD is the system\'s libgd', $output);
+        $this->assertStringContainsString('[WARN] memory_limit on the web is 64M, below PHP\'s default of 128M', $output);
+        $this->fakeHost(['php' => ['ini' => ['memory_limit' => '128M'], 'gd_bundled' => false]]);
+        $output = $this->runCheck(['--only' => 'web']);
+        $this->assertStringContainsString('[ OK ] memory_limit on the web: 128M. This PHP\'s GD is the system\'s libgd', $output);
         $this->assertStringContainsString('(12,600,000 pixels) a PHP process grows to about 128M', $output);
 
         config(['openpne.images.processor' => 'imgproxy']);
@@ -722,10 +718,10 @@ class CheckCommandTest extends TestCase
     /** @return iterable<string, array{string, string, bool, bool, string, ?string}> */
     public static function commandMemoryCases(): iterable
     {
-        yield 'bundled GD without OPcache holds the default cap from 176M' => ['gd', '175M', true, false, 'cli_memory_images_low', '176M'];
-        yield 'bundled GD without OPcache at 176M' => ['gd', '176M', true, false, 'cli_memory', null];
-        yield 'bundled GD with OPcache at 128M' => ['gd', '128M', true, true, 'cli_memory', null];
-        yield 'bundled GD with OPcache below 128M' => ['gd', '120M', true, true, 'cli_memory_images_low', '128M'];
+        yield 'bundled GD without OPcache holds a source up to the byte cap from 206M' => ['gd', '205M', true, false, 'cli_memory_images_low', '206M'];
+        yield 'bundled GD without OPcache at 206M' => ['gd', '206M', true, false, 'cli_memory', null];
+        yield 'bundled GD with OPcache at 158M' => ['gd', '158M', true, true, 'cli_memory', null];
+        yield 'bundled GD with OPcache below 158M' => ['gd', '157M', true, true, 'cli_memory_images_low', '158M'];
         yield 'bundled GD unlimited' => ['gd', '-1', true, false, 'cli_memory', null];
         yield 'system libgd is held to the floor only' => ['gd', '128M', false, false, 'cli_memory', null];
         yield 'system libgd below the floor' => ['gd', '100M', false, false, 'cli_memory_low', '128M'];
@@ -736,7 +732,7 @@ class CheckCommandTest extends TestCase
     #[DataProvider('commandMemoryCases')]
     public function test_the_command_line_memory_limit_is_judged_against_what_its_commands_decode(string $processor, string $limit, bool $bundled, bool $opcache, string $message, ?string $asked): void
     {
-        config(['openpne.images.processor' => $processor, 'openpne.images.max_source_pixels' => 0, 'openpne.images.max_upload_kilobytes' => 5120, 'openpne.images.max_upload_dimension' => 5000]);
+        config(['openpne.images.processor' => $processor, 'openpne.images.max_source_pixels' => 0, 'openpne.images.max_source_kilobytes' => 0, 'openpne.images.max_upload_kilobytes' => 5120, 'openpne.images.max_upload_dimension' => 5000]);
 
         $finding = BeforeInstallCheck::commandMemory($limit, $bundled, $opcache, 'php');
 
