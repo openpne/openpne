@@ -168,8 +168,8 @@ recorded it and `no-referrer` withholds the Referer, so a refused submit redirec
 name, and `token` is never flashed with the old input (the password-reset form posts it). An Inertia
 location response (the 409 for a stale asset version, or a Modern tab under `classic_only`) replaces
 the route's response or comes before it (a route middleware's exception answers one too), so
-[`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php), outermost in the `web` group,
-gives every one the same two headers.
+[`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php), ahead of every `web` middleware
+that can answer one, gives each the same two headers.
 
 The framework's other guards stand (GET, a matched route, not a prefetch, not
 precognitive).

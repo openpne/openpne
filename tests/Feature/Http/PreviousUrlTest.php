@@ -438,9 +438,10 @@ class PreviousUrlTest extends TestCase
         $headers = ['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'];
 
         // The route's limiter throws before NoStore, NoReferrer and HandleInertiaRequests are entered.
-        for ($i = 0; $i < 10; $i++) {
-            $this->get($url);
+        for ($i = 0, $status = 200; $i < 50 && $status !== 429; $i++) {
+            $status = $this->get($url)->getStatusCode();
         }
+        $this->assertSame(429, $status);
 
         $this->withHeaders($headers)->get($url)->assertStatus(409)
             ->assertHeader('X-Inertia-Location', url($url))
