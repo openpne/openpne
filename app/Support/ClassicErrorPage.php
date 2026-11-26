@@ -31,8 +31,7 @@ final class ClassicErrorPage
         $isWebRoute = $route instanceof Route
             && in_array('web', $route->gatherMiddleware(), true);
 
-        // A route middleware's abort (the feature gate, a binding) runs before HandleInertiaRequests, so the
-        // handoff is repeated here; one thrown before routing (maintenance) keeps its own answer.
+        // A web route middleware's abort (the feature gate, a binding) runs before HandleInertiaRequests, so the handoff is repeated here, never for an error thrown before routing.
         if ($isWebRoute && ($handoff = ClassicOnlyHandoff::for($request)) !== null) {
             return $handoff;
         }

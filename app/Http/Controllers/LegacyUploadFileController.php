@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Files\FileResponse;
 use App\Models\File;
+use App\Support\SecretSafeLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -20,7 +20,7 @@ class LegacyUploadFileController extends Controller
         // The login redirect lands here through the Inertia router after a sign-in; told to make a full
         // visit, the browser downloads instead of showing the bytes as an error.
         if ($request->hasHeader('X-Inertia')) {
-            return Inertia::location($request->fullUrl());
+            return SecretSafeLocation::to($request->fullUrl());
         }
 
         $found = File::query()->findOrFail((int) strtok($file, '.'));

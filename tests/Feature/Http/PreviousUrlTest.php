@@ -452,15 +452,22 @@ class PreviousUrlTest extends TestCase
     public function test_a_stale_tab_during_maintenance_gets_the_maintenance_answer(): void
     {
         [$url] = $this->secretLink('register');
-        config(['openpne.surface_mode' => 'classic_only']);
+        // This process's array cache: the file driver's flag under storage/ is every parallel worker's and the local site's.
+        config(['openpne.surface_mode' => 'classic_only', 'app.maintenance.driver' => 'cache', 'app.maintenance.store' => 'array']);
         $this->app->maintenanceMode()->activate([]);
 
-        try {
-            // Thrown ahead of every route: there is no Classic page to hand the tab off to yet.
-            $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'])
-                ->get($url)->assertStatus(503)->assertHeaderMissing('X-Inertia-Location');
-        } finally {
-            $this->app->maintenanceMode()->deactivate();
+        $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->get($url)->assertStatus(503)->assertHeaderMissing('X-Inertia-Location');
+        $this->assertFileDoesNotExist(storage_path('framework/down'));
+    }
+
+    public function test_a_language_switch_from_a_session_that_recorded_a_secret_link_keeps_its_headers(): void
+    {
+        // A session saved before such links went unrecorded.
+        $this->withSession(['_previous' => ['url' => url('/register/'.Str::random(40))]]);
+
+        foreach ([$this->post('/locale', ['locale' => 'en']), $this->withHeaders(['X-Inertia' => 'true'])->post('/locale', ['locale' => 'en'])] as $response) {
+            $response->assertHeader('Cache-Control', 'no-store, no-transform, private')->assertHeader('Referrer-Policy', 'no-referrer');
         }
     }
 }

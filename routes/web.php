@@ -78,11 +78,11 @@ use App\Support\BrandColor;
 use App\Support\ClassicErrorPage;
 use App\Support\Feature;
 use App\Support\GuestLoginRedirect;
+use App\Support\SecretSafeLocation;
 use App\Support\SurfaceResolver;
 use Filament\Http\Middleware\SetUpPanel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
@@ -115,11 +115,9 @@ Route::post('/locale', function (Request $request) {
     // A full page load: the React i18n provider reads `locale` only at app boot, so an XHR-followed
     // 302 would leave it on the old locale.
     $target = url()->previous();
-    if ($request->header('X-Inertia')) {
-        return Inertia::location($target);
-    }
 
-    return redirect($target);
+    // A session saved before secret-bearing pages went unrecorded may still name one as the previous URL.
+    return $request->header('X-Inertia') ? SecretSafeLocation::to($target) : SecretSafeLocation::protect(redirect($target));
 })->name('locale.switch');
 
 // Under /admin so it runs on the admin session store, where the panel's CSRF token validates and

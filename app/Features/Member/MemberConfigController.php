@@ -35,6 +35,7 @@ use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\Feature;
 use App\Support\PreferenceKey;
+use App\Support\SecretSafeLocation;
 use App\Support\SecurityLog;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
@@ -269,7 +270,7 @@ class MemberConfigController extends Controller
 
         $target = route('login');
 
-        return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
+        return $request->hasHeader('X-Inertia') ? SecretSafeLocation::to($target) : redirect($target);
     }
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
@@ -294,7 +295,7 @@ class MemberConfigController extends Controller
             ? route('member.config')
             : route('member.config', ['category' => MemberConfigCategory::General->value]);
 
-        return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
+        return $request->hasHeader('X-Inertia') ? SecretSafeLocation::to($target) : redirect($target);
     }
 
     public function destroyConnection(ConnectionRevokeRequest $request, string $client, int $subject): RedirectResponse

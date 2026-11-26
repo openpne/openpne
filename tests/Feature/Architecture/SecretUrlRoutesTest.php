@@ -53,4 +53,25 @@ class SecretUrlRoutesTest extends TestCase
             $this->assertContains($listed, $found, "the entry for [{$listed}] is stale.");
         }
     }
+
+    public function test_every_inertia_location_is_built_with_the_secret_headers(): void
+    {
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path('app'), \FilesystemIterator::SKIP_DOTS));
+        $paths = [...array_map(fn (\SplFileInfo $f): string => $f->getPathname(), iterator_to_array($files, false)), base_path('routes/web.php'), base_path('bootstrap/app.php')];
+
+        $builders = [];
+        foreach ($paths as $path) {
+            if (str_ends_with($path, '.php') && preg_match('/Inertia::location\(|inertia_location\(|X-Inertia-Location|Header::LOCATION/', (string) file_get_contents($path))) {
+                $builders[] = str_replace(base_path().'/', '', $path);
+            }
+        }
+
+        $this->assertSame(['app/Support/SecretSafeLocation.php'], $builders, 'Build an Inertia location with SecretSafeLocation.');
+    }
+
+    // Inertia's own previous-URL write does not consult keepUrlOut.
+    public function test_inertia_does_not_record_the_previous_url_itself(): void
+    {
+        $this->assertFalse((bool) config('inertia.store_previous_url'));
+    }
 }
