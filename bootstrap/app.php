@@ -116,6 +116,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // not lift that, so the parent is un-ignored and ->stop() keeps the rest out of the default channel.
         $exceptions->stopIgnoring(HttpException::class);
 
+        // The password-reset form posts its link token, which a refused submit would otherwise flash
+        // into the session (docs/internals/sessions.md, "The previous URL").
+        $exceptions->dontFlash('token');
+
         // Passport's guard reports every bearer it cannot read, which on `auth:sanctum,oauth` is each
         // refused personal token too; the endpoint already answers these with 401.
         $exceptions->dontReport(OAuthServerException::class);

@@ -12,6 +12,7 @@ use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -63,11 +64,15 @@ class MfaResetLinkController extends Controller
             return $wrongMember;
         }
 
-        // Format only: the guest context cannot use the `current_password:member` rule.
-        $request->validate(['password' => ['required', 'string']]);
+        try {
+            // Format only: the guest context cannot use the `current_password:member` rule.
+            $request->validate(['password' => ['required', 'string']]);
 
-        // A wrong password throws, landing back on the form with the token intact.
-        $result = $consume((int) $pending->member_id, $token, (string) $request->input('password'));
+            $result = $consume((int) $pending->member_id, $token, (string) $request->input('password'));
+        } catch (ValidationException $e) {
+            // Named, not back(): the session never recorded the form's URL (docs/internals/sessions.md, "The previous URL").
+            throw $e->redirectTo(route('member.mfa.reset', ['token' => $token]));
+        }
 
         if ($result->isInvalid()) {
             return redirect()->route('login')->with('status', __('This two-factor reset link is no longer valid.'));

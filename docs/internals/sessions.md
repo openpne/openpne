@@ -159,7 +159,11 @@ endpoint fetched without it would be recorded for a client without Fetch
 Metadata.
 
 A route with [`NoStore`](../../app/Http/Middleware/NoStore.php) is never recorded: its URL carries
-a secret, which the session store (a database row by default) would otherwise keep.
+a secret, which the session store (a database row by default) would otherwise keep. Every GET route
+with a `{token}` parameter carries it, with `NoReferrer`, unless the token is no secret (the site
+icon's file name); a test enumerates them. Such a page's form cannot go back: the session never
+recorded it and `no-referrer` withholds the Referer, so a refused submit redirects to the form by
+name, and `token` is never flashed with the old input (the password-reset form posts it).
 
 The framework's other guards stand (GET, a matched route, not a prefetch, not
 precognitive).

@@ -7,17 +7,23 @@ namespace Tests\Feature\Http;
 use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Models\BannerImage;
+use App\Models\EmailChangeRequest;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\MemberImage;
+use App\Models\MfaResetRequest;
 use App\Models\RegistrationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\ImageBytes;
 use Tests\TestCase;
 
@@ -257,5 +263,119 @@ class PreviousUrlTest extends TestCase
         $this->post("/register/{$raw}", ['name' => 'Newcomer', 'password' => 'sufficiently-long-pw', 'password_confirmation' => 'different'])
             ->assertRedirect("/register/{$raw}")
             ->assertSessionHasErrors('password');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function secretLinks(): array
+    {
+        return [
+            'registration' => ['register'],
+            'password reset' => ['reset'],
+            'email-change confirm' => ['email-confirm'],
+            'email-change cancel' => ['email-cancel'],
+            'MFA reset' => ['mfa'],
+        ];
+    }
+
+    /** @return array{string, string} the link's URL and its raw token */
+    private function secretLink(string $kind): array
+    {
+        $raw = Str::random(40);
+        $member = fn (): Member => Member::factory()->create();
+
+        switch ($kind) {
+            case 'register':
+                RegistrationToken::create(['email' => 'newcomer@example.com', 'token' => hash('sha256', $raw), 'created_at' => now()]);
+
+                return ["/register/{$raw}", $raw];
+            case 'reset':
+                $subject = $member();
+                $raw = Password::broker('members')->createToken($subject);
+
+                return ["/reset-password/{$raw}?email=".urlencode($subject->email), $raw];
+            case 'email-confirm':
+            case 'email-cancel':
+                $column = $kind === 'email-confirm' ? 'token' : 'cancel_token';
+                EmailChangeRequest::create([
+                    'member_id' => $member()->getKey(), 'new_email' => 'moved@example.com',
+                    'token' => hash('sha256', Str::random(40)), 'cancel_token' => hash('sha256', Str::random(40)),
+                    $column => hash('sha256', $raw), 'created_at' => now(),
+                ]);
+
+                return [$kind === 'email-confirm' ? "/member/config/email/confirm/{$raw}" : "/member/config/email/cancel/{$raw}", $raw];
+            default:
+                $subject = $member();
+                $this->giveLiveFactor($subject);
+                MfaResetRequest::create(['member_id' => $subject->getKey(), 'token' => hash('sha256', $raw), 'created_at' => now()]);
+
+                return ["/member/mfa/reset/{$raw}", $raw];
+        }
+    }
+
+    private function giveLiveFactor(Member $member): void
+    {
+        app(EnableTwoFactorAuthentication::class)($member, force: true);
+        $member->forceFill(['two_factor_confirmed_at' => now()])->save();
+    }
+
+    private function storedSessions(): string
+    {
+        return DB::table('sessions')->pluck('payload')->map(fn (string $payload): string => base64_decode($payload))->implode("\n");
+    }
+
+    #[DataProvider('secretLinks')]
+    public function test_a_link_that_carries_a_secret_is_never_recorded(string $kind): void
+    {
+        config(['session.driver' => 'database']);
+        [$url, $raw] = $this->secretLink($kind);
+
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, no-transform, private');
+
+        $this->assertStringEndsWith('/login', (string) $this->previousUrl());
+        $this->assertNotSame('', $this->storedSessions(), 'the session was not written, so this proves nothing');
+        $this->assertStringNotContainsString($raw, $this->storedSessions());
+    }
+
+    public function test_a_refused_mfa_reset_returns_to_the_form(): void
+    {
+        [$url] = $this->secretLink('mfa');
+
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)->assertOk();
+
+        $this->post($url, ['password' => 'wrong-password'])
+            ->assertRedirect($url)
+            ->assertSessionHasErrors('password');
+        $this->post($url, [])
+            ->assertRedirect($url)
+            ->assertSessionHasErrors('password');
+    }
+
+    public function test_a_refused_password_reset_returns_to_the_form_without_flashing_the_token(): void
+    {
+        config(['session.driver' => 'database']);
+        [$url, $raw] = $this->secretLink('reset');
+        $email = Member::sole()->email;
+
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)->assertOk();
+
+        // Refused by the password rules, then by the broker for an address the token is not for.
+        $this->post('/reset-password', ['token' => $raw, 'email' => $email, 'password' => 'Sufficiently-long-pw-1', 'password_confirmation' => 'different'])
+            ->assertRedirect($url)
+            ->assertSessionHasErrors('password');
+        $this->assertStringNotContainsString($raw, $this->storedSessions());
+
+        $this->post('/reset-password', ['token' => $raw, 'email' => 'someone-else@example.com', 'password' => 'Sufficiently-long-pw-1', 'password_confirmation' => 'Sufficiently-long-pw-1'])
+            ->assertRedirect("/reset-password/{$raw}?email=".urlencode('someone-else@example.com'))
+            ->assertSessionHasErrors('email');
+        $this->assertStringNotContainsString($raw, $this->storedSessions());
+
+        $this->post('/reset-password', ['email' => $email, 'password' => 'x'])
+            ->assertRedirect('/forgot-password')
+            ->assertSessionHasErrors('token');
     }
 }

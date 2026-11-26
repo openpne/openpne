@@ -695,8 +695,10 @@ follow-up requests, and `document.referrer`. It covers the responses the route
 returns, an abort inside it included; a response from middleware that runs ahead of it — the 419,
 the throttle's 429 — ships the baseline.
 
-The administrator password link also carries [`NoStore`](../../app/Http/Middleware/NoStore.php):
-`Cache-Control: no-store, no-transform, private`, and its URL is never recorded as the session's
+The links among them whose URL carries the token — registration, password reset, the email-change
+and MFA-reset landings, and the administrator password link — also carry
+[`NoStore`](../../app/Http/Middleware/NoStore.php):
+`Cache-Control: no-store, no-transform, private`, and the URL is never recorded as the session's
 previous URL ([sessions.md](sessions.md#the-previous-url)).
 
 Deliberately not set:

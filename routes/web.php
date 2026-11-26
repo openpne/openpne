@@ -50,6 +50,7 @@ use App\Http\Controllers\Admin\AdminFileController;
 use App\Http\Controllers\Admin\PasswordSetupController;
 use App\Http\Controllers\Admin\SiteIconRasterController;
 use App\Http\Controllers\AppIconController;
+use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
@@ -83,7 +84,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
-use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
 use Laravel\Passport\Http\Controllers\DenyAuthorizationController;
@@ -166,7 +166,7 @@ Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(functio
     Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
         ->middleware('guest:member')->name('password.email');
     Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])
-        ->middleware('guest:member')->name('password.reset');
+        ->middleware(['guest:member', NoStore::class])->name('password.reset');
     Route::post('/reset-password', [NewPasswordController::class, 'store'])
         ->middleware('guest:member')->name('password.update');
 
@@ -211,23 +211,23 @@ Route::get('/member/configNotification', fn () => redirect()->route('member.conf
 // Neither guest- nor auth-restricted (the link may be opened on another device), and the change
 // happens on POST so a mail scanner's prefetch cannot consume the token.
 Route::get('/member/config/email/confirm/{token}', [EmailChangeLinkController::class, 'confirmEmailForm'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.confirm');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, NoStore::class, 'throttle:30,1'])->name('member.config.email.confirm');
 Route::post('/member/config/email/confirm/{token}', [EmailChangeLinkController::class, 'confirmEmail'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.confirm.submit');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, NoStore::class, 'throttle:30,1'])->name('member.config.email.confirm.submit');
 
 // Same shape as confirmation, with its own token, so the old-address holder can void a change
 // without signing in.
 Route::get('/member/config/email/cancel/{token}', [EmailChangeLinkController::class, 'cancelEmailForm'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.cancel');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, NoStore::class, 'throttle:30,1'])->name('member.config.email.cancel');
 Route::post('/member/config/email/cancel/{token}', [EmailChangeLinkController::class, 'cancelEmail'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.config.email.cancel.submit');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, NoStore::class, 'throttle:30,1'])->name('member.config.email.cancel.submit');
 
 // Same public shape as the email links, plus a per-token limiter on the POST so distributed password
 // guessing cannot pool onto one link.
 Route::get('/member/mfa/reset/{token}', [MfaResetLinkController::class, 'form'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.mfa.reset');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, NoStore::class, 'throttle:30,1'])->name('member.mfa.reset');
 Route::post('/member/mfa/reset/{token}', [MfaResetLinkController::class, 'reset'])
-    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1', 'throttle:mfa-reset'])->name('member.mfa.reset.submit');
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, NoStore::class, 'throttle:30,1', 'throttle:mfa-reset'])->name('member.mfa.reset.submit');
 
 // OpenPNE 3 opAuthMailAddress: its id + token scheme cannot be honored by Fortify, so both entry
 // points restart at the request form.
@@ -246,7 +246,7 @@ Route::post('/register/capacity-request', [RegistrationController::class, 'capac
     ->middleware([NoReferrer::class, 'throttle:capacity-request'])->name('register.capacity-request');
 // The completion half sits outside EnsureOpenRegistration because an invited member must finish in
 // invite or admin_only mode; the controller re-checks the mode against the token's origin.
-Route::middleware(['guest', NoReferrer::class])->controller(RegistrationController::class)->group(function () {
+Route::middleware(['guest', NoReferrer::class, NoStore::class])->controller(RegistrationController::class)->group(function () {
     Route::get('/register/{token}', 'form')->where('token', '[A-Za-z0-9]{40}')
         ->middleware('throttle:register-complete')->name('register.form');
     Route::post('/register/{token}', 'register')->where('token', '[A-Za-z0-9]{40}')

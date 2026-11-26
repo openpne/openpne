@@ -6,6 +6,7 @@ use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
 use App\Actions\Fortify\Responses\NeutralPasswordResetLinkResponse;
+use App\Actions\Fortify\Responses\ReturnToResetForm;
 use App\Auth\RequireSecondLoginProof;
 use App\Captcha\Captcha;
 use App\Features\Auth\AuthScreen;
@@ -28,6 +29,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
+use Laravel\Fortify\Contracts\FailedPasswordResetResponse;
 use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
@@ -47,6 +49,7 @@ class FortifyServiceProvider extends ServiceProvider
         $this->app->singleton(SuccessfulPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
         $this->app->singleton(FailedPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
 
+        $this->app->bind(FailedPasswordResetResponse::class, ReturnToResetForm::class);
         $this->app->bind(PasskeyVerificationRequest::class, PasskeyLoginRequest::class);
 
         $this->app->scoped(RedirectsIfTwoFactorAuthenticatable::class, RequireSecondLoginProof::class);

@@ -134,7 +134,8 @@ class RegistrationController extends Controller
                 return $this->addressClaimed($pending);
             }
 
-            throw $e; // name / password / profile errors → back to the form, token kept
+            // Named, not back(): the session never recorded the form's URL (docs/internals/sessions.md, "The previous URL").
+            throw $e->redirectTo(route('register.form', ['token' => $token]));
         } catch (QueryException $e) {
             // Only the unique address is a reason to burn the token; any other failure rolled the member
             // back and leaves the link usable for a retry.
