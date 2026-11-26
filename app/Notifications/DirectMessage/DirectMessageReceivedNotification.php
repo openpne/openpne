@@ -58,6 +58,7 @@ class DirectMessageReceivedNotification extends Notification implements FeatureN
         return $this->featureShouldSend($notifiable, $channel)
             && ! $notifiable->is_login_rejected
             && ! BlockLookup::hasAnyBlockBetween($notifiable, $this->sender)
+            && $this->recipientWants($notifiable, $channel === 'database' ? NotificationChannel::Web : NotificationChannel::Mail)
             && ($channel === 'database' ? $this->stillUnread($notifiable) : $this->stillTheirs($notifiable));
     }
 

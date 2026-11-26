@@ -241,10 +241,34 @@ class NotificationSettingsPageTest extends TestCase
             );
 
         $classic = $this->actingAs($member)->get('/member/config?category=notification')
-            ->assertSee(NotificationKind::DirectMessageNew->caption());
+            ->assertSee(NotificationKind::DiaryNewPost->caption());
         foreach ([NotificationKind::TimelineNewPostOnlyFriends, NotificationKind::DiaryNewPostOnlyFriends, NotificationKind::DirectMessageNewOnlyFriends] as $kind) {
             $classic->assertDontSee($kind->caption());
         }
+    }
+
+    public function test_turning_a_kind_off_while_friends_are_off_turns_its_hidden_variant_off_too(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/notifications', ['settings' => ['diary_new_post' => ['mail' => false]]]);
+
+        $fresh = $member->fresh();
+        $this->assertFalse($fresh->wantsNotification(NotificationKind::DiaryNewPostOnlyFriends, NotificationChannel::Mail));
+        $this->assertTrue($fresh->wantsNotification(NotificationKind::DiaryNewPostOnlyFriends, NotificationChannel::Web));
+    }
+
+    public function test_re_posting_an_unchanged_off_keeps_a_stored_friends_only_choice(): void
+    {
+        $member = Member::factory()->create();
+        $member->setNotificationSetting(NotificationKind::DiaryNewPost, NotificationChannel::Mail, false);
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        // The Classic form posts every rendered control, the broad kind included, on any save.
+        $this->actingAs($member)->post('/member/config/notifications', ['settings' => ['diary_new_post' => ['mail' => '0', 'web' => '1']]]);
+
+        $this->assertTrue($member->fresh()->wantsNotification(NotificationKind::DiaryNewPostOnlyFriends, NotificationChannel::Mail));
     }
 
     public function test_classic_category_page_explains_the_talk_settings_reach_and_lists_the_muted_rooms(): void

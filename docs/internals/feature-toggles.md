@@ -180,11 +180,15 @@ dashboard digest of it, the friend-scoped gadgets, the friends-only notification
 offered nor delivered, so a member who kept only that variant hears nothing from the kind until the
 unit returns), and the home feed's friend branch
 ([`TimelineFeedScope::apply()`](../../app/Features/Timeline/TimelineFeedScope.php), so its three
-consumers follow from one place while the own-posts and all-members tiers stay). Two seams state the
+consumers follow from one place while the own-posts and all-members tiers stay). Three seams state the
 dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinTest`'s dependency map
-(a route needing a second gate) and [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
+(a route needing a second gate), [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
 second unit per context — `activityBox` goes on the home, where it is the friend feed, and stays on a
-profile, where it is the owner's own timeline).
+profile, where it is the owner's own timeline) and `NotificationKindDefinition::$dependsOn` (read by
+`NotificationKind::isAvailable()`, which the settings and each fan-out consult). Turning a broad kind
+off while its friends-only variant is hidden turns the variant off too, so "Do not notify" stays that
+when the unit returns; a direct message re-reads the choice when it is sent, so one queued before the
+switch is still dropped.
 
 ## Upgrade
 

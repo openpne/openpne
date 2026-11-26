@@ -131,11 +131,11 @@ class BroadcastDiaryPostedTest extends TestCase
         );
     }
 
-    public function test_with_friends_off_the_friends_only_variant_reaches_no_one(): void
+    public function test_with_friends_off_the_friends_only_variant_reaches_no_one_and_the_broad_kind_still_does(): void
     {
         Notification::fake();
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
-        [$author, $friend] = Member::factory()->count(2)->create()->all();
+        [$author, $friend, $bystander] = Member::factory()->count(3)->create()->all();
         $this->makeFriends($author, $friend);
         $friend->setNotificationSetting(NotificationKind::DiaryNewPost, NotificationChannel::Mail, false);
         $friend->setNotificationSetting(NotificationKind::DiaryNewPost, NotificationChannel::Web, false);
@@ -144,6 +144,8 @@ class BroadcastDiaryPostedTest extends TestCase
         $this->broadcast($diary);
 
         Notification::assertNotSentTo($friend, DiaryPostedNotification::class);
+        // The broad kind is not a friend lens and keeps reaching everyone.
+        Notification::assertSentTo($bystander, DiaryPostedNotification::class);
     }
 
     public function test_both_kinds_off_drops_a_friend_entirely(): void

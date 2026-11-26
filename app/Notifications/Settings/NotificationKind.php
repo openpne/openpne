@@ -223,11 +223,19 @@ enum NotificationKind: string
         return $this->definition()->isWired;
     }
 
-    /** Whether its category's unit and any unit it depends on are on. */
     public function isAvailable(): bool
     {
         return $this->category()->feature()->enabled()
             && ($this->definition()->dependsOn?->enabled() ?? true);
+    }
+
+    /** @return list<self> the "(x only)" variants of this kind that the settings do not offer right now */
+    public function hiddenVariants(): array
+    {
+        return array_values(array_filter(
+            self::wiredCases(),
+            fn (self $variant): bool => $variant->dependOnNot() === $this && ! $variant->isAvailable(),
+        ));
     }
 
     /**

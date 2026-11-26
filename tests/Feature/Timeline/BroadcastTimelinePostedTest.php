@@ -167,11 +167,11 @@ class BroadcastTimelinePostedTest extends TestCase
         Notification::assertNotSentTo($stranger, TimelinePostedNotification::class);
     }
 
-    public function test_with_friends_off_the_friends_only_variant_reaches_no_one(): void
+    public function test_with_friends_off_the_friends_only_variant_reaches_no_one_and_the_broad_kind_still_does(): void
     {
         Notification::fake();
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
-        [$author, $friend] = Member::factory()->count(2)->create()->all();
+        [$author, $friend, $bystander] = Member::factory()->count(3)->create()->all();
         $this->makeFriends($author, $friend);
         $friend->setNotificationSetting(NotificationKind::TimelineNewPost, NotificationChannel::Mail, false);
         $friend->setNotificationSetting(NotificationKind::TimelineNewPost, NotificationChannel::Web, false);
@@ -179,6 +179,8 @@ class BroadcastTimelinePostedTest extends TestCase
         $this->broadcast($this->newPost($author));
 
         Notification::assertNotSentTo($friend, TimelinePostedNotification::class);
+        // The broad kind is not a friend lens and keeps reaching everyone.
+        Notification::assertSentTo($bystander, TimelinePostedNotification::class);
     }
 
     public function test_both_kinds_off_drops_a_friend_entirely(): void

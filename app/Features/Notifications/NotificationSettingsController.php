@@ -37,13 +37,18 @@ class NotificationSettingsController extends Controller
     {
         $viewer = $this->viewer();
 
-        foreach ($request->validated('settings') as $kind => $channels) {
-            foreach ($channels as $channel => $enabled) {
-                $viewer->setNotificationSetting(
-                    NotificationKind::from($kind),
-                    NotificationChannel::from($channel),
-                    (bool) $enabled,
-                );
+        foreach ($request->validated('settings') as $kindValue => $channels) {
+            $kind = NotificationKind::from($kindValue);
+            foreach ($channels as $channelValue => $enabled) {
+                $channel = NotificationChannel::from($channelValue);
+                // Turning a broad kind off while its friends-only variant is hidden is the "Do not notify"
+                // choice, so the variant goes off with it instead of returning with the friend unit.
+                if (! $enabled && $viewer->wantsNotification($kind, $channel)) {
+                    foreach ($kind->hiddenVariants() as $variant) {
+                        $viewer->setNotificationSetting($variant, $channel, false);
+                    }
+                }
+                $viewer->setNotificationSetting($kind, $channel, (bool) $enabled);
             }
         }
 

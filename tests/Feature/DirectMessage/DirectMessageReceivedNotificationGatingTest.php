@@ -52,6 +52,22 @@ class DirectMessageReceivedNotificationGatingTest extends TestCase
         $this->assertSame(['database'], $this->channelsFor($sender, $recipient));
     }
 
+    public function test_a_friends_only_mail_queued_before_friends_go_off_is_dropped_at_send(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create()->all();
+        $this->makeFriends($sender, $recipient);
+        $recipient->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
+        $notification = new DirectMessageReceivedNotification($sender, $message);
+        $this->assertContains('mail', $notification->via($recipient));
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        $this->assertFalse($notification->shouldSend($recipient, 'mail'));
+        $this->assertTrue($notification->shouldSend($recipient, 'database'));
+    }
+
     public function test_both_kinds_off_drop_mail_even_for_a_friend_sender(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create()->all();

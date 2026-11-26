@@ -29,8 +29,8 @@ final readonly class NotificationKindDefinition
          */
         public bool $isWired = false,
         /**
-         * A second unit this kind needs beyond its category's: a friends-only variant is a lens the
-         * friend unit owns, so it is neither offered nor delivered while that unit is off.
+         * A second unit this kind needs beyond its category's (a friends-only variant needs friends):
+         * the settings stop offering it, but each fan-out must check isAvailable() itself to stop delivery.
          */
         public ?Feature $dependsOn = null,
     ) {}
