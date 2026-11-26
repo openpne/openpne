@@ -57,7 +57,8 @@ and editing its settings re-run their role check under this lock too.
 nominee from Member or Sub-admin, demotes the incumbent admin to Member and clears the pending
 seat, all under that lock. The writes on a live group that stay outside the protocol do so on
 purpose:
-[`AddAllMembers`](../../app/Features/Group/Actions/AddAllMembers.php) and
+[`AddAllMembers`](../../app/Features/Group/Actions/AddAllMembers.php),
+[`JoinDefaultGroups`](../../app/Features/Group/Actions/JoinDefaultGroups.php) and
 [`JoinGroup`](../../app/Features/Group/Actions/JoinGroup.php) only insert plain Member rows and
 touch neither a role nor `pending_admin_member_id`, and
 [`RejectAdminTransfer`](../../app/Features/Group/Actions/RejectAdminTransfer.php) clears the seat

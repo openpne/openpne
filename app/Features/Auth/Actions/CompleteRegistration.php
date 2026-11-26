@@ -7,8 +7,10 @@ use App\Features\Auth\Events\MemberRegistered;
 use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\MemberCapacityReached;
 use App\Features\Auth\RegistrationTokenSource;
+use App\Features\Group\Actions\JoinDefaultGroups;
 use App\Models\Member;
 use App\Models\RegistrationToken;
+use App\Support\Feature;
 use App\Support\ViewerRelations;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -22,13 +24,13 @@ use Illuminate\Validation\ValidationException;
  */
 class CompleteRegistration
 {
-    public function __construct(private CreateNewMember $create, private MemberCapacity $capacity) {}
+    public function __construct(private CreateNewMember $create, private MemberCapacity $capacity, private JoinDefaultGroups $joinDefaultGroups) {}
 
     /**
      * @param  array<string, mixed>  $input  the posted form (name, password, profile); email is ignored
      *
      * @throws ValidationException name/password/profile failed validation
-     * @throws QueryException the email was claimed between check and insert
+     * @throws QueryException the email was claimed between check and insert, or another write failed
      * @throws MemberCapacityReached no seat left; the token is kept so the link works once one frees up
      */
     public function __invoke(RegistrationToken $pending, array $input): Member
@@ -36,6 +38,7 @@ class CompleteRegistration
         return $this->capacity->reserveMember(fn (): Member => DB::transaction(function () use ($pending, $input): Member {
             $member = $this->create->create(['email' => $pending->email] + $input);
             $this->autoFriendInviter($pending, $member);
+            ($this->joinDefaultGroups)($member);
             $pending->delete();
 
             // Fires after this transaction commits (ShouldDispatchAfterCommit), so the queued
@@ -53,7 +56,7 @@ class CompleteRegistration
      */
     private function autoFriendInviter(RegistrationToken $pending, Member $member): void
     {
-        if ($pending->source !== RegistrationTokenSource::MemberInvite || $pending->inviter_id === null) {
+        if ($pending->source !== RegistrationTokenSource::MemberInvite || $pending->inviter_id === null || ! Feature::Friend->enabled()) {
             return;
         }
 

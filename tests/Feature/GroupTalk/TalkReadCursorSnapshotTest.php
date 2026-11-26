@@ -5,6 +5,7 @@ namespace Tests\Feature\GroupTalk;
 use App\Features\Group\Actions\AddAllMembers;
 use App\Features\Group\Actions\ApproveMember;
 use App\Features\Group\Actions\CreateGroup;
+use App\Features\Group\Actions\JoinDefaultGroups;
 use App\Features\Group\Actions\JoinGroup;
 use App\Features\Group\Data\GroupFormData;
 use App\Features\Group\JoinPolicy;
@@ -69,10 +70,10 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
             'open join' => ['openJoin'],
             'join-request approval' => ['approveRequest'],
             'bulk add-all-members' => ['addAll'],
+            'registration into the default groups' => ['joinDefaults'],
         ];
     }
 
-    /** All four paths are pinned here so that the next one added cannot quietly be the fifth. */
     #[DataProvider('membershipPaths')]
     public function test_every_membership_path_snapshots_the_cursor(string $path): void
     {
@@ -135,6 +136,19 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
         app(ApproveMember::class)($admin, $group, $applicant);
 
         return [$group, $applicant];
+    }
+
+    /** @return array{0: Group, 1: Member} */
+    private function joinDefaults(): array
+    {
+        // Two defaults with their own latest message, so a cursor shared across them would be wrong for one.
+        [$first, $group] = Group::factory()->count(2)->create(['is_default' => true])->all();
+        GroupMessage::factory()->create(['group_id' => $group->getKey()]);
+        GroupMessage::factory()->create(['group_id' => $first->getKey()]);
+        $newcomer = Member::factory()->create();
+        app(JoinDefaultGroups::class)($newcomer);
+
+        return [$group, $newcomer];
     }
 
     /** @return array{0: Group, 1: Member} */

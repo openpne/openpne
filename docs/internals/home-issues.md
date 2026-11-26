@@ -45,10 +45,9 @@ and this section shows none of them — the group page itself is open to any sig
 ([`GroupPolicy::view`](../../app/Policies/GroupPolicy.php) is unconditionally true), so a new
 members-only group is a door to knock on rather than something withheld.
 
-**`is_default` is not the predicate.** It marks a group OpenPNE 3 enrolled every new member into at
-registration, and in OpenPNE 4 nothing but the admin table reads it. Either way it says who is *in* a
-group, never who may *read* one: a default group can be members-only and an ordinary one can be open
-to the whole site. Using it here would answer a question nobody asked.
+**`is_default` is not the predicate.** It marks a group every member who registers is enrolled into,
+as in OpenPNE 3. It says who is *in* a group, never who may *read* one: a default group can be
+members-only and an ordinary one can be open to the whole site. Using it here would answer a question nobody asked.
 
 Newcomers include AI accounts and members an administrator has banned from logging in, matching the
 member lists an issue sits beside — `is_login_rejected` gates logging in and receiving, not being

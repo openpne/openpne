@@ -3,9 +3,12 @@
 namespace Tests\Feature\Auth;
 
 use App\Features\Auth\Actions\CompleteRegistration;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\RegistrationToken;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
@@ -220,6 +223,49 @@ class RegistrationCompletionTest extends TestCase
 
         $this->assertGuest();
         $this->assertDatabaseCount('registration_tokens', 0);
+    }
+
+    public function test_a_unique_violation_on_the_address_burns_the_token(): void
+    {
+        $token = $this->issueToken('newcomer@example.com');
+
+        // Stands in for a concurrent registration that claimed the address between the check and the insert.
+        $this->mock(CompleteRegistration::class)
+            ->shouldReceive('__invoke')
+            ->andReturnUsing(function (): never {
+                Member::factory()->create(['email' => 'newcomer@example.com']);
+
+                throw new QueryException('testing', 'insert into members', [], new \PDOException('Duplicate entry'));
+            });
+
+        $this->post("/register/{$token}", $this->validForm())->assertRedirect(route('login'));
+
+        $this->assertDatabaseCount('registration_tokens', 0);
+    }
+
+    public function test_any_other_database_failure_keeps_the_link_for_a_retry(): void
+    {
+        $groups = Group::factory()->count(2)->create(['is_default' => true]);
+        $token = $this->issueToken('newcomer@example.com');
+        $failed = false;
+        DB::beforeExecuting(function (string $sql) use (&$failed): void {
+            if (! $failed && str_contains($sql, 'insert') && str_contains($sql, 'group_members')) {
+                $failed = true;
+
+                throw new QueryException('testing', $sql, [], new \PDOException('General error'));
+            }
+        });
+
+        $this->post("/register/{$token}", $this->validForm())->assertServerError();
+
+        $this->assertDatabaseMissing('members', ['email' => 'newcomer@example.com']);
+        $this->assertDatabaseCount('group_members', 0);
+        $this->assertDatabaseCount('registration_tokens', 1);
+
+        $this->post("/register/{$token}", $this->validForm())->assertRedirect('/');
+
+        $member = Member::where('email', 'newcomer@example.com')->firstOrFail();
+        $this->assertSame(2, DB::table('group_members')->where('member_id', $member->getKey())->whereIn('group_id', $groups->modelKeys())->count());
     }
 
     public function test_the_mailed_link_path_resolves_to_the_form(): void
