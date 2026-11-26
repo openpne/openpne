@@ -21,6 +21,12 @@ anything, and the web's once the document root is set.
   back take the whole database.
 - Apache honouring `.htaccess`, and a domain whose document root you choose yourself, or whose
   folder can be [replaced by a link](#where-the-host-fixes-the-document-root).
+- That domain for the site alone, with the site at its root: setup refuses an address with a path
+  after the host name, such as `https://example.com/sns/`, as the Modern pages do not work under a
+  path. Where the domain already serves something else, add a subdomain for the site in the
+  control panel (`sns.example.com`), with a document root of its own. A site that was under a path
+  redirects the old address, as
+  [installing.md](installing.md#moving-from-an-address-under-a-path) says.
 - PHP for the web running as your own account, as it does over SSH.
 
 Cron, a process kept running and `sudo` are not needed.
@@ -309,8 +315,13 @@ php artisan up
   `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` at most what `openpne:check` states. Setup runs itself again after writing `.env`, which a
   `php -d` option given to it does not reach.
 - **The backup fails later with error 1045, through `mariadb-dump`**: on a MySQL 8 server without
-  TLS, that tool cannot always sign in. Ask the host for `mysqldump`, or for TLS on the server.
-- **Deleting a post, an image or a member fails with error 1615**: the host's MySQL needs a larger
-  table definition cache ([runtime.md](internals/runtime.md#table-definition-cache)). Ask the host.
+  TLS, that tool can sign in as a `caching_sha2_password` user only once another client has since
+  the server started, so on that host the backup works at some times and fails at others, and
+  cannot be relied on.
+- **Deleting a post, an image or a member fails with error 1615**: the MySQL server's
+  `table_definition_cache` is too small for the databases it holds
+  ([runtime.md](internals/runtime.md#table-definition-cache)). Retrying does not help, and the
+  setting is the server's, which an account on a shared host cannot change. A site on SQLite does
+  not meet it.
 - **An archive or a file uploaded by FTP** goes in binary mode: in text mode, `.htaccess` gains line
   endings that `openpne:check` refuses. Running setup again puts `openpne-data/.htaccess` right.

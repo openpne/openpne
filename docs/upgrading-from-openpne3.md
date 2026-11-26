@@ -517,7 +517,8 @@ actually keep using:
    a different dump into a different database, so none of it is here. Mail templates are the usual
    case — the editor re-renders each one as you save it, so a fix that no longer works is refused
    rather than carried into a live site.
-7. Point traffic at OpenPNE 4.
+7. Point traffic at OpenPNE 4. A site that was under a path moves to a host name of its own and
+   redirects the old address ([installing.md](installing.md#moving-from-an-address-under-a-path)).
 
 Step 6 is before step 7 on purpose: once traffic is on OpenPNE 4, a mail template that still fails is
 a registration or password reset that does not arrive. Stage 3 covers how to avoid the redo entirely

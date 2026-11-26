@@ -761,6 +761,18 @@ class CheckCommandTest extends TestCase
         $this->assertStringNotContainsString('sentinel-Pa55word', $output);
     }
 
+    public function test_an_app_url_under_a_path_is_refused_for_the_modern_pages_and_both_parts_say_so(): void
+    {
+        $this->installEnv();
+        config(['app.url' => 'https://example.com/sns/']);
+
+        $output = $this->runCheck(['--only' => 'installed']).$this->runCheck(['--only' => 'web']);
+
+        $this->assertStringContainsString('[FAIL] APP_URL is https://example.com/sns/, with a path after the host name.', $output);
+        $this->assertStringContainsString('[ ?? ] Not checked: APP_URL has a path after the host name', $output);
+        $this->assertStringNotContainsString('not an https:// address', $output);
+    }
+
     public function test_the_parent_address_is_not_repeated_with_a_user_in_it(): void
     {
         $this->installEnv();

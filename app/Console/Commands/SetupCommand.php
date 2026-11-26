@@ -310,7 +310,11 @@ class SetupCommand extends Command
 
         $values['APP_URL'] = rtrim($this->until(
             fn (): string => text($this->text('url'), placeholder: 'https://sns.example.com', required: true, hint: $this->text('url_hint')),
-            fn (string $value): ?string => InstalledCheck::usableAppUrl(rtrim($value, '/')) ? EnvValue::problem($value) : 'url_unusable',
+            fn (string $value): ?string => match (true) {
+                InstalledCheck::usableAppUrl(rtrim($value, '/')) => EnvValue::problem($value),
+                InstalledCheck::subpathAppUrl(rtrim($value, '/')) => 'url_subpath',
+                default => 'url_unusable',
+            },
         ), '/');
         $values['APP_NAME'] = $this->until(
             fn (): string => text($this->text('name'), required: true, hint: $this->text('name_hint')),

@@ -58,13 +58,26 @@ final class InstalledCheck
     /** Whether APP_URL is what the web part can fetch: https, a host, and nothing after it. */
     public static function usableAppUrl(string $url): bool
     {
-        $parts = parse_url($url);
+        return self::appUrlPath($url) === '';
+    }
 
-        return is_array($parts)
-            && ($parts['scheme'] ?? '') === 'https'
-            && ($parts['host'] ?? '') !== ''
-            && in_array($parts['path'] ?? '', ['', '/'], true)
-            && ! isset($parts['query']) && ! isset($parts['fragment']) && ! isset($parts['user']);
+    /** Whether APP_URL would be usable but for a path after the host, under which the Modern pages do not work. */
+    public static function subpathAppUrl(string $url): bool
+    {
+        return ! in_array(self::appUrlPath($url), [null, ''], true);
+    }
+
+    /** The path of an https URL with a host and nothing else after it, '' for none; null for any other URL. */
+    private static function appUrlPath(string $url): ?string
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || ($parts['host'] ?? '') === ''
+            || isset($parts['query']) || isset($parts['fragment']) || isset($parts['user'])) {
+            return null;
+        }
+        $path = $parts['path'] ?? '';
+
+        return $path === '/' ? '' : $path;
     }
 
     private function envFile(): Finding
@@ -83,7 +96,7 @@ final class InstalledCheck
             return Finding::ok('app.url', 'app_url', ['url' => $url]);
         }
 
-        return Finding::fail('app.url', 'app_url_unusable', ['url' => self::shownUrl($url)]);
+        return Finding::fail('app.url', self::subpathAppUrl($url) ? 'app_url_subpath' : 'app_url_unusable', ['url' => self::shownUrl($url)]);
     }
 
     /** A URL with a user in it may carry a password, so only a URL without one is repeated. */

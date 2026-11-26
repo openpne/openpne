@@ -71,7 +71,9 @@ A site that serves people installs a tagged release (`v4.0.0-alpha.N`, under
 development line and moves with every merged change.
 
 [docs/installing.md](docs/installing.md) sets a release up on a server: PHP 8.3, 8.4 or 8.5, SQLite,
-MySQL or MariaDB, a web server, and a way to run queued work. Where a release has an archive, installing from
+MySQL or MariaDB, a web server, and a way to run queued work. The site needs a host name of its
+own, which a subdomain such as `sns.example.com` can be: under a path such as
+`https://example.com/sns/`, the Modern pages do not work. Where a release has an archive, installing from
 it needs neither Composer nor Node.js on the server. A release without one, or a site that will
 carry changes of its own, is installed from its tag, which needs both. Moving from one release to the next is [docs/updating.md](docs/updating.md).
 
