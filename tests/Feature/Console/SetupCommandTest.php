@@ -1048,7 +1048,7 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsConfirmation('Print a registration link for the first member?', 'no')
-            ->expectsOutputToContain('PHP on the command line has no sqlite3 extension, and the backup of an SQLite database needs it. Ask the host for it.')
+            ->expectsOutputToContain('PHP on the command line has no sqlite3 extension, and the backup of an SQLite database needs it. Where another PHP on this host has it')
             ->doesntExpectOutputToContain('openpne:backup-sqlite')
             ->assertSuccessful();
     }
