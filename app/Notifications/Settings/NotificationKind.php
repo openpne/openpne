@@ -6,6 +6,7 @@ namespace App\Notifications\Settings;
 
 use App\Features\GroupTalk\GroupTalkNotifyDefault;
 use App\Features\GroupTalk\GroupTalkNotifyMode;
+use App\Support\Feature;
 use LogicException;
 
 /**
@@ -60,6 +61,7 @@ enum NotificationKind: string
                 caption: 'New %activity% posts (%friends% only)',
                 dependOnNot: self::TimelineNewPost,
                 isWired: true,
+                dependsOn: Feature::Friend,
             ),
             // Dormant: the community timeline it announced is gone, but the case and its imported rows
             // stay, a member's stored choice for it being no consent to a different kind.
@@ -98,6 +100,7 @@ enum NotificationKind: string
                 caption: 'New %diaries% (%friends% only)',
                 dependOnNot: self::DiaryNewPost,
                 isWired: true,
+                dependsOn: Feature::Friend,
             ),
             self::DiaryReplyPost => new NotificationKindDefinition(
                 category: NotificationCategory::Diary,
@@ -194,6 +197,7 @@ enum NotificationKind: string
                 caption: 'New messages (%friends% only)',
                 dependOnNot: self::DirectMessageNew,
                 isWired: true,
+                dependsOn: Feature::Friend,
             ),
         };
     }
@@ -217,6 +221,21 @@ enum NotificationKind: string
     public function isWired(): bool
     {
         return $this->definition()->isWired;
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->category()->feature()->enabled()
+            && ($this->definition()->dependsOn?->enabled() ?? true);
+    }
+
+    /** @return list<self> the "(x only)" variants of this kind that the settings do not offer right now */
+    public function hiddenVariants(): array
+    {
+        return array_values(array_filter(
+            self::wiredCases(),
+            fn (self $variant): bool => $variant->dependOnNot() === $this && ! $variant->isAvailable(),
+        ));
     }
 
     /**

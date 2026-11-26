@@ -127,7 +127,8 @@ Every catalog item is registered so the one-shot upgrade can preserve stored cho
 `dependOnNot` encodes the extension's "(x only)" variants: `DirectMessageNewOnlyFriends` only takes
 effect while `DirectMessageNew` is off — an enabled broad kind already covers the narrower audience.
 Delivery reproduces the extension's chain: broad kind on → deliver; else narrow kind on and the
-relation holds (e.g. sender is a friend) → deliver.
+relation holds (e.g. sender is a friend) → deliver. The narrow step needs the friend unit on
+([feature-toggles.md](feature-toggles.md#what-a-disabled-unit-does-not-change)).
 
 ## Mail headers
 
@@ -250,8 +251,8 @@ immediately before each channel send
 [`GroupTalkNotificationEligibility`](../../app/Features/GroupTalk/GroupTalkNotificationEligibility.php),
 [`DiaryAccess`](../../app/Features/Diary/DiaryAccess.php),
 and [`DirectMessageReceivedNotification`](../../app/Notifications/DirectMessage/DirectMessageReceivedNotification.php)'s
-own — asked once, so it stays with the notification — each composed with the feature gate through a
-trait alias). `via()` cannot serve this: it runs at enqueue time, and `SendQueuedNotifications` replays
+own — asked once, so it stays with the notification, and re-reading the recipient's opt-out for that
+channel too — each composed with the feature gate through a trait alias). `via()` cannot serve this: it runs at enqueue time, and `SendQueuedNotifications` replays
 the channels decided back then.
 
 Two of those re-checks are **`database`-only**, and are the delivery-time half of the rule that a read

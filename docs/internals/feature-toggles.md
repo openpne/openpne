@@ -128,8 +128,9 @@ feature notification namespaces so a class added later cannot skip either half.
 
 Mark-all-read runs through the same filter, so **a hidden row stays unread** and returns exactly as
 the member left it. Opening one 404s rather than redirecting to a switched-off unit's screen. The
-member's notification settings drop a unit's kinds while it is off (`NotificationCategory::feature()`);
-the stored opt-ins stay and apply again when it returns.
+member's notification settings drop a unit's kinds while it is off (`NotificationKind::isAvailable()`:
+the category's unit, plus the friend unit for a friends-only variant); the stored opt-ins stay and
+apply again when it returns.
 
 ## File delivery
 
@@ -175,13 +176,19 @@ doctrine governs member-selectable audiences only.
 
 What does go is the **friend lenses other features own**, because a lens's purpose *is* the unit: the
 friend diary feed (`diary.list_friend`, gated as `diary` **and** `friend`), the diary hub tab and the
-dashboard digest of it, the friend-scoped gadgets, and the home feed's friend branch
+dashboard digest of it, the friend-scoped gadgets, the friends-only notification variants (not offered,
+and not fanned out once the switch is seen, so a member who kept only that variant hears nothing from
+the kind until the unit returns), and the home feed's friend branch
 ([`TimelineFeedScope::apply()`](../../app/Features/Timeline/TimelineFeedScope.php), so its three
-consumers follow from one place while the own-posts and all-members tiers stay). Two seams state the
+consumers follow from one place while the own-posts and all-members tiers stay). Three seams state the
 dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinTest`'s dependency map
-(a route needing a second gate) and [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
+(a route needing a second gate), [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
 second unit per context — `activityBox` goes on the home, where it is the friend feed, and stays on a
-profile, where it is the owner's own timeline).
+profile, where it is the owner's own timeline) and `NotificationKindDefinition::$dependsOn` (read by
+`NotificationKind::isAvailable()`, which the settings and each fan-out consult). Turning a broad kind
+off while its friends-only variant is hidden turns the variant off too, so "Do not notify" stays that
+when the unit returns; a direct message re-reads the choice when it is sent, so one queued before the
+switch is still dropped.
 
 ## Upgrade
 

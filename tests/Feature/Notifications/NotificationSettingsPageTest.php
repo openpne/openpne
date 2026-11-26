@@ -10,6 +10,7 @@ use App\Models\GroupMember;
 use App\Models\Member;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\Concerns\FakesWebPushTransport;
@@ -223,6 +224,51 @@ class NotificationSettingsPageTest extends TestCase
             ->assertSee(NotificationKind::GroupTalkMention->caption())
             // Dormant since the group-talk cutover: registered, but off the page.
             ->assertDontSee(NotificationKind::TimelineNewPostCommunity->caption());
+    }
+
+    public function test_with_friends_off_neither_surface_offers_a_friends_only_variant(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/member/config/notifications')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('form.groups', fn ($groups): bool => collect($groups)->flatMap(fn (array $group): array => $group['kinds'])
+                    ->every(fn (array $kind): bool => $kind['dependOnNot'] === null))
+                ->where('form.groups.0.kinds.0.kind', 'timeline_new_post')
+                ->where('form.groups.1.kinds.0.kind', 'diary_new_post')
+                ->where('form.groups.5.kinds.0.kind', 'direct_message_new'),
+            );
+
+        $classic = $this->actingAs($member)->get('/member/config?category=notification')
+            ->assertSee(NotificationKind::DiaryNewPost->caption());
+        foreach ([NotificationKind::TimelineNewPostOnlyFriends, NotificationKind::DiaryNewPostOnlyFriends, NotificationKind::DirectMessageNewOnlyFriends] as $kind) {
+            $classic->assertDontSee($kind->caption());
+        }
+    }
+
+    public function test_turning_a_kind_off_while_friends_are_off_turns_its_hidden_variant_off_too(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/notifications', ['settings' => ['diary_new_post' => ['mail' => false]]]);
+
+        $fresh = $member->fresh();
+        $this->assertFalse($fresh->wantsNotification(NotificationKind::DiaryNewPostOnlyFriends, NotificationChannel::Mail));
+        $this->assertTrue($fresh->wantsNotification(NotificationKind::DiaryNewPostOnlyFriends, NotificationChannel::Web));
+    }
+
+    public function test_re_posting_an_unchanged_off_keeps_a_stored_friends_only_choice(): void
+    {
+        $member = Member::factory()->create();
+        $member->setNotificationSetting(NotificationKind::DiaryNewPost, NotificationChannel::Mail, false);
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        // The Classic form posts every rendered control, the broad kind included, on any save.
+        $this->actingAs($member)->post('/member/config/notifications', ['settings' => ['diary_new_post' => ['mail' => '0', 'web' => '1']]]);
+
+        $this->assertTrue($member->fresh()->wantsNotification(NotificationKind::DiaryNewPostOnlyFriends, NotificationChannel::Mail));
     }
 
     public function test_classic_category_page_explains_the_talk_settings_reach_and_lists_the_muted_rooms(): void

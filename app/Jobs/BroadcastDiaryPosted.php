@@ -51,7 +51,7 @@ class BroadcastDiaryPosted implements ShouldQueue
         }
 
         $author = $diary->member;
-        $friendIds = $recipients->friendIds($author)->flip();
+        $friendIds = NotificationKind::DiaryNewPostOnlyFriends->isAvailable() ? $recipients->friendIds($author)->flip() : collect();
 
         $audience->select('id', 'email', 'locale')
             ->chunkById(self::CHUNK, function (EloquentCollection $members) use ($diary, $author, $friendIds): void {
