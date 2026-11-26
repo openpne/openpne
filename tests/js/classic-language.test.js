@@ -12,6 +12,9 @@ const choose = async (status) => {
     const calls = { fetch: [], reload: 0, submit: 0 };
     globalThis.fetch = async (url, init) => {
         calls.fetch.push({ url, init });
+        if (status === null) {
+            throw new TypeError('offline');
+        }
 
         return { ok: status < 400 };
     };
@@ -40,9 +43,11 @@ test('a choice is posted for JSON and the page reloads itself', async () => {
     assert.equal(calls.fetch[0].init.body.get('_token'), 't');
 });
 
-test('a refused post falls back to submitting the form', async () => {
-    const calls = await choose(419);
+for (const [label, status] of [['refused', 419], ['unreachable', null]]) {
+    test(`a ${label} post falls back to submitting the form`, async () => {
+        const calls = await choose(status);
 
-    assert.equal(calls.reload, 0);
-    assert.equal(calls.submit, 1);
-});
+        assert.equal(calls.reload, 0);
+        assert.equal(calls.submit, 1);
+    });
+}

@@ -41,14 +41,17 @@ test('a language switch reloads the page it is on', async () => {
     await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
     expect(fetch).toHaveBeenCalledWith('/locale', expect.objectContaining({
             method: 'POST',
-            headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'xsrf=', Accept: 'application/json' }),
+            headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'xsrf=', 'Content-Type': 'application/json', Accept: 'application/json' }),
             body: JSON.stringify({ locale: 'en' }),
         }));
     expect(inertia.post).not.toHaveBeenCalled();
 });
 
-test('a refused switch falls back to the Inertia post', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 419 })));
+test.each([
+    ['refused', () => Promise.resolve(new Response(null, { status: 419 }))],
+    ['unreachable', () => Promise.reject(new TypeError('offline'))],
+])('a %s switch falls back to the Inertia post', async (_, answer) => {
+    vi.stubGlobal('fetch', vi.fn(answer));
     renderWithProviders(<AuthLayout title="Register">form</AuthLayout>);
 
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
