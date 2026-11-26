@@ -311,6 +311,12 @@ is a still unless its URL asks for the frames with `_a`, and a header over the p
 | Where the decode runs | the php-fpm worker | the sidecar |
 | To install | nothing | the container (the compose file runs one) and three env values |
 
+The sidecar's memory grows with the pixels it decodes at once. Measured on imgproxy v4.0.25 making a
+canonical, a GIF peaks at about 17 bytes a pixel (over 800 MB at 50 MP) and a JPEG at about 4, and decodes
+running together take up to the sum of theirs, so the container's memory limit has to hold
+`IMGPROXY_WORKERS` pictures at the pixel limit; over it the container is killed and every picture in
+flight fails. `OPENPNE_IMAGE_MAX_SOURCE_PIXELS` lowers that limit without touching the sidecar.
+
 Switching changes the encoder directory of every cache key, so each picture is made afresh on its next
 view or by `openpne:image-cache warm`; `rebuild` reclaims the old directories. Whether a GIF or WebP
 animates is recorded only under `imgproxy`, so after a switch to it each picture GD left unknown is
