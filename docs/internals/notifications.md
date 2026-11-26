@@ -251,8 +251,8 @@ immediately before each channel send
 [`GroupTalkNotificationEligibility`](../../app/Features/GroupTalk/GroupTalkNotificationEligibility.php),
 [`DiaryAccess`](../../app/Features/Diary/DiaryAccess.php),
 and [`DirectMessageReceivedNotification`](../../app/Notifications/DirectMessage/DirectMessageReceivedNotification.php)'s
-own — asked once, so it stays with the notification — each composed with the feature gate through a
-trait alias). `via()` cannot serve this: it runs at enqueue time, and `SendQueuedNotifications` replays
+own — asked once, so it stays with the notification, and re-reading the recipient's opt-out for that
+channel too — each composed with the feature gate through a trait alias). `via()` cannot serve this: it runs at enqueue time, and `SendQueuedNotifications` replays
 the channels decided back then.
 
 Two of those re-checks are **`database`-only**, and are the delivery-time half of the rule that a read
