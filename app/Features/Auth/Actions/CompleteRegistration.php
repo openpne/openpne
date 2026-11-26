@@ -7,6 +7,7 @@ use App\Features\Auth\Events\MemberRegistered;
 use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\MemberCapacityReached;
 use App\Features\Auth\RegistrationTokenSource;
+use App\Features\Group\Actions\JoinDefaultGroups;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Support\ViewerRelations;
@@ -22,7 +23,7 @@ use Illuminate\Validation\ValidationException;
  */
 class CompleteRegistration
 {
-    public function __construct(private CreateNewMember $create, private MemberCapacity $capacity) {}
+    public function __construct(private CreateNewMember $create, private MemberCapacity $capacity, private JoinDefaultGroups $joinDefaultGroups) {}
 
     /**
      * @param  array<string, mixed>  $input  the posted form (name, password, profile); email is ignored
@@ -36,6 +37,7 @@ class CompleteRegistration
         return $this->capacity->reserveMember(fn (): Member => DB::transaction(function () use ($pending, $input): Member {
             $member = $this->create->create(['email' => $pending->email] + $input);
             $this->autoFriendInviter($pending, $member);
+            ($this->joinDefaultGroups)($member);
             $pending->delete();
 
             // Fires after this transaction commits (ShouldDispatchAfterCommit), so the queued
