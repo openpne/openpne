@@ -135,8 +135,14 @@ class RegistrationController extends Controller
             }
 
             throw $e; // name / password / profile errors → back to the form, token kept
-        } catch (QueryException) {
-            return $this->addressClaimed($pending);
+        } catch (QueryException $e) {
+            // Only the unique address is a reason to burn the token; any other failure rolled the member
+            // back and leaves the link usable for a retry.
+            if (Member::whereRaw('lower(email) = ?', [$pending->email])->exists()) {
+                return $this->addressClaimed($pending);
+            }
+
+            throw $e;
         }
 
         Auth::login($member);

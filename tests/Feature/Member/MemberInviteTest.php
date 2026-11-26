@@ -6,6 +6,7 @@ use App\Features\Auth\RegistrationTokenSource;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\RegistrationLinkNotification;
+use App\Support\Feature;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -116,6 +117,19 @@ class MemberInviteTest extends TestCase
         $invitee = Member::where('email', 'invitee@example.com')->firstOrFail();
         $this->assertDatabaseHas('friendships', ['member_id' => $inviter->getKey(), 'friend_id' => $invitee->getKey()]);
         $this->assertDatabaseHas('friendships', ['member_id' => $invitee->getKey(), 'friend_id' => $inviter->getKey()]);
+    }
+
+    public function test_with_friends_off_a_member_invite_forms_no_friendship(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $inviter = Member::factory()->create();
+        $raw = $this->issueMemberInvite('invitee@example.com', $inviter);
+
+        $this->post("/register/{$raw}", $this->validForm())->assertRedirect('/');
+
+        $this->assertDatabaseHas('members', ['email' => 'invitee@example.com']);
+        $this->assertDatabaseCount('friendships', 0);
     }
 
     public function test_a_deleted_inviter_drops_the_friendship_but_not_the_registration(): void

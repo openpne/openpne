@@ -880,6 +880,8 @@
     "Members are notified of every message, which suits a small site. A member can still silence a room or turn the notification off.": "すべてのメッセージを通知します。少人数のサイト向けです。メンバー側でトークをミュートしたり、通知を切ったりできます。",
     "Members are notified only when a message names them.": "メッセージで名前が挙がったメンバーにだけ通知します。",
     "Members can create %communities% in this category": "メンバーがこのカテゴリで%Community%を作成できる",
+    "Members who register from now on no longer start out in this %community%. Current members stay.": "これから登録するメンバーは、この%community%に参加した状態では始まらなくなります。参加しているメンバーはそのままです。",
+    "Members who register from now on start out in this %community%. Members already registered are not added; use Add all members for them.": "これから登録するメンバーは、この%community%に参加した状態で始まります。すでに登録しているメンバーは追加されません。追加するには「全メンバーを追加」を使います。",
     "Mention candidates": "メンション候補",
     "Mentioned in a %activity% post": "%activity%でのメンション",
     "Mentioned in a %community% talk message": "%Community%のトークでメンションされたとき",

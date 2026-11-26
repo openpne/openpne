@@ -12,15 +12,20 @@ use Illuminate\Support\Facades\DB;
 /**
  * A plain Member row in every default group, whatever its join policy and with no join notification,
  * as OpenPNE 3 opAuthRegisterForm::save() joined the is_default communities.
+ * Only for a member created in the caller's transaction: it neither checks nor clears a join request.
  */
 class JoinDefaultGroups
 {
     public function __invoke(Member $member): void
     {
-        $groupIds = Group::query()->where('is_default', true)->orderBy('id')->pluck('id');
-        if ($groupIds->isEmpty()) {
+        $candidates = Group::query()->where('is_default', true)->pluck('id');
+        if ($candidates->isEmpty()) {
             return;
         }
+
+        // The plain read may answer from the caller's REPEATABLE READ snapshot, older than an admin's unset;
+        // a locking read sees the latest commit.
+        $groupIds = Group::query()->whereKey($candidates)->where('is_default', true)->orderBy('id')->sharedLock()->pluck('id');
 
         $now = now();
         $rows = $groupIds->map(fn (mixed $groupId): array => [
@@ -32,7 +37,7 @@ class JoinDefaultGroups
             ...TalkReadCursor::snapshot((int) $groupId),
         ])->all();
 
-        foreach (array_chunk($rows, 100) as $part) {
+        foreach (array_chunk($rows, AddAllMembers::INSERT_ROWS) as $part) {
             DB::table('group_members')->insertOrIgnore($part);
         }
 

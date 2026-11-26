@@ -10,6 +10,7 @@ use App\Features\Auth\RegistrationTokenSource;
 use App\Features\Group\Actions\JoinDefaultGroups;
 use App\Models\Member;
 use App\Models\RegistrationToken;
+use App\Support\Feature;
 use App\Support\ViewerRelations;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -55,7 +56,7 @@ class CompleteRegistration
      */
     private function autoFriendInviter(RegistrationToken $pending, Member $member): void
     {
-        if ($pending->source !== RegistrationTokenSource::MemberInvite || $pending->inviter_id === null) {
+        if ($pending->source !== RegistrationTokenSource::MemberInvite || $pending->inviter_id === null || ! Feature::Friend->enabled()) {
             return;
         }
 

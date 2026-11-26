@@ -69,6 +69,9 @@ class GroupsTable
                     ->label(fn (Group $record): string => $record->is_default ? __('Unset as default') : __('Set as default'))
                     ->icon(Heroicon::OutlinedStar)
                     ->requiresConfirmation()
+                    ->modalDescription(fn (Group $record): string => $record->is_default
+                        ? __('Members who register from now on no longer start out in this %community%. Current members stay.')
+                        : __('Members who register from now on start out in this %community%. Members already registered are not added; use Add all members for them.'))
                     ->action(function (Group $record): void {
                         $record->update(['is_default' => ! $record->is_default]);
                         Notification::make()->success()->title(__('Saved'))->send();

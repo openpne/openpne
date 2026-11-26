@@ -74,7 +74,6 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
         ];
     }
 
-    /** All five paths are pinned here so that the next one added cannot quietly be the sixth. */
     #[DataProvider('membershipPaths')]
     public function test_every_membership_path_snapshots_the_cursor(string $path): void
     {
@@ -142,8 +141,10 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
     /** @return array{0: Group, 1: Member} */
     private function joinDefaults(): array
     {
-        $group = Group::factory()->create(['is_default' => true]);
+        // Two defaults with their own latest message, so a cursor shared across them would be wrong for one.
+        [$first, $group] = Group::factory()->count(2)->create(['is_default' => true])->all();
         GroupMessage::factory()->create(['group_id' => $group->getKey()]);
+        GroupMessage::factory()->create(['group_id' => $first->getKey()]);
         $newcomer = Member::factory()->create();
         app(JoinDefaultGroups::class)($newcomer);
 
