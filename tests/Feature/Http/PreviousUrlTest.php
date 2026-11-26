@@ -456,9 +456,13 @@ class PreviousUrlTest extends TestCase
         config(['openpne.surface_mode' => 'classic_only', 'app.maintenance.driver' => 'cache', 'app.maintenance.store' => 'array']);
         $this->app->maintenanceMode()->activate([]);
 
-        $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'])
-            ->get($url)->assertStatus(503)->assertHeaderMissing('X-Inertia-Location');
-        $this->assertFileDoesNotExist(storage_path('framework/down'));
+        try {
+            $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'])
+                ->get($url)->assertStatus(503)->assertHeaderMissing('X-Inertia-Location');
+            $this->assertFileDoesNotExist(storage_path('framework/down'));
+        } finally {
+            $this->app->maintenanceMode()->deactivate();
+        }
     }
 
     public function test_a_language_switch_from_a_session_that_recorded_a_secret_link_keeps_its_headers(): void

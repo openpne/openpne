@@ -57,11 +57,11 @@ class SecretUrlRoutesTest extends TestCase
     public function test_every_inertia_location_is_built_with_the_secret_headers(): void
     {
         $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path('app'), \FilesystemIterator::SKIP_DOTS));
-        $paths = [...array_map(fn (\SplFileInfo $f): string => $f->getPathname(), iterator_to_array($files, false)), base_path('routes/web.php'), base_path('bootstrap/app.php')];
+        $paths = [...array_map(fn (\SplFileInfo $f): string => $f->getPathname(), iterator_to_array($files, false)), ...glob(base_path('routes/*.php')), base_path('bootstrap/app.php')];
 
         $builders = [];
         foreach ($paths as $path) {
-            if (str_ends_with($path, '.php') && preg_match('/Inertia::location\(|inertia_location\(|X-Inertia-Location|Header::LOCATION/', (string) file_get_contents($path))) {
+            if (str_ends_with($path, '.php') && preg_match('/Inertia::location\(|inertia_location\(|inertia\(\)->location\(|ResponseFactory::class\)->location\(|X-Inertia-Location|Header::LOCATION/', (string) file_get_contents($path))) {
                 $builders[] = str_replace(base_path().'/', '', $path);
             }
         }
