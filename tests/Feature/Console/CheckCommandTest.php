@@ -327,17 +327,10 @@ class CheckCommandTest extends TestCase
             ->expectsOutputToContain('backup of an SQLite database ('.$php.' artisan openpne:backup-sqlite, docs/updating.md)')
             ->assertFailed();
 
-        $limit = (string) ini_get('memory_limit');
-        // A refused ini_set warns, which the framework turns into an exception.
-        if (memory_get_usage(true) > 224 * 1024 * 1024 || @ini_set('memory_limit', '255M') === false) {
-            $this->markTestIncomplete('This process holds too much memory to lower its limit under 256M.');
-        }
-        try {
-            $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'en'])
-                ->expectsOutputToContain('Give such a command more with '.$php.' -d memory_limit=256M.');
-        } finally {
-            ini_set('memory_limit', $limit);
-        }
+        $memory = (new BeforeInstallCheck($this->layout, $this->app->make(SqliteSupport::class), $this->app->make(PhpCommand::class), '100M'))->run(true);
+        $line = collect($memory)->firstWhere('id', 'cli.memory');
+        $this->assertSame($php, $line->replace['php']);
+        $this->assertStringContainsString($php.' -d memory_limit=', __('console.check.'.$line->message, $line->replace, 'en'));
         $this->assertFileDoesNotExist($this->layout->base.'/tools/ran');
     }
 
@@ -703,10 +696,48 @@ class CheckCommandTest extends TestCase
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
             ->expectsOutputToContain('[ OK ] memory_limit on the web: 256M. An upload of up to 29,491,200 pixels fits in it and this site takes up to 25,600,000');
 
+        // A system libgd allocates outside memory_limit, so the size a process grows to is stated instead.
+        config(['openpne.images.max_source_pixels' => 0]);
+        $this->fakeHost(['php' => ['ini' => ['memory_limit' => '64M'], 'gd_bundled' => false]]);
+        $output = $this->runCheck(['--only' => 'web']);
+        $this->assertStringContainsString('[WARN] memory_limit on the web is 64M, below PHP\'s default of 128M', $output);
+        $this->fakeHost(['php' => ['ini' => ['memory_limit' => '128M'], 'gd_bundled' => false]]);
+        $output = $this->runCheck(['--only' => 'web']);
+        $this->assertStringContainsString('[ OK ] memory_limit on the web: 128M. This PHP\'s GD is the system\'s libgd', $output);
+        $this->assertStringContainsString('(12,600,000 pixels) a PHP process grows to about 128M', $output);
+
         config(['openpne.images.processor' => 'imgproxy']);
         $this->fakeHost(['php' => ['ini' => ['memory_limit' => '128M']]]);
         $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
-            ->expectsOutputToContain('[WARN] memory_limit on the web is 128M, which a large photo can run out of');
+            ->expectsOutputToContain('[ OK ] memory_limit on the web: 128M.');
+        $this->fakeHost(['php' => ['ini' => ['memory_limit' => '64M']]]);
+        $this->artisan('openpne:check', ['--only' => 'web', '--lang' => 'en'])
+            ->expectsOutputToContain('[WARN] memory_limit on the web is 64M, below PHP\'s default of 128M that the site is sized for. Set it to 128M or more');
+    }
+
+    /** @return iterable<string, array{string, string, bool, bool, string, ?string}> */
+    public static function commandMemoryCases(): iterable
+    {
+        yield 'bundled GD without OPcache holds a source up to the byte cap from 206M' => ['gd', '205M', true, false, 'cli_memory_images_low', '206M'];
+        yield 'bundled GD without OPcache at 206M' => ['gd', '206M', true, false, 'cli_memory', null];
+        yield 'bundled GD with OPcache at 158M' => ['gd', '158M', true, true, 'cli_memory', null];
+        yield 'bundled GD with OPcache below 158M' => ['gd', '157M', true, true, 'cli_memory_images_low', '158M'];
+        yield 'bundled GD unlimited' => ['gd', '-1', true, false, 'cli_memory', null];
+        yield 'system libgd is held to the floor only' => ['gd', '128M', false, false, 'cli_memory', null];
+        yield 'system libgd below the floor' => ['gd', '100M', false, false, 'cli_memory_low', '128M'];
+        yield 'imgproxy is held to the floor only' => ['imgproxy', '128M', true, false, 'cli_memory', null];
+        yield 'imgproxy below the floor' => ['imgproxy', '100M', true, false, 'cli_memory_low', '128M'];
+    }
+
+    #[DataProvider('commandMemoryCases')]
+    public function test_the_command_line_memory_limit_is_judged_against_what_its_commands_decode(string $processor, string $limit, bool $bundled, bool $opcache, string $message, ?string $asked): void
+    {
+        config(['openpne.images.processor' => $processor, 'openpne.images.max_source_pixels' => 0, 'openpne.images.max_source_kilobytes' => 0, 'openpne.images.max_upload_kilobytes' => 5120, 'openpne.images.max_upload_dimension' => 5000]);
+
+        $finding = BeforeInstallCheck::commandMemory($limit, $bundled, $opcache, 'php');
+
+        $this->assertSame($message, $finding->message);
+        $this->assertSame($asked, $finding->replace['needed'] ?? $finding->replace['minimum'] ?? null);
     }
 
     public function test_upload_sizes_of_zero_are_no_limit(): void
@@ -949,6 +980,7 @@ class CheckCommandTest extends TestCase
         $this->assertSame(PHP_VERSION, $answer['version']);
         $this->assertContains('mbstring', $answer['extensions']);
         $this->assertSame(['memory_limit', 'upload_max_filesize', 'post_max_size', 'max_execution_time', 'opcache.enable', 'opcache.file_cache'], array_keys($answer['ini']));
+        $this->assertSame(defined('GD_BUNDLED') ? (bool) constant('GD_BUNDLED') : null, $answer['gd_bundled']);
         $this->assertTrue($answer['wrote']);
         $this->assertFileExists($owner);
     }
@@ -1127,7 +1159,7 @@ class CheckCommandTest extends TestCase
             return Http::response('', 404);
         }
 
-        $php += ['version' => '8.3.30', 'sapi' => 'fpm-fcgi', 'missing' => [], 'ini' => [], 'wrote' => true, 'proxy_headers' => [], 'peer' => '127.0.0.1', 'prefix' => ''];
+        $php += ['version' => '8.3.30', 'sapi' => 'fpm-fcgi', 'missing' => [], 'ini' => [], 'gd_bundled' => true, 'wrote' => true, 'proxy_headers' => [], 'peer' => '127.0.0.1', 'prefix' => ''];
         if ($php['wrote'] === 'another user') {
             // fileowner() follows the link to root's directory, and unlink() removes the link alone.
             symlink('/', $owner[1]);
@@ -1141,6 +1173,7 @@ class CheckCommandTest extends TestCase
             'sapi' => $php['sapi'],
             'extensions' => array_values(array_diff([...BeforeInstallCheck::EXTENSIONS, 'pdo_sqlite', 'pdo_mysql'], $php['missing'])),
             'ini' => $php['ini'] + ['memory_limit' => '256M', 'upload_max_filesize' => '16M', 'post_max_size' => '32M', 'max_execution_time' => '30', 'opcache.enable' => '1', 'opcache.file_cache' => ''],
+            'gd_bundled' => $php['gd_bundled'],
             'wrote' => (bool) $php['wrote'],
             'proxy_headers' => $php['proxy_headers'],
             'peer' => $php['peer'],

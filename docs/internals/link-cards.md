@@ -367,10 +367,14 @@ byte cap → finfo (real media type) → header dimensions → side and pixel li
          → store (whose canonical re-encode is the decode)
 ```
 
-Everything before the decode exists because a decoder allocates roughly width × height × 4 bytes
-before anything can inspect the result, and an out-of-memory kill is not catchable. So the size must
-be known bounded from data that is cheap to read — **total pixels, not just each side**: the per-side
-limit alone permits 5000 × 5000 = 100 MB decoded, enough to end a 128 MB worker by itself.
+Everything before the decode exists because a decoder allocates the whole picture before anything
+can inspect the result, and an out-of-memory kill is not catchable. So the size must be known bounded
+from data that is cheap to read — **total pixels, not just each side**: the per-side limit alone
+permits 5000 × 5000, which under GD costs some 200 MB ([security](security.md), "Decoding an
+upload"), more than a 128 MB worker holds. The card's own limit, plain pixels, is checked first and the
+store's `ImageSourceLimit`, counted GD's way, after it: under GD and at the store's default, a card
+limit raised past about 8.4 million lets through pictures the store refuses, and such a card has no
+picture; a store limit set lower meets the card's sooner.
 
 The frame count is no part of that bound. The GD processor decodes one frame whatever the source
 holds, and the `imgproxy` sidecar decodes out of process under its own frame and pixel budgets

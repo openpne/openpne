@@ -60,8 +60,9 @@ packages ship it; with 256M or more and OPcache on, `25600000` takes every pictu
 side limit, and `php artisan openpne:check` states the most a web `memory_limit` holds. Set a larger
 value before the site first meets such a picture: one refused under a lower value comes back only
 with `php artisan openpne:image-cache warm --retry-failed`, the site's icons with `rebuild`. The
-packages above build PHP against the system's libgd, which takes that memory outside `memory_limit`:
-leave the server room for it.
+packages above build PHP against the system's libgd, which takes that memory outside `memory_limit`,
+so the limit does not stop it: the web lines of `openpne:check` state how large a PHP process grows
+instead, and the server needs room for it.
 
 ## The site user and its directory
 
@@ -265,7 +266,8 @@ PHP runs as the site user, in a PHP-FPM pool of its own:
 ```ini
 ; /etc/php/8.5/fpm/pool.d/openpne.conf
 [openpne]
-; What the site needs: PHP as the site user, on a socket nginx can open, taking uploads this large.
+; What the site needs: PHP as the site user, on a socket nginx can open, taking uploads this large,
+; with PHP's default memory_limit.
 user = openpne
 group = openpne
 listen = /run/php/openpne.sock
@@ -273,6 +275,7 @@ listen.owner = www-data
 listen.group = www-data
 php_admin_value[upload_max_filesize] = 16M
 php_admin_value[post_max_size] = 32M
+php_admin_value[memory_limit] = 128M
 ; Yours: how many PHP processes the server keeps. These are a small server's numbers.
 pm = dynamic
 pm.max_children = 10
@@ -283,6 +286,21 @@ pm.max_spare_servers = 3
 
 The two sizes follow the upload caps in `.env` (`OPENPNE_IMAGE_MAX_UPLOAD_KB`,
 `OPENPNE_FILE_MAX_UPLOAD_KB`): PHP's default of 2M refuses most photos.
+
+`memory_limit` is the most one PHP process takes for a request. 128M holds the default picture limit
+([What the server needs](#what-the-server-needs)), and a page takes a few MB of it. Any process can
+reach it, with a picture to draw or a large request body, from someone signed in or not, so choose
+`pm.max_children` to fit that many times `memory_limit` in the memory you leave PHP: 10 at 128M is
+1.3 GB. With the system's libgd, a picture's memory is held outside `memory_limit`: count each
+process at `memory_limit` or the size `openpne:check` states, whichever is larger.
+
+A request body is bounded in three places. The web server refuses one over `client_max_body_size`
+(Apache: `LimitRequestBody`) before PHP reads it. PHP leaves a form over `post_max_size` unread, and the
+site answers 413; a body that is not a form, such as JSON, is still read whole and decoded by the
+site before that answer, so only the web server's limit stops it. PHP writes a form's files to
+temporary files, but holds a form without files at three to five times its size, and a JSON body at
+50 times or more depending on its shape; a request past `memory_limit` fails alone. Keep the web
+server's limit at `post_max_size`, and lower both only as far as the upload caps allow.
 
 ```nginx
 # /etc/nginx/sites-available/openpne
@@ -353,15 +371,17 @@ PHP answers with:
     # Yours: the name and the port the site answers on, and its certificate.
     ServerName sns.example.com
 
-    # What the site needs: the release's public/ as the root with its .htaccess in force, and
-    # uploads this large.
+    # What the site needs: the release's public/ as the root with its .htaccess in force, and a
+    # request body and uploads this large, with PHP's default memory_limit.
     DocumentRoot /srv/openpne/site/public
     <Directory /srv/openpne/site/public>
         AllowOverride All
         Require all granted
     </Directory>
+    LimitRequestBody 33554432
     php_admin_value upload_max_filesize 16M
     php_admin_value post_max_size 32M
+    php_admin_value memory_limit 128M
 
     # What a site should have, though it runs without: the pages PHP answers with left
     # uncompressed.
@@ -389,7 +409,7 @@ the two sections above show:
   the nginx section;
 - the `a2enmod`, `a2ensite` and restart lines are those of the `mod_php` section, with `proxy_fcgi`
   added to the modules `a2enmod` enables;
-- the virtual host is the one of the `mod_php` section, without its two `php_admin_value` lines
+- the virtual host is the one of the `mod_php` section, without its `php_admin_value` lines
   (the pool has them) and with `.php` handed to the pool's socket: inside the `FilesMatch` block,
   `SetHandler "proxy:unix:/run/php/openpne.sock|fcgi://localhost"`.
 

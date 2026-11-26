@@ -767,9 +767,12 @@ shipped cap is decoded within PHP's default 128M and 25,600,000, which takes eve
 `(memory_limit − 2 × upload cap − 21 MB) / 8`, which covers an upload and the canonical and variants
 of a source no larger than the upload cap; a stored source over the upload cap (an OpenPNE 3 row,
 read up to the byte cap) costs 2 MB more per MB. A web PHP without OPcache holds its compiled code
-in the request, and the check takes 48 MB more from its `memory_limit` before dividing. A system
-libgd takes the same memory outside `memory_limit`, where nothing but this cap bounds it. Under
-`imgproxy` the cap counts plain pixels.
+in the request, and the check takes 48 MB more from its `memory_limit` before dividing; the command
+line is judged the same way, without OPcache unless `opcache.enable_cli` is on and for a source up to
+the byte cap rather than the upload cap, since `warm` reads OpenPNE 3 rows. A system libgd takes
+the same memory outside `memory_limit`, where nothing but this cap bounds it, so where PHP reports
+no `GD_BUNDLED` the web line states the size a process grows to instead and the command line is held
+only to PHP's default of 128M, as both are under `imgproxy`, where the cap counts plain pixels.
 
 The processor writes a JPEG, PNG or GIF canonical from the decoded image itself rather than through
 intervention/image's encoder, which copies every pixel first, and turns a JPEG upright with

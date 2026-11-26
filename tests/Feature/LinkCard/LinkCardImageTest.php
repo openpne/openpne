@@ -99,8 +99,6 @@ class LinkCardImageTest extends TestCase
 
     public function test_an_image_within_each_side_but_over_the_pixel_budget_is_refused(): void
     {
-        // The per-side limit alone is not a memory bound: at the 5000 default, 5000 x 5000 x 4 is
-        // 100 MB decoded — enough to end a 128 MB worker on its own.
         config()->set('openpne.images.max_upload_dimension', 5000);
         config()->set('openpne.outbound.max_image_pixels', 4_000_000);
 
@@ -446,7 +444,7 @@ class LinkCardImageTest extends TestCase
      * An ImageProcessor that records every process() call, the only route to a decode.
      *
      * Reading the header (getimagesizefromstring) is expected and cheap; going through the decoder is
-     * what allocates width × height × 4 bytes, and is what must not happen for an oversized image.
+     * what allocates the whole picture, and is what must not happen for an oversized image.
      */
     private function spyDecoder(): ImageProcessor
     {
