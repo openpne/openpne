@@ -539,7 +539,7 @@ class CheckCommandTest extends TestCase
     public function test_the_language_follows_the_option_then_the_shell_then_app_locale(): void
     {
         $this->artisan('openpne:check', ['--only' => 'before', '--lang' => 'ja'])
-            ->expectsOutputToContain('入れる前に分かること')
+            ->expectsOutputToContain('インストール前に確認できること')
             ->assertSuccessful();
 
         $saved = getenv('LANG');
@@ -549,11 +549,11 @@ class CheckCommandTest extends TestCase
             $this->artisan('openpne:check', ['--only' => 'before'])->expectsOutputToContain('Before installing');
 
             putenv('LANG=C.UTF-8');
-            $this->artisan('openpne:check', ['--only' => 'before'])->expectsOutputToContain('入れる前に分かること');
+            $this->artisan('openpne:check', ['--only' => 'before'])->expectsOutputToContain('インストール前に確認できること');
 
             putenv('LANG=ja_JP.UTF-8');
             config(['app.locale' => 'en']);
-            $this->artisan('openpne:check', ['--only' => 'before'])->expectsOutputToContain('入れる前に分かること');
+            $this->artisan('openpne:check', ['--only' => 'before'])->expectsOutputToContain('インストール前に確認できること');
         } finally {
             putenv($saved === false ? 'LANG' : "LANG={$saved}");
         }
