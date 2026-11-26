@@ -14,6 +14,8 @@ use App\Features\GroupTalk\GroupTalkNotifyDefault;
 use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
 use App\Files\FileOwners;
+use App\Http\Middleware\NoReferrer;
+use App\Http\Middleware\NoStore;
 use App\Http\Middleware\StartSession;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\LinkCard\InternalCardResolver;
@@ -80,6 +82,7 @@ use Laravel\Passport\Bridge\AuthCodeRepository;
 use Laravel\Passport\Bridge\RefreshTokenRepository;
 use Laravel\Passport\Passport;
 use Laravel\Sanctum\PersonalAccessToken;
+use Livewire\Features\SupportFileUploads\FilePreviewController;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -175,6 +178,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         SiteTimezone::assertUsable((string) config('app.timezone'));
+
+        // The preview URL is signed, and Livewire answers it with a year of public caching.
+        FilePreviewController::$middleware = ['web', NoStore::class, NoReferrer::class];
 
         // Registered after the package providers' listeners (Livewire's asset injection among them), so it measures the body they leave.
         Event::listen(RequestHandled::class, DeclareContentLength::class);

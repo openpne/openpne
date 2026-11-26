@@ -168,7 +168,7 @@ Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(functio
     Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])
         ->middleware(['guest:member', NoStore::class])->name('password.reset');
     Route::post('/reset-password', [NewPasswordController::class, 'store'])
-        ->middleware('guest:member')->name('password.update');
+        ->middleware(['guest:member', NoStore::class])->name('password.update');
 
     // The challenge GET is deliberately unthrottled (vendor parity): a refresh or back-navigation
     // render must not consume the code-guess budget before the member has typed anything.

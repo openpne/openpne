@@ -28,7 +28,16 @@ class HandleInertiaRequests extends Middleware
     public function handle(Request $request, Closure $next): Response
     {
         // Not through parent::handle(): its asset-version branch swaps in its own location response, which drops Vary.
-        return ClassicOnlyHandoff::for($request) ?? parent::handle($request, $next);
+        $response = ClassicOnlyHandoff::for($request) ?? parent::handle($request, $next);
+
+        // A location response replaces the route's, or comes before it, so the headers NoStore and NoReferrer
+        // set on a secret-bearing URL are set here for every one (docs/internals/sessions.md, "The previous URL").
+        if ($response->headers->has('X-Inertia-Location')) {
+            $response->headers->set('Cache-Control', 'no-store, no-transform, private');
+            $response->headers->set('Referrer-Policy', 'no-referrer');
+        }
+
+        return $response;
     }
 
     /**

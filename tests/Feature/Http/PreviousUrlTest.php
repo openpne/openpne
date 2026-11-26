@@ -20,9 +20,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\ImageBytes;
 use Tests\TestCase;
@@ -380,5 +382,34 @@ class PreviousUrlTest extends TestCase
         $this->post('/reset-password', ['email' => $email, 'password' => 'x'])
             ->assertRedirect('/forgot-password')
             ->assertSessionHasErrors('token');
+    }
+
+    #[DataProvider('secretLinks')]
+    public function test_a_stale_tab_is_sent_to_a_secret_link_with_its_headers(string $kind): void
+    {
+        [$url] = $this->secretLink($kind);
+        $headers = ['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'];
+
+        // An asset version the server no longer has, then a Modern tab left open under classic_only.
+        $this->withHeaders($headers)->get($url)->assertStatus(409)
+            ->assertHeader('Cache-Control', 'no-store, no-transform, private')
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+
+        config(['openpne.surface_mode' => 'classic_only']);
+        $this->withHeaders($headers)->get($url)->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', url($url))
+            ->assertHeader('Cache-Control', 'no-store, no-transform, private')
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+    }
+
+    public function test_a_signed_upload_preview_is_neither_cached_nor_referred(): void
+    {
+        Storage::fake(FileUploadConfiguration::disk());
+        FileUploadConfiguration::storage()->put(FileUploadConfiguration::path('preview.png'), ImageBytes::png());
+        $url = URL::temporarySignedRoute('livewire.preview-file', now()->addMinutes(30), ['filename' => 'preview.png'], absolute: false);
+
+        $this->withHeader('Sec-Fetch-Dest', 'image')->get($url)->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, no-transform, private')
+            ->assertHeader('Referrer-Policy', 'no-referrer');
     }
 }
