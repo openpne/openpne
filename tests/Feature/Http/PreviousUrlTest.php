@@ -412,4 +412,23 @@ class PreviousUrlTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, no-transform, private')
             ->assertHeader('Referrer-Policy', 'no-referrer');
     }
+
+    public function test_a_language_switch_on_a_secret_link_leaves_the_reload_to_the_page(): void
+    {
+        [$url, $raw] = $this->secretLink('register');
+
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get($url)->assertOk();
+
+        // What both switchers send; the server's way back would be /login.
+        $this->postJson('/locale', ['locale' => 'en'])->assertNoContent();
+        $this->assertSame('en', session('locale'));
+        $this->assertStringNotContainsString($raw, json_encode(session()->all(), JSON_THROW_ON_ERROR));
+
+        $this->withHeaders(['X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->post('/locale', ['locale' => 'ja'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', url('/login'));
+    }
 }
+

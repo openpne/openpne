@@ -107,6 +107,11 @@ Route::post('/locale', function (Request $request) {
         }
     }
 
+    // The page's own switcher reloads it: a page that carries a secret is not recorded as the previous URL.
+    if ($request->wantsJson()) {
+        return response()->noContent();
+    }
+
     // A full page load: the React i18n provider reads `locale` only at app boot, so an XHR-followed
     // 302 would leave it on the old locale.
     $target = url()->previous();

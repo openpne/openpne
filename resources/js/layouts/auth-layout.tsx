@@ -4,6 +4,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { BrandName } from '@/components/brand-name';
 import { LayoutHook } from '@/components/layout-hook';
 import { Heading } from '@/components/ui/heading';
+import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
 import { STANDARD_COLUMN } from '@/lib/member-column';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,19 @@ interface AuthLayoutProps {
     intro?: ReactNode;
     width?: keyof typeof WIDTH;
     children: ReactNode;
+}
+
+// A reload rather than the server's way back: the token pages here are never recorded as the previous URL.
+function switchLocale(locale: string): void {
+    fetch('/locale', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { ...xsrfHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ locale }),
+    }).then(
+        (response) => (response.ok ? window.location.reload() : router.post('/locale', { locale })),
+        () => router.post('/locale', { locale }),
+    );
 }
 
 export function AuthLayout({ title, intro, width = 'standard', children }: AuthLayoutProps) {
@@ -94,7 +108,7 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
                                 <button
                                     type="button"
                                     lang={opt.value}
-                                    onClick={() => router.post('/locale', { locale: opt.value })}
+                                    onClick={() => switchLocale(opt.value)}
                                     className="rounded px-2 py-1 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                                 >
                                     {opt.label}
