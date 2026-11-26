@@ -18,13 +18,6 @@ class SecurityHeaders
         $response = $next($request);
         $headers = $response->headers;
 
-        // An Inertia location response replaces the route's or comes before it, an exception's included, so a
-        // secret-bearing URL in it gets NoStore's and NoReferrer's headers here (docs/internals/sessions.md, "The previous URL").
-        if ($headers->has('X-Inertia-Location')) {
-            $headers->set('Cache-Control', 'no-store, no-transform, private');
-            $headers->set('Referrer-Policy', 'no-referrer');
-        }
-
         $headers->set('X-Content-Type-Options', 'nosniff');
         $headers->set('X-Frame-Options', 'DENY');
 

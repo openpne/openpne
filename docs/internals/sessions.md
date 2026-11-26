@@ -166,10 +166,9 @@ a URL carrying the token, and Livewire's signed upload preview, which Livewire w
 year of public caching. A test enumerates them. Such a page's form cannot go back: the session never
 recorded it and `no-referrer` withholds the Referer, so a refused submit redirects to the form by
 name, and `token` is never flashed with the old input (the password-reset form posts it). An Inertia
-location response (the 409 for a stale asset version, or a Modern tab under `classic_only`) replaces
-the route's response or comes before it (a route middleware's exception answers one too), so
-[`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php), ahead of every `web` middleware
-that can answer one, gives each the same two headers.
+location response to the request's own URL (the 409 for a stale asset version, or a Modern tab under
+`classic_only`) replaces the route's response or comes before it, so both builders of one give it the
+same two headers through [`SecretSafeLocation`](../../app/Support/SecretSafeLocation.php).
 
 The framework's other guards stand (GET, a matched route, not a prefetch, not
 precognitive).

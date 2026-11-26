@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support;
 
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -28,7 +27,7 @@ final class ClassicOnlyHandoff
             $request->session()->reflash();
         }
 
-        $response = Inertia::location($request->fullUrl());
+        $response = SecretSafeLocation::to($request->fullUrl());
         $response->headers->set('Vary', 'X-Inertia');
 
         return $response;

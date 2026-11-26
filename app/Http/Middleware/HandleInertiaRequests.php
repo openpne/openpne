@@ -14,6 +14,7 @@ use App\Support\BrandColor;
 use App\Support\ClassicOnlyHandoff;
 use App\Support\Feature;
 use App\Support\LayoutHooks;
+use App\Support\SecretSafeLocation;
 use App\Support\SnsSettingKey;
 use Closure;
 use Illuminate\Http\Request;
@@ -29,6 +30,11 @@ class HandleInertiaRequests extends Middleware
     {
         // Not through parent::handle(): its asset-version branch swaps in its own location response, which drops Vary.
         return ClassicOnlyHandoff::for($request) ?? parent::handle($request, $next);
+    }
+
+    public function onVersionChange(Request $request, Response $response): Response
+    {
+        return SecretSafeLocation::protect(parent::onVersionChange($request, $response));
     }
 
     /**

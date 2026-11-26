@@ -33,12 +33,17 @@ afterEach(() => {
 test('a language switch reloads the page it is on', async () => {
     const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetch);
+    document.cookie = 'XSRF-TOKEN=xsrf%3D';
     renderWithProviders(<AuthLayout title="Register">form</AuthLayout>);
 
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
 
     await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
-    expect(fetch).toHaveBeenCalledWith('/locale', expect.objectContaining({ method: 'POST', body: JSON.stringify({ locale: 'en' }) }));
+    expect(fetch).toHaveBeenCalledWith('/locale', expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'xsrf=', Accept: 'application/json' }),
+            body: JSON.stringify({ locale: 'en' }),
+        }));
     expect(inertia.post).not.toHaveBeenCalled();
 });
 

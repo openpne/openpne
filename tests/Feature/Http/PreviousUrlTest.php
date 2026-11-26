@@ -448,4 +448,19 @@ class PreviousUrlTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, no-transform, private')
             ->assertHeader('Referrer-Policy', 'no-referrer');
     }
+
+    public function test_a_stale_tab_during_maintenance_gets_the_maintenance_answer(): void
+    {
+        [$url] = $this->secretLink('register');
+        config(['openpne.surface_mode' => 'classic_only']);
+        $this->app->maintenanceMode()->activate([]);
+
+        try {
+            // Thrown ahead of every route: there is no Classic page to hand the tab off to yet.
+            $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale', 'X-Requested-With' => 'XMLHttpRequest'])
+                ->get($url)->assertStatus(503)->assertHeaderMissing('X-Inertia-Location');
+        } finally {
+            $this->app->maintenanceMode()->deactivate();
+        }
+    }
 }
