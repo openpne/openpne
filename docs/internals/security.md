@@ -9,10 +9,11 @@ the member out.
 
 - **The entry.** A member session opens the panel only within `SESSION_LIFETIME` idle (120 minutes)
   of the last admin-realm request; after that the panel asks for a re-authentication proof, the
-  password with the TOTP factor or a passkey ([administrators.md](administrators.md), "The panel's
-  entry"). A login headed for the panel counts as one. This bounds what a session left signed in on
-  a shared device or taken from one opens, for the 30 days a member's session lasts ([Session
-  lifetime](#session-lifetime)); a stolen session that is used within the period keeps it open.
+  password with the TOTP factor (or a recovery code) or a passkey
+  ([administrators.md](administrators.md), "The panel's entry"). A login headed for the panel counts
+  as one. This bounds what a session left signed in on a shared device or taken from one opens, for
+  the 30 days a member's session lasts ([Session lifetime](#session-lifetime)); a stolen session
+  that is used within the period keeps it open.
 
 - **The gate.** Every admin-realm request passes `EnsureAdministrator`
   ([administrators.md](administrators.md), "The admin panel"): a guest is sent to the member login
@@ -342,7 +343,9 @@ package's confirmation route, which stamps the framework-wide
   passkeys.
 - **A verified assertion leaves a proof in the session** (`PasskeyProof`): the
   member, the purpose, a nonce and the time. The seam accepts it for that
-  member and purpose for two minutes.
+  member and purpose for two minutes. A purpose may bind it to more
+  (`ReauthPurpose::binding()`): the admin panel's entry binds the role
+  generation and the password hash, as its mark does.
 - **A proof opens one request.** The session is not locked, so parallel
   requests read the same proof; the one whose `Cache::add` of the nonce
   succeeds is the one that passes. The challenge is spent the same way, since a

@@ -92,6 +92,14 @@ class AdminEntryTest extends TestCase
         $this->get('/admin')->assertRedirect(route('member.admin_entry'));
     }
 
+    public function test_a_mark_from_the_future_opens_nothing(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->travel(-1)->minutes();
+        $this->get('/admin')->assertRedirect(route('member.admin_entry'));
+    }
+
     public function test_a_livewire_update_after_the_lapse_moves_the_window_to_the_entry_and_back_to_the_last_page(): void
     {
         $this->signedIn();
@@ -240,6 +248,21 @@ class AdminEntryTest extends TestCase
         PasskeyProof::issue(app('session.store'), $admin, ReauthPurpose::AdminEntry);
         $this->post(route('member.admin_entry.store'))->assertRedirect(url('/admin'));
         $this->assertSame('passkey', $this->assertOneSecurityEvent('admin.entered')['via']);
+    }
+
+    public function test_a_passkey_proof_given_before_the_role_or_password_changed_opens_nothing(): void
+    {
+        $member = $this->signedIn(Member::factory()->create());
+        PasskeyProof::issue(app('session.store'), $member, ReauthPurpose::AdminEntry);
+        $member->forceFill(['admin_granted_at' => now(), 'admin_generation' => $member->admin_generation + 1])->save();
+        $this->post(route('member.admin_entry.store'))->assertSessionHasErrors('current_password');
+
+        $this->assertNull(session(AdminEntry::SESSION_KEY));
+
+        // A new password also closes the session on its next request, so the proof is read directly.
+        PasskeyProof::issue(app('session.store'), $member, ReauthPurpose::AdminEntry);
+        $member->forceFill(['password' => Hash::make('another-password')])->save();
+        $this->assertFalse(PasskeyProof::stands(app('session.store'), $member, ReauthPurpose::AdminEntry));
     }
 
     public function test_a_login_headed_for_the_panel_opens_its_entry(): void

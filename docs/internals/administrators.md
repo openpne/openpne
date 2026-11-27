@@ -58,13 +58,14 @@ request it lets through starts the period again.
 
 - **A proof stamps it.** The entry screen (`/member/admin-entry`, Classic and Modern) asks for a
   member re-authentication proof under the purpose `admin-entry` ([security.md](security.md),
-  "Member re-authentication"): the password with the TOTP factor, or a passkey. A proof regenerates
-  the session id and keeps the CSRF token, so the member's other open tabs still submit. A login
-  stamps it too when `url.intended` is on the admin realm, as for a guest sent from the panel to the
-  login and for a registration through an administrator invite, which sets it before logging in; any
-  other login does not.
+  "Member re-authentication"): the password with the TOTP factor or an unused recovery code, or a
+  passkey. A proof regenerates the session id and keeps the CSRF token, so the member's other open
+  tabs still submit. A login stamps it too when `url.intended` is on the admin realm, as for a guest
+  sent from the panel to the login and for a registration through an administrator invite, which
+  sets it before logging in; any other login does not.
 - **Bound to what it was proven against**: the member, the role generation and the password hash.
-  A revoke followed by a grant, or a new password, voids it.
+  A revoke followed by a grant, or a new password, voids it, and a passkey proof given for the entry
+  but not yet spent as well.
 - **A lapsed mark** sends a GET page visit or a Livewire update to the entry screen; Livewire
   follows the redirect with the whole window. The entry returns to the page visited, or else to the
   last page the session opened when that is on the admin realm, or else to the panel's front. Any

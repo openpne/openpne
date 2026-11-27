@@ -19,6 +19,7 @@ class PasskeyProof
         $session->put(self::SLOT, [
             'member_id' => $member->getKey(),
             'purpose' => $purpose->value,
+            'binding' => $purpose->binding($member),
             'nonce' => Str::random(40),
             'at' => now()->getTimestamp(),
         ]);
@@ -58,6 +59,6 @@ class PasskeyProof
         $age = now()->getTimestamp() - (int) $proof['at'];
 
         return $proof['member_id'] === $member->getKey() && $proof['purpose'] === $purpose->value
-            && $age >= 0 && $age <= self::TTL_SECONDS ? (string) $proof['nonce'] : null;
+            && hash_equals($purpose->binding($member), (string) ($proof['binding'] ?? '')) && $age >= 0 && $age <= self::TTL_SECONDS ? (string) $proof['nonce'] : null;
     }
 }

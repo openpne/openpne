@@ -27,11 +27,12 @@ final class AdminEntry
         }
 
         $current = self::mark($member);
+        $age = now()->getTimestamp() - $mark['at'];
 
         return ($mark['member_id'] ?? null) === $current['member_id']
             && ($mark['generation'] ?? null) === $current['generation']
             && hash_equals($current['credential'], $mark['credential'])
-            && now()->getTimestamp() - $mark['at'] <= (int) config('session.lifetime') * 60;
+            && $age >= 0 && $age <= (int) config('session.lifetime') * 60;
     }
 
     public static function admit(Session $session, Member $member): bool
@@ -43,6 +44,13 @@ final class AdminEntry
         $session->put(self::SESSION_KEY.'.at', now()->getTimestamp());
 
         return true;
+    }
+
+    public static function binding(Member $member): string
+    {
+        $mark = self::mark($member);
+
+        return $mark['generation'].'|'.$mark['credential'];
     }
 
     /** @return array{member_id: mixed, generation: int, credential: string, at: int} */
