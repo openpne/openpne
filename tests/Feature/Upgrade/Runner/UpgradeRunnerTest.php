@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -205,8 +206,34 @@ class UpgradeRunnerTest extends TestCase
         $this->assertDatabaseCount('registration_tokens', 0);
     }
 
+    public function test_a_reset_refuses_a_session_store_it_cannot_empty_before_anything_changes(): void
+    {
+        config(['session.driver' => 'file']);
+        $member = Member::factory()->create();
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+
+        try {
+            (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+            $this->fail('the reset went ahead with sessions it cannot sign out');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('SESSION_DRIVER=database', $e->getMessage());
+        }
+
+        $this->assertModelExists($member);
+        $this->assertDatabaseCount('admin_role_invites', 1);
+    }
+
     public function test_a_reset_that_replaces_the_members_leaves_nothing_bound_to_their_ids(): void
     {
+        // On a connection of its own, as session.connection may put the store.
+        config([
+            'database.connections.session_store' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+            'session.driver' => 'database',
+            'session.connection' => 'session_store',
+        ]);
+        $sessions = DB::connection('session_store');
+        $sessions->statement('create table '.config('session.table').' (id varchar primary key, user_id integer, payload text, last_activity integer)');
+
         $member = Member::factory()->create();
         $id = $member->getKey();
         $member->passkeys()->create(['name' => 'a', 'credential_id' => 'AbC', 'credential' => []]);
@@ -219,7 +246,7 @@ class UpgradeRunnerTest extends TestCase
         DB::table('oauth_device_codes')->insert(['id' => 'device', 'user_id' => $id, 'client_id' => 'client', 'user_code' => 'U', 'scopes' => '[]', 'revoked' => false]);
         DB::table('notifications')->insert(['id' => 'n', 'type' => 'x', 'notifiable_type' => $member->getMorphClass(), 'notifiable_id' => $id, 'data' => '{}']);
         DB::table('password_reset_tokens')->insert(['email' => $member->email, 'token' => 'pw', 'created_at' => now()]);
-        DB::table((string) config('session.table'))->insert(['id' => 'session', 'user_id' => $id, 'payload' => '', 'last_activity' => time()]);
+        $sessions->table((string) config('session.table'))->insert(['id' => 'session', 'user_id' => $id, 'payload' => '', 'last_activity' => time()]);
         $member->updatePushSubscription('https://push.example.test/endpoint');
         $issue = DB::table('home_issues')->insertGetId(['number' => 1, 'issue_date' => '2026-11-01', 'window_start' => now(), 'published_at' => now()]);
         DB::table('home_issue_items')->insert(['home_issue_id' => $issue, 'section' => 'diaries', 'rank' => 1, 'source_type' => 'diary', 'source_id' => 1, 'score' => 1, 'stats' => '{}']);
@@ -230,10 +257,11 @@ class UpgradeRunnerTest extends TestCase
 
         (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
 
-        $seeded = ['passkeys', 'personal_access_tokens', 'mfa_reset_requests', 'email_change_requests', 'oauth_access_tokens', 'oauth_refresh_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'notifications', 'password_reset_tokens', (string) config('session.table'), 'push_subscriptions', 'home_issues', 'home_issue_items'];
+        $seeded = ['passkeys', 'personal_access_tokens', 'mfa_reset_requests', 'email_change_requests', 'oauth_access_tokens', 'oauth_refresh_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'notifications', 'password_reset_tokens', 'push_subscriptions', 'home_issues', 'home_issue_items'];
         foreach ($seeded as $table) {
             $this->assertDatabaseCount($table, 0);
         }
+        $this->assertSame(0, $sessions->table((string) config('session.table'))->count());
     }
 
     public function test_every_table_naming_a_member_by_id_is_cleared_by_a_reset_that_replaces_the_members(): void

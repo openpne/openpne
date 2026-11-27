@@ -19,6 +19,7 @@ class ResetForeignKeysSqlTest extends UpgradeSqlTestCase
     {
         if (DB::connection()->getDriverName() === 'mysql') {
             Schema::dropIfExists('reset_probe');
+            DB::statement('drop database if exists `'.$this->otherDatabase().'`');
             DB::table('members')->delete();
             if (! $this->fileBinKeepsItsKey()) {
                 Schema::table('file_bin', fn (Blueprint $table) => $table->foreign('file_id')->references('id')->on('files')->cascadeOnDelete());
@@ -60,6 +61,48 @@ class ResetForeignKeysSqlTest extends UpgradeSqlTestCase
         $this->assertDatabaseCount('members', 1);
         $this->assertDatabaseCount('admin_role_invites', 1);
         $this->assertTrue($this->fileBinKeepsItsKey());
+    }
+
+    public function test_a_reference_onto_a_table_of_a_targets_name_in_another_database_is_left_alone(): void
+    {
+        $other = $this->createOtherDatabase();
+        DB::statement("create table `{$other}`.members (id bigint unsigned primary key)");
+        DB::statement("insert into `{$other}`.members (id) values (1)");
+        DB::statement("create table reset_probe (id bigint unsigned auto_increment primary key, member_id bigint unsigned, foreign key (member_id) references `{$other}`.members (id) on delete cascade)");
+        DB::table('reset_probe')->insert(['member_id' => 1]);
+
+        (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+
+        $this->assertSame([1], DB::table('reset_probe')->pluck('member_id')->map(fn ($id) => (int) $id)->all());
+    }
+
+    public function test_a_reference_from_another_database_onto_a_target_refuses_before_any_delete(): void
+    {
+        $other = $this->createOtherDatabase();
+        $here = DB::connection()->getDatabaseName();
+        DB::statement("create table `{$other}`.reset_probe (id bigint unsigned auto_increment primary key, member_id bigint unsigned, foreign key (member_id) references `{$here}`.members (id) on delete cascade)");
+        $member = Member::factory()->create();
+
+        try {
+            (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+            $this->fail('the reset ran');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString("`{$other}`.`reset_probe`.`member_id`", $e->getMessage());
+        }
+
+        $this->assertModelExists($member);
+    }
+
+    private function otherDatabase(): string
+    {
+        return DB::connection()->getDatabaseName().'_reset_other';
+    }
+
+    private function createOtherDatabase(): string
+    {
+        DB::statement('create database `'.$this->otherDatabase().'`');
+
+        return $this->otherDatabase();
     }
 
     private function fileBinKeepsItsKey(): bool

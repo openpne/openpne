@@ -680,6 +680,12 @@ final class UpgradeRunner
     {
         $report ??= new RunReport;
 
+        $sessions = (string) config('session.driver');
+        // The array driver keeps nothing past its own process.
+        if (! in_array($sessions, ['database', 'array'], true)) {
+            throw new RuntimeException("A reset signs everyone out by emptying the database session store, and session.driver `{$sessions}` keeps sessions elsewhere: empty that store yourself, then rerun with SESSION_DRIVER=database.");
+        }
+
         $mysql = DB::connection()->getDriverName() === 'mysql';
 
         // First, so a rule this cannot apply refuses with nothing changed.
@@ -731,7 +737,9 @@ final class UpgradeRunner
         DB::table('home_issue_items')->delete();
         DB::table('home_issues')->delete();
 
-        DB::table((string) config('session.table'))->delete();
+        if (config('session.driver') === 'database') {
+            DB::connection(config('session.connection'))->table((string) config('session.table'))->delete();
+        }
         foreach (self::MEMBER_OWNED_TABLES as $table) {
             DB::table($table)->delete();
         }
@@ -741,19 +749,24 @@ final class UpgradeRunner
     private function foreignKeysOntoTargets(): array
     {
         $targets = $this->targetTables();
+        $schema = DB::connection()->getDatabaseName();
         $children = [];
 
         foreach (DB::select(
-            'select kcu.table_name as t, kcu.column_name as c, rc.referenced_table_name as p, rc.delete_rule as r
+            'select rc.constraint_schema as s, kcu.table_name as t, kcu.column_name as c, rc.referenced_table_name as p, rc.delete_rule as r
                from information_schema.referential_constraints rc
                join information_schema.key_column_usage kcu
                  on kcu.constraint_schema = rc.constraint_schema and kcu.constraint_name = rc.constraint_name and kcu.table_name = rc.table_name
-              where rc.constraint_schema = ?',
-            [DB::connection()->getDatabaseName()],
+              where rc.unique_constraint_schema = ?',
+            [$schema],
         ) as $fk) {
+            $here = $fk->s === $schema;
             // file_bin's key onto files is dropped instead, since no step owns the BLOBs.
-            if (! in_array($fk->p, $targets, true) || in_array($fk->t, $targets, true) || $fk->t === 'file_bin') {
+            if (! in_array($fk->p, $targets, true) || ($here && (in_array($fk->t, $targets, true) || $fk->t === 'file_bin'))) {
                 continue;
+            }
+            if (! $here) {
+                throw new RuntimeException("`{$fk->s}`.`{$fk->t}`.`{$fk->c}` in another database refers to the upgrade target `{$fk->p}`, which a reset cannot reach.");
             }
             if (! in_array($fk->r, ['CASCADE', 'SET NULL'], true)) {
                 throw new RuntimeException("`{$fk->t}`.`{$fk->c}` refers to the upgrade target `{$fk->p}` with ON DELETE {$fk->r}, which a reset cannot apply.");

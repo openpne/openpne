@@ -103,6 +103,7 @@ class RegistrationCompletionTest extends TestCase
         $member = Member::where('email', 'newcomer@example.com')->first();
         $this->assertNotNull($member);
         $this->assertTrue($this->app['auth']->user()->is($member));
+        $this->assertSessionBindsPassword($member);
         $this->assertDatabaseCount('registration_tokens', 0);
     }
 

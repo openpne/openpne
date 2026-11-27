@@ -235,10 +235,13 @@ re-copying under new keys. `reset()` (`--force-restart`) DELETEs the upgrade-own
 BLOBs cannot cascade. The walk restores OpenPNE 3's ids, so a row left outside the targets that names
 a target row would bind to whoever holds that id there: with MySQL's checks off no delete rule runs,
 so `reset()` applies the rule of each foreign key from outside the targets onto one (CASCADE deletes,
-SET NULL nulls, any other refuses before anything changes; `file_bin`'s is the one dropped instead).
-It also empties what names a target row by an id no key carries: `session.table`,
-`UpgradeRunner::MEMBER_OWNED_TABLES` and the front page's issues, whose ledger would otherwise hold
-back the upgraded site's stories under those ids ([home-issues.md](home-issues.md)).
+SET NULL nulls, any other refuses before anything changes; `file_bin`'s is the one dropped instead,
+and a key from another database refuses too).
+It also empties what names a target row by an id no key carries: `session.table` on
+`session.connection`, `UpgradeRunner::MEMBER_OWNED_TABLES` and the front page's issues, whose ledger
+would otherwise hold back the upgraded site's stories under those ids ([home-issues.md](home-issues.md)).
+A session driver other than `database` (or `array`, which keeps nothing past its process) refuses
+before anything changes, since that store is out of the reset's reach.
 
 **Sites sharing one MySQL server may be upgraded at the same time.** Every piece of a run's state
 is in the site's own database (its `openpne4_upgrade_state`, its targets, the empty stand-ins for

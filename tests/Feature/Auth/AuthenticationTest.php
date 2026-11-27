@@ -51,6 +51,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticatedAs($member);
+        $this->assertSessionBindsPassword($member);
         $response->assertRedirect('/'); // surface-aware root landing
     }
 

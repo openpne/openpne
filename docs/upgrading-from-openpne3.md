@@ -169,7 +169,9 @@ admin Banner page, or an administrator invite from `openpne:admin:invite` that n
 restore the empty schema, or rerun with `--force-restart`, which also signs everyone out and
 removes what belonged to the members it replaces: passkeys, MCP connections and API tokens,
 notifications and browser push subscriptions, and pending email changes, password resets and
-two-factor resets. It also removes the front page's past issues. Under
+two-factor resets. It also removes the front page's past issues. It refuses with a
+`SESSION_DRIVER` other than `database` (the default), whose sessions it cannot remove: empty that
+store yourself, then rerun with `SESSION_DRIVER=database`. Under
 `--source-prefix` or `--source-database`, an OpenPNE 4 `file_bin` that already holds rows:
 `--force-restart` leaves `file_bin` alone, so start again from a fresh database (stages 1 and 2).
 
