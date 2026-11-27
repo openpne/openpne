@@ -8,7 +8,6 @@ use App\Filament\Resources\GroupTopics\GroupTopicResource;
 use App\Filament\Resources\GroupTopics\Pages\ListGroupTopics;
 use App\Filament\Resources\GroupTopics\Pages\ViewGroupTopic;
 use App\Filament\Resources\GroupTopics\RelationManagers\TopicCommentsRelationManager;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
@@ -29,7 +28,7 @@ class GroupTopicResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_list_page_renders_topics(): void

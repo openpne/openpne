@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Features\Timeline\TimelineAutoPost;
 use App\Features\Timeline\TimelinePosting;
 use App\Filament\Pages\TimelineSettings;
-use App\Models\AdminUser;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +22,7 @@ class TimelineSettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_enabling_web_public_posts_takes_effect(): void

@@ -8,7 +8,6 @@ use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\BannerImages\Pages\CreateBannerImage;
 use App\Filament\Resources\BannerImages\Pages\EditBannerImage;
 use App\Filament\Resources\BannerImages\Pages\ListBannerImages;
-use App\Models\AdminUser;
 use App\Models\BannerImage;
 use App\Models\File;
 use Filament\Facades\Filament;
@@ -31,7 +30,7 @@ class BannerImageResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_the_create_page_loads(): void

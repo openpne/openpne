@@ -12,7 +12,6 @@ use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
 use App\Filament\Resources\Navigations\NavigationResource;
-use App\Models\AdminUser;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -28,7 +27,7 @@ class AppearanceNavigationTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
         app()->setLocale('en');
     }
 

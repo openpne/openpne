@@ -8,7 +8,6 @@ use App\Filament\Pages\BannerSettings;
 use App\Filament\Pages\DesignSettings;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
 use App\Filament\Resources\Gadgets\Pages\EditGadget;
-use App\Models\AdminUser;
 use App\Models\Banner;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
@@ -34,7 +33,7 @@ class OperatorMarkdownAdminTest extends TestCase
         app(SnsSettingService::class)->clearCache();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_the_design_page_edits_the_markdown_keys_and_not_the_html_ones(): void

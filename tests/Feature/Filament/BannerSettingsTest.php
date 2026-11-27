@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\BannerSettings;
-use App\Models\AdminUser;
 use App\Models\Banner;
 use App\Models\BannerImage;
 use Filament\Facades\Filament;
@@ -22,7 +21,7 @@ class BannerSettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_the_page_loads_with_a_section_per_placement(): void

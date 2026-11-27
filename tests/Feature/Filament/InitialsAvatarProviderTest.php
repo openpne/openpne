@@ -39,7 +39,7 @@ class InitialsAvatarProviderTest extends TestCase
     public function test_the_panel_draws_the_administrators_avatar_without_a_third_party(): void
     {
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(['username' => 'admin']), 'admin');
+        $this->actingAsAdmin();
 
         $response = $this->get('/admin');
 

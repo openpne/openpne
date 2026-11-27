@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Http;
 
-use App\Models\AdminUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -34,7 +33,7 @@ class SecurityHeadersTest extends TestCase
             ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
             ->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
 
-        $this->actingAs(AdminUser::factory()->create(), 'admin')
+        $this->actingAsAdmin()
             ->get('/admin')
             ->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff')

@@ -8,7 +8,6 @@ use App\Features\Auth\CapacityState;
 use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Filament\Pages\InviteMembers;
-use App\Models\AdminUser;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\MemberCapacityRequestNotification;
@@ -242,7 +241,7 @@ class MemberCapacityTest extends TestCase
     {
         Notification::fake();
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
         $this->cap(3);
         Member::factory()->create();
 
@@ -261,7 +260,7 @@ class MemberCapacityTest extends TestCase
     {
         Notification::fake();
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
         $this->cap(1);
         Member::factory()->create();
 

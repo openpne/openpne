@@ -11,7 +11,6 @@ use App\Filament\Widgets\OverviewStatsWidget;
 use App\Filament\Widgets\RecentMembersWidget;
 use App\Filament\Widgets\RegistrationModeWidget;
 use App\Files\ImageEdit;
-use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupMember;
@@ -33,7 +32,7 @@ class DashboardWidgetsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_dashboard_page_renders_for_admin(): void

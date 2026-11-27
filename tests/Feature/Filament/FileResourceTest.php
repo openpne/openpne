@@ -6,7 +6,6 @@ namespace Tests\Feature\Filament;
 
 use App\Filament\Resources\Files\Pages\ListFiles;
 use App\Files\FileStorage;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\Member;
 use Filament\Actions\Testing\TestAction;
@@ -24,7 +23,7 @@ class FileResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     /** Create a File with real stored bytes via the storage seam. */
@@ -90,7 +89,7 @@ class FileResourceTest extends TestCase
     {
         $file = $this->fileWithBytes();
 
-        auth('admin')->logout();
+        $this->signOutAdmin();
 
         $this->get(route('admin.file.raw', ['file' => $file->name]))->assertNotFound();
     }
@@ -101,7 +100,7 @@ class FileResourceTest extends TestCase
         // guard must not satisfy the admin-guard check, so the byte path stays admin-only.
         $file = $this->fileWithBytes();
 
-        auth('admin')->logout();
+        $this->signOutAdmin();
         $this->actingAs(Member::factory()->create(), 'member');
 
         $this->get(route('admin.file.raw', ['file' => $file->name]))->assertNotFound();

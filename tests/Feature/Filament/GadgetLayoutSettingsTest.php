@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\GadgetLayoutSettings;
-use App\Models\AdminUser;
 use App\Models\Gadget;
 use App\Models\Member;
 use App\Services\GadgetService;
@@ -25,7 +24,7 @@ class GadgetLayoutSettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_saving_the_layout_takes_effect_and_narrows_the_rendered_zones(): void

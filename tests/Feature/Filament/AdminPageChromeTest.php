@@ -6,7 +6,6 @@ namespace Tests\Feature\Filament;
 
 use App\Features\Auth\RegistrationMode;
 use App\Filament\Resources\Pages\ListPage;
-use App\Models\AdminUser;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
 use Filament\Facades\Filament;
@@ -28,7 +27,7 @@ class AdminPageChromeTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
 
         // Open the two gates that would otherwise drop screens from this sweep: InviteMembers needs a
         // mode that permits admin invites, the Appearance (Classic) screens need Classic served.

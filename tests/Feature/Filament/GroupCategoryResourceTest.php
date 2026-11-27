@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Filament\Resources\GroupCategories\Pages\CreateGroupCategory;
 use App\Filament\Resources\GroupCategories\Pages\EditGroupCategory;
 use App\Filament\Resources\GroupCategories\Pages\ListGroupCategories;
-use App\Models\AdminUser;
 use App\Models\GroupCategory;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
@@ -24,7 +23,7 @@ class GroupCategoryResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_list_page_renders_records(): void

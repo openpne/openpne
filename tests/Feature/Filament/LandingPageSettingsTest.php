@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\LandingPageSettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\ModernGroupList;
 use App\Support\ModernHome;
@@ -23,7 +22,7 @@ class LandingPageSettingsTest extends TestCase
     {
         parent::setUp();
 
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_the_home_page_is_the_issue_until_saved_and_round_trips(): void
@@ -148,7 +147,7 @@ class LandingPageSettingsTest extends TestCase
 
     public function test_a_guest_cannot_reach_it(): void
     {
-        auth('admin')->logout();
+        $this->signOutAdmin();
 
         $this->get(LandingPageSettings::getUrl())->assertRedirect();
     }

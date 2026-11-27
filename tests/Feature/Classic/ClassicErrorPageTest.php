@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Classic;
 
-use App\Models\AdminUser;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use App\Support\Surface;
@@ -123,7 +122,7 @@ class ClassicErrorPageTest extends TestCase
 
         Route::middleware('web')->get('/admin/__error_probe', fn () => abort(419));
         $this->freshRequestState();
-        $this->actingAs(AdminUser::factory()->create(), 'admin')->get('/admin/__error_probe')
+        $this->actingAsAdmin()->get('/admin/__error_probe')
             ->assertStatus(419)
             ->assertDontSee('page_default_error');
     }
@@ -165,7 +164,7 @@ class ClassicErrorPageTest extends TestCase
 
     public function test_an_unmatched_url_in_the_admin_realm_keeps_the_framework_page(): void
     {
-        $this->actingAs(AdminUser::factory()->create(), 'admin')->get('/admin/no-such-page')
+        $this->actingAsAdmin()->get('/admin/no-such-page')
             ->assertNotFound()
             ->assertDontSee('page_default_error');
     }

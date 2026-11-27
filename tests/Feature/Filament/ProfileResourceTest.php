@@ -8,7 +8,6 @@ use App\Filament\Resources\Profiles\Pages\CreateProfile;
 use App\Filament\Resources\Profiles\Pages\EditProfile;
 use App\Filament\Resources\Profiles\Pages\ListProfiles;
 use App\Filament\Resources\Profiles\RelationManagers\ProfileOptionsRelationManager;
-use App\Models\AdminUser;
 use App\Models\Profile;
 use App\Models\ProfileOption;
 use App\Support\Visibility;
@@ -27,7 +26,7 @@ class ProfileResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_list_page_renders_records(): void

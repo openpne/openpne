@@ -171,12 +171,12 @@ class SiteIconRasterTest extends TestCase
 
     public function test_the_admin_panel_asks_the_browser_to_draw_only_when_it_is_wanted(): void
     {
-        $admin = AdminUser::factory()->create();
+        $admin = $this->createAdmin();
 
         // A guest on the login screen: the body-end hook renders there too.
         $this->get('/admin/login')->assertOk()->assertDontSee('data-site-icon-raster', false);
 
-        $page = $this->actingAs($admin, 'admin')->get('/admin')->assertOk();
+        $page = $this->actingAsAdmin($admin)->get('/admin')->assertOk();
         $page->assertSee('data-site-icon-raster', false)
             ->assertSee('data-version="'.app(GeneratedIcon::class)->version().'"', false)
             ->assertSee('data-svg-tab=', false)
@@ -184,22 +184,22 @@ class SiteIconRasterTest extends TestCase
             ->assertSee(route('admin.site_icon.raster'), false);
 
         $this->setSnsSetting(SnsSettingKey::BrandFaviconFallback, FaviconFallback::None);
-        $this->actingAs($admin, 'admin')->get('/admin')->assertOk()->assertSee('data-site-icon-raster', false);
+        $this->actingAsAdmin($admin)->get('/admin')->assertOk()->assertSee('data-site-icon-raster', false);
 
         $this->send(as: $admin)->assertNoContent();
-        $this->actingAs($admin, 'admin')->get('/admin')->assertOk()->assertDontSee('data-site-icon-raster', false);
+        $this->actingAsAdmin($admin)->get('/admin')->assertOk()->assertDontSee('data-site-icon-raster', false);
 
         $file = app(FileUploader::class)->store(UploadedFile::fake()->image('icon.png', 32, 32), explicitVisibility: File::VISIBILITY_PUBLIC);
         $this->setSnsSetting(SnsSettingKey::BrandFaviconFile, $file->name);
         $this->setSnsSetting(SnsSettingKey::SnsName, 'Renamed');
-        $this->actingAs($admin, 'admin')->get('/admin')->assertOk()->assertDontSee('data-site-icon-raster', false);
+        $this->actingAsAdmin($admin)->get('/admin')->assertOk()->assertDontSee('data-site-icon-raster', false);
     }
 
     public function test_a_session_whose_password_changed_is_sent_to_log_in_again(): void
     {
-        $admin = AdminUser::factory()->create();
+        $admin = $this->createAdmin();
 
-        $this->actingAs($admin, 'admin')
+        $this->actingAsAdmin($admin)
             ->withSession(['password_hash_admin' => 'stale'])
             ->post('/admin/site-icon/raster', ['version' => app(GeneratedIcon::class)->version(), 'icon' => array_map(fn (int $size) => $this->png($size), array_combine(GeneratedIconRaster::SIZES, GeneratedIconRaster::SIZES))])
             ->assertRedirect();
@@ -221,16 +221,20 @@ class SiteIconRasterTest extends TestCase
     }
 
     /** @param  array<int, UploadedFile|null>  $override */
-    private function send(?string $version = null, array $override = [], mixed $as = 'admin'): TestResponse
+    private function send(?string $version = null, array $override = [], AdminUser|Member|string|null $as = 'admin'): TestResponse
     {
         $files = [];
         foreach (GeneratedIconRaster::SIZES as $size) {
             $files[$size] = array_key_exists($size, $override) ? $override[$size] : $this->png($size);
         }
 
-        $actor = $as === 'admin' ? AdminUser::factory()->create() : $as;
-        // The admin realm middleware makes `admin` the default guard for the rest of the test, so the member guard is named.
-        $request = $actor instanceof AdminUser ? $this->actingAs($actor, 'admin') : ($actor === null ? $this : $this->actingAs($actor, 'member'));
+        $request = match (true) {
+            $as === 'admin' => $this->actingAsAdmin(),
+            $as === null => $this,
+            // The admin realm middleware makes `admin` the default guard for the rest of the test, so the member guard is named.
+            $as instanceof Member => $this->actingAs($as, 'member'),
+            default => $this->actingAsAdmin($as),
+        };
 
         return $request->post('/admin/site-icon/raster', [
             'version' => $version ?? app(GeneratedIcon::class)->version(),

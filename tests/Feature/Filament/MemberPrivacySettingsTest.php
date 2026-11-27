@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Features\Profile\ProfilePageVisibility;
 use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Filament\Pages\MemberPrivacySettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
@@ -25,7 +24,7 @@ class MemberPrivacySettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_enabling_web_public_age_takes_effect(): void

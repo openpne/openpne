@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\DesignSettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -27,7 +26,7 @@ class DesignSettingsTest extends TestCase
         app(SnsSettingService::class)->clearCache();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_saving_stores_every_design_field_verbatim(): void

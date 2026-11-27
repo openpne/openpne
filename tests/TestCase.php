@@ -14,10 +14,13 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\ActsAsAdmin;
 use Tests\Support\PassportTestKeys;
 
 abstract class TestCase extends BaseTestCase
 {
+    use ActsAsAdmin;
+
     protected function setUp(): void
     {
         // Before the application boots, so the OAuth routes are part of every test's route table.
