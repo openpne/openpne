@@ -25,6 +25,19 @@ class AdminLocaleSwitchTest extends TestCase
         $this->get('/admin')->assertOk()->assertSee('lang="en"', false);
     }
 
+    public function test_the_panel_switch_leaves_a_member_page_on_the_session_less_choice(): void
+    {
+        // A browser asking for ja, so en can only come from the switch; no stored choice, so the
+        // member pages fall to the session and would follow a shared key.
+        $admin = Member::factory()->administrator()->create(['locale' => null]);
+        $this->withHeader('Accept-Language', 'ja');
+
+        $this->actingAsAdmin($admin)->post('/admin/locale/session', ['locale' => 'en']);
+
+        $this->get('/admin')->assertOk()->assertSee('lang="en"', false);
+        $this->get('/member/config')->assertOk()->assertSee('lang="ja"', false);
+    }
+
     public function test_the_member_toggle_leaves_the_panel_language_alone(): void
     {
         $admin = Member::factory()->administrator()->create(['locale' => 'ja']);
