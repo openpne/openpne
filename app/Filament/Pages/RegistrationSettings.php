@@ -94,6 +94,7 @@ class RegistrationSettings extends Page
     {
         $data = $this->form->getState();
 
+        // A registration share-locks the mode row while holding the capacity gap, which the first save's inserts can deadlock with.
         DB::transaction(function () use ($data): void {
             foreach (SnsSettingKey::inGroup(SettingGroup::Auth) as $key) {
                 DB::table('sns_settings')->updateOrInsert(
@@ -101,7 +102,7 @@ class RegistrationSettings extends Page
                     ['value' => $key->encode($key->coerce($data[$key->value] ?? $key->default()))],
                 );
             }
-        });
+        }, attempts: 3);
 
         app(SnsSettingService::class)->clearCache();
 

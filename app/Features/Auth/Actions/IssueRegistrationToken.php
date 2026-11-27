@@ -95,13 +95,13 @@ class IssueRegistrationToken
                 ['token', 'source', 'inviter_id', 'created_at'],
             );
 
-            // A registration holds this link's row until it commits, so the address is asked again once the upsert has the row; that member's address is this lowercased one, as the app wrote it.
-            if (Member::where('email', $email)->sharedLock()->exists()) {
-                throw new AddressRegisteredMeanwhile;
-            }
-
             if ($alongside !== null) {
                 $alongside($createdAt);
+            }
+
+            // Plain, since a locking read deadlocks with registrations of neighbouring addresses, and correct only while no consistent read precedes the upsert in this transaction (CapacityLock::hold's counts follow its lock).
+            if (Member::where('email', $email)->exists()) {
+                throw new AddressRegisteredMeanwhile;
             }
         };
 

@@ -57,9 +57,10 @@ are serialized instead.
 
 `openpne:admin:invite <email> [--json]` prints a registration link and writes an administrator
 invite for the address, in the transaction that writes the link and under the capacity lock
-([capacity.md](capacity.md), "Reservation"). It refuses an address a member already has (grant that
-member the role instead), asked again in the transaction once the link's row is held, so a
-registration that commits first is refused too, and a site at capacity. Stdout carries only the URL, or one line of JSON
+([capacity.md](capacity.md), "Reservation"). It refuses a site at capacity and an address a member already
+has (grant that member the role instead). The address is asked again at the end of the transaction,
+so a registration that commits first leaves the command failing with neither a link nor an invite
+written. Stdout carries only the URL, or one line of JSON
 `{"email","url","expires_at"}`; every failure and the note go to stderr.
 
 - **The invite belongs to the address, not to the link.** `admin_role_invites` holds one row per
@@ -75,8 +76,8 @@ registration that commits first is refused too, and a site at capacity. Stdout c
   `closed` nothing else completes: a link of another source to an invited address answers 404 like
   any other ([security.md](security.md), "Registration links").
 - **Completing.** The transaction that creates the member re-reads, under lock, the link (still the
-  address's current one and within its lifetime) and the invite, and checks against both the mode,
-  read from its row under a shared lock so a mode change commits wholly before or after.
+  address's current one and within its lifetime) and the invite, and checks the mode against both,
+  reading it from its row under a shared lock so a mode change commits wholly before or after.
   A link replaced meanwhile creates no one. An invite that lapsed meanwhile refuses the invite's own
   link in every mode, and any link in `closed`; another link elsewhere registers a member without the
   role. A live invite is deleted as the role is set.

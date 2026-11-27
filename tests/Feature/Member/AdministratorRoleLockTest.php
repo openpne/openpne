@@ -13,17 +13,20 @@ use App\Features\Member\Actions\GrantAdministrator;
 use App\Features\Member\Actions\RejectMemberLogin;
 use App\Features\Member\Actions\RevokeAdministrator;
 use App\Features\Member\Actions\WithdrawMember;
+use App\Filament\Pages\RegistrationSettings;
 use App\Models\AdminRoleInvite;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Support\SnsSettingKey;
 use ArrayObject;
 use Carbon\CarbonInterface;
+use Filament\Facades\Filament;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Livewire\Livewire;
 use PDOException;
 use RuntimeException;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
@@ -228,13 +231,26 @@ class AdministratorRoleLockTest extends TestCase
         $this->assertSame(AdministratorRoleResult::Revoked, app(RevokeAdministrator::class)($administrator));
     }
 
-    /** InnoDB's answer to a revoke's index write meeting a writer queued on the administrators' gaps, which a single connection cannot provoke. */
-    private function deadlockOnce(): void
+    public function test_a_registration_or_a_registration_settings_save_rolled_back_by_a_deadlock_runs_again(): void
+    {
+        $this->deadlockOnce(self::CAPACITY);
+        $member = app(CompleteRegistration::class)($this->adminLink('admin@example.com'), $this->form());
+        $this->assertTrue($member->fresh()->isAdministrator());
+
+        Filament::setCurrentPanel('admin');
+        $this->actingAsAdmin();
+        $this->deadlockOnce('/insert into `sns_settings`/i');
+        Livewire::test(RegistrationSettings::class)->fillForm(['registration_mode' => 'closed'])->call('save')->assertHasNoErrors();
+        $this->assertSame('closed', DB::table('sns_settings')->where('key', SnsSettingKey::RegistrationMode->value)->value('value'));
+    }
+
+    /** InnoDB's answer to a write meeting another writer on the same gaps, which a single connection cannot provoke. */
+    private function deadlockOnce(string $pattern = self::ADMINISTRATORS): void
     {
         $done = false;
 
-        DB::beforeExecuting(function (string $sql, array $bindings, Connection $on) use (&$done): void {
-            if ($done || ! preg_match(self::ADMINISTRATORS, $sql)) {
+        DB::beforeExecuting(function (string $sql, array $bindings, Connection $on) use (&$done, $pattern): void {
+            if ($done || ! preg_match($pattern, $sql)) {
                 return;
             }
             $done = true;
