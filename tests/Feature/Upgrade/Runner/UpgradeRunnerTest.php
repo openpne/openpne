@@ -246,6 +246,24 @@ class UpgradeRunnerTest extends TestCase
         $this->assertDatabaseCount('openpne4_upgrade_state', 1);
     }
 
+    public function test_a_sign_in_while_the_reset_runs_is_signed_out_too(): void
+    {
+        config(['session.driver' => 'database']);
+        $member = Member::factory()->create();
+        $signedIn = false;
+        DB::listen(function ($query) use ($member, &$signedIn): void {
+            if (! $signedIn && str_contains($query->sql, 'admin_role_invites')) {
+                $signedIn = true;
+                DB::table((string) config('session.table'))->insert(['id' => 'late', 'user_id' => $member->getKey(), 'payload' => '', 'last_activity' => time()]);
+            }
+        });
+
+        (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+
+        $this->assertTrue($signedIn);
+        $this->assertDatabaseCount((string) config('session.table'), 0);
+    }
+
     public function test_a_reset_that_replaces_the_members_leaves_nothing_bound_to_their_ids(): void
     {
         // On a connection of its own, as session.connection may put the store.

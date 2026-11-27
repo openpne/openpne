@@ -19,6 +19,7 @@ class ResetForeignKeysSqlTest extends UpgradeSqlTestCase
     {
         if (DB::connection()->getDriverName() === 'mysql') {
             Schema::dropIfExists('reset_probe');
+            DB::table((string) config('session.table'))->delete();
             DB::statement('drop database if exists `'.$this->otherDatabase().'`');
             DB::table('members')->delete();
             if (! $this->fileBinKeepsItsKey()) {
@@ -50,6 +51,8 @@ class ResetForeignKeysSqlTest extends UpgradeSqlTestCase
         });
         DB::table('reset_probe')->insert(['member_id' => Member::factory()->create()->getKey()]);
         $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+        config(['session.driver' => 'database']);
+        DB::table((string) config('session.table'))->insert(['id' => 'kept', 'payload' => '', 'last_activity' => time()]);
 
         try {
             (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade, new FileUpgrade]))->reset();
@@ -60,6 +63,7 @@ class ResetForeignKeysSqlTest extends UpgradeSqlTestCase
 
         $this->assertDatabaseCount('members', 1);
         $this->assertDatabaseCount('admin_role_invites', 1);
+        $this->assertDatabaseCount((string) config('session.table'), 1);
         $this->assertTrue($this->fileBinKeepsItsKey());
     }
 

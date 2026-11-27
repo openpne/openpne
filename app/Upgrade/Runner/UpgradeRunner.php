@@ -691,10 +691,8 @@ final class UpgradeRunner
         // First, so a rule this cannot apply refuses with nothing changed.
         $children = $mysql ? $this->foreignKeysOntoTargets() : [];
 
-        // Before the targets, so a session store it cannot reach stops it with only sessions gone.
-        if ($sessions === 'database') {
-            DB::connection(config('session.connection'))->table((string) config('session.table'))->delete();
-        }
+        // Before the targets, so a store it cannot reach stops it with only sessions gone; again after them, for a sign-in between.
+        $this->emptySessionStore();
 
         if ($mysql && in_array('files', $this->targetTables(), true)) {
             (new FileBinMigration)->dropForeignKey();
@@ -714,6 +712,7 @@ final class UpgradeRunner
             }
 
             $this->clearRowsNamingTargets($children);
+            $this->emptySessionStore();
         } finally {
             if ($mysql) {
                 DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -744,6 +743,13 @@ final class UpgradeRunner
 
         foreach (self::MEMBER_OWNED_TABLES as $table) {
             DB::table($table)->delete();
+        }
+    }
+
+    private function emptySessionStore(): void
+    {
+        if (config('session.driver') === 'database') {
+            DB::connection(config('session.connection'))->table((string) config('session.table'))->delete();
         }
     }
 
