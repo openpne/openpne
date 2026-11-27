@@ -9,7 +9,6 @@ use App\Features\GroupTalk\Queries\GroupTalkMentionCandidates;
 use App\Features\Member\Queries\SearchMembers;
 use App\Features\Timeline\Queries\MentionCandidates;
 use App\Filament\Resources\Profiles\Pages\ListProfiles;
-use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\Member;
@@ -167,7 +166,7 @@ class SearchCollationSitesTest extends TestCase
     private function profileCaption(string $stored, string $term): bool
     {
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
         // The name column is searched too, and the factory's names carry an underscore.
         $profile = Profile::factory()->create(['form_type' => 'input', 'name' => 'f'.Str::lower(Str::random(12))]);
         $profile->setTranslation('ja_JP', $stored);

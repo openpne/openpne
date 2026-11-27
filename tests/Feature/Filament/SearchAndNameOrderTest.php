@@ -33,15 +33,12 @@ class SearchAndNameOrderTest extends TestCase
 {
     use RefreshDatabase;
 
-    private AdminUser $admin;
-
     protected function setUp(): void
     {
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->admin = AdminUser::factory()->create();
-        $this->actingAs($this->admin, 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_a_table_search_folds_ascii_case(): void

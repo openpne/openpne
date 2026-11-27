@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Features\Diary\DiarySearch;
 use App\Features\Diary\DiaryVisibility;
 use App\Filament\Pages\DiarySettings;
-use App\Models\AdminUser;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,7 +26,7 @@ class DiarySettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_disabling_web_public_entries_takes_effect(): void

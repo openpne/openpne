@@ -6,7 +6,6 @@ namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\TermSettings;
 use App\Http\Middleware\SetLocale;
-use App\Models\AdminUser;
 use App\Services\TermService;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
@@ -24,7 +23,7 @@ class TermSettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_changing_a_field_from_default_inserts_a_row(): void

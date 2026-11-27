@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\CacheTools;
-use App\Models\AdminUser;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -21,7 +20,7 @@ class CacheToolsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_page_renders(): void

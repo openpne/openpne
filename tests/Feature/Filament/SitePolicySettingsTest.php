@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\SitePolicySettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
@@ -26,7 +25,7 @@ class SitePolicySettingsTest extends TestCase
         app(SnsSettingService::class)->clearCache();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_saving_stores_both_bodies_verbatim(): void

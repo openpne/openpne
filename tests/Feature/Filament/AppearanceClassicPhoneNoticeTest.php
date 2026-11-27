@@ -6,7 +6,6 @@ namespace Tests\Feature\Filament;
 
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
-use App\Models\AdminUser;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +22,7 @@ class AppearanceClassicPhoneNoticeTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
         $this->withSession(['locale' => 'ja']);
     }
 

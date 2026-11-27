@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Captcha\Captcha;
 use App\Features\Auth\RegistrationMode;
 use App\Filament\Pages\RegistrationSettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
@@ -25,7 +24,7 @@ class RegistrationSettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_saving_registration_mode_takes_effect(): void

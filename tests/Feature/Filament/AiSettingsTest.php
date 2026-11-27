@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\AiSettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +20,7 @@ class AiSettingsTest extends TestCase
     {
         parent::setUp();
 
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_it_shows_the_stored_values(): void
@@ -113,7 +112,7 @@ class AiSettingsTest extends TestCase
 
     public function test_a_guest_cannot_reach_it(): void
     {
-        auth('admin')->logout();
+        $this->signOutAdmin();
 
         $this->get(AiSettings::getUrl())->assertRedirect();
     }

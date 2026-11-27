@@ -6,7 +6,6 @@ namespace Tests\Feature\Filament;
 
 use App\Features\Auth\RegistrationTokenSource;
 use App\Filament\Pages\InviteMembers;
-use App\Models\AdminUser;
 use App\Models\Member;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Support\SnsSettingKey;
@@ -26,7 +25,7 @@ class InviteMembersTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_it_issues_admin_invite_tokens_for_valid_new_addresses(): void

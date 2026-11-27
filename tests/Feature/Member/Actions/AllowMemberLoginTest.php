@@ -21,8 +21,8 @@ class AllowMemberLoginTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = AdminUser::factory()->create();
-        $this->actingAs($this->admin, 'admin');
+        $this->admin = $this->createAdmin();
+        $this->actingAsAdmin($this->admin);
         $this->captureSecurityLog();
     }
 

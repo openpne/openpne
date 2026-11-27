@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\ImageSettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,7 +19,7 @@ class ImageSettingsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_it_shows_the_stored_value(): void

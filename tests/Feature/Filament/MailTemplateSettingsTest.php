@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Filament\Pages\MailTemplateSettings;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
-use App\Models\AdminUser;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,7 +23,7 @@ class MailTemplateSettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_lists_every_registry_template(): void

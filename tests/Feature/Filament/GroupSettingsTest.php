@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Features\GroupTalk\GroupTalkNotifyDefault;
 use App\Features\GroupTalk\GroupTalkNotifyMode;
 use App\Filament\Pages\GroupSettings;
-use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
@@ -28,7 +27,7 @@ class GroupSettingsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_defaults_to_mentions_when_no_row_exists(): void

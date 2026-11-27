@@ -36,8 +36,8 @@ class MemberResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->admin = AdminUser::factory()->create();
-        $this->actingAs($this->admin, 'admin');
+        $this->admin = $this->createAdmin();
+        $this->actingAsAdmin($this->admin);
         $this->captureSecurityLog();
 
         // Reserve id 1 as the un-withdrawable primary member so factory subjects below get id >= 2.

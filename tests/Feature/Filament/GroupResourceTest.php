@@ -9,7 +9,6 @@ use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Filament\Resources\Groups\Pages\EditGroup;
 use App\Filament\Resources\Groups\Pages\ListGroups;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupCategory;
@@ -37,7 +36,7 @@ class GroupResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_list_page_renders_communities(): void

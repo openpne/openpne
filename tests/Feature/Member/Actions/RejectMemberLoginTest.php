@@ -24,8 +24,8 @@ class RejectMemberLoginTest extends TestCase
 
         // The admin actor supplies admin_username on the security event; the guard also proves the
         // action never touches admin-realm sessions when it revokes a member.
-        $this->admin = AdminUser::factory()->create();
-        $this->actingAs($this->admin, 'admin');
+        $this->admin = $this->createAdmin();
+        $this->actingAsAdmin($this->admin);
         $this->captureSecurityLog();
 
         // Reserve id 1 as the primary member so factory subjects below get id >= 2.

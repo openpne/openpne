@@ -8,7 +8,6 @@ use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
 use App\Filament\Resources\Gadgets\Pages\EditGadget;
 use App\Filament\Resources\Gadgets\Pages\ListGadgets;
-use App\Models\AdminUser;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
 use App\Models\Member;
@@ -28,7 +27,7 @@ class GadgetResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_list_tab_scopes_to_context(): void

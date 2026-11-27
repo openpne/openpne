@@ -15,7 +15,6 @@ use App\Files\ImageProcessorUnavailableException;
 use App\Files\ImageSpec;
 use App\Files\ImageTransform;
 use App\Files\ProcessedImage;
-use App\Models\AdminUser;
 use App\Models\BannerImage;
 use App\Models\File;
 use App\Models\Member;
@@ -108,7 +107,7 @@ class ImageCanonicalDeliveryTest extends TestCase
     {
         $file = $this->stored('image/jpeg', $this->fixture('jpeg-gps-orientation.jpg'), ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
 
-        $response = $this->actingAs(AdminUser::factory()->create(), 'admin')
+        $response = $this->actingAsAdmin()
             ->get(route('admin.file.raw', ['file' => $file->name]))
             ->assertOk();
 
@@ -147,15 +146,15 @@ class ImageCanonicalDeliveryTest extends TestCase
 
     public function test_the_admin_raw_route_labels_the_stored_bytes_by_what_they_are(): void
     {
-        $admin = AdminUser::factory()->create();
+        $admin = $this->createAdmin();
         $heic = $this->stored('image/jpeg', $this->fixture('heic-gps-orientation.heic'), ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
         // A row typed as a picture whose bytes are a document: never inline, whatever `type` says.
         $html = $this->stored('image/jpeg', '<html><script>alert(1)</script></html>', ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
 
-        $this->actingAs($admin, 'admin')->get(route('admin.file.raw', ['file' => $heic->name]))
+        $this->actingAsAdmin($admin)->get(route('admin.file.raw', ['file' => $heic->name]))
             ->assertOk()->assertHeader('Content-Type', 'image/heic')->assertHeader('Content-Disposition', 'inline; filename=file-'.$heic->id);
 
-        $response = $this->actingAs($admin, 'admin')->get(route('admin.file.raw', ['file' => $html->name]))->assertOk()
+        $response = $this->actingAsAdmin($admin)->get(route('admin.file.raw', ['file' => $html->name]))->assertOk()
             ->assertHeader('Content-Type', 'application/octet-stream');
         $this->assertStringStartsWith('attachment', (string) $response->headers->get('Content-Disposition'));
         $this->assertSame('<html><script>alert(1)</script></html>', $response->streamedContent());
@@ -167,7 +166,7 @@ class ImageCanonicalDeliveryTest extends TestCase
         $bytes = '%PDF-1.4 '.random_bytes(20_000);
         $file = $this->stored('application/pdf', $bytes, ['related_entity_type' => 'member', 'related_entity_id' => Member::factory()->create()->getKey()]);
 
-        $response = $this->actingAs(AdminUser::factory()->create(), 'admin')->get(route('admin.file.raw', ['file' => $file->name]))->assertOk();
+        $response = $this->actingAsAdmin()->get(route('admin.file.raw', ['file' => $file->name]))->assertOk();
 
         $this->assertSame($bytes, $response->streamedContent());
         $this->assertSame((string) strlen($bytes), $response->headers->get('Content-Length'));

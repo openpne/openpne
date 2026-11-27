@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Filament\Pages\BrandingSettings;
 use App\Files\FileUploader;
 use App\Files\GeneratedIcon;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Services\SnsSettingService;
 use App\Support\FaviconFallback;
@@ -39,7 +38,7 @@ class BrandingSettingsTest extends TestCase
         app(SnsSettingService::class)->clearCache();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_saving_stores_the_brand_color_verbatim(): void

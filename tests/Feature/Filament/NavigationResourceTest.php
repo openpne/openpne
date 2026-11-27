@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Filament\Resources\Navigations\Pages\CreateNavigation;
 use App\Filament\Resources\Navigations\Pages\EditNavigation;
 use App\Filament\Resources\Navigations\Pages\ListNavigations;
-use App\Models\AdminUser;
 use App\Models\Navigation;
 use App\Services\NavigationService;
 use Filament\Actions\DeleteAction;
@@ -25,7 +24,7 @@ class NavigationResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     private function makeNav(string $type, string $uri): Navigation

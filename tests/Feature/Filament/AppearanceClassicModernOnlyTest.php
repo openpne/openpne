@@ -11,7 +11,6 @@ use App\Filament\Pages\ThemeSettings;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Navigations\NavigationResource;
-use App\Models\AdminUser;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,7 +32,7 @@ class AppearanceClassicModernOnlyTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_screens_are_accessible_under_a_coexistence_mode(): void

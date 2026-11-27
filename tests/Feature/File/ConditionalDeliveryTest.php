@@ -7,7 +7,6 @@ use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageCache;
 use App\Files\ImageTransform;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -143,7 +142,7 @@ class ConditionalDeliveryTest extends TestCase
     {
         $file = $this->memberImage(Member::factory()->create(), 'PNGDATA');
         $url = route('admin.file.raw', ['file' => $file->name]);
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
 
         $first = $this->get($url);
         $first->assertOk();
@@ -168,7 +167,7 @@ class ConditionalDeliveryTest extends TestCase
         // The existence check sits ahead of the 304 too: a row without bytes must not have a browser
         // keep drawing what the server no longer holds.
         $file = $this->memberImage(Member::factory()->create(), 'PNGDATA');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
         $this->mock(FileStorage::class)->shouldReceive('exists')->andReturn(false);
 
         $this->withHeader('If-None-Match', FileResponse::etag($file))

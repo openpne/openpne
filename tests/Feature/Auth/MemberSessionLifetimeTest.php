@@ -189,7 +189,7 @@ class MemberSessionLifetimeTest extends TestCase
 
     public function test_a_signed_in_administrator_keeps_the_framework_lifetime(): void
     {
-        $response = $this->actingAs(AdminUser::factory()->create(), 'admin')->get('/admin');
+        $response = $this->actingAsAdmin()->get('/admin');
 
         $this->assertSame(self::GUEST_MINUTES, $this->sessionMinutes($response));
     }

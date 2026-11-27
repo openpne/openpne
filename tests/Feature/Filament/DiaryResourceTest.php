@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Resources\Diaries\Pages\ListDiaries;
-use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\File;
@@ -24,7 +23,7 @@ class DiaryResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_list_page_renders_diaries(): void

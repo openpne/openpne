@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminPanel;
 
-use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,10 +20,10 @@ class AdminLocaleSwitchTest extends TestCase
     public function test_session_only_switch_does_not_touch_a_co_logged_in_members_locale(): void
     {
         $member = Member::factory()->create(['locale' => 'ja']);
-        $admin = AdminUser::factory()->create();
+        $admin = $this->createAdmin();
 
         $this->actingAs($member, 'member')
-            ->actingAs($admin, 'admin')
+            ->actingAsAdmin($admin)
             ->post('/admin/locale/session', ['locale' => 'en'])
             ->assertNoContent();
 
@@ -51,7 +50,7 @@ class AdminLocaleSwitchTest extends TestCase
 
     public function test_panel_header_renders_the_locale_switcher(): void
     {
-        $this->actingAs(AdminUser::factory()->create(), 'admin')
+        $this->actingAsAdmin()
             ->get('/admin')
             ->assertOk()
             ->assertSee('locale/session');

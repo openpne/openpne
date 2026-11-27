@@ -9,7 +9,6 @@ use App\Features\Auth\Actions\IssueRegistrationToken;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Features\Member\Actions\RequestEmailChange;
 use App\Filament\Pages\InviteMembers;
-use App\Models\AdminUser;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Models\RegistrationToken;
@@ -152,7 +151,7 @@ class NewEmailAddressTest extends TestCase
     {
         Notification::fake();
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
 
         Livewire::test(InviteMembers::class)
             ->fillForm(['emails' => "user@れい.jp\nたろう@example.com\n".self::PUNYCODE])

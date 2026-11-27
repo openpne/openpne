@@ -10,7 +10,6 @@ use App\Filament\Pages\ImageSettings;
 use App\Filament\Pages\LandingPageSettings;
 use App\Filament\Pages\LoginScreenSettings;
 use App\Filament\Pages\ThemeSettings;
-use App\Models\AdminUser;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,7 +27,7 @@ class ModernScreensClassicOnlyTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_modern_screens_are_accessible_under_a_coexistence_mode(): void

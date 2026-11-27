@@ -9,7 +9,6 @@ use App\Filament\Resources\GroupEvents\Pages\ListGroupEvents;
 use App\Filament\Resources\GroupEvents\Pages\ViewGroupEvent;
 use App\Filament\Resources\GroupEvents\RelationManagers\EventCommentsRelationManager;
 use App\Filament\Resources\GroupEvents\RelationManagers\EventMembersRelationManager;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
@@ -31,7 +30,7 @@ class GroupEventResourceTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     public function test_list_page_renders_events(): void

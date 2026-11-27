@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
-use App\Models\AdminUser;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -21,7 +20,7 @@ class AdminFormColumnsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
     }
 
     /**

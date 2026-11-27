@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
-use App\Models\AdminUser;
 use App\Models\BannerImage;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -123,7 +122,7 @@ class FilePolicyFeatureToggleTest extends TestCase
         ]);
 
         $this->switchOff(Feature::Diary);
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->actingAsAdmin();
 
         $response = $this->get(route('admin.file.raw', ['file' => $file->name]))->assertOk();
         $this->assertSame('diary-bytes', $response->streamedContent());
