@@ -9,6 +9,7 @@ use App\Files\FileUploader;
 use App\Files\GeneratedIcon;
 use App\Files\GeneratedIconRaster;
 use App\Models\File;
+use App\Models\AdminUser;
 use App\Models\Member;
 use App\Support\FaviconFallback;
 use App\Support\SnsSettingKey;
@@ -220,7 +221,7 @@ class SiteIconRasterTest extends TestCase
     }
 
     /** @param  array<int, UploadedFile|null>  $override */
-    private function send(?string $version = null, array $override = [], mixed $as = 'admin'): TestResponse
+    private function send(?string $version = null, array $override = [], AdminUser|Member|string|null $as = 'admin'): TestResponse
     {
         $files = [];
         foreach (GeneratedIconRaster::SIZES as $size) {

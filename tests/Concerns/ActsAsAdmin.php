@@ -12,7 +12,6 @@ trait ActsAsAdmin
         return AdminUser::factory()->create();
     }
 
-    /** Signs in to the admin panel as $admin, or as a fresh administrator. */
     protected function actingAsAdmin(?AdminUser $admin = null): static
     {
         return $this->actingAs($admin ?? $this->createAdmin(), 'admin');
