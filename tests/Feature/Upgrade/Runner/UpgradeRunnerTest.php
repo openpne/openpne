@@ -220,10 +220,18 @@ class UpgradeRunnerTest extends TestCase
         DB::table('notifications')->insert(['id' => 'n', 'type' => 'x', 'notifiable_type' => $member->getMorphClass(), 'notifiable_id' => $id, 'data' => '{}']);
         DB::table('password_reset_tokens')->insert(['email' => $member->email, 'token' => 'pw', 'created_at' => now()]);
         DB::table((string) config('session.table'))->insert(['id' => 'session', 'user_id' => $id, 'payload' => '', 'last_activity' => time()]);
+        $member->updatePushSubscription('https://push.example.test/endpoint');
+        $issue = DB::table('home_issues')->insertGetId(['number' => 1, 'issue_date' => '2026-11-01', 'window_start' => now(), 'published_at' => now()]);
+        DB::table('home_issue_items')->insert(['home_issue_id' => $issue, 'section' => 'diaries', 'rank' => 1, 'source_type' => 'diary', 'source_id' => 1, 'score' => 1, 'stats' => '{}']);
+
+        foreach (['passkeys', 'push_subscriptions', 'home_issues'] as $table) {
+            $this->assertDatabaseCount($table, 1);
+        }
 
         (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
 
-        foreach (['passkeys', 'mfa_reset_requests', 'email_change_requests', (string) config('session.table'), ...UpgradeRunner::MEMBER_OWNED_TABLES] as $table) {
+        $seeded = ['passkeys', 'personal_access_tokens', 'mfa_reset_requests', 'email_change_requests', 'oauth_access_tokens', 'oauth_refresh_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'notifications', 'password_reset_tokens', (string) config('session.table'), 'push_subscriptions', 'home_issues', 'home_issue_items'];
+        foreach ($seeded as $table) {
             $this->assertDatabaseCount($table, 0);
         }
     }
@@ -233,7 +241,7 @@ class UpgradeRunnerTest extends TestCase
         $targets = (new UpgradeRunner(new InsertSelectCompiler))->targetTables();
         // Holding an id nothing reads: the old admin accounts' sessions and links, and an OAuth client's owner, which dynamic registration leaves empty.
         $inert = ['admin_sessions', 'admin_password_setup_tokens', 'oauth_clients'];
-        $cleared = [(string) config('session.table'), 'registration_tokens', ...UpgradeRunner::MEMBER_OWNED_TABLES, ...$inert];
+        $cleared = [(string) config('session.table'), 'registration_tokens', 'home_issue_items', ...UpgradeRunner::MEMBER_OWNED_TABLES, ...$inert];
         $missed = [];
 
         foreach (Schema::getTableListing(schemaQualified: false) as $table) {
@@ -244,8 +252,10 @@ class UpgradeRunnerTest extends TestCase
                 ->filter(fn (array $fk) => in_array($fk['foreign_table'], $targets, true))
                 ->flatMap(fn (array $fk) => $fk['columns'])
                 ->all();
-            foreach (Schema::getColumnListing($table) as $column) {
-                if (preg_match('/(^|_)(member|user|notifiable|tokenable|owner)_id$/', $column) === 1 && ! in_array($column, $guarded, true)) {
+            $columns = Schema::getColumnListing($table);
+            foreach ($columns as $column) {
+                $morph = str_ends_with($column, '_id') && in_array(substr($column, 0, -3).'_type', $columns, true);
+                if (($morph || preg_match('/(^|_)(member|user|notifiable|tokenable|owner)_id$/', $column) === 1) && ! in_array($column, $guarded, true)) {
                     $missed[] = "{$table}.{$column}";
                 }
             }

@@ -47,8 +47,8 @@ final class UpgradeRunner
     /** The tables a new-site install (`openpne:install`, a registration) writes, which the walk fills from OpenPNE 3 instead. */
     public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'members'];
 
-    /** Every row of these belongs to a member, by an id no foreign key carries; reset() empties them when it replaces `members`. */
-    public const MEMBER_OWNED_TABLES = ['oauth_refresh_tokens', 'oauth_access_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'personal_access_tokens', 'notifications', 'password_reset_tokens'];
+    /** Every row of these belongs to a member, by an id no foreign key carries; reset() empties them. */
+    public const MEMBER_OWNED_TABLES = ['oauth_refresh_tokens', 'oauth_access_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'personal_access_tokens', 'notifications', 'push_subscriptions', 'password_reset_tokens'];
 
     public const PENDING_ADMIN_INVITE_MESSAGE = 'OpenPNE 4 table `admin_role_invites` holds an administrator invite (openpne:admin:invite), whose registration, while it is live, would make an administrator of the upgraded site. Restore the schema fresh, or rerun with --force-restart, which empties it first.';
 
@@ -682,12 +682,12 @@ final class UpgradeRunner
 
         $mysql = DB::connection()->getDriverName() === 'mysql';
 
+        // First, so a rule this cannot apply refuses with nothing changed.
+        $children = $mysql ? $this->foreignKeysOntoTargets() : [];
+
         if ($mysql && in_array('files', $this->targetTables(), true)) {
             (new FileBinMigration)->dropForeignKey();
         }
-
-        // After the drop, so file_bin is not among them; before any delete, so a rule this cannot apply refuses with nothing deleted.
-        $children = $mysql ? $this->foreignKeysOntoTargets() : [];
 
         if ($mysql) {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
@@ -727,9 +727,9 @@ final class UpgradeRunner
             $rule === 'SET NULL' ? $rows->update([$column => null]) : $rows->delete();
         }
 
-        if (! in_array('members', $this->targetTables(), true)) {
-            return;
-        }
+        // The front page's past issues name their stories by id alone, and would hold back the upgraded site's stories that take those ids.
+        DB::table('home_issue_items')->delete();
+        DB::table('home_issues')->delete();
 
         DB::table((string) config('session.table'))->delete();
         foreach (self::MEMBER_OWNED_TABLES as $table) {
@@ -751,7 +751,8 @@ final class UpgradeRunner
               where rc.constraint_schema = ?',
             [DB::connection()->getDatabaseName()],
         ) as $fk) {
-            if (! in_array($fk->p, $targets, true) || in_array($fk->t, $targets, true)) {
+            // file_bin's key onto files is dropped instead, since no step owns the BLOBs.
+            if (! in_array($fk->p, $targets, true) || in_array($fk->t, $targets, true) || $fk->t === 'file_bin') {
                 continue;
             }
             if (! in_array($fk->r, ['CASCADE', 'SET NULL'], true)) {
