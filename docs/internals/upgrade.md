@@ -236,9 +236,10 @@ BLOBs cannot cascade. The walk restores OpenPNE 3's ids, so a row left outside t
 a target row would bind to whoever holds that id there: with MySQL's checks off no delete rule runs,
 so `reset()` applies the rule of each foreign key from outside the targets onto one (CASCADE deletes,
 SET NULL nulls, any other refuses before anything changes; `file_bin`'s is the one dropped instead,
-and a key from another database refuses too).
+and a key from another database refuses too, where the connection's user can see it).
 It also empties what names a target row by an id no key carries: `session.table` on
-`session.connection`, `UpgradeRunner::MEMBER_OWNED_TABLES` and the front page's issues, whose ledger
+`session.connection` (before the targets, so a store it cannot reach stops it with only sessions
+gone), `UpgradeRunner::MEMBER_OWNED_TABLES` and the front page's issues, whose ledger
 would otherwise hold back the upgraded site's stories under those ids ([home-issues.md](home-issues.md)).
 A session driver other than `database` (or `array`, which keeps nothing past its process) refuses
 before anything changes, since that store is out of the reset's reach.

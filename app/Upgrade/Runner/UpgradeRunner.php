@@ -691,6 +691,11 @@ final class UpgradeRunner
         // First, so a rule this cannot apply refuses with nothing changed.
         $children = $mysql ? $this->foreignKeysOntoTargets() : [];
 
+        // Before the targets, so a session store it cannot reach stops it with only sessions gone.
+        if ($sessions === 'database') {
+            DB::connection(config('session.connection'))->table((string) config('session.table'))->delete();
+        }
+
         if ($mysql && in_array('files', $this->targetTables(), true)) {
             (new FileBinMigration)->dropForeignKey();
         }
@@ -721,7 +726,7 @@ final class UpgradeRunner
 
     /**
      * The walk inserts OpenPNE 3's rows under their own ids, so a row left outside the targets would
-     * bind its passkey, token or session to whoever holds that id there. With MySQL's checks off
+     * bind its passkey or token to whoever holds that id there. With MySQL's checks off
      * InnoDB applies no delete rule, so $children's are applied here (SQLite's ran with the deletes).
      *
      * @param  list<array{0: string, 1: string, 2: string}>  $children
@@ -737,9 +742,6 @@ final class UpgradeRunner
         DB::table('home_issue_items')->delete();
         DB::table('home_issues')->delete();
 
-        if (config('session.driver') === 'database') {
-            DB::connection(config('session.connection'))->table((string) config('session.table'))->delete();
-        }
         foreach (self::MEMBER_OWNED_TABLES as $table) {
             DB::table($table)->delete();
         }

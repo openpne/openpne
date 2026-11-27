@@ -18,6 +18,7 @@ use App\Upgrade\Steps\NavigationUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use Database\Seeders\NavigationSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -221,6 +222,28 @@ class UpgradeRunnerTest extends TestCase
 
         $this->assertModelExists($member);
         $this->assertDatabaseCount('admin_role_invites', 1);
+    }
+
+    public function test_a_session_store_the_reset_cannot_empty_stops_it_before_the_targets(): void
+    {
+        config([
+            'database.connections.session_store' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+            'session.driver' => 'database',
+            'session.connection' => 'session_store',
+        ]);
+        $member = Member::factory()->create();
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+        UpgradeState::create(['step_key' => 'member', 'status' => UpgradeState::STATUS_COMPLETED]);
+
+        try {
+            (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+            $this->fail('the reset emptied a session table that does not exist');
+        } catch (QueryException) {
+        }
+
+        $this->assertModelExists($member);
+        $this->assertDatabaseCount('admin_role_invites', 1);
+        $this->assertDatabaseCount('openpne4_upgrade_state', 1);
     }
 
     public function test_a_reset_that_replaces_the_members_leaves_nothing_bound_to_their_ids(): void
