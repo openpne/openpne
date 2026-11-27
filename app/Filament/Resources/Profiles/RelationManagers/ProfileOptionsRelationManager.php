@@ -24,6 +24,8 @@ class ProfileOptionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'options';
 
+    protected static bool $shouldSkipAuthorization = true;
+
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
         return __('Options');

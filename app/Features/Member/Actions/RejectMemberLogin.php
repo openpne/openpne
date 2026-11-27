@@ -15,8 +15,12 @@ class RejectMemberLogin
 {
     use SyncsCallerInstance;
 
-    /** @throws AdministratorRoleHeld */
-    public function __invoke(Member $member): void
+    /**
+     * @param  Member  $actor  the administrator acting from the admin panel
+     *
+     * @throws AdministratorRoleHeld
+     */
+    public function __invoke(Member $member, Member $actor): void
     {
         // Defensive: the admin UI hides the action for id 1, so reaching here is a programming error.
         if ((int) $member->getKey() === 1) {
@@ -57,7 +61,7 @@ class RejectMemberLogin
 
         SecurityLog::event('member.banned', [
             'member_id' => $member->getKey(),
-            'admin_username' => auth('admin')->user()?->username,
+            'admin_member_id' => $actor->getKey(),
         ]);
     }
 }

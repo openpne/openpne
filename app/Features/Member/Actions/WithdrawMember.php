@@ -34,7 +34,8 @@ class WithdrawMember
         private readonly DeleteGroup $deleteGroup,
     ) {}
 
-    public function __invoke(Member $member): void
+    /** @param  Member|null  $actor  the administrator withdrawing the member from the admin panel; null for the member themselves */
+    public function __invoke(Member $member, ?Member $actor = null): void
     {
         // Defensive: the admin UI hides the action for id 1, so reaching here is a programming error.
         if ((int) $member->getKey() === 1) {
@@ -52,7 +53,7 @@ class WithdrawMember
 
         // Before anything else: `owner_member_id` is RESTRICT, so this row cannot go while an owned
         // account survives.
-        $this->drainAiAccounts($member);
+        $this->drainAiAccounts($member, $actor);
 
         $this->drainGroups($member);
 
@@ -72,18 +73,15 @@ class WithdrawMember
             ($this->deleteTimelinePost)($post);
         }
 
-        $this->deleteMemberRow($member);
+        $this->deleteMemberRow($member, $actor);
 
         ViewerRelations::flush();
-
-        // The self path has already logged the member out, so a guard here means an admin actor.
-        $adminUsername = auth('admin')->user()?->username;
 
         // Before the dispatch: enqueueing listeners is fallible and must not suppress the audit record.
         SecurityLog::event('member.withdrawn', [
             'member_id' => $memberId,
-            'actor' => $adminUsername === null ? 'self' : 'admin',
-            'admin_username' => $adminUsername,
+            'actor' => $actor === null ? 'self' : 'admin',
+            'admin_member_id' => $actor?->getKey(),
         ]);
 
         MemberWithdrawn::dispatch($memberId, $name, $email, $locale, $wasAiAccount);
@@ -129,10 +127,10 @@ class WithdrawMember
      * its own, so there is no depth guard. Not routed through DeleteAiAccount, which logs the owner's
      * deliberate retirement of one account.
      */
-    private function drainAiAccounts(Member $member): void
+    private function drainAiAccounts(Member $member, ?Member $actor): void
     {
         foreach ($member->aiAccounts()->get() as $aiAccount) {
-            $this($aiAccount);
+            $this($aiAccount, $actor);
         }
     }
 
@@ -141,7 +139,7 @@ class WithdrawMember
      * would otherwise be FK-cascaded away silently and strand a group admin-less, while an AI account
      * would abort the delete on its RESTRICT foreign key.
      */
-    private function deleteMemberRow(Member $member): void
+    private function deleteMemberRow(Member $member, ?Member $actor): void
     {
         $id = $member->getKey();
 
@@ -184,7 +182,7 @@ class WithdrawMember
                 return;
             }
 
-            $this->drainAiAccounts($member);
+            $this->drainAiAccounts($member, $actor);
             $this->drainGroups($member);
         }
 

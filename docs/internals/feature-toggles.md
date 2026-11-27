@@ -146,7 +146,7 @@ The refusal is the application's. A variant URL already signed for a member, on 
 unit was on, is still answered ahead of the framework while that member's browser sends the image
 cookie it was signed for ([images.md](images.md), "The fast path").
 
-The admin file monitor reads through its own route (`AdminFileController`, admin guard, no policy),
+The admin file monitor reads through its own route (`AdminFileController`, the administrator gate, no policy),
 so an operator keeps moderating a unit they switched off.
 
 ## What a disabled unit does not change

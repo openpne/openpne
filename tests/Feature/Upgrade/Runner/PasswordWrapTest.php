@@ -3,7 +3,6 @@
 namespace Tests\Feature\Upgrade\Runner;
 
 use App\Auth\PasswordScheme;
-use App\Models\AdminUser;
 use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\PasswordWrap;
@@ -22,7 +21,7 @@ use Tests\Feature\Upgrade\UpgradeSqlTestCase;
 class PasswordWrapTest extends UpgradeSqlTestCase
 {
     /** @return list<string> */
-    private function runWrap(array $tables = ['members', 'admin_users']): array
+    private function runWrap(array $tables = ['members']): array
     {
         $lines = [];
         $ok = (new PasswordWrap)->run($tables, new RunReport(function (string $line) use (&$lines): void {
@@ -73,8 +72,6 @@ class PasswordWrapTest extends UpgradeSqlTestCase
         $bcryptBefore = $bcryptMember->fresh()->password;
         $nullMember = Member::factory()->create();
         DB::table('members')->where('id', $nullMember->getKey())->update(['password' => null]);
-        $admin = AdminUser::factory()->create();
-        DB::table('admin_users')->where('id', $admin->getKey())->update(['password' => md5('admin-pass')]);
 
         $this->runWrap();
 
@@ -89,14 +86,9 @@ class PasswordWrapTest extends UpgradeSqlTestCase
         $this->assertNull($nullMember->fresh()->password);
         $this->assertNull($nullMember->fresh()->password_scheme);
 
-        $admin = $admin->fresh();
-        $this->assertTrue(Hash::check(md5('admin-pass'), $admin->password));
-        $this->assertSame(PasswordScheme::Md5Bcrypt->value, $admin->password_scheme);
-
         $this->assertSame(1, UpgradeState::where('step_key', 'password_wrap_members')
             ->where('status', UpgradeState::STATUS_COMPLETED)->where('rows_affected', 1)->count());
-        $this->assertSame(1, UpgradeState::where('step_key', 'password_wrap_admin_users')
-            ->where('status', UpgradeState::STATUS_COMPLETED)->where('rows_affected', 1)->count());
+        $this->assertFalse(UpgradeState::where('step_key', 'password_wrap_admin_users')->exists());
     }
 
     public function test_a_completed_pass_is_skipped_and_a_failed_one_resumes(): void

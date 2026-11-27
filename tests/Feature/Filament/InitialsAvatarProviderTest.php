@@ -3,7 +3,7 @@
 namespace Tests\Feature\Filament;
 
 use App\Filament\Support\InitialsAvatarProvider;
-use App\Models\AdminUser;
+use App\Models\Member;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,7 +14,7 @@ class InitialsAvatarProviderTest extends TestCase
 
     public function test_the_avatar_is_an_inline_svg_of_the_initials(): void
     {
-        $admin = AdminUser::factory()->create(['username' => 'site-admin']);
+        $admin = Member::factory()->create(['name' => 'site-admin']);
 
         $url = app(InitialsAvatarProvider::class)->get($admin);
 
@@ -24,14 +24,14 @@ class InitialsAvatarProviderTest extends TestCase
 
     public function test_two_words_give_two_initials_with_leading_punctuation_dropped(): void
     {
-        $admin = AdminUser::factory()->create(['username' => '[bot] <x> & yo']);
+        $admin = Member::factory()->create(['name' => '[bot] <x> & yo']);
 
         $this->assertStringContainsString('>BX<', rawurldecode(app(InitialsAvatarProvider::class)->get($admin)));
     }
 
     public function test_a_name_without_letters_still_draws_something(): void
     {
-        $admin = AdminUser::factory()->create(['username' => '***']);
+        $admin = Member::factory()->create(['name' => '***']);
 
         $this->assertStringContainsString('>?<', rawurldecode(app(InitialsAvatarProvider::class)->get($admin)));
     }

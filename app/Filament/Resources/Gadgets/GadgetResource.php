@@ -23,6 +23,8 @@ class GadgetResource extends Resource
 
     protected static ?string $model = Gadget::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 
     protected static ?int $navigationSort = 2;

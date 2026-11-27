@@ -25,14 +25,6 @@ class SecurityHeadersTest extends TestCase
     {
         // The Filament panel keeps its own middleware stack (no `web` group), so this is a
         // real regression surface — without SecurityHeaders registered there, /admin ships none.
-        $this->get('/admin/login')
-            ->assertOk()
-            ->assertHeader('X-Content-Type-Options', 'nosniff')
-            ->assertHeader('X-Frame-Options', 'DENY')
-            ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'")
-            ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-            ->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
-
         $this->actingAsAdmin()
             ->get('/admin')
             ->assertOk()
@@ -48,7 +40,7 @@ class SecurityHeadersTest extends TestCase
         // SecurityHeaders is outermost in the panel stack, so it decorates a short-circuit
         // response (here the guest→login redirect) that never reaches a rendered page.
         $this->get('/admin')
-            ->assertRedirect('/admin/login')
+            ->assertRedirect(route('login'))
             ->assertHeader('X-Frame-Options', 'DENY')
             ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'");
     }
@@ -58,7 +50,7 @@ class SecurityHeadersTest extends TestCase
         // Deliberately omitted: web-public avatars and banners are served for cross-origin
         // embedding, which CORP: same-origin would break.
         $this->get('/login')->assertHeaderMissing('Cross-Origin-Resource-Policy');
-        $this->get('/admin/login')->assertHeaderMissing('Cross-Origin-Resource-Policy');
+        $this->actingAsAdmin()->get('/admin')->assertHeaderMissing('Cross-Origin-Resource-Policy');
     }
 
     public function test_hsts_is_absent_without_force_https(): void

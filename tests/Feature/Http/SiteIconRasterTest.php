@@ -8,7 +8,6 @@ use App\Features\Branding\Actions\SaveBrandingSettings;
 use App\Files\FileUploader;
 use App\Files\GeneratedIcon;
 use App\Files\GeneratedIconRaster;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\Member;
 use App\Support\FaviconFallback;
@@ -60,7 +59,7 @@ class SiteIconRasterTest extends TestCase
         $this->assertSame(24, ord($ico[12]));
 
         $this->assertSame($tileUrl.'-r', app_icon_url(192));
-        // Back to the member realm: the admin request above left the admin guard as the default.
+        // Back to the member realm: the admin request above left its realm-scoped state behind.
         $this->freshRequestState();
         $this->assertStringContainsString('-r', app_icon_url(180));
         $this->get('/login')->assertOk()->assertSee(app_icon_url(180), false);
@@ -70,7 +69,7 @@ class SiteIconRasterTest extends TestCase
     {
         $this->send()->assertNoContent();
         $pngs = $this->pngs();
-        // Back to the member realm: the admin request above left the admin guard as the default.
+        // Back to the member realm: the admin request above left its realm-scoped state behind.
         $this->freshRequestState();
 
         $file = app(FileUploader::class)->store(UploadedFile::fake()->image('icon.png', 32, 32), explicitVisibility: File::VISIBILITY_PUBLIC);
@@ -81,8 +80,8 @@ class SiteIconRasterTest extends TestCase
 
     public function test_only_an_administrator_may_send_one(): void
     {
-        $this->send(as: null)->assertNotFound();
-        $this->send(as: Member::factory()->create())->assertNotFound();
+        $this->send(as: null)->assertRedirect(route('login'));
+        $this->send(as: Member::factory()->create())->assertForbidden();
 
         Storage::disk('image_cache')->assertDirectoryEmpty('');
         $this->assertFalse(app(GeneratedIcon::class)->hasRaster());
@@ -173,9 +172,6 @@ class SiteIconRasterTest extends TestCase
     {
         $admin = $this->createAdmin();
 
-        // A guest on the login screen: the body-end hook renders there too.
-        $this->get('/admin/login')->assertOk()->assertDontSee('data-site-icon-raster', false);
-
         $page = $this->actingAsAdmin($admin)->get('/admin')->assertOk();
         $page->assertSee('data-site-icon-raster', false)
             ->assertSee('data-version="'.app(GeneratedIcon::class)->version().'"', false)
@@ -200,7 +196,7 @@ class SiteIconRasterTest extends TestCase
         $admin = $this->createAdmin();
 
         $this->actingAsAdmin($admin)
-            ->withSession(['password_hash_admin' => 'stale'])
+            ->withSession(['password_hash_member' => 'stale'])
             ->post('/admin/site-icon/raster', ['version' => app(GeneratedIcon::class)->version(), 'icon' => array_map(fn (int $size) => $this->png($size), array_combine(GeneratedIconRaster::SIZES, GeneratedIconRaster::SIZES))])
             ->assertRedirect();
 
@@ -221,7 +217,7 @@ class SiteIconRasterTest extends TestCase
     }
 
     /** @param  array<int, UploadedFile|null>  $override */
-    private function send(?string $version = null, array $override = [], AdminUser|Member|string|null $as = 'admin'): TestResponse
+    private function send(?string $version = null, array $override = [], Member|string|null $as = 'admin'): TestResponse
     {
         $files = [];
         foreach (GeneratedIconRaster::SIZES as $size) {
@@ -231,9 +227,8 @@ class SiteIconRasterTest extends TestCase
         $request = match (true) {
             $as === 'admin' => $this->actingAsAdmin(),
             $as === null => $this,
-            // The admin realm middleware makes `admin` the default guard for the rest of the test, so the member guard is named.
-            $as instanceof Member => $this->actingAs($as, 'member'),
-            default => $this->actingAsAdmin($as),
+            $as->isAdministrator() => $this->actingAsAdmin($as),
+            default => $this->actingAs($as, 'member'),
         };
 
         return $request->post('/admin/site-icon/raster', [

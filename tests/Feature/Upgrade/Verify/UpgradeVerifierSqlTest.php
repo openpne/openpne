@@ -119,6 +119,8 @@ class UpgradeVerifierSqlTest extends UpgradeSqlTestCase
 
         $this->assertTrue($report->failed());
         $this->assertStringContainsString('FAIL manifest: completed under a different set of steps', $out);
+        // A completed site may already be in use, so the way out is the version that ran it, not a fresh run.
+        $this->assertStringContainsString('verify with the version that ran the upgrade', $out);
     }
 
     public function test_an_unverified_marker_passes_the_manifest_check_with_the_fact(): void

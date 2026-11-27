@@ -15,6 +15,8 @@ class DiaryResource extends Resource
 {
     protected static ?string $model = Diary::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBookOpen;
 
     protected static ?int $navigationSort = 4;

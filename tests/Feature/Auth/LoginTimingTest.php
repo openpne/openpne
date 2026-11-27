@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
-use App\Auth\LegacyEloquentUserProvider;
-use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Hashing\BcryptHasher;
@@ -67,32 +65,6 @@ class LoginTimingTest extends TestCase
         $this->post('/login', ['email' => 'nologin@example.com', 'password' => 'whatever-123']);
 
         $this->assertGuest();
-        $this->assertNotEmpty($spy->made);
-    }
-
-    public function test_an_unknown_admin_username_still_costs_a_hash(): void
-    {
-        AdminUser::factory()->create(['username' => 'real-admin']);
-        $spy = $this->spyHasher();
-        $provider = new LegacyEloquentUserProvider(app('hash'), AdminUser::class);
-
-        $user = $provider->retrieveByCredentials(['username' => 'ghost', 'password' => 'whatever-123']);
-
-        $this->assertNull($user);
-        $this->assertNotEmpty($spy->made);
-    }
-
-    public function test_an_admin_with_an_unrecognised_hash_still_costs_a_hash(): void
-    {
-        DB::table('admin_users')->insert([
-            'username' => 'bare', 'password' => md5('secret'),
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
-        $admin = AdminUser::where('username', 'bare')->first();
-        $spy = $this->spyHasher();
-        $provider = new LegacyEloquentUserProvider(app('hash'), AdminUser::class);
-
-        $this->assertFalse($provider->validateCredentials($admin, ['password' => 'secret']));
         $this->assertNotEmpty($spy->made);
     }
 }

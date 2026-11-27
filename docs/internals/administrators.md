@@ -1,9 +1,50 @@
 # Administrators as members
 
-A member can hold the administrator role. The role, its commands and its registration path exist,
-but the admin panel does not read the role yet: it still signs in its own administrator accounts
-through the `admin` guard ([security.md](security.md), "Administrator password links"). Until it
-does, the role opens nothing; it only keeps its holder from being withdrawn or having login rejected.
+An administrator is a member holding the administrator role: they sign in as a member, and the
+role opens the admin panel at `/admin` in that same session ([sessions.md](sessions.md)). Nothing
+else reads the role, so on the member pages an administrator is a member like any other, except that
+they can be neither withdrawn nor have login rejected ([Who can hold the role](#who-can-hold-the-role)).
+How an administrator signs in and what guards the panel is in [security.md](security.md),
+"Administrators".
+
+## The admin panel
+
+`Member::canAccessPanel()` is true for a member holding the role who is not an AI account and whose
+login is not rejected. `EnsureAdministrator` asks it on every admin-realm request
+([sessions.md](sessions.md), "Key invariants" 1), from the `web` group and from the panel's own
+stack, since panel pages do not pass the `web` group and Livewire's uploads, previews and the
+Filament export and import downloads do not pass the panel's. Before the role it runs `auth.session`,
+which signs out a session whose password has changed since it signed in, so a session the change left
+behind (no row is deleted on a session driver other than `database`) opens no admin-realm route. A guest is sent to the member login
+and, once signed in, back to the URL they asked for; a member the panel refuses gets 403. The only
+admin-realm route it leaves alone is `/admin/logout`, which Filament's own check guards; an
+architecture test lists every admin-realm route and requires the gate ahead of route-model binding
+on each. An Inertia visit to the admin realm, as the Modern login's redirect to `url.intended` makes,
+is answered with a full page load ahead of every check (`LoadAdminRealmInFull`), so a refusal too
+arrives as a page. The panel has no login page of its own; `/admin/login`
+redirects to `/admin`.
+
+- **Logging out of the panel** logs the member out and lands on the member login. A member whose
+  role was taken while the panel was open gets 403 there, and logs out from the member pages.
+- **Authorization is the gate.** Every Resource and RelationManager sets
+  `$shouldSkipAuthorization`, so Filament never asks the member policies, which would judge the
+  administrator as the content's reader or author; no code names an `admin` guard. An architecture
+  test holds both.
+- **Actions name their administrator.** Panel actions that write a member (ban, unban, withdrawal,
+  MFA reset, the role) take the acting administrator as an argument, for the log
+  (`admin_member_id`) and, for the role, for [the last-administrator rule](#the-last-administrator).
+- **The member list** has an Administrator column and filter, and the row actions to give and take
+  the role, each confirmed. Giving is hidden for an AI account and a member whose login is
+  rejected, taking on the administrator's own row, and a refusal the action still returns is
+  shown with its reason.
+- **The panel's language** is a session toggle (`/admin/locale/session`) under a key of its own,
+  as OpenPNE 3 kept the admin culture apart from the member's in either direction
+  ([i18n.md](i18n.md)): it never writes `members.locale`, and the member pages' toggle never
+  writes it. The panel and its Livewire requests follow it.
+- **The dashboard** reminds an administrator without a confirmed TOTP factor to add one in the
+  member settings, and suggests a passkey.
+- **Registering through an administrator invite** lands on the panel, whatever URL the visitor
+  asked for before.
 
 ## The role
 
@@ -31,8 +72,8 @@ way, so a half-purged member is never granted the role; it goes with the row.
 
 ## The last administrator
 
-`openpne:admin:revoke` refuses to revoke the last administrator. A revoke from the panel will also
-refuse the actor's own role, and a grant or revoke from the panel is refused when the actor is no
+`openpne:admin:revoke` refuses to revoke the last administrator. A revoke from the panel also
+refuses the actor's own role, and a grant or revoke from the panel is refused when the actor is no
 longer an administrator by the time it takes its locks (the `actor` argument of both actions). The
 remaining administrators are counted from rows read under lock, so two revokes at once cannot both
 see another administrator left.
@@ -95,3 +136,25 @@ session holds too, and once the controller has found the invite live it keeps th
 invite spent while the page is drawn does not bring the insertions back. Every completion screen shows the address in a read-only field with
 `autocomplete="username"`, so a password manager files the new password under it, and the route
 carries `no-store` ([security.md](security.md), "Response headers").
+
+## Command line
+
+| Command | Does |
+|---|---|
+| `openpne:admin:invite <email> [--json]` | [Inviting an administrator](#inviting-an-administrator) |
+| `openpne:admin:grant <email\|id>` | gives an existing member the role; exits 0 without a change for an administrator, non-zero for a member who cannot hold it or does not exist |
+| `openpne:admin:revoke <email\|id>` | takes the role, never from the last administrator |
+| `openpne:admin:list [--json]` | the member count, the administrators and the administrator invites |
+
+`openpne:admin:list --json` prints one line, a contract hosting automation reads:
+`{"members":N,"admins":[{"id","email","name","two_factor","passkeys","granted_at"}],"invites":[{"email","expires_at","expired"}]}`.
+`members` counts every row of `members`, AI accounts included. `two_factor` is a confirmed TOTP
+factor and `passkeys` the member's count of them. Times are ISO 8601 in UTC. `invites` holds the
+administrator invites with their expiry, an expired one with `expired: true` until it is swept
+seven days later, whether or not housekeeping has run. Stdout carries only the JSON, raw past the
+console formatter, so a name or an address arrives unchanged.
+
+A locked-out administrator recovers as a member does, with a password reset by mail, a recovery
+code or `openpne:member:disable-mfa`. When no member who can open the panel is left,
+`openpne:admin:grant` gives the role to one, and `openpne:admin:invite` to an address that is not
+a member yet.

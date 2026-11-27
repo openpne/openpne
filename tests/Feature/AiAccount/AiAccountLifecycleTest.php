@@ -49,7 +49,7 @@ class AiAccountLifecycleTest extends TestCase
             $account->createToken('mcp', ['mcp:read']);
         }
 
-        app(RejectMemberLogin::class)($owner);
+        app(RejectMemberLogin::class)($owner, $this->createAdmin());
 
         $this->assertSame(0, $this->tokenCount($first));
         $this->assertSame(0, $this->tokenCount($second));
@@ -62,7 +62,7 @@ class AiAccountLifecycleTest extends TestCase
         $aiAccount = Member::factory()->aiAccount($owner)->create();
         $aiAccount->createToken('mcp', ['mcp:read']);
 
-        app(RejectMemberLogin::class)($aiAccount);
+        app(RejectMemberLogin::class)($aiAccount, $this->createAdmin());
 
         $fresh = $aiAccount->fresh();
         $this->assertTrue($fresh->is_login_rejected);

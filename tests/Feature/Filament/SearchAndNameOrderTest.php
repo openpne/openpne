@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Filament;
 
-use App\Filament\Resources\AdminUsers\Pages\ListAdminUsers;
 use App\Filament\Resources\Diaries\Pages\ListDiaries;
 use App\Filament\Resources\DiaryComments\Pages\ListDiaryComments;
 use App\Filament\Resources\Files\Pages\ListFiles;
@@ -13,7 +12,6 @@ use App\Filament\Resources\Groups\Pages\ListGroups;
 use App\Filament\Resources\GroupTopics\Pages\ListGroupTopics;
 use App\Filament\Resources\Members\Pages\ListMembers;
 use App\Filament\Resources\Profiles\Pages\ListProfiles;
-use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupEvent;
@@ -147,7 +145,6 @@ class SearchAndNameOrderTest extends TestCase
             'events' => [ListGroupEvents::class],
             'files' => [ListFiles::class],
             'profile fields' => [ListProfiles::class],
-            'administrators' => [ListAdminUsers::class],
         ];
     }
 
@@ -186,16 +183,6 @@ class SearchAndNameOrderTest extends TestCase
                 $this->assertStringNotContainsStringIgnoringCase("escape '!'", $sql, $resource);
             }
         }
-    }
-
-    public function test_admin_users_default_to_name_order(): void
-    {
-        $admins = [];
-        foreach ($this->unorderedNames() as $name) {
-            $admins[$name] = AdminUser::factory()->create(['username' => $name]);
-        }
-
-        $this->assertOrder($admins, Livewire::test(ListAdminUsers::class));
     }
 
     public function test_members_sort_by_name(): void

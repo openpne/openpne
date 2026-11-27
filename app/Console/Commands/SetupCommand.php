@@ -8,6 +8,7 @@ use App\Console\Commands\Concerns\RunsWebCheck;
 use App\Database\DatabaseServer;
 use App\Database\DatabaseServerProbe;
 use App\Database\SqliteBackup;
+use App\Rules\NewEmailAddress;
 use App\Setup\BackupLine;
 use App\Setup\EnvFile;
 use App\Setup\EnvValue;
@@ -36,10 +37,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Laravel\Prompts\Prompt;
 use RuntimeException;
 use SQLite3;
@@ -232,9 +231,9 @@ class SetupCommand extends Command
             return self::FAILURE;
         }
 
-        $hasAdmin = Schema::hasTable('admin_users') && DB::table('admin_users')->exists();
+        $holdsSite = $this->holdsSiteHere();
         if (! filled(config('app.key'))) {
-            if ($hasAdmin) {
+            if ($holdsSite) {
                 $this->say('key_missing', ['path' => $this->layout->envFile], 'error');
 
                 return self::FAILURE;
@@ -250,13 +249,13 @@ class SetupCommand extends Command
         }
 
         // An unpacked new version run here would otherwise migrate a live site outside maintenance mode.
-        if ($hasAdmin && $this->pendingMigrations() > 0) {
+        if ($holdsSite && $this->pendingMigrations() > 0) {
             $this->say('pending_migrations', [], 'error');
 
             return self::FAILURE;
         }
         $this->say('install');
-        // Its success ends with "Next: openpne:admin:create", which this command does next itself.
+        // Its success ends with "Next: openpne:admin:invite", which this command does last itself.
         $install = new BufferedOutput;
         try {
             $installed = Artisan::call('openpne:install', [], $install);
@@ -286,16 +285,16 @@ class SetupCommand extends Command
         }
         // Not before: openpne:install seeds in the site's locale.
         $this->laravel->setLocale($this->locale);
-        if (! $hasAdmin) {
-            $this->createAdmin();
-        }
 
         $findings = $this->waitForWeb();
         $this->offerProxies($findings);
         $this->closeDirectories();
-        $this->inviteFirstMember();
         $this->backup($driver, $settings);
         $this->cron();
+        // Last, once the web is known to answer: the link is what the operator opens next.
+        if (! $holdsSite) {
+            $this->inviteAdmin();
+        }
 
         $this->newLine();
         $this->say('done', ['php' => $this->php->word()]);
@@ -397,7 +396,7 @@ class SetupCommand extends Command
                 'DB_DATABASE' => $this->until(fn (): string => text($this->text('mysql_database'), required: true), EnvValue::problem(...)),
                 'DB_USERNAME' => $this->until(fn (): string => text($this->text('mysql_username'), required: true), EnvValue::problem(...)),
             ];
-            $this->acceptShownInput(viaPrompts: true);
+            $this->acceptShownInput();
             $settings['DB_PASSWORD'] = $this->until(fn (): string => password($this->text('mysql_password')), EnvValue::problem(...));
 
             $server = $this->mysqlServer($settings);
@@ -436,7 +435,7 @@ class SetupCommand extends Command
         ];
         $username = $this->until(fn (): string => text($this->text('smtp_username'), hint: $this->text('smtp_username_hint')), EnvValue::problem(...));
         if ($username !== '') {
-            $this->acceptShownInput(viaPrompts: true);
+            $this->acceptShownInput();
             $values['MAIL_USERNAME'] = $username;
             $values['MAIL_PASSWORD'] = $this->until(fn (): string => password($this->text('smtp_password')), EnvValue::problem(...));
         }
@@ -495,11 +494,28 @@ class SetupCommand extends Command
     {
         return $this->onConnection($template, $connection, function (Connection $db): bool {
             try {
-                return $db->getSchemaBuilder()->hasTable('admin_users') && $db->table('admin_users')->exists();
+                return self::anyoneIn($db);
             } catch (Throwable) {
                 return false;
             }
         });
+    }
+
+    /** `admin_users` counts while the table remains, for a site that has not yet moved its administrators to members. */
+    private static function anyoneIn(Connection $db): bool
+    {
+        foreach (['members', 'admin_users'] as $table) {
+            if ($db->getSchemaBuilder()->hasTable($table) && $db->table($table)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function holdsSiteHere(): bool
+    {
+        return self::anyoneIn(DB::connection());
     }
 
     /**
@@ -636,31 +652,22 @@ class SetupCommand extends Command
     private function nobodyYet(): ?bool
     {
         try {
-            foreach (['members', 'admin_users'] as $table) {
-                if (Schema::hasTable($table) && DB::table($table)->exists()) {
-                    return false;
-                }
-            }
+            return ! $this->holdsSiteHere();
         } catch (Throwable) {
             return null;
         }
-
-        return true;
     }
 
-    private function createAdmin(): void
+    private function inviteAdmin(): void
     {
-        $username = Str::trim($this->until(
-            fn (): string => text($this->text('admin'), required: true, hint: $this->text('admin_hint')),
-            fn (string $value): ?string => Validator::make(['username' => Str::trim($value)], [
-                'username' => ['required', 'string', 'max:64', Rule::unique('admin_users', 'username')],
-            ])->fails() ? 'admin_invalid' : null,
-        ));
-        $this->acceptShownInput(viaPrompts: false);
-
+        $this->newLine();
         for ($attempt = 1; $attempt <= self::ADMIN_ATTEMPTS; $attempt++) {
-            $this->say('admin_password');
-            if ($this->call('openpne:admin:create', ['username' => $username]) === self::SUCCESS) {
+            $email = Str::lower(Str::trim($this->until(
+                fn (): string => text($this->text('admin'), required: true, hint: $this->text('admin_hint')),
+                fn (string $value): ?string => Validator::make(['email' => Str::lower(Str::trim($value))], ['email' => NewEmailAddress::rules()])->fails() ? 'admin_invalid' : null,
+            )));
+            $this->say('admin_link');
+            if ($this->call('openpne:admin:invite', ['email' => $email]) === self::SUCCESS) {
                 return;
             }
         }
@@ -748,17 +755,6 @@ class SetupCommand extends Command
             }
         }
         $this->say('closed');
-    }
-
-    private function inviteFirstMember(): void
-    {
-        while (confirm($this->text('invite'), true)) {
-            $email = text($this->text('invite_email'), required: true);
-            $this->say('invite_link');
-            if ($this->call('openpne:member:invite', ['email' => $email]) === self::SUCCESS) {
-                return;
-            }
-        }
     }
 
     /** @param array<string, mixed> $settings */
@@ -863,9 +859,9 @@ class SetupCommand extends Command
     }
 
     /** Asks once, before the first password this host would echo, whether to go on. */
-    private function acceptShownInput(bool $viaPrompts): void
+    private function acceptShownInput(): void
     {
-        $shown = $viaPrompts ? ! $this->host->canSpawn() && ! $this->host->hidesTypedInput() : ! $this->host->hidesTypedInput();
+        $shown = ! $this->host->canSpawn() && ! $this->host->hidesTypedInput();
         if (! $shown || $this->shownInputAccepted === true) {
             return;
         }

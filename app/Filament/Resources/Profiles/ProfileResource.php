@@ -19,6 +19,8 @@ class ProfileResource extends Resource
 {
     protected static ?string $model = Profile::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;
 
     protected static ?int $navigationSort = 11;

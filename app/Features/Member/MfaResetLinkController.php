@@ -81,7 +81,7 @@ class MfaResetLinkController extends Controller
 
         $member = $result->member;
 
-        // Logged before the fallible enqueue, with no admin_username: the member acted, not the admin.
+        // Logged before the fallible enqueue, with no admin_member_id: the member acted, not the admin.
         SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $member->getKey(), 'via' => 'reset_link']);
         $member->notify(new MfaDisabledNotification($member->locale ?? app()->getLocale()));
 

@@ -12,7 +12,7 @@ locale mismatch would silently drop the group to the end of the sidebar.
 | Content | What members posted, for moderation | Groups, Diaries, Files |
 | Settings | What an operator configures | Base settings, Feature settings, Group settings, Profile item settings |
 | Appearance (Classic) | Classic-surface look and layout | Gadgets, Navigation, Custom CSS & HTML |
-| System | Running the install itself | Cache, Admin Users |
+| System | Running the install itself | Cache |
 
 ## Naming
 
@@ -24,7 +24,7 @@ locale mismatch would silently drop the group to the end of the sidebar.
   above rather than standing on its own: one subject named twice means two screens claim one job.
 - A Resource overrides `getNavigationLabel()` for this, never its `modelLabel` /
   `pluralModelLabel` — those stay the plain entity name that buttons, breadcrumbs and record
-  headings read ("Create Admin User"), which is a different job from labelling a sidebar row.
+  headings read ("Create Gadget"), which is a different job from labelling a sidebar row.
 
 ## Placement
 
@@ -64,7 +64,7 @@ Those are the package's to place and label; the five groups keep their relative 
 ## Key invariants
 
 1. Every navigable `App\Filament` screen sits in one of the five registered groups and declares an
-   explicit `$navigationSort`, unique within its group. A package's screens and groups are allowed
+   explicit `$navigationSort`, unique within its group, and each group holds at least one. A package's screens and groups are allowed
    beside them.
 2. No two navigable `App\Filament` screens render the same navigation label in any locale.
 3. `App\Filament` Settings-group labels end in "settings" (`設定` in Japanese).

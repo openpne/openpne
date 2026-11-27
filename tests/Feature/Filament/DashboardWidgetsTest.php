@@ -7,6 +7,7 @@ namespace Tests\Feature\Filament;
 use App\Features\GroupTopic\Actions\CreateTopicComment;
 use App\Features\GroupTopic\Actions\UpdateTopic;
 use App\Features\GroupTopic\Data\GroupTopicFormData;
+use App\Filament\Widgets\MfaReminderWidget;
 use App\Filament\Widgets\OverviewStatsWidget;
 use App\Filament\Widgets\RecentMembersWidget;
 use App\Filament\Widgets\RegistrationModeWidget;
@@ -20,6 +21,7 @@ use App\Models\RegistrationToken;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -32,12 +34,25 @@ class DashboardWidgetsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAsAdmin();
+        // Counted as a member like any other, but older than every recent-member fixture.
+        $this->actingAsAdmin(Member::factory()->administrator()->create(['created_at' => now()->subYears(2)]));
     }
 
     public function test_dashboard_page_renders_for_admin(): void
     {
         $this->get('/admin')->assertOk();
+    }
+
+    public function test_the_mfa_reminder_shows_until_the_administrator_confirms_totp(): void
+    {
+        $this->assertTrue(MfaReminderWidget::canView());
+
+        $admin = Filament::auth()->user();
+        app(EnableTwoFactorAuthentication::class)($admin, force: true);
+        $this->assertTrue(MfaReminderWidget::canView(), 'a secret not yet confirmed');
+
+        $admin->forceFill(['two_factor_confirmed_at' => now()])->save();
+        $this->assertFalse(MfaReminderWidget::canView());
     }
 
     public function test_overview_stats_render(): void
@@ -60,7 +75,7 @@ class DashboardWidgetsTest extends TestCase
 
         Livewire::test(OverviewStatsWidget::class)
             ->assertSuccessful()
-            ->assertSeeInOrder([__('Member count'), '3', __('AI accounts'), '1', __('New members this month'), '3']);
+            ->assertSeeInOrder([__('Member count'), '4', __('AI accounts'), '1', __('New members this month'), '3']);
     }
 
     public function test_the_ai_stat_is_absent_until_the_site_has_or_offers_one(): void
@@ -81,8 +96,8 @@ class DashboardWidgetsTest extends TestCase
 
         Livewire::test(OverviewStatsWidget::class)
             ->assertSuccessful()
-            ->assertSee('3 / 10')
-            ->assertSee(__(':count left', ['count' => 6]))
+            ->assertSee('4 / 10')
+            ->assertSee(__(':count left', ['count' => 5]))
             ->assertSee(__(':count invited', ['count' => 1]));
     }
 
@@ -90,10 +105,10 @@ class DashboardWidgetsTest extends TestCase
     {
         Member::factory()->count(3)->create();
 
-        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 3);
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 4);
         Livewire::test(OverviewStatsWidget::class)->assertSee(__('At capacity'));
 
-        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 2);
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 3);
         Livewire::test(OverviewStatsWidget::class)->assertSee(__('Over capacity'));
     }
 

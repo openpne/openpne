@@ -442,7 +442,10 @@ reads who blocks the viewer once, and a serializer hands the policy the owner ro
 and the message it answers. Those pages gain a fixed number of queries; a surface that draws a file
 whose owner it has not noted gains at least one read an owner. No signature is issued without a member on the
 `member` guard and a session — so not to a guest, the admin realm or a token request — and code that
-runs with that member still set, a queued job run inline included, signs as the page would.
+runs with that member still set, a queued job run inline included, signs as the page would. The
+admin panel draws a member's file only through its raw route (`AdminFileController`), which the
+administrator gate guards instead of `FilePolicy`, so who blocks the administrator never hides one
+there; the panel's other images (banners, the brand assets) are public.
 
 **The signature** is HMAC-SHA256 over `<format>/<geometry>/<name>`, `v` and the image cookie's value,
 cut to 128 bits, under a key derived from `APP_KEY`. It has no expiry, so the URL is stable and the
@@ -456,7 +459,7 @@ could have planted. It is host-only with `Path=/` whatever `session.domain` says
 `SameSite=Lax`, exempt from cookie encryption so the check can read it, and expires when the session
 cookie of the same response does ([sessions.md](sessions.md), "Lifetimes"). A member login replaces
 it whether or not the fast path is on; a member logout, and the sign-out `auth.session` forces on a
-device after a password change, expire it under both names. An admin signing in or out leaves it alone.
+device after a password change, expire it under both names. An administrator signs in as a member, so the same holds.
 
 **The published file.** [`ImageFastPath::sync()`](../../app/Files/ImageFastPath.php) writes
 `storage/framework/image-fast-path.json` — the derived key, `APP_URL`'s host, the cache disk's root,
@@ -540,7 +543,7 @@ changing it moves the layout. Classic keeps its 120px square, in the file's own 
   variants, the `w_h` original, `/file/{name}`, the banner and public routes — carries the canonical's
   or the variant's key hashed as its `ETag` (`ImageTransform::etag`). A non-raster attachment and the
   admin raw route carry the file token hashed (`FileResponse::etag`), whose bytes never change. In the application each is checked after the route's own gate
-  (`FilePolicy`, or the admin guard on the raw route) and before any bytes are read, and `max-age`
+  (`FilePolicy`, or the administrator gate on the raw route) and before any bytes are read, and `max-age`
   is not shortened for it — revalidating every image would cost a PHP request each. Only the
   link-card image route carries no validator (it is `no-store` by design).
 - **A variant URL the app writes is kept by the browser for a year, without revalidation.**

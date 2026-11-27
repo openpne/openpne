@@ -16,6 +16,7 @@ class LogSuccessfulLogin
         SecurityLog::event('login.success', [
             'guard' => $event->guard,
             'remember' => (bool) $event->remember,
-        ] + ActorContext::of($event->guard, $event->user));
+            'member_id' => $event->user->getAuthIdentifier(),
+        ]);
     }
 }

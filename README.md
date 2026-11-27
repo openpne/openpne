@@ -49,16 +49,16 @@ With Docker Compose, run:
 git clone https://github.com/openpne/openpne.git && cd openpne
 bin/dev-up                                                           # http://localhost:8080
 docker compose exec app php artisan openpne:install                  # the tables and a new site's initial data
-docker compose exec app php artisan openpne:admin:create admin       # asks for a password; sign in at /admin
-docker compose exec app php artisan openpne:member:invite you@example.com
+docker compose exec app php artisan openpne:admin:invite you@example.com
 ```
 
 The first `bin/dev-up` can take a few minutes, as it builds an image.
 
 The last command prints a registration link. Open it, choose a name and a password, and you are the
-site's first member, free to write a diary entry or start a group. Invite others the same way, or
-from "Member invites" in the admin panel, whose mail arrives at <http://localhost:8025> instead of a
-real mailbox.
+site's first member and its administrator: registering opens the admin panel at `/admin`, and you are
+free to write a diary entry or start a group. Invite others with `openpne:member:invite`, or from
+"Member invites" in the admin panel, whose mail arrives at <http://localhost:8025> instead of a real
+mailbox.
 
 This setup is for trying OpenPNE and for developing it (it keeps its data in a SQLite file in the
 checkout and serves the frontend from a development server). A site that serves people uses the

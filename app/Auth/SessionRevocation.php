@@ -2,16 +2,12 @@
 
 namespace App\Auth;
 
-use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Only the database driver keeps a queryable per-user session store; on other drivers the purge is
  * a no-op and the auth.session middleware is the best-effort fallback after a password change.
- * Tables are read from session.member_table / session.admin_table, never session.table, which is
- * pinned per request to the serving realm (docs/internals/sessions.md).
  */
 final class SessionRevocation
 {
@@ -20,40 +16,14 @@ final class SessionRevocation
         self::purgeMemberSessions((int) $member->getAuthIdentifier(), $exceptSessionId);
     }
 
-    public static function revokeAdmin(AdminUser $admin, ?string $exceptSessionId = null): void
-    {
-        self::rotateRememberToken($admin);
-        self::purgeAdminSessions((int) $admin->getAuthIdentifier(), $exceptSessionId);
-    }
-
     public static function purgeMemberSessions(int $memberId, ?string $exceptSessionId = null): void
-    {
-        self::purge((string) config('session.member_table'), $memberId, $exceptSessionId);
-    }
-
-    public static function purgeAdminSessions(int $adminId, ?string $exceptSessionId = null): void
-    {
-        self::purge((string) config('session.admin_table'), $adminId, $exceptSessionId);
-    }
-
-    /** A null token is already the end state: retrieveByToken() needs a stored token to compare against. */
-    private static function rotateRememberToken(AdminUser $user): void
-    {
-        if ($user->getRememberToken() === null || $user->getRememberToken() === '') {
-            return;
-        }
-
-        $user->forceFill(['remember_token' => Str::random(60)])->save();
-    }
-
-    private static function purge(string $table, int $userId, ?string $exceptSessionId): void
     {
         if (config('session.driver') !== 'database') {
             return;
         }
 
-        DB::table($table)
-            ->where('user_id', $userId)
+        DB::table((string) config('session.table'))
+            ->where('user_id', $memberId)
             ->when($exceptSessionId !== null, fn ($query) => $query->where('id', '!=', $exceptSessionId))
             ->delete();
     }

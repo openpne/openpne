@@ -6,7 +6,6 @@ namespace Tests\Feature\Auth;
 
 use App\Actions\Fortify\ResetMemberPassword;
 use App\Auth\PasswordScheme;
-use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +22,7 @@ class PasswordSchemeTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function flag(Member|AdminUser $user): void
+    private function flag(Member $user): void
     {
         DB::table($user->getTable())->where('id', $user->getKey())
             ->update(['password_scheme' => PasswordScheme::Md5Bcrypt->value]);
@@ -37,16 +36,6 @@ class PasswordSchemeTest extends TestCase
         $member->fresh()->forceFill(['password' => Hash::make('brand-new-pass-1')])->save();
 
         $this->assertNull($member->fresh()->password_scheme);
-    }
-
-    public function test_an_admin_password_write_clears_a_stale_scheme(): void
-    {
-        $admin = AdminUser::factory()->create();
-        $this->flag($admin);
-
-        $admin->fresh()->update(['password' => 'brand-new-pass-1']);
-
-        $this->assertNull($admin->fresh()->password_scheme);
     }
 
     public function test_an_explicit_scheme_in_the_same_save_is_preserved(): void

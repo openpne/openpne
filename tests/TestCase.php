@@ -5,12 +5,14 @@ namespace Tests;
 use App\Features\Profile\ProfileVisibilityPolicy;
 use App\Files\FileOwners;
 use App\Files\ImageCache;
+use App\Models\Member;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -119,7 +121,7 @@ abstract class TestCase extends BaseTestCase
                 DB::getQueryLog(),
                 fn (array $query): bool => preg_match('/["`]cache(_locks)?["`]/', $query['query']) !== 1
                     && preg_match('/^delete from ["`](registration_tokens|email_change_requests|mfa_reset_requests)["`] where ["`]created_at["`] < \?$/', $query['query']) !== 1
-                    && preg_match('/^delete from ["`]admin_password_setup_tokens["`] where ["`]expires_at["`] < \?$/', $query['query']) !== 1
+                    && preg_match('/^delete from ["`]admin_role_invites["`] where ["`]expires_at["`] < \?$/', $query['query']) !== 1
                     && preg_match('/^delete from ["`]oauth_(auth_codes|refresh_tokens|access_tokens)["`] where \(["`]revoked["`] = \? or ["`]expires_at["`] < \?\)/', $query['query']) !== 1
                     && preg_match('/^delete from ["`]oauth_clients["`] where ["`]used_at["`] is null/', $query['query']) !== 1,
             ));
@@ -162,6 +164,12 @@ abstract class TestCase extends BaseTestCase
         $this->app->forgetInstance('session.store');
         $this->app->forgetInstance('redirect');
         $this->app->forgetScopedInstances();
+    }
+
+    /** The framework's login writes it, so a session no request checked before a password change still fails auth.session. */
+    protected function assertSessionBindsPassword(Member $member): void
+    {
+        $this->assertSame(Auth::guard('member')->hashPasswordForCookie((string) $member->fresh()?->getAuthPassword()), session('password_hash_member'));
     }
 
     /** Render a templated notification mail's plain-text body (the MailMessage delivers text/plain only). */

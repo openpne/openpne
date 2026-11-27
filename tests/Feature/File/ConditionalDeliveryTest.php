@@ -175,15 +175,19 @@ class ConditionalDeliveryTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_a_non_admin_holding_the_tag_is_answered_404_not_304_on_the_raw_route(): void
+    public function test_a_non_admin_holding_the_tag_is_refused_not_answered_304_on_the_raw_route(): void
     {
-        // The route bypasses FilePolicy, so its own gate has to sit ahead of the 304: otherwise a
-        // guest with a token could tell an existing file (304) from a missing one (404).
+        // The route bypasses FilePolicy, so the administrator gate has to sit ahead of the 304: otherwise
+        // a member with a token could tell an existing file (304) from a missing one.
         $file = $this->memberImage(Member::factory()->create(), 'PNGDATA');
 
         $this->withHeader('If-None-Match', FileResponse::etag($file))
             ->get(route('admin.file.raw', ['file' => $file->name]))
-            ->assertNotFound();
+            ->assertRedirect(route('login'));
+        $this->actingAs(Member::factory()->create(), 'member')
+            ->withHeader('If-None-Match', FileResponse::etag($file))
+            ->get(route('admin.file.raw', ['file' => $file->name]))
+            ->assertForbidden();
     }
 
     /** @param  array<string, string|true>  $directives */

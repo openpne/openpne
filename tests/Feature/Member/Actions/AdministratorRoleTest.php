@@ -166,7 +166,7 @@ class AdministratorRoleTest extends TestCase
 
         foreach ([WithdrawMember::class, RejectMemberLogin::class] as $action) {
             try {
-                app($action)($member);
+                app($action)($member, $this->createAdmin());
                 $this->fail("{$action} went through");
             } catch (AdministratorRoleHeld) {
             }
@@ -203,6 +203,6 @@ class AdministratorRoleTest extends TestCase
 
         $this->expectException(AdministratorRoleHeld::class);
 
-        app(RejectMemberLogin::class)($stale);
+        app(RejectMemberLogin::class)($stale, $this->createAdmin());
     }
 }

@@ -4,58 +4,40 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http;
 
-use App\Http\Middleware\UseAdminSessionStore;
+use App\Http\Middleware\PrefixSessionCookie;
 use App\Models\Member;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Symfony\Component\HttpFoundation\Cookie;
 use Tests\TestCase;
 
-/**
- * UseAdminSessionStore pins the session store (cookie + table) and default guard to
- * the request's realm (the member/admin split), and keeps the XSRF-TOKEN cookie
- * member-only. These tests pin the predicate against the real routes so a
- * Filament/Livewire upgrade that moves an endpoint fails here instead of silently
- * splitting a realm across two stores.
- */
-class AdminSessionStoreTest extends TestCase
+class PrefixSessionCookieTest extends TestCase
 {
     use RefreshDatabase;
 
     private function handle(string $path): Response
     {
-        return app(UseAdminSessionStore::class)->handle(
+        return app(PrefixSessionCookie::class)->handle(
             Request::create($path),
             fn (): Response => new Response(''),
         );
     }
 
-    public function test_admin_paths_pin_the_admin_store_and_guard(): void
+    public function test_every_path_keeps_the_one_store_and_guard(): void
     {
-        foreach (['/admin', '/admin/members', EndpointResolver::updatePath(), EndpointResolver::uploadPath(), EndpointResolver::prefix().'/preview-file/photo.png', '/filament/exports/1/download'] as $path) {
+        config(['session.secure' => true]);
+        $prefixed = '__Host-'.config('session.cookie');
+
+        foreach (['/admin', '/admin/members', EndpointResolver::updatePath(), '/filament/exports/1/download', '/dashboard', '/locale'] as $path) {
             $this->handle($path);
 
-            $this->assertSame(config('session.admin_cookie'), config('session.cookie'), $path);
-            $this->assertSame('admin_sessions', config('session.table'), $path);
-            $this->assertSame('admin', config('auth.defaults.guard'), $path);
-        }
-    }
-
-    public function test_member_paths_restore_the_base_store_and_guard(): void
-    {
-        $baseCookie = config('session.cookie');
-
-        foreach (['/dashboard', '/admin-foo', '/administrator', '/filament-foo', '/locale'] as $path) {
-            $this->handle('/admin');
-            $this->handle($path);
-
-            $this->assertSame($baseCookie, config('session.cookie'), $path);
+            $this->assertSame($prefixed, config('session.cookie'), $path);
             $this->assertSame('sessions', config('session.table'), $path);
             $this->assertSame('member', config('auth.defaults.guard'), $path);
         }
@@ -74,38 +56,13 @@ class AdminSessionStoreTest extends TestCase
         $this->assertStringStartsWith(config('filament.system_route_prefix', 'filament').'/', $export->uri());
     }
 
-    public function test_each_realm_sets_its_own_session_cookie(): void
-    {
-        config(['session.driver' => 'database']);
-        // Read once up front: the middleware's realm pin rewrites session.cookie
-        // during each request, so config() re-reads here would follow the pin.
-        $memberCookie = config('session.cookie');
-        $adminCookie = config('session.admin_cookie');
-
-        $this->get('/login')
-            ->assertCookie($memberCookie)
-            ->assertCookieMissing($adminCookie)
-            ->assertCookie('XSRF-TOKEN');
-
-        $this->freshRequestState();
-
-        $this->get('/admin/login')
-            ->assertCookie($adminCookie)
-            ->assertCookieMissing($memberCookie)
-            ->assertCookieMissing('XSRF-TOKEN');
-    }
-
-    public function test_secure_prefixes_both_realm_cookies(): void
+    public function test_secure_prefixes_the_session_cookie(): void
     {
         config(['session.secure' => true]);
-        $memberBase = config('session.cookie');
-        $adminBase = config('session.admin_cookie');
+        $base = config('session.cookie');
 
         $this->handle('/dashboard');
-        $this->assertSame('__Host-'.$memberBase, config('session.cookie'));
-
-        $this->handle('/admin');
-        $this->assertSame('__Host-'.$adminBase, config('session.cookie'));
+        $this->assertSame('__Host-'.$base, config('session.cookie'));
     }
 
     /** @param array<string, mixed> $scope */
@@ -114,14 +71,10 @@ class AdminSessionStoreTest extends TestCase
     {
         // A browser drops a __Host- cookie that carries a Domain attribute or a path other than /.
         config(['session.secure' => true] + $scope);
-        $memberBase = config('session.cookie');
-        $adminBase = config('session.admin_cookie');
+        $base = config('session.cookie');
 
         $this->handle('/dashboard');
-        $this->assertSame('__Secure-'.$memberBase, config('session.cookie'));
-
-        $this->handle('/admin');
-        $this->assertSame('__Secure-'.$adminBase, config('session.cookie'));
+        $this->assertSame('__Secure-'.$base, config('session.cookie'));
     }
 
     /** @return array<string, array{array<string, mixed>}> */
@@ -176,7 +129,7 @@ class AdminSessionStoreTest extends TestCase
             config(['session.secure' => true, 'session.cookie' => $name]);
             // The middleware captures the member base in its constructor, so re-resolve it
             // to pick up this iteration's configured name.
-            $this->app->forgetInstance(UseAdminSessionStore::class);
+            $this->app->forgetInstance(PrefixSessionCookie::class);
 
             $this->handle('/dashboard');
 
@@ -205,34 +158,37 @@ class AdminSessionStoreTest extends TestCase
         $this->withCookie($prefixed, $sid)->get('/dashboard')->assertOk();
     }
 
-    public function test_the_admin_realm_emits_the_prefixed_secure_cookie(): void
+    /** @return array<string, array{0: string, 1: ?string}> */
+    public static function releasedCookiePrefixes(): array
     {
-        // Response-level (not just the config pin): exercises StartSession + the CookieJar
-        // for the admin realm, where the guest redirect still sets its session cookie.
-        config(['session.driver' => 'database', 'session.secure' => true]);
-        $prefixed = '__Host-'.config('session.admin_cookie');
-
-        $response = $this->get('/admin')->assertRedirect('/admin/login');
-
-        $response->assertCookie($prefixed);
-        $this->assertTrue($response->getCookie($prefixed, false)->isSecure());
+        return ['host-only' => ['__Host-', null], 'with a domain' => ['__Secure-', 'localhost']];
     }
 
-    public function test_the_xsrf_strip_matches_a_configured_cookie_domain(): void
+    /** The session row and cookie are written as 4.0.0-alpha.1 wrote a member's, not by this version's login. */
+    #[DataProvider('releasedCookiePrefixes')]
+    public function test_a_member_session_from_the_release_before_the_switch_opens_both_realms(string $prefix, ?string $domain): void
     {
-        config(['session.domain' => '.example.test']);
+        config(['session.driver' => 'database', 'session.secure' => true, 'session.domain' => $domain]);
+        $admin = Member::factory()->administrator()->create();
+        $login = 'login_member_'.sha1('Illuminate\\Auth\\SessionGuard');
+        $sid = str_repeat('a', 40);
+        DB::table('sessions')->insert([
+            'id' => $sid,
+            'user_id' => $admin->getKey(),
+            'payload' => base64_encode(json_encode([
+                '_token' => str_repeat('t', 40),
+                $login => $admin->getKey(),
+                $login.'_at' => time(),
+                'password_hash_member' => hash_hmac('sha256', $admin->getAuthPassword(), (string) config('app.key')),
+            ], JSON_THROW_ON_ERROR)),
+            'last_activity' => time(),
+        ]);
+        $cookie = $prefix.config('session.cookie');
 
-        $response = app(UseAdminSessionStore::class)->handle(Request::create('/admin'), function (): Response {
-            $response = new Response('');
-            $response->headers->setCookie(Cookie::create('XSRF-TOKEN', 'token', 0, '/', '.example.test'));
-
-            return $response;
-        });
-
-        $this->assertSame([], array_values(array_filter(
-            $response->headers->getCookies(),
-            fn (Cookie $cookie): bool => $cookie->getName() === 'XSRF-TOKEN',
-        )));
+        foreach (['/dashboard', '/admin', '/admin/members'] as $path) {
+            $this->freshRequestState();
+            $this->withCookie($cookie, $sid)->get($path)->assertOk();
+        }
     }
 
     public function test_no_livewire_renders_outside_the_admin_realm(): void
@@ -259,8 +215,7 @@ class AdminSessionStoreTest extends TestCase
         }
 
         $this->assertSame([], $offenders,
-            'Livewire belongs to the admin realm: UseAdminSessionStore routes every Livewire '
-            .'endpoint to the admin session store, so a member-realm Livewire component would '
-            .'run on the wrong session. Extend the realm predicate before adding one.');
+            'Livewire belongs to the admin realm: EnsureAdministrator gates every Livewire endpoint, '
+            .'so a member-realm Livewire component would answer only administrators.');
     }
 }

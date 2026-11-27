@@ -1,19 +1,18 @@
-{{-- Admin-account 2FA nudge. Full-width alert, deliberately unlike the member-stat cards so an
-     operator reads it as being about their own login. Only rendered while MFA is off (canView).
-     Filament panel vars (--gray-*) do not auto-flip, so dark mode is handled with .dark overrides,
-     as in components/image-lightbox.blade.php. --}}
+{{-- Full-width alert, deliberately unlike the member-stat cards so an operator reads it as being about
+     their own account. Filament panel vars (--gray-*) do not auto-flip, so dark mode is handled with
+     .dark overrides, as in components/image-lightbox.blade.php. --}}
 <x-filament-widgets::widget>
     <div class="op-mfa-alert">
         <x-filament::icon icon="heroicon-o-shield-exclamation" class="op-mfa-alert__icon" />
         <div class="op-mfa-alert__body">
             <div class="op-mfa-alert__title">
-                {{ __('Your administrator account is not protected by two-factor authentication') }}
+                {{ __('Your account is not protected by two-factor authentication') }}
             </div>
             <div class="op-mfa-alert__text">
-                {{ __('Add a one-time code from an authenticator app to your own admin login.') }}
+                {{ __('This account opens the admin panel. Add a one-time code from an authenticator app in your member settings, so that a password reset through your mailbox alone cannot open it. Adding a passkey protects your login further.') }}
             </div>
         </div>
-        <x-filament::button tag="a" :href="$this->getSecurityUrl()" icon="heroicon-m-lock-closed" color="warning">
+        <x-filament::button tag="a" :href="$this->getSettingsUrl()" icon="heroicon-m-lock-closed" color="warning">
             {{ __('Set up two-factor authentication') }}
         </x-filament::button>
     </div>

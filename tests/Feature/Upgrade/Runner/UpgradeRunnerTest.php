@@ -2,8 +2,7 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
-use App\Auth\AdminPasswords;
-use App\Models\AdminUser;
+use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
@@ -19,11 +18,14 @@ use App\Upgrade\Steps\NavigationUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use Database\Seeders\NavigationSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -194,15 +196,180 @@ class UpgradeRunnerTest extends TestCase
         $this->assertTrue($runner->claimNamingEpoch());
     }
 
-    public function test_a_reset_leaves_no_setup_link_for_an_administrator_id_the_upgrade_reuses(): void
+    public function test_a_reset_leaves_no_registration_link_from_the_site_it_overwrites(): void
     {
-        // Teeth on the MySQL lane only: the reset turns foreign key checks off there, so no cascade runs.
-        app(AdminPasswords::class)->issueSetupLink(AdminUser::factory()->create(), 60);
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+        $this->assertDatabaseCount('registration_tokens', 1);
 
-        (new UpgradeRunner(new InsertSelectCompiler))->reset();
+        (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->reset();
 
-        $this->assertDatabaseCount('admin_users', 0);
-        $this->assertDatabaseCount('admin_password_setup_tokens', 0);
+        $this->assertDatabaseCount('admin_role_invites', 0);
+        $this->assertDatabaseCount('registration_tokens', 0);
+    }
+
+    public function test_a_reset_refuses_a_session_store_it_cannot_empty_before_anything_changes(): void
+    {
+        config(['session.driver' => 'file']);
+        $member = Member::factory()->create();
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+
+        try {
+            (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+            $this->fail('the reset went ahead with sessions it cannot sign out');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('SESSION_DRIVER=database', $e->getMessage());
+        }
+
+        $this->assertModelExists($member);
+        $this->assertDatabaseCount('admin_role_invites', 1);
+    }
+
+    public function test_a_session_store_the_reset_cannot_empty_stops_it_before_the_targets(): void
+    {
+        config([
+            'database.connections.session_store' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+            'session.driver' => 'database',
+            'session.connection' => 'session_store',
+        ]);
+        $member = Member::factory()->create();
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+        UpgradeState::create(['step_key' => 'member', 'status' => UpgradeState::STATUS_COMPLETED]);
+
+        try {
+            (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+            $this->fail('the reset emptied a session table that does not exist');
+        } catch (QueryException) {
+        }
+
+        $this->assertModelExists($member);
+        $this->assertDatabaseCount('admin_role_invites', 1);
+        $this->assertDatabaseCount('openpne4_upgrade_state', 1);
+    }
+
+    public function test_a_sign_in_while_the_reset_runs_is_signed_out_too(): void
+    {
+        config(['session.driver' => 'database']);
+        $member = Member::factory()->create();
+        $signedIn = false;
+        DB::listen(function ($query) use ($member, &$signedIn): void {
+            if (! $signedIn && preg_match('/^delete from [`"]members[`"]$/', $query->sql) === 1) {
+                $signedIn = true;
+                DB::table((string) config('session.table'))->insert(['id' => 'late', 'user_id' => $member->getKey(), 'payload' => '', 'last_activity' => time()]);
+            }
+        });
+
+        (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+
+        $this->assertTrue($signedIn);
+        $this->assertDatabaseCount((string) config('session.table'), 0);
+    }
+
+    public function test_a_reset_that_replaces_the_members_leaves_nothing_bound_to_their_ids(): void
+    {
+        // On a connection of its own, as session.connection may put the store.
+        config([
+            'database.connections.session_store' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+            'session.driver' => 'database',
+            'session.connection' => 'session_store',
+        ]);
+        $sessions = DB::connection('session_store');
+        $sessions->statement('create table '.config('session.table').' (id varchar primary key, user_id integer, payload text, last_activity integer)');
+
+        $member = Member::factory()->create();
+        $id = $member->getKey();
+        $member->passkeys()->create(['name' => 'a', 'credential_id' => 'AbC', 'credential' => []]);
+        $member->createToken('mcp');
+        DB::table('mfa_reset_requests')->insert(['member_id' => $id, 'token' => 'reset', 'created_at' => now()]);
+        DB::table('email_change_requests')->insert(['member_id' => $id, 'new_email' => 'new@example.com', 'token' => 'change', 'created_at' => now()]);
+        DB::table('oauth_access_tokens')->insert(['id' => 'access', 'user_id' => $id, 'client_id' => 'client', 'revoked' => false]);
+        DB::table('oauth_refresh_tokens')->insert(['id' => 'refresh', 'access_token_id' => 'access', 'revoked' => false]);
+        DB::table('oauth_auth_codes')->insert(['id' => 'code', 'user_id' => $id, 'client_id' => 'client', 'revoked' => false]);
+        DB::table('oauth_device_codes')->insert(['id' => 'device', 'user_id' => $id, 'client_id' => 'client', 'user_code' => 'U', 'scopes' => '[]', 'revoked' => false]);
+        DB::table('notifications')->insert(['id' => 'n', 'type' => 'x', 'notifiable_type' => $member->getMorphClass(), 'notifiable_id' => $id, 'data' => '{}']);
+        DB::table('password_reset_tokens')->insert(['email' => $member->email, 'token' => 'pw', 'created_at' => now()]);
+        $sessions->table((string) config('session.table'))->insert(['id' => 'session', 'user_id' => $id, 'payload' => '', 'last_activity' => time()]);
+        $member->updatePushSubscription('https://push.example.test/endpoint');
+        $issue = DB::table('home_issues')->insertGetId(['number' => 1, 'issue_date' => '2026-11-01', 'window_start' => now(), 'published_at' => now()]);
+        DB::table('home_issue_items')->insert(['home_issue_id' => $issue, 'section' => 'diaries', 'rank' => 1, 'source_type' => 'diary', 'source_id' => 1, 'score' => 1, 'stats' => '{}']);
+
+        foreach (['passkeys', 'push_subscriptions', 'home_issues'] as $table) {
+            $this->assertDatabaseCount($table, 1);
+        }
+
+        (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+
+        $seeded = ['passkeys', 'personal_access_tokens', 'mfa_reset_requests', 'email_change_requests', 'oauth_access_tokens', 'oauth_refresh_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'notifications', 'password_reset_tokens', 'push_subscriptions', 'home_issues', 'home_issue_items'];
+        foreach ($seeded as $table) {
+            $this->assertDatabaseCount($table, 0);
+        }
+        $this->assertSame(0, $sessions->table((string) config('session.table'))->count());
+    }
+
+    public function test_every_table_naming_a_member_by_id_is_cleared_by_a_reset_that_replaces_the_members(): void
+    {
+        $targets = (new UpgradeRunner(new InsertSelectCompiler))->targetTables();
+        // Holding an id nothing reads: the old admin accounts' sessions and links, and an OAuth client's owner, which dynamic registration leaves empty.
+        $inert = ['admin_sessions', 'admin_password_setup_tokens', 'oauth_clients'];
+        $cleared = [(string) config('session.table'), 'registration_tokens', 'home_issue_items', ...UpgradeRunner::MEMBER_OWNED_TABLES, ...$inert];
+        $missed = [];
+
+        foreach (Schema::getTableListing(schemaQualified: false) as $table) {
+            if (in_array($table, $targets, true) || in_array($table, $cleared, true)) {
+                continue;
+            }
+            $guarded = collect(Schema::getForeignKeys($table))
+                ->filter(fn (array $fk) => in_array($fk['foreign_table'], $targets, true))
+                ->flatMap(fn (array $fk) => $fk['columns'])
+                ->all();
+            $columns = Schema::getColumnListing($table);
+            foreach ($columns as $column) {
+                $morph = str_ends_with($column, '_id') && in_array(substr($column, 0, -3).'_type', $columns, true);
+                if (($morph || preg_match('/(^|_)(member|user|notifiable|tokenable|owner)_id$/', $column) === 1) && ! in_array($column, $guarded, true)) {
+                    $missed[] = "{$table}.{$column}";
+                }
+            }
+        }
+
+        $this->assertSame([], $missed);
+    }
+
+    public function test_every_foreign_key_onto_an_upgrade_target_has_a_delete_rule_a_reset_applies(): void
+    {
+        $targets = (new UpgradeRunner(new InsertSelectCompiler))->targetTables();
+        $unapplied = [];
+
+        foreach (Schema::getTableListing(schemaQualified: false) as $table) {
+            if (in_array($table, $targets, true)) {
+                continue;
+            }
+            foreach (Schema::getForeignKeys($table) as $fk) {
+                $dropped = $table === 'file_bin' && $fk['foreign_table'] === 'files';
+                if (in_array($fk['foreign_table'], $targets, true) && ! $dropped && ! in_array($fk['on_delete'], ['cascade', 'set null'], true)) {
+                    $unapplied[] = "{$table}.".implode(',', $fk['columns'])." {$fk['on_delete']}";
+                }
+            }
+        }
+
+        $this->assertSame([], $unapplied);
+    }
+
+    public function test_a_pending_administrator_invite_refuses_a_fresh_run_and_yields_to_a_restart(): void
+    {
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+        $runner = new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]);
+        $lines = [];
+        $collect = function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        };
+
+        $report = new RunReport($collect, dryRun: true);
+        $this->assertFalse($runner->run(new RunOptions(dryRun: true), report: $report));
+        $this->assertSame(RunReport::OUTCOME_PRECHECK_ERROR, $report->outcome());
+        $this->assertStringContainsString(UpgradeRunner::PENDING_ADMIN_INVITE_MESSAGE, implode("\n", $lines));
+
+        $lines = [];
+        $runner->run(new RunOptions(dryRun: true, forceRestart: true), report: new RunReport($collect, dryRun: true));
+        $this->assertStringNotContainsString(UpgradeRunner::PENDING_ADMIN_INVITE_MESSAGE, implode("\n", $lines));
     }
 
     public function test_checkpoints_without_a_marker_are_refused_as_legacy_state(): void
@@ -269,6 +436,8 @@ class UpgradeRunnerTest extends TestCase
 
         $this->assertSame(['navigations'], (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->installedTargetTables());
         $this->assertSame([], (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->installedTargetTables());
+        Member::factory()->create();
+        $this->assertSame(['members'], (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->installedTargetTables());
 
         // --force-restart empties the targets after the source preflight, so it must not be refused here.
         $lines = [];

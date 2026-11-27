@@ -2,15 +2,13 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Pages\SecuritySettings;
-use App\Models\AdminUser;
-use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use App\Models\Member;
 use Filament\Facades\Filament;
 use Filament\Widgets\Widget;
 
 /**
- * Rendered only while the signed-in administrator's MFA is off: the opt-in posture relies on the
- * prompt being seen, and an acted-on nudge should not linger.
+ * Rendered only while the signed-in administrator has no confirmed TOTP, even with a passkey: only
+ * the one-time code stops a password reset from their mailbox opening the panel (docs/internals/security.md, "Administrators").
  */
 class MfaReminderWidget extends Widget
 {
@@ -25,13 +23,13 @@ class MfaReminderWidget extends Widget
     {
         $admin = Filament::auth()->user();
 
-        return $admin instanceof AdminUser
-            && $admin instanceof HasAppAuthentication
-            && blank($admin->getAppAuthenticationSecret());
+        return $admin instanceof Member && ! $admin->hasEnabledTwoFactorAuthentication();
     }
 
-    public function getSecurityUrl(): string
+    // The member settings page, not its two-factor page: Classic keeps the two-factor and passkey
+    // forms inline there.
+    public function getSettingsUrl(): string
     {
-        return SecuritySettings::getUrl();
+        return route('member.config');
     }
 }

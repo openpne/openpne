@@ -53,7 +53,7 @@ final class Warning
         UploadFileOwnerPreflight::W_OWNERLESS => self::REVIEW,
         LoginPreflight::W_MEMBER_EMAIL => self::REVIEW,
         LoginPreflight::W_MEMBER_EMAIL_NON_ASCII => self::REVIEW,
-        LoginPreflight::W_ADMIN_USERNAME => self::REVIEW,
+        LoginPreflight::W_ADMIN_USER_NOT_COPIED => self::DROPPED,
         ActivityTemplateTransform::W_KEPT_UNKNOWN => self::REVIEW,
         ActivityTemplateTransform::W_KEPT_BAD_PARAMS => self::REVIEW,
         ActivityTemplateTransform::W_KEPT_NO_LINK => self::REVIEW,

@@ -21,8 +21,6 @@ class GroupResource extends Resource
 
     protected static ?string $model = Group::class;
 
-    // The panel guard authorizes; GroupPolicy is member-typed and would TypeError on an AdminUser,
-    // so Filament's per-record checks are skipped.
     protected static bool $shouldSkipAuthorization = true;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;

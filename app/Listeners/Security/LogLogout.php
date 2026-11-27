@@ -9,6 +9,6 @@ class LogLogout
 {
     public function handle(Logout $event): void
     {
-        SecurityLog::event('logout', ['guard' => $event->guard] + ActorContext::of($event->guard, $event->user));
+        SecurityLog::event('logout', ['guard' => $event->guard] + ($event->user === null ? [] : ['member_id' => $event->user->getAuthIdentifier()]));
     }
 }

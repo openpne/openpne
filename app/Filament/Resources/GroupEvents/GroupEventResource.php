@@ -20,8 +20,6 @@ class GroupEventResource extends Resource
 
     protected static ?string $model = GroupEvent::class;
 
-    // The panel guard authorizes; GroupEventPolicy is member-typed and would TypeError on an
-    // AdminUser, so Filament's per-record checks are skipped.
     protected static bool $shouldSkipAuthorization = true;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;

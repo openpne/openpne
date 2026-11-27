@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Member\Actions;
 
 use App\Features\Member\Actions\AllowMemberLogin;
-use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CapturesSecurityLog;
@@ -15,20 +14,19 @@ class AllowMemberLoginTest extends TestCase
 {
     use CapturesSecurityLog, RefreshDatabase;
 
-    private AdminUser $admin;
+    private Member $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->admin = $this->createAdmin();
-        $this->actingAsAdmin($this->admin);
         $this->captureSecurityLog();
     }
 
     private function allow(Member $member): void
     {
-        app(AllowMemberLogin::class)($member);
+        app(AllowMemberLogin::class)($member, $this->admin);
     }
 
     public function test_clears_the_login_rejected_flag(): void
@@ -48,6 +46,6 @@ class AllowMemberLoginTest extends TestCase
 
         $context = $this->assertOneSecurityEvent('member.unbanned');
         $this->assertSame((string) $member->getKey(), $context['member_id']);
-        $this->assertSame($this->admin->username, $context['admin_username']);
+        $this->assertSame((string) $this->admin->getKey(), $context['admin_member_id']);
     }
 }

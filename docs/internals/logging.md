@@ -29,10 +29,10 @@ fallible and must not be able to suppress the audit record of a change that alre
 
 | Event | Source | Context (beyond ip/user_agent) |
 |---|---|---|
-| `login.success` | listener `LogSuccessfulLogin` (`Login`) | `guard`, `remember` (false for `member`, whose guard issues no recaller), `member_id`\|`username` |
+| `login.success` | listener `LogSuccessfulLogin` (`Login`) | `guard`, `remember` (false for `member`, whose guard issues no recaller), `member_id` |
 | `login.failed` | listener `LogFailedLogin` (`Failed`) | `guard`, `identifier` |
 | `login.lockout` | listener `LogLockout` (`Lockout`) | `identifier` |
-| `logout` | listener `LogLogout` (`Logout`) | `guard`, `member_id`\|`username` |
+| `logout` | listener `LogLogout` (`Logout`) | `guard`, `member_id` |
 | `password.reset` | listener `LogPasswordReset` (`PasswordReset`) | `guard`, `member_id` |
 | `login.code_sent` | seam: `App\Features\Auth\LoginCode::issue` — a passkey holder's password verified and a confirmation code was mailed | `guard`, `member_id` |
 | `login.code_failed` | seam: `LoginCodeController::store` — a submitted code that was refused (wrong, over the attempt cap, or the challenge voided since); an expired challenge logs nothing, and the code itself is never logged | `guard`, `member_id` |
@@ -40,32 +40,32 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `member.registered` | listener `LogMemberRegistered` (`MemberRegistered`) | `guard`, `member_id` |
 | `registration.link_printed` | seam: `InviteMemberCommand`, `InviteAdministratorCommand` — a mailed link logs nothing | `email`, `via` (cli), `role` (admin) and `expires_at` for an administrator invite |
 | `admin.granted` / `admin.revoked` | seam: `GrantAdministrator` / `RevokeAdministrator` (actions), and `CompleteRegistration` for a registration through a live administrator invite | `member_id`, `actor` (cli, or the acting administrator's member id), `via` (invite) |
-| `password.link_printed` | seam: `AdminPasswordLinkCommand` — an administrator password link was printed; never the URL | `guard`, `username`, `via` (cli), `expires_at` |
-| `mfa.enabled` | seam: `MemberMfaController::confirm`, `AdminAppAuthentication` set-up | `guard`, `member_id`\|`username` |
-| `mfa.disabled` | seam: `MemberMfaController::disable` (live), `AdminAppAuthentication` disable, `DisableMemberMfaCommand`, `DisableAdminMfaCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
-| `mfa.recovery_codes_regenerated` | seam: `MemberMfaController::regenerate`, `AdminAppAuthentication` regenerate | `guard`, `member_id`\|`username` |
-| `mfa.recovery_code_used` | listener `LogRecoveryCodeReplaced` (member); seam `AdminAppAuthentication::verifyRecoveryCode` (admin) | `guard`, `member_id`\|`username` |
+| `mfa.enabled` | seam: `MemberMfaController::confirm` | `guard`, `member_id` |
+| `mfa.disabled` | seam: `MemberMfaController::disable` (live), `DisableMemberMfaCommand` | `guard`, `member_id`, `via` (cli) |
+| `mfa.recovery_codes_regenerated` | seam: `MemberMfaController::regenerate` | `guard`, `member_id` |
+| `mfa.recovery_code_used` | listener `LogRecoveryCodeReplaced` | `guard`, `member_id` |
+| `mfa.reset_link_sent` | seam: `RequestMfaReset` (action) | `guard`, `member_id`, `admin_member_id` |
 | `passkey.registered` | seam: `MemberPasskeyController::store` | `guard`, `member_id`, `passkey_id` |
 | `passkey.removed` | seam: `MemberPasskeyController::destroy` | `guard`, `member_id`, `passkey_id` |
 | `mfa.codes_paused` | seam: `App\Auth\Reauth\ReauthCodeBudget` — a member's step-ups stopped accepting TOTP codes after too many wrong ones | `guard`, `member_id` |
 | `passkey.verified` | listener `LogPasskeyVerified` (`PasskeyVerified`) — the assertion verified, before the login gate; a refused (banned) member logs this with no `login.success`. A step-up assertion adds `via` (`reauth`) and `purpose` | `guard`, `member_id`, `passkey_id`, `via`, `purpose` |
 | `passkey.refused` | seam: the passkey login gate (`FortifyServiceProvider`) — a verified assertion refused for a banned or AI-account member | `guard`, `member_id` |
 | `passkey.failed` | seam: `App\Features\Auth\PasskeyLoginController::store` — an assertion the ceremony refused (unknown credential, stale challenge, bad signature, a counter that went backwards); the gate's refusal is not doubled here. `ReauthPasskeyController::store` logs the same for a step-up assertion, with `via` (`reauth`) | `guard`, `credential_id`, `member_id` (when the credential is known), `via` |
-| `password.changed` | seam: `MemberConfigController::updatePassword`, `ResetAdminPasswordCommand`, `PasswordSetupController` (an administrator password link used) | `guard`, `member_id`\|`username`, `via` (cli\|link) |
+| `password.changed` | seam: `MemberConfigController::updatePassword` | `guard`, `member_id` |
 | `email.change_requested` | seam: `RequestEmailChange` (action) | `guard`, `member_id`, `new_email` |
 | `email.changed` | seam: `EmailChangeLinkController::confirmEmail` | `guard`, `member_id`, `old_email`, `new_email` |
 | `email.change_cancelled` | seam: `EmailChangeLinkController::cancelEmail` | `guard`, `member_id`, `new_email` |
-| `member.withdrawn` | seam: `WithdrawMember` | `member_id`, `actor` (self\|admin), `admin_username` |
-| `member.banned` / `member.unbanned` | seam: `RejectMemberLogin` / `AllowMemberLogin` (actions) | `member_id`, `admin_username` |
+| `member.withdrawn` | seam: `WithdrawMember` | `member_id`, `actor` (self\|admin), `admin_member_id` |
+| `member.banned` / `member.unbanned` | seam: `RejectMemberLogin` / `AllowMemberLogin` (actions) | `member_id`, `admin_member_id` |
 | `ai_account.created` / `ai_account.deleted` | seam: `CreateAiAccount` / `DeleteAiAccount` (actions) | `member_id`, `owner_id` |
-| `throttle.hit` | `bootstrap/app.php` report hook; `SendDirectMessageTool`, whose limit answers as a tool error rather than a 429 | `route`, `member_id` (a member only, never an administrator), `tool` (the MCP tool only) |
+| `throttle.hit` | `bootstrap/app.php` report hook; `SendDirectMessageTool`, whose limit answers as a tool error rather than a 429 | `route`, `member_id`, `tool` (the MCP tool only) |
 
 ## PII / injection contract
 
 `SecurityLog` enforces one contract (stated in full on the class):
 
-- **Actor.** Always the resolved actor where one exists — member id, or admin username (admins have
-  no email). The attempted identifier (email/username) is logged only for `login.failed` /
+- **Actor.** Always the resolved actor where one exists — a member id, an administrator's included.
+  The attempted identifier is logged only for `login.failed` /
   `login.lockout` (no actor resolved yet), and for the `email.*` events and `registration.link_printed`
   (the address is the subject).
 - **Never logged.** Passwords, tokens, session ids, recovery codes, a `Failed` event's raw
@@ -106,13 +106,3 @@ operational picture for the mail side of a security event (e.g. a password-chang
 security *event* listeners are deliberately **synchronous** (not `ShouldQueue`): a worker no longer
 holds the originating request, so the `ip`/`user_agent` auto-attach would be lost and events could
 reorder relative to the request that caused them.
-
-## Admin TOTP-code failure is not logged
-
-Member TOTP failures log (`mfa.failed`, via Fortify's event). The admin panel has no equivalent
-event, and the only seam — overriding `AppAuthentication::verifyCode` — also fires during set-up and
-disable, so it would log a fat-fingered code during enrolment as a "failure". This is an accepted
-blind spot: a wrong code at the admin login challenge fires no framework event (Filament's `Failed`
-covers only the password step), and Filament's own MFA rate limit surfaces as a Livewire
-notification, not an HTTP 429, so it produces no `throttle.hit` either. Admin recovery-*code* use is
-logged (a distinct seam, `verifyRecoveryCode`, that only fires on a real spent code).

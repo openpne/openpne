@@ -56,8 +56,7 @@ cp .env.example .env                     # then set APP_URL=http://localhost:800
 php artisan key:generate
 touch database/database.sqlite
 php artisan openpne:install              # schema + the initial data of a new site
-php artisan openpne:admin:create admin   # the first administrator, for /admin
-php artisan openpne:member:invite you@example.com   # prints the first member's registration link
+php artisan openpne:admin:invite you@example.com   # prints the registration link of the first member, an administrator
 php artisan passport:keys  # optional: lets AI clients sign in to the MCP server
 
 php artisan serve         # http://localhost:8000

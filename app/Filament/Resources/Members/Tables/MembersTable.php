@@ -3,10 +3,13 @@
 namespace App\Filament\Resources\Members\Tables;
 
 use App\Features\Member\Actions\AdministratorRoleHeld;
+use App\Features\Member\Actions\AdministratorRoleResult;
 use App\Features\Member\Actions\AllowMemberLogin;
+use App\Features\Member\Actions\GrantAdministrator;
 use App\Features\Member\Actions\MfaResetUnavailable;
 use App\Features\Member\Actions\RejectMemberLogin;
 use App\Features\Member\Actions\RequestMfaReset;
+use App\Features\Member\Actions\RevokeAdministrator;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Filament\Resources\Members\MemberResource;
 use App\Filament\Support\CollatedSearch;
@@ -14,6 +17,7 @@ use App\Models\Member;
 use App\Support\Database\SearchCollation;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
@@ -42,6 +46,11 @@ class MembersTable
                     ->default('-')
                     ->searchable(query: CollatedSearch::on('email')),
 
+                IconColumn::make('administrator')
+                    ->label(__('Administrator'))
+                    ->boolean()
+                    ->getStateUsing(fn (Member $record): bool => $record->isAdministrator()),
+
                 IconColumn::make('is_login_rejected')
                     ->label(__('Login rejected'))
                     ->boolean()
@@ -66,22 +75,27 @@ class MembersTable
                     ->sortable(),
             ])
             ->filters([
+                TernaryFilter::make('administrator')
+                    ->label(__('Administrator'))
+                    ->nullable()
+                    ->attribute('admin_granted_at'),
                 TernaryFilter::make('is_login_rejected')
                     ->label(__('Login rejected')),
             ])
             ->recordActions([
+                self::grantAdministratorAction(),
+                self::revokeAdministratorAction(),
                 self::banAction(),
                 self::unbanAction(),
                 self::sendMfaResetAction(),
-                // The panel guard authorizes, so the author-less WithdrawMember runs directly; the truthy
-                // return is required because DeleteAction reports failure on a falsy using() result.
+                // The truthy return is required because DeleteAction reports failure on a falsy using() result.
                 DeleteAction::make()
                     ->label(__('Withdraw this member'))
                     ->hidden(fn (Member $record): bool => ! MemberResource::canDelete($record))
                     ->failureNotificationTitle(__('An administrator cannot be withdrawn'))
                     ->using(function (Member $record): bool {
                         try {
-                            app(WithdrawMember::class)($record);
+                            app(WithdrawMember::class)($record, self::actor());
                         } catch (AdministratorRoleHeld) {
                             return false; // granted since the row was drawn
                         }
@@ -90,6 +104,57 @@ class MembersTable
                     }),
             ])
             ->defaultSort('id', 'desc');
+    }
+
+    /** Called outside any transaction, which the action's own retry needs (docs/internals/administrators.md, "Locks"). */
+    private static function grantAdministratorAction(): Action
+    {
+        return Action::make('grantAdministrator')
+            ->label(__('Make administrator'))
+            ->icon(Heroicon::OutlinedShieldCheck)
+            ->requiresConfirmation()
+            ->modalDescription(fn (Member $record): string => __(':name will be able to open this admin panel with their member account.', ['name' => (string) $record->name]))
+            ->visible(fn (Member $record): bool => ! $record->isAdministrator() && ! $record->isAiAccount() && ! $record->is_login_rejected)
+            ->action(fn (Member $record) => self::notifyRole(app(GrantAdministrator::class)($record, self::actor())));
+    }
+
+    private static function revokeAdministratorAction(): Action
+    {
+        return Action::make('revokeAdministrator')
+            ->label(__('Remove administrator role'))
+            ->icon(Heroicon::OutlinedShieldExclamation)
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalDescription(fn (Member $record): string => __(':name will no longer be able to open this admin panel. Their member account stays as it is.', ['name' => (string) $record->name]))
+            ->visible(fn (Member $record): bool => $record->isAdministrator() && (int) $record->getKey() !== (int) self::actor()->getKey())
+            ->action(fn (Member $record) => self::notifyRole(app(RevokeAdministrator::class)($record, self::actor())));
+    }
+
+    private static function notifyRole(AdministratorRoleResult $result): void
+    {
+        $title = match ($result) {
+            AdministratorRoleResult::Granted, AdministratorRoleResult::AlreadyAdministrator => __('The member is now an administrator'),
+            AdministratorRoleResult::Revoked, AdministratorRoleResult::NotAdministrator => __('The member is no longer an administrator'),
+            AdministratorRoleResult::MemberGone => __('The member no longer exists'),
+            AdministratorRoleResult::AiAccount => __('An AI account cannot be an administrator'),
+            AdministratorRoleResult::Withdrawing => __('The member is being withdrawn'),
+            AdministratorRoleResult::LoginRejected => __('A member whose login is rejected cannot be an administrator'),
+            AdministratorRoleResult::LastAdministrator => __('The last administrator cannot lose the role'),
+            AdministratorRoleResult::OwnRole => __('You cannot remove your own administrator role'),
+            AdministratorRoleResult::ActorNotAdministrator => __('You are no longer an administrator'),
+        };
+
+        $notification = Notification::make()->title($title);
+        ($result->succeeded() ? $notification->success() : $notification->danger())->send();
+    }
+
+    /** The administrator signed in to the panel, whom the panel's gate has already let in. */
+    private static function actor(): Member
+    {
+        $actor = Filament::auth()->user();
+        assert($actor instanceof Member);
+
+        return $actor;
     }
 
     /** Freeze a member's login (is_login_rejected). Never offered for the primary member. */
@@ -110,7 +175,7 @@ class MembersTable
             })
             ->action(function (Member $record): void {
                 try {
-                    app(RejectMemberLogin::class)($record);
+                    app(RejectMemberLogin::class)($record, self::actor());
                 } catch (AdministratorRoleHeld) {
                     Notification::make()
                         ->title(__('An administrator cannot have login rejected'))
@@ -135,7 +200,7 @@ class MembersTable
             ->requiresConfirmation()
             ->visible(fn (Member $record): bool => (bool) $record->is_login_rejected)
             ->action(function (Member $record): void {
-                app(AllowMemberLogin::class)($record);
+                app(AllowMemberLogin::class)($record, self::actor());
                 Notification::make()
                     ->title(__('The member can log in again'))
                     ->success()
@@ -173,7 +238,7 @@ class MembersTable
             })
             ->action(function (Member $record): void {
                 try {
-                    app(RequestMfaReset::class)($record);
+                    app(RequestMfaReset::class)($record, self::actor());
                 } catch (MfaResetUnavailable) {
                     // The factor or address was invalidated between before() and here; RequestMfaReset's
                     // locked recheck is the backstop, so degrade to the warning instead of a 500.

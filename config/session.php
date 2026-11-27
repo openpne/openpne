@@ -93,14 +93,6 @@ return [
 
     'table' => env('SESSION_TABLE', 'sessions'),
 
-    // Stable per-realm table names (see App\Http\Middleware\UseAdminSessionStore).
-    // `table` above is pinned per request to whichever realm is serving, so any
-    // code that revokes a specific principal's sessions (App\Auth\SessionRevocation)
-    // must read these two keys — they are never mutated at runtime, regardless of
-    // which realm the revoking request runs on.
-    'member_table' => env('SESSION_TABLE', 'sessions'),
-    'admin_table' => 'admin_sessions',
-
     /*
     |--------------------------------------------------------------------------
     | Session Cache Store
@@ -143,14 +135,6 @@ return [
     'cookie' => env(
         'SESSION_COOKIE',
         Str::slug((string) env('APP_NAME', 'laravel')).'-session'
-    ),
-
-    // Cookie for the admin realm's own session: admin and member logins coexist in one
-    // browser, and logging out of one never destroys the other. See
-    // App\Http\Middleware\UseAdminSessionStore.
-    'admin_cookie' => env(
-        'SESSION_ADMIN_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-admin-session'
     ),
 
     /*

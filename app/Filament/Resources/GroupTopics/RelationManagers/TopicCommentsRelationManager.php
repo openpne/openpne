@@ -14,7 +14,6 @@ class TopicCommentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'comments';
 
-    // Admin-guard authorization; skip Filament's per-record policy checks (no member policy applies).
     protected static bool $shouldSkipAuthorization = true;
 
     // The panel makes relation managers read-only on ViewRecord pages by default; this one hosts the

@@ -16,6 +16,8 @@ class MemberResource extends Resource
 {
     protected static ?string $model = Member::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
     protected static ?int $navigationSort = 1;

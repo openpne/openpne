@@ -24,6 +24,7 @@ use App\Upgrade\Steps\WithdrawnMemberTermUpgrade;
 use App\Upgrade\UpgradeStep;
 use Closure;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -43,8 +44,13 @@ final class UpgradeRunner
     /** The `step_key` the epoch marker occupies. Not a step: no registry entry ever bears this name. */
     public const EPOCH_KEY = 'naming_epoch';
 
-    /** The tables a new-site install (`openpne:install`, `openpne:admin:create`) writes, which the walk fills from OpenPNE 3 instead. */
-    public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'admin_users'];
+    /** The tables a new-site install (`openpne:install`, a registration) writes, which the walk fills from OpenPNE 3 instead. */
+    public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'members'];
+
+    /** Every row of these belongs to a member, by an id no foreign key carries; reset() empties them. */
+    public const MEMBER_OWNED_TABLES = ['oauth_refresh_tokens', 'oauth_access_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'personal_access_tokens', 'notifications', 'push_subscriptions', 'password_reset_tokens'];
+
+    public const PENDING_ADMIN_INVITE_MESSAGE = 'OpenPNE 4 table `admin_role_invites` holds an administrator invite (openpne:admin:invite), whose registration, while it is live, would make an administrator of the upgraded site. Restore the schema fresh, or rerun with --force-restart, which empties it first.';
 
     /** The `step_key` of the completion marker, written once on the first full success; not a step either. */
     public const RUN_KEY = 'upgrade_completed';
@@ -119,6 +125,11 @@ final class UpgradeRunner
             $installed = $this->installedTargetTables();
             foreach ($installed as $table) {
                 $report->error(self::installedTargetMessage($table));
+            }
+            // No step writes the invites, so the table check above cannot see one awaiting its registration.
+            if (DB::table('admin_role_invites')->exists()) {
+                $installed[] = 'admin_role_invites';
+                $report->error(self::PENDING_ADMIN_INVITE_MESSAGE);
             }
             if ($installed !== []) {
                 $report->abort('the OpenPNE 4 schema is not empty; nothing was migrated.');
@@ -669,7 +680,19 @@ final class UpgradeRunner
     {
         $report ??= new RunReport;
 
+        $sessions = (string) config('session.driver');
+        // The array driver keeps nothing past its own process.
+        if (! in_array($sessions, ['database', 'array'], true)) {
+            throw new RuntimeException("A reset signs everyone out by emptying the database session store, and session.driver `{$sessions}` keeps sessions elsewhere: empty that store yourself, then rerun with SESSION_DRIVER=database.");
+        }
+
         $mysql = DB::connection()->getDriverName() === 'mysql';
+
+        // First, so a rule this cannot apply refuses with nothing changed.
+        $children = $mysql ? $this->foreignKeysOntoTargets() : [];
+
+        // Before the targets, so a store it cannot reach stops it with only sessions gone; again after them, for a sign-in between.
+        $this->emptySessionStore();
 
         if ($mysql && in_array('files', $this->targetTables(), true)) {
             (new FileBinMigration)->dropForeignKey();
@@ -680,14 +703,16 @@ final class UpgradeRunner
         }
 
         try {
-            // Not a step target, and with MySQL's checks off the cascade from admin_users would not run.
-            if (in_array('admin_users', $this->targetTables(), true)) {
-                DB::table('admin_password_setup_tokens')->delete();
-            }
+            // Not step targets: a link issued on the site being overwritten must not register into the upgraded one.
+            DB::table('admin_role_invites')->delete();
+            DB::table('registration_tokens')->delete();
 
             foreach ($this->targetTables() as $table) {
                 DB::table($table)->delete();
             }
+
+            $this->clearRowsNamingTargets($children);
+            $this->emptySessionStore();
         } finally {
             if ($mysql) {
                 DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -696,6 +721,68 @@ final class UpgradeRunner
 
         UpgradeState::query()->delete();
         $report->line('Reset: cleared upgrade state and target tables.');
+    }
+
+    /**
+     * The walk inserts OpenPNE 3's rows under their own ids, so a row left outside the targets would
+     * bind its passkey or token to whoever holds that id there. With MySQL's checks off
+     * InnoDB applies no delete rule, so $children's are applied here (SQLite's ran with the deletes).
+     *
+     * @param  list<array{0: string, 1: string, 2: string}>  $children
+     */
+    private function clearRowsNamingTargets(array $children): void
+    {
+        foreach ($children as [$table, $column, $rule]) {
+            $rows = DB::table($table)->whereNotNull($column);
+            $rule === 'SET NULL' ? $rows->update([$column => null]) : $rows->delete();
+        }
+
+        // The front page's past issues name their stories by id alone, and would hold back the upgraded site's stories that take those ids.
+        DB::table('home_issue_items')->delete();
+        DB::table('home_issues')->delete();
+
+        foreach (self::MEMBER_OWNED_TABLES as $table) {
+            DB::table($table)->delete();
+        }
+    }
+
+    private function emptySessionStore(): void
+    {
+        if (config('session.driver') === 'database') {
+            DB::connection(config('session.connection'))->table((string) config('session.table'))->delete();
+        }
+    }
+
+    /** @return list<array{0: string, 1: string, 2: string}> table, column and delete rule of each foreign key from outside the targets onto one */
+    private function foreignKeysOntoTargets(): array
+    {
+        $targets = $this->targetTables();
+        $children = [];
+
+        foreach (DB::select(
+            'select rc.constraint_schema as s, rc.constraint_schema = rc.unique_constraint_schema as here, kcu.table_name as t, kcu.column_name as c, rc.referenced_table_name as p, rc.delete_rule as r
+               from information_schema.referential_constraints rc
+               join information_schema.key_column_usage kcu
+                 on kcu.constraint_schema = rc.constraint_schema and kcu.constraint_name = rc.constraint_name and kcu.table_name = rc.table_name
+              where rc.unique_constraint_schema = ?',
+            [DB::connection()->getDatabaseName()],
+        ) as $fk) {
+            // MySQL compares the names, which lower_case_table_names may have folded.
+            $here = (bool) $fk->here;
+            // file_bin's key onto files is dropped instead, since no step owns the BLOBs.
+            if (! in_array($fk->p, $targets, true) || ($here && (in_array($fk->t, $targets, true) || $fk->t === 'file_bin'))) {
+                continue;
+            }
+            if (! $here) {
+                throw new RuntimeException("`{$fk->s}`.`{$fk->t}`.`{$fk->c}` in another database refers to the upgrade target `{$fk->p}`, which a reset cannot reach.");
+            }
+            if (! in_array($fk->r, ['CASCADE', 'SET NULL'], true)) {
+                throw new RuntimeException("`{$fk->t}`.`{$fk->c}` refers to the upgrade target `{$fk->p}` with ON DELETE {$fk->r}, which a reset cannot apply.");
+            }
+            $children[] = [$fk->t, $fk->c, $fk->r];
+        }
+
+        return $children;
     }
 
     /**
@@ -730,7 +817,7 @@ final class UpgradeRunner
 
     public static function installedTargetMessage(string $table): string
     {
-        return "OpenPNE 4 table `{$table}` already holds rows (a new-site install writes them: openpne:install, openpne:admin:create, or opening the admin Banner page); the upgrade needs the schema `php artisan migrate` alone creates. Restore it fresh, or rerun with --force-restart, which empties every target table first.";
+        return "OpenPNE 4 table `{$table}` already holds rows (a new-site install writes them: openpne:install, a registration such as the one openpne:admin:invite leads to, or opening the admin Banner page); the upgrade needs the schema `php artisan migrate` alone creates. Restore it fresh, or rerun with --force-restart, which empties every target table first.";
     }
 
     /** @return list<string> distinct step target tables in reverse run order (FK-safe delete order). */

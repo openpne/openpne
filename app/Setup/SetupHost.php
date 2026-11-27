@@ -18,7 +18,7 @@ class SetupHost
         return function_exists('proc_open');
     }
 
-    /** Symfony's hidden question, which openpne:admin:create asks, runs stty through shell_exec. */
+    /** Symfony's hidden question, which Prompts falls back to without proc_open, runs stty through shell_exec. */
     public function hidesTypedInput(): bool
     {
         return function_exists('shell_exec');

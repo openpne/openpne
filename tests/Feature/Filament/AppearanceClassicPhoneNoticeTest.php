@@ -6,6 +6,7 @@ namespace Tests\Feature\Filament;
 
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
+use App\Http\Middleware\SetLocale;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class AppearanceClassicPhoneNoticeTest extends TestCase
 
         Filament::setCurrentPanel('admin');
         $this->actingAsAdmin();
-        $this->withSession(['locale' => 'ja']);
+        $this->withSession([SetLocale::ADMIN_SESSION_KEY => 'ja']);
     }
 
     /**

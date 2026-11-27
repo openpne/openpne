@@ -11,8 +11,8 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Rejects a password that embeds the site name, the member's name or email local part, or the admin
- * username (ASVS 5.0 6.2.4). A source that fails to resolve (an unresolved guard, no DB schema for
+ * Rejects a password that embeds the site name or the member's name or email local part (ASVS 5.0
+ * 6.2.4). A source that fails to resolve (an unresolved guard, no DB schema for
  * sns_name() mid-install) skips only itself and never blocks or discards the other sources' tokens.
  */
 class NotContextWord implements DataAwareRule, ValidationRule
@@ -21,7 +21,7 @@ class NotContextWord implements DataAwareRule, ValidationRule
     private const MIN_TOKEN = 4;
 
     /** Validation-data keys (last dot-segment) that carry a context word; Filament nests under `data.*`. */
-    private const CONTEXT_KEYS = ['email', 'name', 'username'];
+    private const CONTEXT_KEYS = ['email', 'name'];
 
     /** @var array<string, mixed> */
     private array $data = [];
@@ -66,10 +66,6 @@ class NotContextWord implements DataAwareRule, ValidationRule
             if (($member = Auth::guard('member')->user()) !== null) {
                 $tokens[] = Str::before((string) $member->email, '@');
                 $tokens[] = (string) $member->name;
-            }
-
-            if (($admin = Auth::guard('admin')->user()) !== null) {
-                $tokens[] = (string) $admin->username;
             }
         } catch (Throwable) {
         }

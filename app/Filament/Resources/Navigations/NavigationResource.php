@@ -22,6 +22,8 @@ class NavigationResource extends Resource
 
     protected static ?string $model = Navigation::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBars3;
 
     protected static ?int $navigationSort = 3;

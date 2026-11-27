@@ -270,17 +270,18 @@ a side effect, such as deleting a diary/comment/member, approving a join request
 or member withdrawal — it calls the shared **Action**, so cleanup and side
 effects are not bypassed.
 
-The admin panel authorizes through its own `admin` guard (an `AdminUser`, not a
-`Member`), so it cannot satisfy a member-actor check. A `Delete*` Action that
-gates on the acting member therefore splits in two: `__invoke(Member $actor, …)`
-keeps the frontend's author/actor check, and an author-less `purge(…)` core holds
-the actual deletion + cleanup. Member adapters call `__invoke`; the Filament
-Resource calls `purge` directly (its guard is the authorization). The cleanup
+The admin panel authorizes through the administrator gate alone, not the member
+checks: its acting member is an administrator, who must not pass for the author.
+A `Delete*` Action that gates on the acting member therefore splits in two:
+`__invoke(Member $actor, …)` keeps the frontend's author/actor check, and an
+author-less `purge(…)` core holds the actual deletion + cleanup. Member adapters
+call `__invoke`; the Filament Resource calls `purge` directly (the gate is the
+authorization). The cleanup
 lives once, in `purge` — or in a private core both call, when the actor check
 must run under the cleanup's own lock (`DeleteGroup`). Member withdrawal is the
 same shape: `WithdrawMember` has no per-actor check, and each caller — the panel
-(its guard authorizes) and the member-facing withdrawal flow — is its own
-adapter.
+(the gate authorizes; it passes its administrator for the log) and the
+member-facing withdrawal flow — is its own adapter.
 
 ## When to use this contract
 

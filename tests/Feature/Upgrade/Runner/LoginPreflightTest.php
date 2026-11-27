@@ -7,7 +7,7 @@ use App\Upgrade\Runner\LoginPreflight;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Runner\Warning;
-use App\Upgrade\Steps\AdminUserUpgrade;
+use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
@@ -28,15 +28,12 @@ class LoginPreflightTest extends UpgradeSqlTestCase
         $this->seedMember(4, ['pc_address' => ' old@example.com']);
         $this->seedMember(4, ['pc_address' => 'new@example.com']);
         $this->seedMember(5, ['pc_address' => 'inactive@example.com '], isActive: 0);
-        $this->seedAdmin(7, 'root');
-        $this->seedAdmin(8, "staff\t");
 
-        $report = (new LoginPreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null);
+        $report = (new LoginPreflight)->inspect([new MemberUpgrade], '', null);
 
         $this->assertSame([], $report->errors);
         $this->assertEquals([
             new Warning(LoginPreflight::W_MEMBER_EMAIL, LoginPreflight::message(LoginPreflight::W_MEMBER_EMAIL, 2, [2, 3]), 2),
-            new Warning(LoginPreflight::W_ADMIN_USERNAME, LoginPreflight::message(LoginPreflight::W_ADMIN_USERNAME, 1, [8]), 1),
         ], $report->warnings);
     }
 
@@ -49,9 +46,8 @@ class LoginPreflightTest extends UpgradeSqlTestCase
         $this->seedMember(5, ['pc_address' => 'taro..yamada@docomo.ne.jp']);
         $this->seedMember(6, ['pc_address' => 'padded@example.com ']);
         $this->seedMember(7, ['pc_address' => ' じろう@example.com']);
-        $this->seedAdmin(8, 'ルート');
 
-        $report = (new LoginPreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null);
+        $report = (new LoginPreflight)->inspect([new MemberUpgrade], '', null);
 
         $this->assertEquals([
             new Warning(LoginPreflight::W_MEMBER_EMAIL, LoginPreflight::message(LoginPreflight::W_MEMBER_EMAIL, 2, [6, 7]), 2),
@@ -64,7 +60,7 @@ class LoginPreflightTest extends UpgradeSqlTestCase
         $this->seedMember(2, ['pc_address' => 'trailing@example.com ', 'password' => md5('x')]);
         $lines = [];
 
-        $ok = (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade, new AdminUserUpgrade]))->run(
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->run(
             new RunOptions,
             function (string $line) use (&$lines): void {
                 $lines[] = $line;
@@ -80,9 +76,57 @@ class LoginPreflightTest extends UpgradeSqlTestCase
     {
         $this->seedMember(1, ['pc_address' => 'plain@example.com']);
         $this->seedMember(2, []);
-        $this->seedAdmin(7, 'root');
 
-        $this->assertSame([], (new LoginPreflight)->inspect([new MemberUpgrade, new AdminUserUpgrade], '', null)->warnings);
+        $this->assertSame([], (new LoginPreflight)->inspect([new MemberUpgrade], '', null)->warnings);
+    }
+
+    public function test_the_source_administrators_are_counted_and_none_is_copied(): void
+    {
+        $this->seedMember(1, ['pc_address' => 'plain@example.com', 'password' => md5('x')]);
+        $this->seedAdmin(7, 'root');
+        $this->seedAdmin(8, 'staff');
+        $lines = [];
+
+        $this->assertEquals(
+            [new Warning(LoginPreflight::W_ADMIN_USER_NOT_COPIED, LoginPreflight::message(LoginPreflight::W_ADMIN_USER_NOT_COPIED, 2, []), 2)],
+            (new LoginPreflight)->inspect([new MemberUpgrade], '', null)->warnings,
+        );
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->run(
+            new RunOptions,
+            function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            },
+        );
+
+        $this->assertTrue($ok, implode("\n", $lines));
+        $this->assertContains('WARN '.LoginPreflight::W_ADMIN_USER_NOT_COPIED.': '.LoginPreflight::message(LoginPreflight::W_ADMIN_USER_NOT_COPIED, 2, []), $lines);
+        $this->assertSame(0, DB::table('admin_users')->count());
+        $this->assertSame(0, DB::table('members')->whereNotNull('admin_granted_at')->count());
+    }
+
+    public function test_a_source_without_admin_user_is_silent_about_it(): void
+    {
+        DB::statement('drop table admin_user');
+
+        $this->assertSame([], (new LoginPreflight)->inspect([new MemberUpgrade], '', null)->warnings);
+    }
+
+    public function test_the_source_administrators_are_counted_under_the_source_prefix(): void
+    {
+        DB::statement('drop table admin_user');
+        DB::statement(str_replace('`admin_user`', '`op_admin_user`', SourceSchema::default()->createStatement('admin_user', withoutForeignKeys: true)));
+
+        try {
+            DB::table('op_admin_user')->insert(['id' => 1, 'username' => 'root', 'password' => md5('secret'),
+                'created_at' => '2018-01-02 03:04:05', 'updated_at' => '2018-01-02 03:04:05']);
+
+            $this->assertEquals(
+                [new Warning(LoginPreflight::W_ADMIN_USER_NOT_COPIED, LoginPreflight::message(LoginPreflight::W_ADMIN_USER_NOT_COPIED, 1, []), 1)],
+                (new LoginPreflight)->inspect([], 'op_', null)->warnings,
+            );
+        } finally {
+            DB::statement('drop table if exists op_admin_user');
+        }
     }
 
     /** @param  array<string, string>  $config */

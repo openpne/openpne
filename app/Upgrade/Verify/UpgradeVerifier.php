@@ -100,7 +100,7 @@ final class UpgradeVerifier
             $this->record($report, $out, 'manifest', ! $verified || $matches, match (true) {
                 ! $verified => 'completed under an unknown set of steps (state written before manifests)',
                 $matches => 'completed under this build\'s set of steps',
-                default => 'completed under a different set of steps than this build — re-run the upgrade on this build from a fresh restore',
+                default => 'completed under a different set of steps than this build — verify with the version that ran the upgrade; a site not yet in use can start over on this version from a fresh restore',
             });
         }
 
@@ -115,7 +115,7 @@ final class UpgradeVerifier
     {
         $targets = $this->targetTables();
 
-        foreach (['members', 'admin_users'] as $table) {
+        foreach (['members'] as $table) {
             if (! in_array($table, $targets, true)) {
                 continue;
             }

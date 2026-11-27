@@ -17,6 +17,8 @@ use App\Support\Surface;
 use App\Support\ViewerRelations;
 use App\Support\Visibility;
 use Database\Factories\MemberFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -38,7 +40,7 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'last_login_at', 'tokens'])]
-class Member extends Authenticatable implements PasskeyUser
+class Member extends Authenticatable implements FilamentUser, PasskeyUser
 {
     /** @use HasFactory<MemberFactory> */
     use ClearsPasswordScheme, HasApiTokens, HasFactory, HasPushSubscriptions, Notifiable, PasskeyAuthenticatable;
@@ -390,5 +392,11 @@ class Member extends Authenticatable implements PasskeyUser
     public function isAdministrator(): bool
     {
         return $this->admin_granted_at !== null;
+    }
+
+    /** Asked on every admin-realm request, not only the panel's (docs/internals/administrators.md, "The admin panel"). */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isAdministrator() && ! $this->is_login_rejected && ! $this->isAiAccount();
     }
 }

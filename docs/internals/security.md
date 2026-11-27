@@ -1,82 +1,31 @@
 # Security
 
-## Admin two-factor authentication
+## Administrators
 
-The Filament admin panel offers **opt-in TOTP** two-factor auth (Filament's
-built-in App provider, registered in
-[`AdminPanelProvider`](../../app/Providers/Filament/AdminPanelProvider.php)). An
-administrator enables it on the **Security** page — reached from the user menu,
-next to the theme switch — and is prompted to by a dashboard reminder widget;
-the admin-user list shows which administrators have it enabled.
+An administrator is a member holding the role ([administrators.md](administrators.md)) and signs
+in as any member does, so everything below about members holds for them: the password, the
+two-factor and passkey rules, login codes, the CAPTCHA and the ban. The admin panel asks for no
+credential of its own; its access lasts as long as the member's session ([Session
+lifetime](#session-lifetime)), and logging out of the panel logs the member out.
 
-- **Opt-in, not required.** `isRequired` is `false`: MFA is a strong nudge, not
-  a gate, to keep the panel easy to try. This is a deliberate deviation from
-  NIST SP 800-63B-4's AAL2-for-administrators SHOULD — a blanket requirement is
-  impractical for the operator population. The enforcement lever exists as
-  Filament's `multiFactorAuthentication(..., isRequired:)` argument; it is not
-  wired to any setting.
-- **TOTP only.** Email one-time codes are not offered — NIST does not count them
-  as an AAL2 authenticator, and admins have no email column anyway.
-- **`codeWindow(1)`** (≈±30s / ±1 step) tightens Filament's default of 8 (≈±4
-  minutes), which is too lax for a privileged account.
-- **No code replay.** Filament records the last accepted step per secret, so the
-  login challenge, disable and regenerate reject any code that is not newer than
-  it — a code used to sign in cannot then authorize factor management. Set-up is
-  exempt: it proves a secret that is not live yet.
-- **Lockout recovery** has two paths: recovery codes (shown once at set-up), and
-  the `openpne:admin:disable-mfa <username>` CLI command — gated by server access,
-  the same trust boundary as `openpne:admin:reset-password`, since an admin has
-  no email for a self-service reset.
-- **Session revocation.** Enabling or disabling MFA revokes the admin's other
-  sessions (`App\Auth\AdminAppAuthentication` decorates the set-up/disable
-  actions, keeping the current session; the CLI revokes all), consistent with a
-  password change. Regenerating recovery codes does not revoke — the TOTP factor
-  is unchanged.
-- **Inline re-authentication (sudo mode).** All three management actions also
-  require the account password, on top of the code requirements above: set-up
-  keeps the new secret's TOTP proof (the password sits on the same wizard step
-  as the code), disable keeps code-or-recovery, and regenerate — whose vendor
-  code field is only required *without* a password — needs the password **and**
-  a current code (`App\Auth\AdminAppAuthentication` re-marks the code required).
-  Password-only regeneration would let an adversary holding the password and a
-  hijacked session mint fresh recovery codes that bypass the TOTP login
-  challenge. A walked-up unlocked session likewise cannot enroll its own
-  authenticator — which would also have revoked the admin's other sessions, so a
-  password-free operation must stay side-effect-free. It can read the new
-  secret, which the wizard shows before the password is checked; that secret is
-  saved only if the same open wizard is then finished with the password, so the
-  residual risk is an administrator completing a set-up modal someone else
-  opened. There is no re-auth
-  window: each flow is a single modal, so the password is asked exactly once per
-  action. The password field is Filament's own (`current_password:admin`, a
-  `Hash::check` that is sound only because of the no-remember-me rule below),
-  but its check runs through `App\Auth\AdminMfaPasswordReauth::gate`, installed
-  ahead of Filament's own closure in the actions' `beforeFormValidated` slot
-  and in place of it in the set-up step's `beforeValidation` slot. The gate
-  throttles password guesses on a per-admin key (5/min, shared across the three
-  modals, hit only on a wrong password, cleared on success); Filament's limiter
-  then still counts every submit that passed the gate (5/min per action), which
-  is what bounds code guesses by someone who already holds the password. The
-  set-up step keeps only the gate: Filament's step limiter counts every attempt,
-  so a few mistyped codes would lock a legitimate enrolment, and a code guess
-  there is worthless with the secret on screen. The gate exists at all because
-  the wizard's per-step validation bypasses Filament's action rate limit. It
-  throws, so a wrong password never consumes a submitted recovery code (the
-  vendor rule that spends the code is never reached). Recovering a lost
-  authenticator for regeneration means disabling with the password and a
-  recovery code, then re-enrolling.
-- **No "remember me."** The admin login drops the remember-me option
-  (`App\Filament\Pages\Auth\Login`): a recaller cookie authenticates through the
-  guard middleware, which never runs the TOTP challenge, so it would silently
-  bypass MFA. Administrators sign in per session.
-
-Filament's default set-up modal text is overridden (`lang/vendor/filament-panels/`)
-so it does not deep-link a region-locked (US) App Store URL or name a specific
-product; it points to the device's own app-store search instead.
-
-The secret and recovery codes are stored encrypted (APP_KEY); recovery codes are
-additionally bcrypt-hashed by Filament before encryption. The MFA challenge in
-the login flow is rate-limited by Filament independently of the password login.
+- **The gate.** Every admin-realm request passes `EnsureAdministrator`
+  ([administrators.md](administrators.md), "The admin panel"): a guest is sent to the member login
+  and back, and a member who cannot open the panel gets 403. It runs after the session's credential
+  check and before route-model binding, so a refused visitor learns nothing of whether a bound
+  record exists. The panel's screens skip the member policies: the gate is their authorization.
+- **Two-factor is not required.** The dashboard reminds an administrator without a confirmed TOTP
+  factor to add one in the member settings, and suggests a passkey. Without one, whoever reads the
+  administrator's mailbox can reset the password and open the panel. This deviates from NIST SP
+  800-63B-4's AAL2-for-administrators SHOULD: a blanket requirement is impractical for the
+  operator population.
+- **The login page is a member page.** On a site with `OPENPNE_OPERATOR_RAW_HTML`, its Classic
+  slots print an administrator's HTML, so one administrator's script can read another's password
+  as it is typed, and a script on any member page can drive the panel in an administrator's
+  session ([Administrator content](#administrator-content)). Every administrator has the same
+  powers, so neither gives one a power they lack.
+- **Recovery** is a member's: a password reset by mail, recovery codes or
+  `openpne:member:disable-mfa`, and `openpne:admin:grant` or `openpne:admin:invite` when no one
+  can open the panel ([administrators.md](administrators.md), "Command line").
 
 ## Member two-factor authentication
 
@@ -84,7 +33,7 @@ Members get **opt-in TOTP** two-factor auth through Fortify's two-factor feature
 (`config/fortify.php`), in confirm mode: a secret whose set-up was never
 confirmed with a valid code is inert at login, so a member cannot lock
 themselves out by starting set-up and walking away. The verification window is
-1 step (≈±30s), matching the admin panel's `codeWindow(1)`; an accepted code
+1 step (≈±30s); an accepted code
 cannot be replayed inside the window (Fortify caches it). The login challenge
 (`/two-factor-challenge`) renders on both surfaces through the same seam as the
 other Fortify screens ([`FortifyServiceProvider`](../../app/Providers/FortifyServiceProvider.php)),
@@ -93,21 +42,17 @@ adversary at this step already holds the password, so the guess budget must
 not scale with attacker IPs; the GET render is deliberately unthrottled so a
 refresh cannot burn the guess budget.
 
-Differences from the admin posture, all deliberate:
-
 - **Set-up re-auth spans requests, so it uses a window.** Member set-up runs
   across several requests (enable, scan, confirm), so it verifies the password
-  once and opens a short window (below) rather than re-asking per step. The
-  admin's set-up is a single modal, so it demands the password **and** a code
-  inline with no window. Disabling and regenerating are inline every time, as the
-  admin's are: disabling takes the account password **and** a second-factor proof, or a
-  passkey; regenerating takes the password or a passkey, plus a current TOTP code
-  ("Member re-authentication").
-- **No "remember me" either.** A member stays signed in through the session
+  once and opens a short window (below) rather than re-asking per step.
+  Disabling and regenerating are inline every time: disabling takes the account
+  password **and** a second-factor proof, or a passkey; regenerating takes the
+  password or a passkey, plus a current TOTP code ("Member re-authentication").
+- **No "remember me."** A member stays signed in through the session
   itself ("Session lifetime"), which exists only after the challenge succeeds;
   the `member` guard issues and reads no recaller cookie.
 - **Recovery codes are encrypted but recoverable** (Fortify standard: a used
-  code is compared in plaintext), not bcrypt-hashed like the admin's. They are
+  code is compared in plaintext), not bcrypt-hashed. They are
   displayed only right after confirmation or regeneration and are never stored
   in the session; that display is a server-side one-shot, but a browser may
   re-show the page from its own history state — accepted, since the codes sit
@@ -517,66 +462,12 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
   (`RequestEmailChange`) repairs it unless someone reading the wrong mailbox cancels first: the change waits for a
   confirmation from the new address, and until then a link mailed to the current one cancels it.
 
-## Administrator password links
-
-An administrator can be created without a password (`openpne:admin:create <username>
---without-password`) and choose one through a link the operator prints with
-`openpne:admin:password-link <username>`. The same link recovers a locked-out administrator without
-the operator choosing their password. [`AdminPasswords`](../../app/Auth/AdminPasswords.php) makes
-every password change (the panel's, the link's, `openpne:admin:reset-password`) and issues and
-consumes the links.
-
-- **No password, no sign-in.** `LegacyEloquentUserProvider` leaves an administrator with a NULL or
-  empty password out of every lookup, so no credential, remember cookie or session resolves to one;
-  a refused sign-in still burns an equal bcrypt. Two-factor authentication is asked only after the
-  password.
-- **The link.** `/admin/password-setup/{token}`, a 40-character token of which
-  `admin_password_setup_tokens` keeps a SHA-256 hash, one row per administrator. It expires after
-  `--minutes` (60 by default, at most 1440) and works once; the expiry is stored in Unix seconds, so
-  the minutes hold across a daylight-saving change in `APP_TIMEZONE`. A new link replaces the old
-  one; until a link is used, the current password and sessions stay. Opening it changes neither the
-  link nor the password, so a mail scanner that opens it first leaves it usable. Only the command
-  issues one (`AdminPasswordLinkPrintersTest`); the security log records that one was printed
-  (`password.link_printed`), never the URL. A failed command prints nothing to stdout, though one
-  that fails after the issue may already have replaced the earlier link.
-- **Using it.** One transaction locks the administrator row, deletes the link row only if it is
-  still live, writes the password, clears `password_scheme`, and ends every session and remember
-  token of the administrator (`SessionRevocation`). The browser's session is then invalidated and
-  the administrator signs in, two-factor included. Every dead link (unknown, malformed, expired,
-  used, replaced, or its administrator deleted) gets the same 404 page, without the username.
-- **A change voids it.** The panel's own change and `openpne:admin:reset-password` delete the
-  unused link in the transaction that writes the password. Every writer locks the administrator row
-  before the link row, so concurrent ones wait instead of deadlocking. The panel's change compares the
-  locked row with the hash its current-password check read, and if a link or the CLI set a password
-  in between, writes nothing and signs the administrator out. A login's rehash is one UPDATE
-  conditional on the hash the login read, so it never overwrites a password set meanwhile.
-- **Where the token is.** In the URL, so in access logs and browser history until the link is used
-  or expires; the expiry bounds that window. Not in the session: the screen runs on the admin
-  session store under `/admin*`, carries `NoStore` and `NoReferrer` ([Response
-  headers](#response-headers)), and a refused submit is answered with the form and a 422 rather
-  than a redirect, which would flash the input. The page loads no script and nothing from another
-  origin.
-- **Rate limit.** `admin-password-setup`: 5 a minute per IP, opening and submitting counted apart.
-- **Asking the state.** `openpne:admin:list --json` gives each administrator's `password_set`,
-  `two_factor`, `link_expires_at` (a live link's expiry, else null) and `created_at`, as of the
-  moment asked. Both commands write their JSON raw, past the console formatter, so a username
-  arrives unchanged.
-- **Session rows.** They are deleted in the same transaction only while the session connection is
-  the default database connection; under another session driver, `AuthenticateSession` ends a
-  session holding the old password at its next request.
-
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in
 [`AppServiceProvider`](../../app/Providers/AppServiceProvider.php) — and every
-password-accepting path (member registration, password reset and change, the
-admin panel forms, the admin CLI commands) validates through `Password::default()`.
-
-At the CLI, `openpne:admin:create` and `openpne:admin:reset-password` prompt twice, or read
-`OPENPNE_ADMIN_PASSWORD` for non-interactive provisioning; there is deliberately no `--password`
-option, which would leak the secret into shell history and the process list. An administrator
-can also choose their own through a link ([Administrator password
-links](#administrator-password-links)), whose screen validates the same way.
+password-accepting path (member registration, password reset and change) validates
+through `Password::default()`.
 
 - **Minimum 8 characters.** This meets ASVS 5.0 V6.2.1 (level 1).
   NIST SP 800-63B-4 §3.1.1.2 requires 15 characters for
@@ -598,7 +489,7 @@ links](#administrator-password-links)), whose screen validates the same way.
   (`App\Rules\NotCommonPassword`).
 - **Context words** — ASVS 5.0 6.2.4. Rejects a password that contains, case-
   insensitively, a ≥4-character subtoken of the site name, the member's name or
-  email local part, or the admin username (`App\Rules\NotContextWord`). Context
+  email local part (`App\Rules\NotContextWord`). Context
   is resolved best-effort — anything unresolvable (e.g. no schema mid-install)
   is skipped rather than blocking. Accepted trade-off: a member whose name is a
   common ≥4-character word cannot embed it in a password.
@@ -690,8 +581,7 @@ ahead of the first middleware that can abort, with `PreventRequestForgery` joine
 list as that anchor ([`bootstrap/app.php`](../../bootstrap/app.php)).
 
 A screen whose URL or form carries a secret — the login and registration
-flows, password reset, the email-change and MFA-reset landings, and the administrator password
-link — carries
+flows, password reset, and the email-change and MFA-reset landings — carries
 [`NoReferrer`](../../app/Http/Middleware/NoReferrer.php) as route middleware:
 the baseline already withholds the path cross-origin, so what `no-referrer`
 closes is the same-origin channel — the landing's own subresources and
@@ -699,11 +589,10 @@ follow-up requests, and `document.referrer`. It and `NoStore` are joined to the 
 of `PreventRequestForgery`, so they wrap the CSRF check and every route middleware: the 419, the
 guest redirect and the throttle's 429 at such a URL carry them too.
 
-The administrator password link also carries [`NoStore`](../../app/Http/Middleware/NoStore.php):
-`Cache-Control: no-store, no-transform, private`, and its URL is never recorded as the session's
-previous URL ([sessions.md](sessions.md#the-previous-url)). The registration completion screen
-(`/register/{token}`) carries `NoStore:recorded`: the same header, but its URL stays the previous
-URL, so a refused submission returns to the form, which `no-referrer` gives no other way back to;
+The registration completion screen (`/register/{token}`) also carries
+[`NoStore`](../../app/Http/Middleware/NoStore.php)`:recorded`: `Cache-Control: no-store,
+no-transform, private`, but its URL stays the session's previous URL
+([sessions.md](sessions.md#the-previous-url)), so a refused submission returns to the form, which `no-referrer` gives no other way back to;
 the token is then in the session store until the session ends.
 
 Deliberately not set:
@@ -827,7 +716,7 @@ are the sidecar's to judge; a host that shares users puts the spool on a volume 
 ## Session lifetime
 
 A signed-in member's session ends after 30 days idle or 400 days from sign-in,
-whichever comes first; an administrator's and a guest's end after
+whichever comes first, and an administrator's is a member's; a guest's ends after
 `SESSION_LIFETIME` idle (120 minutes). The mechanism and the three settings are
 in [sessions.md](sessions.md#lifetimes).
 
@@ -842,12 +731,11 @@ long-lived member session instead:
   as does a first passkey added without a TOTP factor, and a ban ends all of
   them;
 - the long lifetime exists only on the `database` session driver, the one where
-  those sessions can be ended row by row;
-- the administrator realm keeps the short lifetime.
+  those sessions can be ended row by row.
 
 ## Cookies
 
-The realm session cookies and the `XSRF-TOKEN` cookie
+The session cookie and the `XSRF-TOKEN` cookie
 carry a browser-enforced name prefix on an HTTPS site
 ([sessions.md](sessions.md#cookie-name-prefix)). Under `__Host-` — a site whose
 cookies are host-only at `/` — another host under the same parent domain cannot
