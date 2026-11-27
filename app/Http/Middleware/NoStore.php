@@ -12,9 +12,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class NoStore
 {
-    public function handle(Request $request, Closure $next): Response
+    /** @param  string  $url  `recorded` keeps the URL as the previous one, for a form a refused submission must return to */
+    public function handle(Request $request, Closure $next, string $url = 'unrecorded'): Response
     {
-        StartSession::keepUrlOut($request);
+        if ($url !== 'recorded') {
+            StartSession::keepUrlOut($request);
+        }
 
         $response = $next($request);
         $response->headers->set('Cache-Control', 'no-store, no-transform, private');

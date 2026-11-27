@@ -316,7 +316,9 @@ stylesheet's leading `@charset` survives. The inserts, the footer, a banner's cu
 ([security.md](security.md#administrator-content)); the imported HTML stays stored beside its
 Markdown version ([upgrade.md](upgrade.md#operator-html)). In Markdown mode a
 one-paragraph footer prints inside the policy links' `<p>` as OpenPNE 3 did, a longer one is a block
-after that `<p>`, and `pc_html_head` is not printed.
+after that `<p>`, and `pc_html_head` is not printed. None of these, nor a banner or gadget, is drawn
+on the registration screen of an address invited as administrator
+([administrators.md](administrators.md#the-registration-screen)).
 HTML a package draws into the shell, which the operator cannot edit, is a layout hook instead
 ([layout-hooks.md](layout-hooks.md)).
 

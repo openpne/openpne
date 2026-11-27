@@ -93,3 +93,5 @@ be used.
 3. Every `LayoutHook` case is emitted at its one named position, and every `<LayoutHook name>` in
    the React shell names a case (`LayoutHookCoverageTest`).
 4. A throwing renderer is reported and renders nothing; it never fails the page.
+5. No hook runs on the registration screen of an address invited as administrator
+   ([administrators.md](administrators.md#the-registration-screen)).

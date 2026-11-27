@@ -41,6 +41,13 @@ class RegistrationToken extends Model
         return $this->belongsTo(Member::class, 'inviter_id');
     }
 
+    /** Whether the link is still within its lifetime; whether it is still the address's current link is the caller's to check. */
+    public function isLive(): bool
+    {
+        return $this->created_at !== null
+            && $this->created_at->gt(now()->subMinutes((int) config('openpne.registration.token_ttl_minutes')));
+    }
+
     /**
      * @return Builder<RegistrationToken>
      */

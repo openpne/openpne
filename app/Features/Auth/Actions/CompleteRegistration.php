@@ -6,11 +6,15 @@ use App\Actions\Fortify\CreateNewMember;
 use App\Features\Auth\Events\MemberRegistered;
 use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\MemberCapacityReached;
+use App\Features\Auth\RegistrationLinkUnusable;
+use App\Features\Auth\RegistrationMode;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Features\Group\Actions\JoinDefaultGroups;
+use App\Models\AdminRoleInvite;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Support\Feature;
+use App\Support\SecurityLog;
 use App\Support\ViewerRelations;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -32,14 +36,31 @@ class CompleteRegistration
      * @throws ValidationException name/password/profile failed validation
      * @throws QueryException the email was claimed between check and insert, or another write failed
      * @throws MemberCapacityReached no seat left; the token is kept so the link works once one frees up
+     * @throws RegistrationLinkUnusable the link was replaced, expired or is refused by the mode since the caller read it
      */
     public function __invoke(RegistrationToken $pending, array $input): Member
     {
-        return $this->capacity->reserveMember(fn (): Member => DB::transaction(function () use ($pending, $input): Member {
-            $member = $this->create->create(['email' => $pending->email] + $input);
-            $this->autoFriendInviter($pending, $member);
+        $member = $this->capacity->reserveMember(fn (): Member => DB::transaction(function () use ($pending, $input): Member {
+            // Re-read under the lock admin:invite and every other link writer take, so the link and the invite are judged as they stand at the insert (docs/internals/administrators.md, "Inviting an administrator").
+            $link = RegistrationToken::whereKey($pending->getKey())->where('token', $pending->token)->lockForUpdate()->first();
+            if ($link === null || ! $link->isLive()) {
+                throw new RegistrationLinkUnusable(refused: false);
+            }
+
+            $invite = AdminRoleInvite::whereKey($link->email)->lockForUpdate()->first();
+            $inviteLive = $invite !== null && $invite->isLive();
+            if (! RegistrationMode::locked()->allows($link->source, $inviteLive)) {
+                throw new RegistrationLinkUnusable(refused: true);
+            }
+
+            $member = $this->create->create(['email' => $link->email] + $input);
+            if ($inviteLive) {
+                $member->forceFill(['admin_granted_at' => now(), 'admin_generation' => 1])->save();
+                $invite->delete();
+            }
+            $this->autoFriendInviter($link, $member);
             ($this->joinDefaultGroups)($member);
-            $pending->delete();
+            $link->delete();
 
             // Fires after this transaction commits (ShouldDispatchAfterCommit), so the queued
             // registration-complete mail never references a not-yet-durable member row.
@@ -47,6 +68,12 @@ class CompleteRegistration
 
             return $member;
         }));
+
+        if ($member->isAdministrator()) {
+            SecurityLog::event('admin.granted', ['member_id' => (int) $member->getKey(), 'actor' => 'cli', 'via' => 'invite']);
+        }
+
+        return $member;
     }
 
     /**

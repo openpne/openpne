@@ -114,6 +114,9 @@ class Member extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'last_login_at' => 'datetime',
             'avatar_color' => AvatarColor::class,
+            'admin_granted_at' => 'datetime',
+            'admin_generation' => 'integer',
+            'withdrawal_started_at' => 'datetime',
         ];
     }
 
@@ -381,5 +384,11 @@ class Member extends Authenticatable implements PasskeyUser
     public function isAiAccount(): bool
     {
         return $this->owner_member_id !== null;
+    }
+
+    /** Written only under this row's lock (docs/internals/administrators.md, "Locks"). */
+    public function isAdministrator(): bool
+    {
+        return $this->admin_granted_at !== null;
     }
 }

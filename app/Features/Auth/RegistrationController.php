@@ -11,10 +11,12 @@ use App\Features\Profile\Queries\RegistrationFields;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterEmailRequest;
+use App\Models\AdminRoleInvite;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\MemberCapacityRequestNotification;
 use App\Rules\NewEmailAddress;
+use App\Support\ShellInsertions;
 use App\Support\SiteLocale;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
@@ -129,6 +131,10 @@ class RegistrationController extends Controller
             $member = $complete($pending, $request->all());
         } catch (MemberCapacityReached) {
             return redirect()->route('register.form', ['token' => $token]);
+        } catch (RegistrationLinkUnusable $e) {
+            abort_if($e->refused || RegistrationMode::current() === RegistrationMode::Closed, 404);
+
+            return $this->expired();
         } catch (ValidationException $e) {
             if ($e->validator->errors()->has('email')) {
                 return $this->addressClaimed($pending);
@@ -152,21 +158,28 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Closed 404s before the lookup, so a known and an unknown token are indistinguishable while the
-     * route is off. The live token is then checked against its own origin, so an admin invite completes
-     * even in admin_only mode while a self or member link does not.
+     * The live token is checked against its own origin, so an admin invite completes even in admin_only
+     * mode while a self or member link does not. Closed answers every token it refuses, known, unknown
+     * or expired, with the same 404, so the route tells nothing while it is off.
      */
     private function resolveForCompletion(string $token): RegistrationToken|RedirectResponse
     {
-        abort_if(RegistrationMode::current() === RegistrationMode::Closed, 404);
+        $closed = RegistrationMode::current() === RegistrationMode::Closed;
 
         // Expired rather than the claimed-address answer, whose "already registered" would be untrue for such a row.
         $pending = $this->pending($token);
         if ($pending === null || ! NewEmailAddress::accepts($pending->email)) {
+            abort_if($closed, 404);
+
             return $this->expired();
         }
 
-        abort_unless(RegistrationMode::current()->allows($pending->source), 404);
+        $inviteLive = AdminRoleInvite::liveFor($pending->email);
+        if ($inviteLive) {
+            ShellInsertions::withhold();
+        }
+
+        abort_unless(RegistrationMode::current()->allows($pending->source, $inviteLive), 404);
 
         return $pending;
     }
@@ -177,13 +190,11 @@ class RegistrationController extends Controller
         // Exact lookup on the stored hash via the unique index — never a prefix/LIKE match, so a
         // partial token cannot probe the space.
         $row = RegistrationToken::where('token', hash('sha256', $rawToken))->first();
-        if ($row === null || $row->created_at === null) {
+        if ($row === null) {
             return null;
         }
 
-        $ttl = (int) config('openpne.registration.token_ttl_minutes');
-
-        return $row->created_at->gt(now()->subMinutes($ttl)) ? $row : null;
+        return $row->isLive() ? $row : null;
     }
 
     private function expired(): RedirectResponse

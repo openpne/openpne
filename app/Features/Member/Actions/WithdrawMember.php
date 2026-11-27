@@ -41,6 +41,8 @@ class WithdrawMember
             throw new RuntimeException('The primary member cannot be withdrawn.');
         }
 
+        $this->markWithdrawing($member);
+
         // Read before the row is gone: the event, dispatched after the delete, carries only these scalars.
         $memberId = (int) $member->getKey();
         $name = (string) $member->name;
@@ -85,6 +87,30 @@ class WithdrawMember
         ]);
 
         MemberWithdrawn::dispatch($memberId, $name, $email, $locale, $wasAiAccount);
+    }
+
+    /**
+     * Committed before the first purge, so an administrator loses no content, and kept if the
+     * withdrawal stops part-way, so GrantAdministrator refuses the half-purged member.
+     *
+     * @throws AdministratorRoleHeld
+     */
+    private function markWithdrawing(Member $member): void
+    {
+        DB::transaction(function () use ($member): void {
+            $locked = Member::whereKey($member->getKey())->lockForUpdate()->first();
+            if ($locked === null) {
+                return; // already gone; the drain below finds nothing
+            }
+
+            if ($locked->isAdministrator()) {
+                throw new AdministratorRoleHeld;
+            }
+
+            if ($locked->withdrawal_started_at === null) {
+                $locked->forceFill(['withdrawal_started_at' => now()])->save();
+            }
+        }, attempts: 3);
     }
 
     /**

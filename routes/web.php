@@ -245,8 +245,8 @@ Route::middleware(['guest', NoReferrer::class, EnsureOpenRegistration::class])->
 Route::post('/register/capacity-request', [RegistrationController::class, 'capacityRequest'])
     ->middleware([NoReferrer::class, 'throttle:capacity-request'])->name('register.capacity-request');
 // The completion half sits outside EnsureOpenRegistration because an invited member must finish in
-// invite or admin_only mode; the controller re-checks the mode against the token's origin.
-Route::middleware(['guest', NoReferrer::class])->controller(RegistrationController::class)->group(function () {
+// any mode their link allows; the controller re-checks the mode against the token's origin.
+Route::middleware(['guest', NoReferrer::class, NoStore::class.':recorded'])->controller(RegistrationController::class)->group(function () {
     Route::get('/register/{token}', 'form')->where('token', '[A-Za-z0-9]{40}')
         ->middleware('throttle:register-complete')->name('register.form');
     Route::post('/register/{token}', 'register')->where('token', '[A-Za-z0-9]{40}')

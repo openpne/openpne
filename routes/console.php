@@ -2,10 +2,7 @@
 
 use App\Console\ScheduleOffset;
 use App\Features\Home\Actions\PublishHomeIssue;
-use App\Models\AdminPasswordSetupToken;
-use App\Models\EmailChangeRequest;
-use App\Models\MfaResetRequest;
-use App\Models\RegistrationToken;
+use App\Support\Housekeeping;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -29,8 +26,8 @@ try {
 }
 
 if ($offset !== null) {
-    // Sweep expired pending tokens (see each model's prunable()): registration, email-change, MFA-reset and administrator password links.
-    Schedule::command('model:prune', ['--model' => [RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class, AdminPasswordSetupToken::class]])->cron(ScheduleOffset::daily('00:00', $offset));
+    // Sweep expired pending tokens and invites (see each model's prunable()).
+    Schedule::command('model:prune', ['--model' => Housekeeping::PRUNED])->cron(ScheduleOffset::daily('00:00', $offset));
 
     // Spent OAuth codes, tokens and never-used clients; also run by TickHousekeeping.
     Schedule::command('openpne:prune-oauth')->cron(ScheduleOffset::daily('00:00', $offset));

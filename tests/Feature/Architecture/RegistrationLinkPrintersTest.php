@@ -11,18 +11,19 @@ use Tests\TestCase;
 
 /**
  * A registration link handed to its caller creates a member whose address nobody proved, which only
- * the operator's command may do (docs/internals/security.md, "Registration links").
+ * the operator's commands may do (docs/internals/security.md, "Registration links").
  */
 class RegistrationLinkPrintersTest extends TestCase
 {
     private const ALLOWED = [
+        'app/Console/Commands/InviteAdministratorCommand.php',
         'app/Console/Commands/InviteMemberCommand.php',
         'app/Features/Auth/Actions/IssueRegistrationToken.php',
     ];
 
     private const NAME = 'unmailedLink';
 
-    public function test_only_the_operator_command_takes_a_link_instead_of_a_mail(): void
+    public function test_only_the_operator_commands_take_a_link_instead_of_a_mail(): void
     {
         $offending = [];
         foreach (['app', 'routes'] as $dir) {
@@ -39,7 +40,7 @@ class RegistrationLinkPrintersTest extends TestCase
             }
         }
 
-        $this->assertSame([], $offending, self::NAME.'() named outside the operator command');
+        $this->assertSame([], $offending, self::NAME.'() named outside the operator commands');
         foreach (self::ALLOWED as $path) {
             $this->assertStringContainsString(self::NAME, (string) file_get_contents(base_path($path)), $path.' no longer names what this test pins');
         }

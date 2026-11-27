@@ -42,10 +42,10 @@ class MemberResource extends Resource
         return __('Member list');
     }
 
-    /** The primary member (id 1) is the initial administrator account and is never withdrawable. */
+    /** Neither the primary member (id 1) nor an administrator is withdrawable, nor can have login rejected. */
     public static function canDelete(Model $record): bool
     {
-        return (int) $record->getKey() !== 1;
+        return (int) $record->getKey() !== 1 && ! ($record instanceof Member && $record->isAdministrator());
     }
 
     public static function table(Table $table): Table

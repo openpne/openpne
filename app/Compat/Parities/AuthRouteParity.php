@@ -74,7 +74,7 @@ class AuthRouteParity extends RouteParity
             ],
             // member/registerInput → resources/views/auth/register-complete.blade.php
             'registerInput' => [
-                new ScreenElement('mail address (read-only)', L::Two, S::Ported, 'member/registerInput', 'authoritative from the token, not an input'),
+                new ScreenElement('mail address (read-only)', L::Two, S::Ported, 'member/registerInput', 'authoritative from the token: a read-only field the form never submits'),
                 new ScreenElement('nickname input', L::One, S::Ported, 'sfWidgetFormInputText nickname', 'field name not preserved (name, Level 3)'),
                 new ScreenElement('password + confirmation inputs', L::One, S::Ported, 'sfWidgetFormInputPassword password / password_confirm'),
                 new ScreenElement('registration profile fields', L::One, S::Ported, 'op_include_form member is_disp_regist'),

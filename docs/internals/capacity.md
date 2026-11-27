@@ -49,6 +49,7 @@ counted under their own cap, so a site offering AI accounts does not spend its m
 | member invitation (`/invite`) | the same box, under the invite page's own id | `IssueRegistrationToken` |
 | administrator invitation (admin "Member invites") | a notice in place of the form; a batch that fills the site part-way reports how many were not sent | `IssueRegistrationToken` |
 | operator invitation (`openpne:member:invite`) | the command fails and names `openpne:capacity` | `IssueRegistrationToken` |
+| administrator invite (`openpne:admin:invite`) | the command fails and names `openpne:capacity`; no invite is written | `IssueRegistrationToken` |
 | link completion (`/register/{token}`) | the paused box instead of the account form; the token is kept, so the link works again once a seat frees | `CompleteRegistration` |
 
 The entry screens check before rendering so a visitor sees the notice rather than a form that will
@@ -57,8 +58,8 @@ writes a registration token.
 
 A live link's own seat is not counted against a re-mail to the same address, so the gate never
 refuses one; the entry screens, which pause for every visitor, are what keep a full site from
-re-mailing. `openpne:member:invite` has no such screen, so on a full site it still prints a new link
-for an address that holds one. The link still completes while the members alone are below the cap.
+re-mailing. `openpne:member:invite` and `openpne:admin:invite` have no such screen, so on a full site
+they still print a new link for an address that holds one. The link still completes while the members alone are below the cap.
 
 A link is a seat whoever asked for it: on an open site, addresses that never complete hold seats
 until their links expire, bounded only by the `register-email` limiter and the TTL. That is

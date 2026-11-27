@@ -28,6 +28,10 @@ final class LayoutHooks
     /** Raw HTML; a renderer that throws is reported and contributes nothing, so the Classic 4xx page still renders. */
     public function render(LayoutHook $hook): string
     {
+        if (ShellInsertions::withheld()) {
+            return '';
+        }
+
         $html = '';
         foreach ($this->renderers[$hook->value] ?? [] as $render) {
             try {

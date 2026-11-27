@@ -9,6 +9,7 @@ use App\Features\AiAccount\MemberTokens;
 use App\Features\AiAccount\Serializers\AiAccountSerializer;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\GroupTalk\Queries\MutedTalkRooms;
+use App\Features\Member\Actions\AdministratorRoleHeld;
 use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
@@ -259,7 +260,11 @@ class MemberConfigController extends Controller
 
         Auth::guard('member')->logout();
 
-        $withdraw($member);
+        try {
+            $withdraw($member);
+        } catch (AdministratorRoleHeld) {
+            abort(403); // granted after the request was authorized
+        }
 
         // `sessions.user_id` carries no FK to members, so the delete leaves its session rows behind.
         SessionRevocation::purgeMemberSessions((int) $member->getKey());

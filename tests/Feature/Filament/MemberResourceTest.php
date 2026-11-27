@@ -22,11 +22,12 @@ use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Livewire\Livewire;
 use RuntimeException;
 use Tests\Concerns\CapturesSecurityLog;
+use Tests\Concerns\GrantsAdministratorMidway;
 use Tests\TestCase;
 
 class MemberResourceTest extends TestCase
 {
-    use CapturesSecurityLog;
+    use CapturesSecurityLog, GrantsAdministratorMidway;
     use RefreshDatabase;
 
     private AdminUser $admin;
@@ -143,6 +144,37 @@ class MemberResourceTest extends TestCase
         Livewire::test(ListMembers::class)
             ->assertActionHidden(TestAction::make('delete')->table($primary))
             ->assertActionHidden(TestAction::make('ban')->table($primary));
+    }
+
+    public function test_an_administrator_is_offered_neither_withdrawal_nor_ban(): void
+    {
+        $admin = Member::factory()->create();
+        $admin->forceFill(['admin_granted_at' => now(), 'admin_generation' => 1])->save();
+        $member = Member::factory()->create();
+
+        $this->assertFalse(MemberResource::canDelete($admin));
+        Livewire::test(ListMembers::class)
+            ->assertActionHidden(TestAction::make('delete')->table($admin))
+            ->assertActionHidden(TestAction::make('ban')->table($admin))
+            ->assertActionVisible(TestAction::make('delete')->table($member))
+            ->assertActionVisible(TestAction::make('ban')->table($member));
+    }
+
+    public function test_a_grant_landing_after_the_row_was_drawn_refuses_withdrawal_and_ban_with_a_notice(): void
+    {
+        $member = Member::factory()->create();
+        $list = Livewire::test(ListMembers::class);
+
+        $this->grantBeforeTheLockedRead($member);
+        $list->callAction(TestAction::make('delete')->table($member))
+            ->assertNotified(__('An administrator cannot be withdrawn'));
+        $this->assertModelExists($member);
+
+        $member->forceFill(['admin_granted_at' => null])->save();
+        $this->grantBeforeTheLockedRead($member);
+        $list->callAction(TestAction::make('ban')->table($member))
+            ->assertNotified(__('An administrator cannot have login rejected'));
+        $this->assertFalse((bool) $member->fresh()->is_login_rejected);
     }
 
     public function test_send_mfa_reset_is_hidden_without_a_live_factor(): void

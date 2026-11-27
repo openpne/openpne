@@ -16,7 +16,7 @@ class TextCollationTest extends TestCase
 
     private const IDENTIFIERS = [
         'members.email', 'registration_tokens.email', 'password_reset_tokens.email',
-        'email_change_requests.new_email', 'admin_users.username',
+        'email_change_requests.new_email', 'admin_users.username', 'admin_role_invites.email',
     ];
 
     /**
@@ -25,6 +25,7 @@ class TextCollationTest extends TestCase
      */
     private const UNIQUE_TEXT = [
         'admin_password_setup_tokens(token)' => 'machine',
+        'admin_role_invites(email)' => 'identifier',
         'admin_sessions(id)' => 'machine',
         'admin_users(username)' => 'identifier',
         'banners(name)' => 'constant',
@@ -94,7 +95,7 @@ class TextCollationTest extends TestCase
 
         $identifiers = array_keys(array_filter(self::UNIQUE_TEXT, fn (string $kind) => $kind === 'identifier'));
         $this->assertSame(
-            ['admin_users(username)', 'members(email)', 'password_reset_tokens(email)', 'registration_tokens(email)'],
+            ['admin_role_invites(email)', 'admin_users(username)', 'members(email)', 'password_reset_tokens(email)', 'registration_tokens(email)'],
             $identifiers,
         );
     }
