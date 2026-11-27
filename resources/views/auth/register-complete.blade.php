@@ -3,16 +3,19 @@
 @section('title', __('Register'))
 
 @section('content')
-    {{-- The token-gated account form. The address is fixed by the mailed token (shown, not
-         editable); name + password + the registration profile fields are entered here. --}}
+    {{-- The token-gated account form. The address is fixed by the mailed token (read-only, and the
+         username a password manager saves the new password under); name + password + the
+         registration profile fields are entered here. --}}
     <x-classic.parts id="RegisterForm" name="form" :title="__('Register')">
         <form method="POST" action="{{ route('register.complete', ['token' => $token]) }}">
             @csrf
             <x-classic.required-notice />
             <table>
                 <tr>
-                    <th>{{ __('Mail Address') }}</th>
-                    <td>{{ $email }}</td>
+                    <th><label for="register_email">{{ __('Mail Address') }}</label></th>
+                    <td>
+                        <input type="email" class="input_text" id="register_email" value="{{ $email }}" autocomplete="username" readonly>
+                    </td>
                 </tr>
                 <tr>
                     <th><label for="register_name">{{ __('%nickname%') }} <x-classic.required-mark /></label></th>

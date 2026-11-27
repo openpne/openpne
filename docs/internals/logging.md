@@ -38,7 +38,8 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `login.code_failed` | seam: `LoginCodeController::store` — a submitted code that was refused (wrong, over the attempt cap, or the challenge voided since); an expired challenge logs nothing, and the code itself is never logged | `guard`, `member_id` |
 | `mfa.failed` | listener `LogTwoFactorFailure` (member TOTP) | `guard`, `member_id` |
 | `member.registered` | listener `LogMemberRegistered` (`MemberRegistered`) | `guard`, `member_id` |
-| `registration.link_printed` | seam: `InviteMemberCommand` — a mailed link logs nothing | `email`, `via` (cli) |
+| `registration.link_printed` | seam: `InviteMemberCommand`, `InviteAdministratorCommand` — a mailed link logs nothing | `email`, `via` (cli), `role` (admin) and `expires_at` for an administrator invite |
+| `admin.granted` / `admin.revoked` | seam: `GrantAdministrator` / `RevokeAdministrator` (actions), and `CompleteRegistration` for a registration through a live administrator invite | `member_id`, `actor` (cli, or the acting administrator's member id), `via` (invite) |
 | `password.link_printed` | seam: `AdminPasswordLinkCommand` — an administrator password link was printed; never the URL | `guard`, `username`, `via` (cli), `expires_at` |
 | `mfa.enabled` | seam: `MemberMfaController::confirm`, `AdminAppAuthentication` set-up | `guard`, `member_id`\|`username` |
 | `mfa.disabled` | seam: `MemberMfaController::disable` (live), `AdminAppAuthentication` disable, `DisableMemberMfaCommand`, `DisableAdminMfaCommand` | `guard`, `member_id`\|`username`, `via` (cli) |

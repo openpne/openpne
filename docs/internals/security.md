@@ -488,6 +488,7 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
 | a member, at `/invite` | `member_invite` | `open`, `invite` |
 | an administrator, in the admin panel | `admin_invite` | anything but `closed` |
 | an operator, with `php artisan openpne:member:invite` | `admin_invite` | anything but `closed` |
+| an operator, with `php artisan openpne:admin:invite` | `admin_role_invite` | any, `closed` included, while the address's administrator invite is live ([administrators.md](administrators.md#inviting-an-administrator)) |
 
 - **The mode is asked twice**, when the link is issued and again when it is opened
   (`RegistrationMode::allows`), so a link outlives neither a tightened mode nor its lifetime
@@ -496,9 +497,9 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
   whoever issued either, and completing the registration deletes it in the transaction that
   creates the member.
 - **Why the address is believed.** The first three links are mailed, so opening one shows the
-  registrant reads that mailbox. The operator's link is printed instead: nothing shows the address
+  registrant reads that mailbox. The operator's links are printed instead: nothing shows the address
   receives mail, and the operator who ran the command vouches for it, as they do for an
-  administrator they create. Only that command may print one (`RegistrationLinkPrintersTest`): an
+  administrator they create. Only those two commands may print one (`RegistrationLinkPrintersTest`): an
   administrator handed the link could register any address as a member. A member carries no mark of
   which link it used (`email_verified_at` is unused on every path), and the security log says only
   that a link was printed for an address (`registration.link_printed`, [logging.md](logging.md)),
@@ -697,7 +698,10 @@ the throttle's 429 — ships the baseline.
 
 The administrator password link also carries [`NoStore`](../../app/Http/Middleware/NoStore.php):
 `Cache-Control: no-store, no-transform, private`, and its URL is never recorded as the session's
-previous URL ([sessions.md](sessions.md#the-previous-url)).
+previous URL ([sessions.md](sessions.md#the-previous-url)). The registration completion screen
+(`/register/{token}`) carries `NoStore:recorded`: the same header, but its URL stays the previous
+URL, so a refused submission returns to the form, which `no-referrer` gives no other way back to;
+the token is then in the session store until the session ends.
 
 Deliberately not set:
 

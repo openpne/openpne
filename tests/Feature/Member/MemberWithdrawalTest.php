@@ -69,6 +69,21 @@ class MemberWithdrawalTest extends TestCase
         $this->assertModelExists($primary);
     }
 
+    public function test_an_administrator_cannot_withdraw(): void
+    {
+        Member::factory()->create(['id' => 1]);
+        $admin = Member::factory()->create();
+        $admin->forceFill(['admin_granted_at' => now(), 'admin_generation' => 1])->save();
+
+        $this->actingAs($admin)->post('/member/config/withdrawal', [
+            'current_password' => 'password',
+            'confirm' => '1',
+        ])->assertForbidden();
+
+        $this->assertModelExists($admin);
+        $this->assertAuthenticatedAs($admin, 'member');
+    }
+
     public function test_the_leave_url_redirects_to_the_withdrawal_category(): void
     {
         $member = Member::factory()->create();

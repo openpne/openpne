@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Members\Tables;
 
+use App\Features\Member\Actions\AdministratorRoleHeld;
 use App\Features\Member\Actions\AllowMemberLogin;
 use App\Features\Member\Actions\MfaResetUnavailable;
 use App\Features\Member\Actions\RejectMemberLogin;
@@ -78,7 +79,11 @@ class MembersTable
                     ->label(__('Withdraw this member'))
                     ->hidden(fn (Member $record): bool => ! MemberResource::canDelete($record))
                     ->using(function (Member $record): bool {
-                        app(WithdrawMember::class)($record);
+                        try {
+                            app(WithdrawMember::class)($record);
+                        } catch (AdministratorRoleHeld) {
+                            return false; // granted since the row was drawn
+                        }
 
                         return true;
                     }),
@@ -103,7 +108,16 @@ class MembersTable
                 }
             })
             ->action(function (Member $record): void {
-                app(RejectMemberLogin::class)($record);
+                try {
+                    app(RejectMemberLogin::class)($record);
+                } catch (AdministratorRoleHeld) {
+                    Notification::make()
+                        ->title(__('An administrator cannot have login rejected'))
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
                 Notification::make()
                     ->title(__('The member can no longer log in'))
                     ->success()

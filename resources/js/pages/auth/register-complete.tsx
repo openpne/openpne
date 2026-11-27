@@ -52,9 +52,11 @@ export default function RegisterComplete() {
                     need a boundary of their own, and it ties each caption-row visibility control to the
                     field it sits above (not the one below it). */}
                 <div className="divide-y divide-border">
-                    <div className="space-y-1 pb-5 last:pb-0">
-                        <span className="block text-sm text-foreground">{t('Mail Address')}</span>
-                        <p className="text-sm text-muted-foreground">{email}</p>
+                    <div className="pb-5 last:pb-0">
+                        {/* Read-only, and the username a password manager saves the new password under. */}
+                        <Field label={t('Mail Address')} htmlFor="email">
+                            <Input id="email" type="email" autoComplete="username" readOnly value={email} />
+                        </Field>
                     </div>
 
                     <div className="py-5 last:pb-0">

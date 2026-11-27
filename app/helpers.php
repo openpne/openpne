@@ -16,6 +16,7 @@ use App\Support\LayoutHooks;
 use App\Support\LinkTarget;
 use App\Support\OperatorContent;
 use App\Support\OperatorLink;
+use App\Support\ShellInsertions;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\Schema;
 
@@ -95,6 +96,10 @@ if (! function_exists('classic_html_slot')) {
      */
     function classic_html_slot(string $slot): string
     {
+        if (ShellInsertions::withheld()) {
+            return '';
+        }
+
         $key = match ($slot) {
             'head' => SnsSettingKey::PcHtmlHead,
             'top2' => SnsSettingKey::PcHtmlTop2,
@@ -130,6 +135,10 @@ if (! function_exists('classic_custom_css_url')) {
      */
     function classic_custom_css_url(): ?string
     {
+        if (ShellInsertions::withheld()) {
+            return null;
+        }
+
         return app(SnsSettingService::class)->hasCustomCss() ? route('design.customizing_css') : null;
     }
 }
@@ -196,6 +205,10 @@ if (! function_exists('classic_footer_html')) {
      */
     function classic_footer_html(bool $secure): string
     {
+        if (ShellInsertions::withheld()) {
+            return '';
+        }
+
         $settings = app(SnsSettingService::class);
 
         return $secure
@@ -227,7 +240,7 @@ if (! function_exists('classic_banner')) {
     {
         // The shell renders before the schema exists on a pre-migrate boot (and on the error page
         // a broken database is a plausible reason to be there at all); no banners, not a crash.
-        if (! Schema::hasTable('banners')) {
+        if (ShellInsertions::withheld() || ! Schema::hasTable('banners')) {
             return '';
         }
 

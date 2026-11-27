@@ -10,6 +10,8 @@ use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Rules\NewEmailAddress;
+use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -44,21 +46,24 @@ class IssueRegistrationToken
 
     /**
      * The link itself instead of a mail carrying it: nothing shows the address can receive mail, so
-     * the caller vouches for it, which only the operator's command may (docs/internals/security.md,
+     * the caller vouches for it, which only the operator's commands may (docs/internals/security.md,
      * "Registration links").
+     *
+     * @param  (Closure(CarbonInterface): void)|null  $alongside  written in the transaction that writes the link, given the link's creation time, so neither is kept without the other
      */
-    public function unmailedLink(string $email, RegistrationTokenSource $source): IssueResult|string
+    public function unmailedLink(string $email, RegistrationTokenSource $source, ?Closure $alongside = null): IssueResult|string
     {
-        [$result, $raw] = $this->issue(Str::lower(Str::trim($email)), $source, null);
+        [$result, $raw] = $this->issue(Str::lower(Str::trim($email)), $source, null, $alongside);
 
         return $raw === null ? $result : MailUrlMapper::resolve('member/register?token='.$raw);
     }
 
     /**
      * @param  string  $email  already trimmed and lowercased, and one NewEmailAddress accepts (anything else throws)
+     * @param  (Closure(CarbonInterface): void)|null  $alongside
      * @return array{IssueResult, ?string} the raw token only when one was issued
      */
-    private function issue(string $email, RegistrationTokenSource $source, ?Member $inviter): array
+    private function issue(string $email, RegistrationTokenSource $source, ?Member $inviter, ?Closure $alongside = null): array
     {
         if (! NewEmailAddress::accepts($email)) {
             throw new InvalidArgumentException('A registration link is only issued for an address NewEmailAddress accepts.');
@@ -75,17 +80,24 @@ class IssueRegistrationToken
         // 500, and source/inviter_id are overwritten on every issuance so a self re-request never
         // inherits a prior invite's provenance.
         $raw = Str::random(40);
-        $write = static fn () => RegistrationToken::upsert(
-            [[
-                'email' => $email,
-                'token' => hash('sha256', $raw),
-                'source' => $source->value,
-                'inviter_id' => $inviter?->getKey(),
-                'created_at' => now(),
-            ]],
-            ['email'],
-            ['token', 'source', 'inviter_id', 'created_at'],
-        );
+        $write = static function () use ($email, $raw, $source, $inviter, $alongside): void {
+            $createdAt = now();
+            RegistrationToken::upsert(
+                [[
+                    'email' => $email,
+                    'token' => hash('sha256', $raw),
+                    'source' => $source->value,
+                    'inviter_id' => $inviter?->getKey(),
+                    'created_at' => $createdAt,
+                ]],
+                ['email'],
+                ['token', 'source', 'inviter_id', 'created_at'],
+            );
+
+            if ($alongside !== null) {
+                $alongside($createdAt);
+            }
+        };
 
         try {
             $this->capacity->reserveToken($email, $write);

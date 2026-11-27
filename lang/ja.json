@@ -270,6 +270,7 @@
     "Always sent": "常時送信",
     "Amber": "アンバー",
     "An admin transfer to this member is already pending.": "このメンバーへの管理者交代は既に依頼中です。",
+    "An administrator cannot have login rejected": "管理者はログインを拒否できません",
     "An event can have at most :max attachments.": "イベントの添付ファイルは最大 :max 件です。",
     "An hour ago": "1時間前",
     "An internal path starting with / (e.g. /member/search) or an http(s):// URL. In member/%community% items, :id is replaced with the member or %community% id.": "/ で始まる内部パス(例: /member/search)、または http(s):// の URL。メンバー/%community%のナビでは :id がメンバー ID または %community% ID に置き換わります。",

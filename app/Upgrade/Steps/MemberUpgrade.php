@@ -39,12 +39,11 @@ class MemberUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // No OpenPNE 3 source: password_scheme is set by PasswordWrap, the two_factor_* columns are
-        // MFA state a member sets up after the move, and avatar_color and owner_member_id are
-        // OpenPNE 4-native choices (every migrated member is a person).
+        // No OpenPNE 3 source: PasswordWrap sets password_scheme, a member sets up MFA after the move,
+        // and the rest are OpenPNE 4-native (no migrated member is an AI account, an administrator or mid-withdrawal).
         return ['email_verified_at', 'password_scheme', 'remember_token',
             'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
-            'avatar_color', 'owner_member_id'];
+            'avatar_color', 'owner_member_id', 'admin_granted_at', 'admin_generation', 'withdrawal_started_at'];
     }
 
     /** NULL is a member who never saved the choice; the page offered only these two tiers (docs/internals/member-profile.md, "Profile page audience"). */

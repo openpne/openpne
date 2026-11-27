@@ -15,10 +15,10 @@ the same comparisons ([MariaDB](#mariadb)).
 
 ## Identifiers
 
-Five columns hold what a person signs in with or is reached at, and compare without case through
+Six columns hold what a person signs in with or is reached at, and compare without case through
 [`IdentifierCollation`](../../app/Support/Database/IdentifierCollation.php): `members.email`,
-`registration_tokens.email`, `password_reset_tokens.email`, `email_change_requests.new_email` and
-`admin_users.username`. MySQL uses `utf8mb4_0900_as_ci`, which also treats as one hiragana and
+`registration_tokens.email`, `password_reset_tokens.email`, `email_change_requests.new_email`,
+`admin_role_invites.email` and `admin_users.username`. MySQL uses `utf8mb4_0900_as_ci`, which also treats as one hiragana and
 katakana, small and full-size kana, full- and half-width forms, compatibility forms (`①` is `1`) and
 the kinds of space inside a value, tells accents and voiced marks apart (`é` is not `e`, `が` is not
 `か`) and is NO PAD; MariaDB uses `utf8mb4_uca1400_nopad_as_ci`, which does the same but follows UCA

@@ -145,6 +145,20 @@ class MemberResourceTest extends TestCase
             ->assertActionHidden(TestAction::make('ban')->table($primary));
     }
 
+    public function test_an_administrator_is_offered_neither_withdrawal_nor_ban(): void
+    {
+        $admin = Member::factory()->create();
+        $admin->forceFill(['admin_granted_at' => now(), 'admin_generation' => 1])->save();
+        $member = Member::factory()->create();
+
+        $this->assertFalse(MemberResource::canDelete($admin));
+        Livewire::test(ListMembers::class)
+            ->assertActionHidden(TestAction::make('delete')->table($admin))
+            ->assertActionHidden(TestAction::make('ban')->table($admin))
+            ->assertActionVisible(TestAction::make('delete')->table($member))
+            ->assertActionVisible(TestAction::make('ban')->table($member));
+    }
+
     public function test_send_mfa_reset_is_hidden_without_a_live_factor(): void
     {
         // No factor at all, and a pending (unconfirmed) set-up: neither is a live factor, so there is
