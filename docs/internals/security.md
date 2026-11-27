@@ -493,7 +493,9 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
 - **The mode is asked twice**, when the link is issued and again when it is opened
   (`RegistrationMode::allows`), so a link outlives neither a tightened mode nor its lifetime
   (`OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES`, 24 hours by default). An `admin_role_invite` link asks
-  no mode; it asks, when opened and completed, whether the address's invite is live.
+  no mode; it asks, when opened and completed, whether the address's invite is live. Completion
+  reads the mode from its row under a shared lock, in the transaction that creates the member, so a
+  mode change commits wholly before or after the registration.
 - **One link per address, used once.** A newer link for an address replaces the older one,
   whoever issued either, and completing the registration deletes it in the transaction that
   creates the member.
@@ -693,9 +695,9 @@ link — carries
 [`NoReferrer`](../../app/Http/Middleware/NoReferrer.php) as route middleware:
 the baseline already withholds the path cross-origin, so what `no-referrer`
 closes is the same-origin channel — the landing's own subresources and
-follow-up requests, and `document.referrer`. It covers the responses the route
-returns, an abort inside it included; a response from middleware that runs ahead of it — the 419,
-the throttle's 429 — ships the baseline.
+follow-up requests, and `document.referrer`. It and `NoStore` are joined to the priority list ahead
+of `PreventRequestForgery`, so they wrap the CSRF check and every route middleware: the 419, the
+guest redirect and the throttle's 429 at such a URL carry them too.
 
 The administrator password link also carries [`NoStore`](../../app/Http/Middleware/NoStore.php):
 `Cache-Control: no-store, no-transform, private`, and its URL is never recorded as the session's

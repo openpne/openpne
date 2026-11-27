@@ -4,6 +4,7 @@ namespace Tests\Feature\Member;
 
 use App\Features\Auth\Actions\CompleteRegistration;
 use App\Features\Auth\Actions\IssueRegistrationToken;
+use App\Features\Auth\Actions\IssueResult;
 use App\Features\Auth\RegistrationLinkUnusable;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Features\Member\Actions\AdministratorRoleHeld;
@@ -309,6 +310,34 @@ class AdministratorRoleLockTest extends TestCase
         $this->assertDatabaseMissing('members', ['email' => 'admin@example.com']);
         $this->assertDatabaseCount('admin_role_invites', 1);
         $this->assertNotSame($pending->token, RegistrationToken::where('email', 'admin@example.com')->sole()->token);
+    }
+
+    public function test_a_registration_committed_just_before_a_new_invite_leaves_neither_a_link_nor_an_invite(): void
+    {
+        $pending = $this->adminLink('admin@example.com');
+
+        $outcomes = $this->before(self::CAPACITY, fn (): string => $this->raced(fn () => app(CompleteRegistration::class)($pending, $this->form())));
+        $result = app(IssueRegistrationToken::class)->unmailedLink('admin@example.com', RegistrationTokenSource::AdminRoleInvite, function (CarbonInterface $createdAt): void {
+            AdminRoleInvite::upsert([['email' => 'admin@example.com', 'expires_at' => $createdAt->copy()->addDay()->getTimestamp(), 'created_at' => $createdAt]], ['email'], ['expires_at', 'created_at']);
+        });
+
+        $this->assertSame(['done'], $outcomes->getArrayCopy());
+        $this->assertSame(IssueResult::AlreadyMember, $result);
+        $this->assertTrue(Member::where('email', 'admin@example.com')->sole()->isAdministrator());
+        $this->assertDatabaseCount('registration_tokens', 0);
+        $this->assertDatabaseCount('admin_role_invites', 0);
+    }
+
+    public function test_a_mode_change_arriving_while_the_registration_holds_the_mode_waits(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
+        $pending = $this->adminLink('admin@example.com');
+
+        $outcomes = $this->after('/from `sns_settings` where `key` = \?.*lock in share mode/is', fn (): string => $this->raced(fn () => DB::table('sns_settings')->where('key', SnsSettingKey::RegistrationMode->value)->update(['value' => 'closed'])));
+        $member = app(CompleteRegistration::class)($pending, $this->form());
+
+        $this->assertWaitedOn('/update `sns_settings`/i', $outcomes);
+        $this->assertTrue($member->fresh()->isAdministrator());
     }
 
     public function test_an_invite_expiring_before_the_registration_locks_grants_nothing(): void

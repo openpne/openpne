@@ -221,6 +221,18 @@ class AdministratorInviteRegistrationTest extends TestCase
         $this->assertDatabaseCount('registration_tokens', 1);
     }
 
+    /** The settings page clears the shared cache once it commits, but this request already holds the old mode in memory. */
+    public function test_a_mode_closed_after_the_link_was_resolved_stops_the_registration(): void
+    {
+        $this->mode('invite');
+        $raw = $this->link(RegistrationTokenSource::MemberInvite);
+        $this->between(fn () => DB::table('sns_settings')->where('key', SnsSettingKey::RegistrationMode->value)->update(['value' => 'closed']));
+
+        $this->post("/register/{$raw}", $this->form())->assertNotFound();
+
+        $this->assertNull($this->registered());
+    }
+
     public function test_a_link_replaced_before_the_insert_creates_no_one(): void
     {
         $this->mode('invite');

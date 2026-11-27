@@ -16,6 +16,7 @@ use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\MemberCapacityRequestNotification;
 use App\Rules\NewEmailAddress;
+use App\Support\ShellInsertions;
 use App\Support\SiteLocale;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
@@ -173,7 +174,12 @@ class RegistrationController extends Controller
             return $this->expired();
         }
 
-        abort_unless(RegistrationMode::current()->allows($pending->source, AdminRoleInvite::liveFor($pending->email)), 404);
+        $inviteLive = AdminRoleInvite::liveFor($pending->email);
+        if ($inviteLive) {
+            ShellInsertions::withhold();
+        }
+
+        abort_unless(RegistrationMode::current()->allows($pending->source, $inviteLive), 404);
 
         return $pending;
     }

@@ -6,6 +6,8 @@ use App\Files\ImageProcessorUnavailableException;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\NoReferrer;
+use App\Http\Middleware\NoStore;
 use App\Http\Middleware\PreventRequestForgery as AppPreventRequestForgery;
 use App\Http\Middleware\RemoveCookiesFromPublicFileResponses;
 use App\Http\Middleware\SecurityHeaders;
@@ -90,6 +92,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->appendToPriorityList(ShareErrorsFromSession::class, PreventRequestForgery::class);
         $middleware->prependToPriorityList(PreventRequestForgery::class, SetLocale::class);
+        // Ahead of the CSRF check and every route middleware, so a 419, a guest redirect or a 429 at a secret URL carries these headers too.
+        $middleware->prependToPriorityList(PreventRequestForgery::class, NoReferrer::class);
+        $middleware->prependToPriorityList(PreventRequestForgery::class, NoStore::class);
 
         // The feature gate runs after auth, so a guest never learns the toggle state, and before
         // ThrottleRequests and SubstituteBindings, so a disabled unit consumes no limiter and reaches no

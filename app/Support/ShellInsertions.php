@@ -29,6 +29,12 @@ final class ShellInsertions
         return $request->attributes->get(self::ATTRIBUTE) === true;
     }
 
+    /** Once the controller has found the address's invite live, no later reading in the request draws the insertions back. */
+    public static function withhold(): void
+    {
+        request()->attributes->set(self::ATTRIBUTE, true);
+    }
+
     private static function atAdministratorInviteLink(Request $request): bool
     {
         $token = $request->routeIs('register.form', 'register.complete') ? $request->route('token') : null;

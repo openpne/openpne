@@ -7,14 +7,17 @@ use App\Http\Middleware\PreventRequestForgery;
 use App\Models\AdminRoleInvite;
 use App\Models\Banner;
 use App\Models\Gadget;
+use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Services\GadgetService;
 use App\Support\LayoutHook;
 use App\Support\LayoutHooks;
 use App\Support\SnsSettingKey;
 use Illuminate\Contracts\Encryption\Encrypter;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -125,6 +128,24 @@ class AdministratorRegistrationScreenTest extends TestCase
         $response->assertInertia(fn ($page) => $page->component('auth/register-complete')->where('layoutHooks', []));
     }
 
+    public function test_an_invite_spent_after_the_controller_found_it_still_draws_none(): void
+    {
+        $this->invite('admin@example.com');
+        $raw = $this->link('admin@example.com', RegistrationTokenSource::AdminRoleInvite);
+        $spent = false;
+        DB::listen(function (QueryExecuted $query) use (&$spent): void {
+            if (! $spent && str_contains($query->sql, 'admin_role_invites')) {
+                $spent = true;
+                AdminRoleInvite::query()->delete();
+            }
+        });
+
+        $html = $this->get("/register/{$raw}")->assertOk()->getContent();
+
+        $this->assertTrue($spent);
+        $this->assertSame([], $this->foreignHosts($html));
+    }
+
     public function test_the_paused_screen_of_an_invited_address_draws_none_either(): void
     {
         $this->setSnsSetting(SnsSettingKey::MemberCapacity, 0);
@@ -161,8 +182,17 @@ class AdministratorRegistrationScreenTest extends TestCase
         $this->assertContains(self::MARK, $this->foreignHosts($plain));
 
         $this->invite('admin@example.com');
-        $expired = $this->post('/register/'.$this->link('admin@example.com', RegistrationTokenSource::AdminRoleInvite), $form)->assertStatus(419)->getContent();
+        $expired = $this->post('/register/'.$this->link('admin@example.com', RegistrationTokenSource::AdminRoleInvite), $form)
+            ->assertStatus(419)->assertHeader('Referrer-Policy', 'no-referrer')->assertHeader('Cache-Control', 'no-store, no-transform, private')->getContent();
         $this->assertSame([], $this->foreignHosts($expired));
         $this->assertStringNotContainsString(self::MARK, $expired);
+    }
+
+    public function test_a_signed_in_visitor_sent_away_from_the_link_gets_its_headers(): void
+    {
+        $this->actingAs(Member::factory()->create(), 'member');
+
+        $this->get('/register/'.$this->link('admin@example.com', RegistrationTokenSource::AdminRoleInvite))
+            ->assertRedirect()->assertHeader('Referrer-Policy', 'no-referrer')->assertHeader('Cache-Control', 'no-store, no-transform, private');
     }
 }

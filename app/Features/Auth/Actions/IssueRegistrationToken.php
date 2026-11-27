@@ -2,6 +2,7 @@
 
 namespace App\Features\Auth\Actions;
 
+use App\Features\Auth\AddressRegisteredMeanwhile;
 use App\Features\Auth\MemberCapacity;
 use App\Features\Auth\MemberCapacityReached;
 use App\Features\Auth\RegistrationTokenSource;
@@ -94,6 +95,11 @@ class IssueRegistrationToken
                 ['token', 'source', 'inviter_id', 'created_at'],
             );
 
+            // A registration holds this link's row until it commits, so the address is asked again once the upsert has the row; that member's address is this lowercased one, as the app wrote it.
+            if (Member::where('email', $email)->sharedLock()->exists()) {
+                throw new AddressRegisteredMeanwhile;
+            }
+
             if ($alongside !== null) {
                 $alongside($createdAt);
             }
@@ -103,6 +109,8 @@ class IssueRegistrationToken
             $this->capacity->reserveToken($email, $write);
         } catch (MemberCapacityReached) {
             return [IssueResult::CapacityFull, null];
+        } catch (AddressRegisteredMeanwhile) {
+            return [IssueResult::AlreadyMember, null];
         }
 
         return [IssueResult::Issued, $raw];

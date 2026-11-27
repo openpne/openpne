@@ -4,6 +4,7 @@ namespace App\Features\Auth;
 
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Who may create an account, mirroring OpenPNE 3's invite_mode. OpenPNE 3 defaulted to invite-only
@@ -25,6 +26,14 @@ enum RegistrationMode: string
     {
         return self::tryFrom((string) app(SnsSettingService::class)->get(SnsSettingKey::RegistrationMode))
             ?? self::Invite;
+    }
+
+    /** The stored mode past every cache, its row share-locked to the end of the caller's transaction so a mode change commits wholly before or after it. */
+    public static function locked(): self
+    {
+        $stored = DB::table('sns_settings')->where('key', SnsSettingKey::RegistrationMode->value)->sharedLock()->value('value');
+
+        return self::tryFrom((string) SnsSettingKey::RegistrationMode->decode($stored === null ? null : (string) $stored)) ?? self::Invite;
     }
 
     /** Admin-facing label (translation key) for the current mode; matches the settings page options. */

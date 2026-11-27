@@ -58,7 +58,8 @@ are serialized instead.
 `openpne:admin:invite <email> [--json]` prints a registration link and writes an administrator
 invite for the address, in the transaction that writes the link and under the capacity lock
 ([capacity.md](capacity.md), "Reservation"). It refuses an address a member already has (grant that
-member the role instead) and a site at capacity. Stdout carries only the URL, or one line of JSON
+member the role instead), asked again in the transaction once the link's row is held, so a
+registration that commits first is refused too, and a site at capacity. Stdout carries only the URL, or one line of JSON
 `{"email","url","expires_at"}`; every failure and the note go to stderr.
 
 - **The invite belongs to the address, not to the link.** `admin_role_invites` holds one row per
@@ -74,7 +75,8 @@ member the role instead) and a site at capacity. Stdout carries only the URL, or
   `closed` nothing else completes: a link of another source to an invited address answers 404 like
   any other ([security.md](security.md), "Registration links").
 - **Completing.** The transaction that creates the member re-reads, under lock, the link (still the
-  address's current one and within its lifetime) and the invite, and checks the mode against both.
+  address's current one and within its lifetime) and the invite, and checks against both the mode,
+  read from its row under a shared lock so a mode change commits wholly before or after.
   A link replaced meanwhile creates no one. An invite that lapsed meanwhile refuses the invite's own
   link in every mode, and any link in `closed`; another link elsewhere registers a member without the
   role. A live invite is deleted as the role is set.
@@ -88,7 +90,7 @@ put in the shells: the Classic HTML slots, footer, banners, side-banner gadgets 
 every layout hook on both surfaces ([layout-hooks.md](layout-hooks.md)). That is the completion
 screen, the paused screen that stands in for it on a full site, and an error page at the same URL:
 `ShellInsertions` decides from the route and its token, so the 419 of a form left open past the
-session holds too. That 419 is answered before the route's middleware, so it carries neither
-`no-referrer` nor `no-store`. Every completion screen shows the address in a read-only field with
+session holds too, and once the controller has found the invite live it keeps that finding, so an
+invite spent while the page is drawn does not bring the insertions back. Every completion screen shows the address in a read-only field with
 `autocomplete="username"`, so a password manager files the new password under it, and the route
 carries `no-store` ([security.md](security.md), "Response headers").

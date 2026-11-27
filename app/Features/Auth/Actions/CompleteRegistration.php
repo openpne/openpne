@@ -49,7 +49,7 @@ class CompleteRegistration
 
             $invite = AdminRoleInvite::whereKey($link->email)->lockForUpdate()->first();
             $inviteLive = $invite !== null && $invite->isLive();
-            if (! RegistrationMode::current()->allows($link->source, $inviteLive)) {
+            if (! RegistrationMode::locked()->allows($link->source, $inviteLive)) {
                 throw new RegistrationLinkUnusable(refused: true);
             }
 
