@@ -247,8 +247,11 @@ class AdministratorRoleLockTest extends TestCase
         $this->assertSame('closed', DB::table('sns_settings')->where('key', SnsSettingKey::RegistrationMode->value)->value('value'));
     }
 
-    /** InnoDB's answer to a write meeting another writer on the same gaps, which a single connection cannot provoke. */
-    /** @return ArrayObject<int, string> the statement it failed, once it has */
+    /**
+     * InnoDB's answer to a write meeting another writer on the same gaps, which a single connection cannot provoke.
+     *
+     * @return ArrayObject<int, string> the statement it failed, once it has
+     */
     private function deadlockOnce(string $pattern = self::ADMINISTRATORS): ArrayObject
     {
         $thrown = new ArrayObject;
