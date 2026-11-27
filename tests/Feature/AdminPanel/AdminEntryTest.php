@@ -7,18 +7,27 @@ namespace Tests\Feature\AdminPanel;
 use App\Auth\AdminEntry;
 use App\Auth\Reauth\PasskeyProof;
 use App\Auth\Reauth\ReauthPurpose;
-use App\Filament\Widgets\OverviewStatsWidget;
 use App\Models\Member;
+use App\Notifications\Auth\LoginCodeNotification;
+use Filament\Facades\Filament;
+use Filament\Widgets\Concerns\CanPoll;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
-use Livewire\Livewire;
+use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
+use Laravel\Passkeys\Actions\StorePasskey;
+use Laravel\Passkeys\Support\WebAuthn;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PragmaRX\Google2FA\Google2FA;
+use ReflectionMethod;
 use Tests\Concerns\CapturesSecurityLog;
+use Tests\Support\FakeAuthenticator;
 use Tests\TestCase;
+use Webauthn\PublicKeyCredential;
 
 class AdminEntryTest extends TestCase
 {
@@ -67,9 +76,10 @@ class AdminEntryTest extends TestCase
     public function test_the_entry_lasts_the_session_lifetime_from_the_last_panel_request(): void
     {
         config(['session.lifetime' => 120]);
+        $this->freezeSecond();
         $this->actingAsAdmin();
 
-        $this->travel(119)->minutes();
+        $this->travel(120)->minutes();
         $this->get('/admin')->assertOk();
         $this->travel(119)->minutes();
         $this->get('/admin')->assertOk();
@@ -106,6 +116,8 @@ class AdminEntryTest extends TestCase
             'an uploaded file' => ['GET', '/admin/file/x/raw', ['Sec-Fetch-Dest' => 'image']],
             'the panel language' => ['POST', '/admin/locale/session', self::FETCH],
             'the site icon' => ['POST', '/admin/site-icon/raster', self::FETCH],
+            // Such a browser's upload XHR would otherwise pass for a page visit.
+            'an upload without Fetch Metadata' => ['POST', 'upload', []],
             'an export download' => ['GET', '/filament/exports/1/download', self::FETCH],
         ];
     }
@@ -186,7 +198,8 @@ class AdminEntryTest extends TestCase
 
         $this->get(route('member.admin_entry'))->assertRedirect(url('/admin'));
 
-        $this->withSession(['url.intended' => 'https://elsewhere.example/admin/members']);
+        $host = (string) parse_url(url('/'), PHP_URL_HOST);
+        $this->withSession(['url.intended' => str_replace($host, str_repeat('x', strlen($host)), url('/admin/members'))]);
         $this->get(route('member.admin_entry'))->assertRedirect(url('/admin'));
     }
 
@@ -194,13 +207,14 @@ class AdminEntryTest extends TestCase
     {
         $this->captureSecurityLog();
         $admin = $this->signedIn();
-        $before = session()->getId();
-
         $this->post(route('member.admin_entry.store'), ['current_password' => 'wrong'])->assertSessionHasErrors('current_password');
         $this->assertNull(session(AdminEntry::SESSION_KEY));
+        [$before, $token] = [session()->getId(), session()->token()];
 
-        $this->post(route('member.admin_entry.store'), ['current_password' => 'password'])->assertRedirect(url('/admin'));
+        $this->withCookie(config('session.cookie'), $before)
+            ->post(route('member.admin_entry.store'), ['current_password' => 'password'])->assertRedirect(url('/admin'));
         $this->assertNotSame($before, session()->getId());
+        $this->assertSame($token, session()->token());
         $context = $this->assertOneSecurityEvent('admin.entered');
         $this->assertSame([(string) $admin->getKey(), 'password'], [$context['member_id'], $context['via']]);
     }
@@ -251,6 +265,16 @@ class AdminEntryTest extends TestCase
         $this->get('/admin')->assertOk();
     }
 
+    public function test_a_login_headed_for_the_panel_marks_nothing_for_a_member(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->get('/admin')->assertRedirect(route('login'));
+        $this->post('/login', ['email' => $member->email, 'password' => 'password']);
+
+        $this->assertNull(session(AdminEntry::SESSION_KEY));
+    }
+
     public function test_a_login_headed_elsewhere_leaves_the_entry_asking(): void
     {
         $admin = $this->createAdmin();
@@ -260,10 +284,64 @@ class AdminEntryTest extends TestCase
         $this->get('/admin')->assertRedirect(route('member.admin_entry'));
     }
 
-    public function test_the_dashboard_figures_do_not_poll(): void
+    public function test_a_login_through_the_mailed_code_headed_for_the_panel_opens_its_entry(): void
     {
-        $this->actingAsAdmin();
+        Notification::fake();
+        $admin = $this->createAdmin();
+        $this->registeredPasskey($admin);
 
-        Livewire::test(OverviewStatsWidget::class)->assertDontSeeHtml('wire:poll');
+        $this->get('/admin')->assertRedirect(route('login'));
+        $this->post('/login', ['email' => $admin->email, 'password' => 'password'])->assertRedirect('/login/code');
+        $this->assertNull(session(AdminEntry::SESSION_KEY));
+
+        $code = null;
+        Notification::assertSentOnDemand(LoginCodeNotification::class, function (LoginCodeNotification $n) use (&$code): bool {
+            $code = $n->code;
+
+            return true;
+        });
+        $this->post('/login/code', ['code' => $code])->assertRedirect(url('/admin'));
+
+        $this->get('/admin')->assertOk();
+    }
+
+    public function test_a_passkey_login_headed_for_the_panel_opens_its_entry(): void
+    {
+        $admin = $this->createAdmin();
+        $authenticator = $this->registeredPasskey($admin);
+
+        $this->get('/admin')->assertRedirect(route('login'));
+        $options = $this->getJson('/passkeys/login/options')->assertOk()->json('options');
+        $this->postJson('/passkeys/login', ['credential' => $authenticator->assert($options)])
+            ->assertOk()->assertJsonPath('redirect', url('/admin'));
+
+        $this->get('/admin')->assertOk();
+    }
+
+    public function test_nothing_in_the_panel_polls(): void
+    {
+        $widgets = Filament::getPanel('admin')->getWidgets();
+        $this->assertNotEmpty($widgets);
+        foreach ($widgets as $widget) {
+            if (in_array(CanPoll::class, class_uses_recursive($widget), true)) {
+                $this->assertNull((new ReflectionMethod($widget, 'getPollingInterval'))->invoke(app($widget)), $widget);
+            }
+        }
+
+        foreach ([app_path(), resource_path('views')] as $root) {
+            foreach (File::allFiles($root) as $file) {
+                $this->assertDoesNotMatchRegularExpression('/->poll\(|wire:poll/', $file->getContents(), $file->getRelativePathname());
+            }
+        }
+    }
+
+    private function registeredPasskey(Member $member): FakeAuthenticator
+    {
+        $authenticator = FakeAuthenticator::forApp();
+        $options = app(GenerateRegistrationOptions::class)($member);
+        $credential = WebAuthn::fromJson(json_encode($authenticator->attest(WebAuthn::toBrowserArray($options))), PublicKeyCredential::class);
+        app(StorePasskey::class)($member, 'phone', $credential, $options);
+
+        return $authenticator;
     }
 }

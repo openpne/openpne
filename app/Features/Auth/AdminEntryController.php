@@ -34,7 +34,6 @@ class AdminEntryController extends Controller
             return view('auth.admin-entry');
         }
 
-        // A plain form, not an Inertia visit: the answer is a panel page, which loads in full.
         return Inertia::render('auth/admin-entry', ['csrfToken' => csrf_token()]);
     }
 
@@ -44,7 +43,8 @@ class AdminEntryController extends Controller
         assert($member instanceof Member);
 
         AdminEntry::stamp($request->session(), $member);
-        $request->session()->regenerate(true);
+        // migrate, not regenerate: the CSRF token stays, so the member's other open tabs still submit.
+        $request->session()->migrate(true);
 
         SecurityLog::event('admin.entered', [
             'member_id' => $member->getKey(),

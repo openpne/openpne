@@ -51,16 +51,15 @@ final class EnsureAdministrator
     }
 
     /**
-     * Only a page visit or a Livewire update is redirected, since Livewire follows a redirect with the
-     * whole window; Livewire answers a refused upload with an update
-     * (docs/internals/administrators.md, "The panel's entry").
+     * Only a GET page visit or a Livewire update is redirected, since Livewire follows a redirect with
+     * the whole window and answers a refused upload with an update (docs/internals/administrators.md, "The panel's entry").
      */
     private function toEntry(Request $request): Response
     {
-        $visit = StartSession::isPageNavigation($request);
+        $visit = $request->isMethod('GET') && StartSession::isPageNavigation($request);
         abort_unless($visit || $request->hasHeader('X-Livewire'), 403);
 
-        $back = $visit && $request->isMethod('GET') ? $request->fullUrl() : $request->session()->previousUrl();
+        $back = $visit ? $request->fullUrl() : $request->session()->previousUrl();
         redirect()->setIntendedUrl(is_string($back) && AdminRealm::matchesUrl($back) ? $back : Filament::getPanel('admin')->getUrl());
 
         return redirect()->route('member.admin_entry');

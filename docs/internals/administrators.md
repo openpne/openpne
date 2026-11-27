@@ -44,8 +44,8 @@ redirects to `/admin`.
   ([i18n.md](i18n.md)): it never writes `members.locale`, and the member pages' toggle never
   writes it. The panel and its Livewire requests follow it.
 - **The dashboard** reminds an administrator without a confirmed TOTP factor to add one in the
-  member settings, and suggests a passkey. Its figures do not refresh by themselves, so a dashboard
-  left open does not keep [the panel's entry](#the-panels-entry) open.
+  member settings, and suggests a passkey. No panel widget polls, so a dashboard left open does not
+  keep [the panel's entry](#the-panels-entry) open.
 - **Registering through an administrator invite** lands on the panel, whatever URL the visitor
   asked for before.
 
@@ -59,15 +59,16 @@ request it lets through starts the period again.
 - **A proof stamps it.** The entry screen (`/member/admin-entry`, Classic and Modern) asks for a
   member re-authentication proof under the purpose `admin-entry` ([security.md](security.md),
   "Member re-authentication"): the password with the TOTP factor, or a passkey. A proof regenerates
-  the session id. A login stamps it too when `url.intended` is on the admin realm, as for a guest sent
+  the session id and keeps the CSRF token, so the member's other open tabs still submit. A login stamps it too when `url.intended` is on the admin realm, as for a guest sent
   from the panel to the login and for a registration through an administrator invite, which sets it
   before logging in; any other login does not.
 - **Bound to what it was proven against**: the member, the role generation and the password hash.
   A revoke followed by a grant, or a new password, voids it.
-- **A lapsed mark** sends a page visit or a Livewire update to the entry screen, which returns to
-  the page visited or else to the last panel page; Livewire follows the redirect with the whole
-  window. Any other request (an image, an upload, a background fetch) gets 403; a refused Livewire
-  upload reports through an update, which then moves the window. What a form held is lost, as when the
+- **A lapsed mark** sends a GET page visit or a Livewire update to the entry screen; Livewire
+  follows the redirect with the whole window. The entry returns to the page visited, or else to the
+  last page the session opened when that is on the admin realm, or else to the panel's front. Any
+  other request (an image, an upload, a background fetch) gets 403; a refused Livewire upload reports
+  through an update, which then moves the window. What a form held is lost, as when the
   panel's own session used to expire.
 - `/admin/logout` is the one admin-realm route the check skips, as the gate does.
 - Each stamp logs `admin.entered` ([logging.md](logging.md)).

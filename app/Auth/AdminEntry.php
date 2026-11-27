@@ -8,11 +8,7 @@ use App\Models\Member;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * The session's mark that the administrator proved who they are on the way into the admin panel
- * (docs/internals/administrators.md, "The panel's entry"). It stands only for the member, role
- * generation and password it was stamped with.
- */
+/** See docs/internals/administrators.md, "The panel's entry". */
 final class AdminEntry
 {
     public const SESSION_KEY = 'admin_entry';
@@ -38,7 +34,6 @@ final class AdminEntry
             && now()->getTimestamp() - $mark['at'] <= (int) config('session.lifetime') * 60;
     }
 
-    /** holds(), and then the idle period starts again. */
     public static function admit(Session $session, Member $member): bool
     {
         if (! self::holds($session, $member)) {
