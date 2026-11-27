@@ -27,6 +27,8 @@ class OverviewStatsWidget extends StatsOverviewWidget
 {
     protected ?string $heading = null;
 
+    protected ?string $pollingInterval = null;
+
     protected static ?int $sort = 1;
 
     protected function getStats(): array

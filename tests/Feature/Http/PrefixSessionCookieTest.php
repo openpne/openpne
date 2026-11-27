@@ -166,7 +166,7 @@ class PrefixSessionCookieTest extends TestCase
 
     /** The session row and cookie are written as 4.0.0-alpha.1 wrote a member's, not by this version's login. */
     #[DataProvider('releasedCookiePrefixes')]
-    public function test_a_member_session_from_the_release_before_the_switch_opens_both_realms(string $prefix, ?string $domain): void
+    public function test_a_member_session_from_the_release_before_the_switch_is_signed_in_on_both_realms(string $prefix, ?string $domain): void
     {
         config(['session.driver' => 'database', 'session.secure' => true, 'session.domain' => $domain]);
         $admin = Member::factory()->administrator()->create();
@@ -185,9 +185,12 @@ class PrefixSessionCookieTest extends TestCase
         ]);
         $cookie = $prefix.config('session.cookie');
 
-        foreach (['/dashboard', '/admin', '/admin/members'] as $path) {
+        $this->freshRequestState();
+        $this->withCookie($cookie, $sid)->get('/dashboard')->assertOk();
+        // Signed in on the admin realm too, which then asks for its own entry.
+        foreach (['/admin', '/admin/members'] as $path) {
             $this->freshRequestState();
-            $this->withCookie($cookie, $sid)->get($path)->assertOk();
+            $this->withCookie($cookie, $sid)->get($path)->assertRedirect(route('member.admin_entry'));
         }
     }
 

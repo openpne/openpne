@@ -56,7 +56,7 @@ class ClassicOnlyCoverageTest extends TestCase
         'timeline.index', 'timeline.new',
         'friend.list', 'friend.manage', 'friend.requests', 'friend.link.show',
         'block.list', 'block.add.show',
-        'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
+        'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit', 'member.admin_entry',
         'group.search', 'group.list_mine', 'group.edit',
         'group.topics.recent', 'group.events.recent',
         'message.index', 'message.index_compat', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
@@ -165,6 +165,11 @@ class ClassicOnlyCoverageTest extends TestCase
         ] as $uri) {
             self::assertClassic($this->actingAs($viewer)->get($uri));
         }
+    }
+
+    public function test_the_admin_entry_renders_classic(): void
+    {
+        self::assertClassic($this->actingAs(Member::factory()->administrator()->create())->get('/member/admin-entry'));
     }
 
     /** The classification guard covers only parameterless routes, so representative parameterized ones are asserted here. */

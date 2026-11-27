@@ -3,6 +3,7 @@
 use App\Auth\PassportKeys;
 use App\Captcha\Captcha;
 use App\Features\AiAccount\AiAccountController;
+use App\Features\Auth\AdminEntryController;
 use App\Features\Auth\LoginCodeController;
 use App\Features\Auth\PasskeyLoginController;
 use App\Features\Auth\RegistrationController;
@@ -129,7 +130,7 @@ Route::post('/admin/locale/session', function (Request $request) {
 })->name('locale.switch.session');
 
 // Under /admin so EnsureAdministrator gates it.
-Route::post('/admin/site-icon/raster', [SiteIconRasterController::class, 'store'])->middleware('auth.session')->name('admin.site_icon.raster');
+Route::post('/admin/site-icon/raster', [SiteIconRasterController::class, 'store'])->name('admin.site_icon.raster');
 
 // Public, yet auth.session: without it a session whose password hash is stale keeps a non-null
 // viewer here, and every gate downstream reads that viewer's clearance.
@@ -685,6 +686,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         });
         Route::get('/member/config/passkeys/options', 'options')->name('member.config.passkeys.options');
         Route::get('/member/config/passkeys', 'edit')->name('member.config.passkeys.edit');
+    });
+
+    // Outside /admin, so the gate that sends an administrator here does not guard it
+    // (docs/internals/administrators.md, "The panel's entry").
+    Route::controller(AdminEntryController::class)->group(function () {
+        Route::get('/member/admin-entry', 'show')->name('member.admin_entry');
+        Route::post('/member/admin-entry', 'store')->middleware('throttle:member-reauth')->name('member.admin_entry.store');
     });
 
     // Blocked per session, since two ceremonies racing would overwrite each other's challenge.

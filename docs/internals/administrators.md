@@ -15,7 +15,9 @@ login is not rejected. `EnsureAdministrator` asks it on every admin-realm reques
 stack, since panel pages do not pass the `web` group and Livewire's uploads, previews and the
 Filament export and import downloads do not pass the panel's. Before the role it runs `auth.session`,
 which signs out a session whose password has changed since it signed in, so a session the change left
-behind (no row is deleted on a session driver other than `database`) opens no admin-realm route. A guest is sent to the member login
+behind (no row is deleted on a session driver other than `database`) opens no admin-realm route; it
+is the only `auth.session` on the admin realm. After the role it asks for [the panel's
+entry](#the-panels-entry). A guest is sent to the member login
 and, once signed in, back to the URL they asked for; a member the panel refuses gets 403. The only
 admin-realm route it leaves alone is `/admin/logout`, which Filament's own check guards; an
 architecture test lists every admin-realm route and requires the gate ahead of route-model binding
@@ -42,9 +44,38 @@ redirects to `/admin`.
   ([i18n.md](i18n.md)): it never writes `members.locale`, and the member pages' toggle never
   writes it. The panel and its Livewire requests follow it.
 - **The dashboard** reminds an administrator without a confirmed TOTP factor to add one in the
-  member settings, and suggests a passkey.
+  member settings, and suggests a passkey. No panel widget polls, so a dashboard left open does not
+  keep [the panel's entry](#the-panels-entry) open.
 - **Registering through an administrator invite** lands on the panel, whatever URL the visitor
   asked for before.
+
+## The panel's entry
+
+A member session alone does not open the panel: it must also hold the entry mark
+(`App\Auth\AdminEntry`), which lasts `SESSION_LIFETIME` minutes (120 by default) from the last
+admin-realm request. A mark dated more than 60 seconds ahead of the server's clock does not hold;
+the allowance is there because every panel request rewrites the mark, and app servers behind one
+load balancer may disagree by seconds. `EnsureAdministrator` checks it after the role on every
+route it gates, and each request it lets through starts the period again.
+
+- **A proof stamps it.** The entry screen (`/member/admin-entry`, Classic and Modern) asks for a
+  member re-authentication proof under the purpose `admin-entry` ([security.md](security.md),
+  "Member re-authentication"): the password with the TOTP factor or an unused recovery code, or a
+  passkey. A proof regenerates the session id and keeps the CSRF token, so the member's other open
+  tabs still submit. A login stamps it too when `url.intended` is on the admin realm, as for a guest
+  sent from the panel to the login and for a registration through an administrator invite, which
+  sets it before logging in; any other login does not.
+- **Bound to what it was proven against**: the member, the role generation and the password hash.
+  A revoke followed by a grant, or a new password, voids it; a passkey proof given for the entry but
+  not yet spent is voided by any grant or revoke, or a new password.
+- **A lapsed mark** sends a GET page visit or a Livewire update to the entry screen; Livewire
+  follows the redirect with the whole window. The entry returns to the page visited, or else to the
+  last page the session opened when that is on the admin realm, or else to the panel's front. Any
+  other request (an image, an upload, a background fetch) gets 403; a refused Livewire upload reports
+  through an update, which then moves the window. What a form held is lost, as when the
+  panel's own session used to expire.
+- `/admin/logout` is the one admin-realm route the check skips, as the gate does.
+- Each stamp logs `admin.entered` ([logging.md](logging.md)).
 
 ## The role
 

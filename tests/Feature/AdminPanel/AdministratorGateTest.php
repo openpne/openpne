@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureAdministrator;
 use App\Http\Middleware\SetLocale;
 use App\Models\Member;
 use App\Support\AdminRealm;
+use Illuminate\Contracts\Session\Middleware\AuthenticatesSessions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
@@ -121,11 +122,12 @@ class AdministratorGateTest extends TestCase
         $this->get('/locale-probe')->assertOk()->assertContent('ja');
     }
 
-    public function test_every_admin_realm_route_runs_the_gate_before_its_bindings(): void
+    public function test_every_admin_realm_route_runs_the_gate_before_its_bindings_and_no_second_auth_session(): void
     {
         $router = $this->app['router'];
         $checked = 0;
         $ungated = [];
+        $twice = [];
 
         foreach ($router->getRoutes() as $route) {
             if (! AdminRealm::matches(Request::create('/'.ltrim((string) preg_replace('/\{[^}]+\}/', 'x', $route->uri()), '/')))
@@ -141,10 +143,17 @@ class AdministratorGateTest extends TestCase
             if ($gate === false || ($bindings !== false && $bindings < $gate)) {
                 $ungated[] = $route->uri();
             }
+            // The gate runs it already.
+            foreach ($middleware as $entry) {
+                if (is_string($entry) && is_a(explode(':', $entry)[0], AuthenticatesSessions::class, true)) {
+                    $twice[] = $route->uri();
+                }
+            }
         }
 
         $this->assertGreaterThan(40, $checked, 'the admin realm predicate matched too few routes to mean anything');
         $this->assertSame([], $ungated);
+        $this->assertSame([], $twice);
     }
 
     /** Livewire's own script and its components' styles carry no middleware at all, so no session to read. */

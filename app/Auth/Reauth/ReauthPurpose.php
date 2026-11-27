@@ -2,12 +2,14 @@
 
 namespace App\Auth\Reauth;
 
+use App\Auth\AdminEntry;
 use App\Auth\ReauthWindow;
 use App\Features\AiAccount\AiTokenReauth;
 use App\Features\Member\MfaSetupReauth;
 use App\Features\Member\PasskeyReauth;
 use App\Mcp\OAuth\ConnectionReauth;
 use App\Mcp\OAuth\ConsentReauth;
+use App\Models\Member;
 
 /**
  * One case per step-up, so a proof given for one never opens another
@@ -27,6 +29,13 @@ enum ReauthPurpose: string
     case AiToken = 'ai-token';
     case OAuthConsent = 'oauth-consent';
     case OAuthConnectionRevoke = 'oauth-connection-revoke';
+    case AdminEntry = 'admin-entry';
+
+    /** What a passkey proof for this purpose must still match when it is spent, beyond its member. */
+    public function binding(Member $member): string
+    {
+        return $this === self::AdminEntry ? AdminEntry::binding($member) : '';
+    }
 
     /** @return class-string<ReauthWindow>|null */
     public function window(): ?string

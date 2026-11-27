@@ -55,7 +55,7 @@ class StartSession extends FrameworkStartSession
             || $request->attributes->get(self::UNRECORDED) === true
             || $request->prefetch()
             || $request->isPrecognitive()
-            || ! $this->isPageNavigation($request)
+            || ! self::isPageNavigation($request)
             || ! $response instanceof Response
             || ! $this->isPage($response)) {
             return;
@@ -82,7 +82,7 @@ class StartSession extends FrameworkStartSession
         return $minutes === null ? parent::getCookieExpirationDate() : Date::instance(now()->addMinutes($minutes));
     }
 
-    private function isPageNavigation(Request $request): bool
+    public static function isPageNavigation(Request $request): bool
     {
         return match ($request->headers->get('Sec-Fetch-Dest')) {
             null => ! $request->ajax(),  // predates Fetch Metadata: the framework's rule stands
