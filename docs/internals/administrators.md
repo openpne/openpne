@@ -53,8 +53,10 @@ redirects to `/admin`.
 
 A member session alone does not open the panel: it must also hold the entry mark
 (`App\Auth\AdminEntry`), which lasts `SESSION_LIFETIME` minutes (120 by default) from the last
-admin-realm request. `EnsureAdministrator` checks it after the role on every route it gates, and each
-request it lets through starts the period again.
+admin-realm request. A mark dated more than 60 seconds ahead of the server's clock does not hold;
+the allowance is there because every panel request rewrites the mark, and app servers behind one
+load balancer may disagree by seconds. `EnsureAdministrator` checks it after the role on every
+route it gates, and each request it lets through starts the period again.
 
 - **A proof stamps it.** The entry screen (`/member/admin-entry`, Classic and Modern) asks for a
   member re-authentication proof under the purpose `admin-entry` ([security.md](security.md),
@@ -64,8 +66,8 @@ request it lets through starts the period again.
   sent from the panel to the login and for a registration through an administrator invite, which
   sets it before logging in; any other login does not.
 - **Bound to what it was proven against**: the member, the role generation and the password hash.
-  A revoke followed by a grant, or a new password, voids it, and a passkey proof given for the entry
-  but not yet spent as well.
+  A revoke followed by a grant, or a new password, voids it; a passkey proof given for the entry but
+  not yet spent is voided by any grant or revoke, or a new password.
 - **A lapsed mark** sends a GET page visit or a Livewire update to the entry screen; Livewire
   follows the redirect with the whole window. The entry returns to the page visited, or else to the
   last page the session opened when that is on the admin realm, or else to the panel's front. Any

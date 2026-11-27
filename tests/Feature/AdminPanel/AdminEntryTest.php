@@ -92,11 +92,15 @@ class AdminEntryTest extends TestCase
         $this->get('/admin')->assertRedirect(route('member.admin_entry'));
     }
 
-    public function test_a_mark_from_the_future_opens_nothing(): void
+    public function test_a_mark_from_beyond_a_clock_skew_in_the_future_opens_nothing(): void
     {
+        $this->freezeSecond();
         $this->actingAsAdmin();
 
-        $this->travel(-1)->minutes();
+        $this->travel(-60)->seconds();
+        $this->get('/admin')->assertOk();
+
+        $this->travel(-61)->seconds();
         $this->get('/admin')->assertRedirect(route('member.admin_entry'));
     }
 

@@ -13,6 +13,9 @@ final class AdminEntry
 {
     public const SESSION_KEY = 'admin_entry';
 
+    // Every panel request rewrites the mark, so app servers whose clocks disagree by seconds must not void it.
+    private const CLOCK_SKEW_SECONDS = 60;
+
     /** Call only once the member has just proven who they are. */
     public static function stamp(Session $session, Member $member): void
     {
@@ -32,7 +35,7 @@ final class AdminEntry
         return ($mark['member_id'] ?? null) === $current['member_id']
             && ($mark['generation'] ?? null) === $current['generation']
             && hash_equals($current['credential'], $mark['credential'])
-            && $age >= 0 && $age <= (int) config('session.lifetime') * 60;
+            && $age >= -self::CLOCK_SKEW_SECONDS && $age <= (int) config('session.lifetime') * 60;
     }
 
     public static function admit(Session $session, Member $member): bool
