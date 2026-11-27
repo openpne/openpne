@@ -32,7 +32,8 @@ class DashboardWidgetsTest extends TestCase
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAsAdmin();
+        // Counted as a member like any other, but older than every recent-member fixture.
+        $this->actingAsAdmin(Member::factory()->administrator()->create(['created_at' => now()->subYears(2)]));
     }
 
     public function test_dashboard_page_renders_for_admin(): void
@@ -60,7 +61,7 @@ class DashboardWidgetsTest extends TestCase
 
         Livewire::test(OverviewStatsWidget::class)
             ->assertSuccessful()
-            ->assertSeeInOrder([__('Member count'), '3', __('AI accounts'), '1', __('New members this month'), '3']);
+            ->assertSeeInOrder([__('Member count'), '4', __('AI accounts'), '1', __('New members this month'), '3']);
     }
 
     public function test_the_ai_stat_is_absent_until_the_site_has_or_offers_one(): void
@@ -81,8 +82,8 @@ class DashboardWidgetsTest extends TestCase
 
         Livewire::test(OverviewStatsWidget::class)
             ->assertSuccessful()
-            ->assertSee('3 / 10')
-            ->assertSee(__(':count left', ['count' => 6]))
+            ->assertSee('4 / 10')
+            ->assertSee(__(':count left', ['count' => 5]))
             ->assertSee(__(':count invited', ['count' => 1]));
     }
 
@@ -90,10 +91,10 @@ class DashboardWidgetsTest extends TestCase
     {
         Member::factory()->count(3)->create();
 
-        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 3);
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 4);
         Livewire::test(OverviewStatsWidget::class)->assertSee(__('At capacity'));
 
-        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 2);
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 3);
         Livewire::test(OverviewStatsWidget::class)->assertSee(__('Over capacity'));
     }
 

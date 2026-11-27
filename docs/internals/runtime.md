@@ -49,9 +49,9 @@ refreshing.
 
 `APP_TIMEZONE` (IANA name, default `UTC`) is the site's single clock. There is no
 per-member timezone: stored wall-clock time and displayed wall-clock time are the
-same value read in the same zone, on both surfaces. An administrator password
-link's expiry holds Unix seconds instead: it is an elapsed time that a
-daylight-saving change must not stretch or shrink ([security.md](security.md#administrator-password-links)).
+same value read in the same zone, on both surfaces. An administrator invite's
+expiry holds Unix seconds instead: it is an elapsed time that a daylight-saving
+change must not stretch or shrink ([administrators.md](administrators.md#inviting-an-administrator)).
 
 That makes it a **deployment-time setting, not a runtime one**. Changing it on a
 live site does not re-render existing rows into the new zone — it reinterprets
@@ -229,7 +229,7 @@ A deployment should run Laravel's scheduler — `php artisan schedule:run` every
 minute from cron (or a systemd timer). Without it the weekly prune of unreferenced
 link cards and the image each holds ([`routes/console.php`](../../routes/console.php))
 never runs, and those rows accumulate. The daily prune of expired pending tokens —
-registration, email-change, MFA-reset and administrator password links, and administrator invites a week past expiry — is registered here too but does
+registration, email-change and MFA-reset links, and administrator invites a week past expiry — is registered here too but does
 not depend on it: the first signed-in request of each site day runs the same prune
 after its response (`TickHousekeeping`, one cache lock per day), as does the sweep of
 spent OAuth codes, tokens and never-used clients (`openpne:prune-oauth`). Nor does the daily
@@ -263,7 +263,7 @@ The seeder runs once: when `navigations`, `gadgets` or `profiles` already has a 
 and says so, because rows there are an administrator's work (or an upgrade's) and reseeding would
 restore what they removed. `banners` does not count — opening the admin Banner page creates its rows.
 The seeders it calls are an implementation detail; a deployment runs `openpne:install` (or
-`db:seed --class=Database\Seeders\InstallSeeder`) and `openpne:admin:create`, not the seeders by name.
+`db:seed --class=Database\Seeders\InstallSeeder`) and `openpne:admin:invite`, not the seeders by name.
 A site being upgraded from OpenPNE 3 is not installed this way: the upgrade brings those rows from
 the source and refuses a schema that already holds them ([upgrade.md](upgrade.md#source-preflight)).
 
@@ -390,12 +390,14 @@ file its dump reads, `mysql-backup.cnf`, at 0600, with a schema-only dump throug
 ## Site setup
 
 `php artisan openpne:setup` is the questions-and-answers way in for a shared host: it writes a new
-site's `.env`, then runs `openpne:install`, `openpne:admin:create` and `openpne:member:invite`
-unchanged, waiting on `openpne:check`'s web part in between. It runs only on a terminal. Run again,
-it goes on from the first step not yet done: `openpne-data/`, `.env`, the MySQL option file,
-`APP_KEY`, an administrator, the web check. `openpne:install` runs every time, being a no-op on an
-installed site, except where an administrator exists and a migration has not run, which is a new
-version unpacked over a live site and stops the command; a failed `openpne:install` stops it too.
+site's `.env`, then runs `openpne:install` and, once `openpne:check`'s web part passes, asks for an
+address and runs `openpne:admin:invite` with it unchanged. It runs only on a terminal. Run again, it
+goes on from the first step not yet done: `openpne-data/`, `.env`, the MySQL option file, `APP_KEY`,
+the web check, the administrator's link. A database **holds a site** when `members`, or
+`admin_users` while that table remains, has a row; the link is asked for only where none does.
+`openpne:install` runs every time, being a no-op on an installed site, except where the database
+holds a site and a migration has not run, which is a new version unpacked over a live site and stops
+the command; a failed `openpne:install` stops it too.
 
 Key invariants:
 
@@ -408,10 +410,10 @@ Key invariants:
    `${`, a control character, `"` with `\` or `'`, a lone `"` right after `=`) is refused before it
    is written, and so is an `APP_URL` other than `https://` and a host with nothing after it, as the
    Modern pages link from the root of the host. The later writes are `APP_KEY` and
-   `TRUSTED_PROXIES`, each only while `.env` holds it empty and through the same file beside it, the first never over a database that holds an
-   administrator and the second typed by the operator, never taken from what the web check saw;
+   `TRUSTED_PROXIES`, each only while `.env` holds it empty and through the same file beside it, the first never over a database that holds a
+   site and the second typed by the operator, never taken from what the web check saw;
    every other key must read back unchanged. A `.env` without `APP_URL` or `DB_CONNECTION` is not
-   gone on with, and a database that holds an administrator already, a `database-<n>.sqlite` in
+   gone on with, and a database that holds a site already, a `database-<n>.sqlite` in
    `openpne-data/` included, is not given a new `.env`.
 3. **The process that wrote `.env` does not go on with it**: it runs the command again through
    `proc_open`, its environment stripped of the keys `.env` holds, and where `proc_open` is disabled
@@ -436,8 +438,8 @@ Key invariants:
    `openpne:check` names both the same way, and a sentence of either command says `php` where
    PATH's `php` is that PHP.
 5. **A failed `openpne:install` ends the run** with what it said, a migration killed midway
-   included, as what it made is in the way of the next. Only where the database holds neither a
-   member nor an administrator does it say how to start over: in a new, empty database (for SQLite an
+   included, as what it made is in the way of the next. Only where the database holds no site does
+   it say how to start over: in a new, empty database (for SQLite an
    unused file name in `openpne-data/`), the one given left as it is. It never says to remove one, as
    one given may hold another application's tables, and empties none itself.
 6. **`storage/` and `bootstrap/cache` are closed to other users only after** the web check has shown

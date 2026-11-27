@@ -91,19 +91,17 @@ class FileResourceTest extends TestCase
 
         $this->signOutAdmin();
 
-        $this->get(route('admin.file.raw', ['file' => $file->name]))->assertNotFound();
+        $this->get(route('admin.file.raw', ['file' => $file->name]))->assertRedirect(route('login'));
     }
 
     public function test_logged_in_member_cannot_fetch_file_bytes(): void
     {
-        // The security boundary is member != admin: a member authenticated on the `member`
-        // guard must not satisfy the admin-guard check, so the byte path stays admin-only.
         $file = $this->fileWithBytes();
 
         $this->signOutAdmin();
         $this->actingAs(Member::factory()->create(), 'member');
 
-        $this->get(route('admin.file.raw', ['file' => $file->name]))->assertNotFound();
+        $this->get(route('admin.file.raw', ['file' => $file->name]))->assertForbidden();
     }
 
     public function test_delete_purges_stored_bytes(): void

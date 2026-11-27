@@ -47,7 +47,6 @@ use App\Features\Timeline\TimelineController;
 use App\Features\Timeline\TimelineReactionController;
 use App\Files\AppIcon;
 use App\Http\Controllers\Admin\AdminFileController;
-use App\Http\Controllers\Admin\PasswordSetupController;
 use App\Http\Controllers\Admin\SiteIconRasterController;
 use App\Http\Controllers\AppIconController;
 use App\Http\Controllers\BannerImageController;
@@ -78,7 +77,6 @@ use App\Support\ClassicErrorPage;
 use App\Support\Feature;
 use App\Support\GuestLoginRedirect;
 use App\Support\SurfaceResolver;
-use Filament\Http\Middleware\SetUpPanel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -117,28 +115,23 @@ Route::post('/locale', function (Request $request) {
     return redirect($target);
 })->name('locale.switch');
 
-// Under /admin so it runs on the admin session store, where the panel's CSRF token validates and
-// its SetLocale:session reads.
+// A bookmark from when the panel had its own login; under /admin, so a guest is sent to the member login first.
+Route::redirect('/admin/login', '/admin')->name('admin.login.legacy');
+
+// Under /admin so EnsureAdministrator gates it; SetLocale reads it on the admin realm.
 Route::post('/admin/locale/session', function (Request $request) {
     $locale = (string) $request->input('locale');
     if (in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
-        // Never members.locale: a co-logged-in member's durable preference must not change with the
-        // panel language.
+        // Never members.locale: the panel language must not change the administrator's own choice
+        // for the member pages.
         $request->session()->put('locale', $locale);
     }
 
     return response()->noContent();
 })->name('locale.switch.session');
 
-// Under /admin for the same reason; the admin guard is checked in the action.
+// Under /admin so EnsureAdministrator gates it.
 Route::post('/admin/site-icon/raster', [SiteIconRasterController::class, 'store'])->middleware('auth.session')->name('admin.site_icon.raster');
-
-// Under /admin for the admin session store, with no token pattern so a link cut short reaches the
-// same dead-link page (docs/internals/security.md, "Administrator password links").
-Route::middleware([NoReferrer::class, NoStore::class, 'throttle:admin-password-setup', SetUpPanel::class.':admin'])->group(function () {
-    Route::get('/admin/password-setup/{token?}', [PasswordSetupController::class, 'show'])->name('admin.password_setup');
-    Route::post('/admin/password-setup/{token?}', [PasswordSetupController::class, 'store'])->name('admin.password_setup.store');
-});
 
 // Public, yet auth.session: without it a session whose password hash is stale keeps a non-null
 // viewer here, and every gate downstream reads that viewer's clearance.
@@ -305,8 +298,8 @@ Route::get('/banner/image/{file:name}', [BannerImageController::class, 'show'])-
 // No login; the controller serves only files explicitly marked public.
 Route::get('/file/public/{file:name}', [PublicFileController::class, 'show'])->name('file.public');
 
-// Gated by the admin guard inside the controller and deliberately bypassing FilePolicy: an
-// administrator may inspect any file.
+// Under /admin so EnsureAdministrator gates it, deliberately bypassing FilePolicy: an administrator may
+// inspect any file.
 Route::get('/admin/file/{file:name}/raw', [AdminFileController::class, 'show'])->name('admin.file.raw');
 
 // Login-free so a web-public page's bytes render for the guest reading it, with FilePolicy gating

@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Auth\Listeners;
 
-use App\Models\AdminUser;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\GenericUser;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -185,7 +185,7 @@ class RecordLastLoginTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        event(new Login('member', AdminUser::factory()->create(), false));
+        event(new Login('member', new GenericUser(['id' => $member->getKey()]), false));
 
         $this->assertNull($member->fresh()->last_login_at);
     }

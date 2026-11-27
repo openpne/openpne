@@ -18,6 +18,8 @@ class GroupCategoryResource extends Resource
 {
     protected static ?string $model = GroupCategory::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?int $navigationSort = 12;

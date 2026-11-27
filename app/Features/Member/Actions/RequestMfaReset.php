@@ -18,7 +18,8 @@ use Illuminate\Support\Str;
  */
 class RequestMfaReset
 {
-    public function __invoke(Member $member): void
+    /** @param  Member  $actor  the administrator acting from the admin panel */
+    public function __invoke(Member $member, Member $actor): void
     {
         // One row per member: `upsert` is atomic, so a re-send refreshes the token in place and two
         // concurrent clicks cannot race the unique index.
@@ -50,7 +51,7 @@ class RequestMfaReset
         SecurityLog::event('mfa.reset_link_sent', [
             'guard' => 'member',
             'member_id' => $member->getKey(),
-            'admin_username' => auth('admin')->user()?->username,
+            'admin_member_id' => $actor->getKey(),
         ]);
 
         // Pinned to the address as an on-demand notifiable: the notification queues, and resolving a

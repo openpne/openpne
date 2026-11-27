@@ -140,7 +140,7 @@ class MfaResetLinkTest extends TestCase
 
         $context = $this->assertOneSecurityEvent('mfa.disabled');
         $this->assertSame('reset_link', $context['via']);
-        $this->assertArrayNotHasKey('admin_username', $context);
+        $this->assertArrayNotHasKey('admin_member_id', $context);
         Notification::assertSentTo($member, MfaDisabledNotification::class);
     }
 
@@ -313,7 +313,7 @@ class MfaResetLinkTest extends TestCase
         Member::whereKey($member->getKey())->update(['two_factor_secret' => null, 'two_factor_confirmed_at' => null]);
 
         try {
-            app(RequestMfaReset::class)($member);
+            app(RequestMfaReset::class)($member, $this->createAdmin());
             $this->fail('expected a RuntimeException for a member with no live factor');
         } catch (RuntimeException) {
             // expected
@@ -331,7 +331,7 @@ class MfaResetLinkTest extends TestCase
         Member::whereKey($member->getKey())->update(['email' => null]);
 
         try {
-            app(RequestMfaReset::class)($member);
+            app(RequestMfaReset::class)($member, $this->createAdmin());
             $this->fail('expected a RuntimeException for a member with no registered address');
         } catch (RuntimeException) {
             // expected

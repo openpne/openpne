@@ -25,7 +25,7 @@ class DeclareContentLengthTest extends TestCase
     {
         Filament::setCurrentPanel('admin');
 
-        $response = $this->get('/admin/login');
+        $response = $this->actingAsAdmin()->get('/admin');
 
         $response->assertOk();
         // The injected script tag (livewire.js in debug, livewire.min.js otherwise), not Filament's own wire: markup.

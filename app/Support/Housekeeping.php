@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use App\Models\AdminPasswordSetupToken;
 use App\Models\AdminRoleInvite;
 use App\Models\EmailChangeRequest;
 use App\Models\MfaResetRequest;
@@ -18,7 +17,7 @@ use App\Models\RegistrationToken;
 class Housekeeping
 {
     /** The scheduler's daily `model:prune` sweeps the same list. */
-    public const PRUNED = [RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class, AdminPasswordSetupToken::class, AdminRoleInvite::class];
+    public const PRUNED = [RegistrationToken::class, EmailChangeRequest::class, MfaResetRequest::class, AdminRoleInvite::class];
 
     /** @return int rows pruned */
     public function run(): int

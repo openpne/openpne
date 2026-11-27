@@ -2,7 +2,6 @@
 
 namespace App\Session;
 
-use App\Support\AdminRealm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -33,9 +32,7 @@ final class MemberSessionLifetime
     /** cookieMinutes() without asking the guard, which fires Login before it holds the user. */
     public static function memberCookieMinutes(Request $request): ?int
     {
-        if (config('session.driver') !== 'database'
-            || config('session.expire_on_close')
-            || AdminRealm::matches($request)) {
+        if (config('session.driver') !== 'database' || config('session.expire_on_close')) {
             return null;
         }
 

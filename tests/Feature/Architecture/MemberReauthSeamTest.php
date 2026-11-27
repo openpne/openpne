@@ -24,7 +24,6 @@ class MemberReauthSeamTest extends TestCase
 
     private const HASH_CHECK = [
         'app/Actions/Fortify/AuthenticateMember.php',
-        'app/Auth/AdminMfaPasswordReauth.php',
         'app/Auth/PasswordScheme.php',
         'app/Auth/Reauth/VerifiesReauthProof.php',
         'app/Features/Member/Actions/ConsumeMfaReset.php',

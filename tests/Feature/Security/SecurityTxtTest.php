@@ -41,7 +41,7 @@ class SecurityTxtTest extends TestCase
 
         $this->get('/.well-known/security.txt')->assertOk();
 
-        $this->assertSame(0, DB::table(config('session.member_table'))->count());
+        $this->assertSame(0, DB::table(config('session.table'))->count());
     }
 
     public function test_the_policy_names_the_contact_the_file_gives(): void

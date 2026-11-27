@@ -42,7 +42,7 @@ class InstallCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info('OpenPNE is installed. Next: php artisan openpne:admin:create <username> creates the first administrator.');
+        $this->info('OpenPNE is installed. Next: php artisan openpne:admin:invite <email> prints the registration link for the first administrator.');
 
         return self::SUCCESS;
     }

@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Auth\LegacyEloquentUserProvider;
 use App\Auth\MemberUserProvider;
 use App\Auth\PassportGuard;
 use App\Auth\SessionGuard;
@@ -14,8 +13,8 @@ use App\Features\GroupTalk\GroupTalkNotifyDefault;
 use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
 use App\Files\FileOwners;
+use App\Http\Middleware\PrefixSessionCookie;
 use App\Http\Middleware\StartSession;
-use App\Http\Middleware\UseAdminSessionStore;
 use App\LinkCard\InternalCardResolver;
 use App\LinkCard\LinkCardSettings;
 use App\Listeners\Http\DeclareContentLength;
@@ -103,9 +102,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AuthCodeRepository::class, SingleUseAuthCodeRepository::class);
         $this->app->when(AuthorizeController::class)->needs(StatefulGuard::class)->give(fn () => Auth::guard('member'));
 
-        // Singleton so its constructor captures the member-realm session config
-        // once per process, before any request's realm pin mutates it.
-        $this->app->singleton(UseAdminSessionStore::class);
+        $this->app->singleton(PrefixSessionCookie::class);
 
         // Bound under the framework class rather than listed in the web group: every stack naming
         // that class gets ours, and the middleware priority list still matches it by name.
@@ -186,11 +183,6 @@ class AppServiceProvider extends ServiceProvider
             config(['session.secure' => true]);
         }
 
-        // The `admins` guard uses this so an administrator carried over from OpenPNE 3 — whose
-        // password the upgrade wrapped as bcrypt(md5) — can log in; the first login retires the
-        // wrapper to a plain bcrypt (see LegacyEloquentUserProvider).
-        Auth::provider('legacy-eloquent', fn ($app, array $config): LegacyEloquentUserProvider => new LegacyEloquentUserProvider($app['hash'], $config['model']));
-
         // The `members` guard and password broker use this so an AI account — a member owned by
         // another, holding no credential of its own — is not retrievable by session id, remember-me
         // cookie or credentials (see MemberUserProvider).
@@ -202,7 +194,7 @@ class AppServiceProvider extends ServiceProvider
             (string) $app['config']->get('session.table'),
             (int) $app['config']->get('session.lifetime'),
             $app,
-            $app['config']->get('session.table') === $app['config']->get('session.admin_table') ? null : MemberSessionLifetime::idleMinutes(),
+            MemberSessionLifetime::idleMinutes(),
         ));
 
         Auth::extend('session', fn ($app, string $name, array $config): SessionGuard => SessionGuard::make($app, $name, $config));

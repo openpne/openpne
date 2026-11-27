@@ -2,8 +2,7 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
-use App\Auth\AdminPasswords;
-use App\Models\AdminUser;
+use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
@@ -194,15 +193,34 @@ class UpgradeRunnerTest extends TestCase
         $this->assertTrue($runner->claimNamingEpoch());
     }
 
-    public function test_a_reset_leaves_no_setup_link_for_an_administrator_id_the_upgrade_reuses(): void
+    public function test_a_reset_leaves_no_registration_link_from_the_site_it_overwrites(): void
     {
-        // Teeth on the MySQL lane only: the reset turns foreign key checks off there, so no cascade runs.
-        app(AdminPasswords::class)->issueSetupLink(AdminUser::factory()->create(), 60);
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+        $this->assertDatabaseCount('registration_tokens', 1);
 
-        (new UpgradeRunner(new InsertSelectCompiler))->reset();
+        (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->reset();
 
-        $this->assertDatabaseCount('admin_users', 0);
-        $this->assertDatabaseCount('admin_password_setup_tokens', 0);
+        $this->assertDatabaseCount('admin_role_invites', 0);
+        $this->assertDatabaseCount('registration_tokens', 0);
+    }
+
+    public function test_a_pending_administrator_invite_refuses_a_fresh_run_and_yields_to_a_restart(): void
+    {
+        $this->artisan('openpne:admin:invite', ['email' => 'admin@example.com'])->assertSuccessful();
+        $runner = new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]);
+        $lines = [];
+        $collect = function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        };
+
+        $report = new RunReport($collect, dryRun: true);
+        $this->assertFalse($runner->run(new RunOptions(dryRun: true), report: $report));
+        $this->assertSame(RunReport::OUTCOME_PRECHECK_ERROR, $report->outcome());
+        $this->assertStringContainsString(UpgradeRunner::PENDING_ADMIN_INVITE_MESSAGE, implode("\n", $lines));
+
+        $lines = [];
+        $runner->run(new RunOptions(dryRun: true, forceRestart: true), report: new RunReport($collect, dryRun: true));
+        $this->assertStringNotContainsString(UpgradeRunner::PENDING_ADMIN_INVITE_MESSAGE, implode("\n", $lines));
     }
 
     public function test_checkpoints_without_a_marker_are_refused_as_legacy_state(): void
@@ -269,6 +287,8 @@ class UpgradeRunnerTest extends TestCase
 
         $this->assertSame(['navigations'], (new UpgradeRunner(new InsertSelectCompiler, [new NavigationUpgrade]))->installedTargetTables());
         $this->assertSame([], (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->installedTargetTables());
+        Member::factory()->create();
+        $this->assertSame(['members'], (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->installedTargetTables());
 
         // --force-restart empties the targets after the source preflight, so it must not be refused here.
         $lines = [];

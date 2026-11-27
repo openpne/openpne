@@ -53,7 +53,7 @@ class OAuthTokenSweepTest extends TestCase
         $this->grant($owner);
         $this->grant($aiAccount);
 
-        app(RejectMemberLogin::class)($owner);
+        app(RejectMemberLogin::class)($owner, $this->createAdmin());
 
         $this->assertSame(0, $this->rows($owner) + $this->rows($aiAccount));
     }

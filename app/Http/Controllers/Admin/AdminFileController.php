@@ -9,21 +9,14 @@ use App\Files\ImageSourceLimit;
 use App\Http\Controllers\Controller;
 use App\Models\File;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Gated by the `admin` guard alone, deliberately not FilePolicy: an administrator may inspect any
- * uploaded file. The guard is checked in the action so a non-admin gets a flat 404 rather than a
- * redirect to a member login.
- */
+/** Gated by the admin realm's EnsureAdministrator alone, deliberately not FilePolicy: an administrator may inspect any uploaded file. */
 class AdminFileController extends Controller
 {
     public function show(Request $request, File $file, FileStorage $storage): Response
     {
-        // 404 (not 403) for non-admins so the endpoint does not confirm a file exists.
-        abort_unless(Auth::guard('admin')->check(), 404);
         abort_unless($storage->exists($file), 404);
 
         $cache = [

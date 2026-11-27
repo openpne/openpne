@@ -16,35 +16,33 @@ class SetLocaleTest extends TestCase
     {
         $member = Member::factory()->make(['locale' => 'en']);
 
-        $this->assertSame('en', $this->resolve('member', $member, session: 'ja'));
+        $this->assertSame('en', $this->resolve('/probe', $member, session: 'ja'));
     }
 
     public function test_session_is_used_when_the_member_has_no_locale(): void
     {
         $member = Member::factory()->make(['locale' => null]);
 
-        $this->assertSame('ja', $this->resolve('member', $member, session: 'ja'));
+        $this->assertSame('ja', $this->resolve('/probe', $member, session: 'ja'));
     }
 
     public function test_an_unsupported_member_locale_is_ignored(): void
     {
         $member = Member::factory()->make(['locale' => 'fr']);
 
-        $this->assertSame('ja', $this->resolve('member', $member, session: 'ja'));
+        $this->assertSame('ja', $this->resolve('/probe', $member, session: 'ja'));
     }
 
     public function test_a_guest_falls_back_to_the_session(): void
     {
-        $this->assertSame('en', $this->resolve('member', null, session: 'en'));
+        $this->assertSame('en', $this->resolve('/probe', null, session: 'en'));
     }
 
-    public function test_session_scope_ignores_the_member_locale(): void
+    public function test_the_admin_realm_ignores_the_member_locale(): void
     {
-        // The Filament panel registers SetLocale with the `session` scope so an admin page
-        // never picks up a co-logged-in member's persisted locale.
         $member = Member::factory()->make(['locale' => 'en']);
 
-        $this->assertSame('ja', $this->resolve('session', $member, session: 'ja'));
+        $this->assertSame('ja', $this->resolve('/admin/members', $member, session: 'ja'));
     }
 
     public function test_post_locale_persists_for_an_authenticated_member(): void
@@ -66,9 +64,9 @@ class SetLocaleTest extends TestCase
     }
 
     /** Drive the middleware directly and return the locale it resolves. */
-    private function resolve(string $scope, ?Member $member, ?string $session): string
+    private function resolve(string $path, ?Member $member, ?string $session): string
     {
-        $request = Request::create('/probe');
+        $request = Request::create($path);
         $request->setUserResolver(fn (?string $guard = null) => $guard === 'member' ? $member : null);
 
         $store = app('session.store');
@@ -77,7 +75,7 @@ class SetLocaleTest extends TestCase
             $store->put('locale', $session);
         }
 
-        (new SetLocale)->handle($request, fn () => response(''), $scope);
+        (new SetLocale)->handle($request, fn () => response(''));
 
         return app()->getLocale();
     }

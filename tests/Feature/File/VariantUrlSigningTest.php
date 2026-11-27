@@ -7,10 +7,10 @@ use App\Files\ImageFastPath;
 use App\Files\ImageTransform;
 use App\Files\VariantUrlSigner;
 use App\Listeners\Auth\RotateImageCookie;
-use App\Models\AdminUser;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\GenericUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -142,7 +142,7 @@ class VariantUrlSigningTest extends TestCase
         Route::middleware('web')->get('/admin/_probe/url/{file:name}', fn (File $file): string => $file->thumbnailUrl(120, 120, square: true));
         // A request of its own, as each is outside a test: the signer reads the realm once.
         $this->app->forgetScopedInstances();
-        $admin = $this->actingAs(Member::factory()->create())->get("/admin/_probe/url/{$file->name}");
+        $admin = $this->actingAsAdmin()->get("/admin/_probe/url/{$file->name}")->assertOk();
         $this->assertStringNotContainsString('s=', (string) $admin->getContent());
     }
 
@@ -265,10 +265,10 @@ class VariantUrlSigningTest extends TestCase
         $this->assertNotNull($this->fastPath($page->getContent(), [ImageFastPath::COOKIE => $issued]));
     }
 
-    public function test_an_admin_signing_in_leaves_the_members_cookie_alone(): void
+    public function test_a_login_on_another_guard_leaves_the_members_cookie_alone(): void
     {
         request()->setLaravelSession($this->app['session.store']);
-        app(RotateImageCookie::class)->handleLogin(new Login('admin', AdminUser::factory()->create(), false));
+        app(RotateImageCookie::class)->handleLogin(new Login('api', new GenericUser(['id' => 1]), false));
 
         $this->assertFalse(Cookie::hasQueued(ImageFastPath::COOKIE));
 

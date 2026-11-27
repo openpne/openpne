@@ -2,23 +2,27 @@
 
 namespace Tests\Concerns;
 
-use App\Models\AdminUser;
+use App\Models\Member;
 
-/** The one way a test that is not about the administrator account itself becomes an administrator. */
+/**
+ * The one way a test that is not about the administrator role itself becomes an administrator. Signed
+ * in on the member guard, as the panel reads it; a Livewire::test call skips the panel's gate, which
+ * the HTTP tests pin.
+ */
 trait ActsAsAdmin
 {
-    protected function createAdmin(): AdminUser
+    protected function createAdmin(): Member
     {
-        return AdminUser::factory()->create();
+        return Member::factory()->administrator()->create();
     }
 
-    protected function actingAsAdmin(?AdminUser $admin = null): static
+    protected function actingAsAdmin(?Member $admin = null): static
     {
-        return $this->actingAs($admin ?? $this->createAdmin(), 'admin');
+        return $this->actingAs($admin ?? $this->createAdmin(), 'member');
     }
 
     protected function signOutAdmin(): void
     {
-        auth('admin')->logout();
+        auth('member')->logout();
     }
 }

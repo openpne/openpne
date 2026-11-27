@@ -66,7 +66,7 @@ class AdministratorInviteRegistrationTest extends TestCase
         $raw = $this->link(RegistrationTokenSource::AdminRoleInvite);
 
         $this->get("/register/{$raw}")->assertOk();
-        $this->post("/register/{$raw}", $this->form())->assertRedirect('/');
+        $this->post("/register/{$raw}", $this->form())->assertRedirect('/admin');
 
         $member = $this->registered();
         $this->assertTrue($member->isAdministrator());
@@ -84,7 +84,7 @@ class AdministratorInviteRegistrationTest extends TestCase
         $this->link(RegistrationTokenSource::AdminRoleInvite);
         $raw = $this->link(RegistrationTokenSource::Selfservice);
 
-        $this->post("/register/{$raw}", $this->form())->assertRedirect('/');
+        $this->post("/register/{$raw}", $this->form())->assertRedirect('/admin');
 
         $this->assertTrue($this->registered()->isAdministrator());
     }
@@ -122,7 +122,7 @@ class AdministratorInviteRegistrationTest extends TestCase
         $raw = $this->link(RegistrationTokenSource::AdminRoleInvite);
 
         $this->get("/register/{$raw}")->assertOk();
-        $this->post("/register/{$raw}", $this->form())->assertRedirect('/');
+        $this->post("/register/{$raw}", $this->form())->assertRedirect('/admin');
 
         $this->assertTrue($this->registered()->isAdministrator());
     }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Member\Actions;
 
 use App\Features\Member\Actions\RejectMemberLogin;
-use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -16,25 +15,22 @@ class RejectMemberLoginTest extends TestCase
 {
     use CapturesSecurityLog, RefreshDatabase;
 
-    private AdminUser $admin;
+    private Member $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // The admin actor supplies admin_username on the security event; the guard also proves the
-        // action never touches admin-realm sessions when it revokes a member.
-        $this->admin = $this->createAdmin();
-        $this->actingAsAdmin($this->admin);
-        $this->captureSecurityLog();
-
         // Reserve id 1 as the primary member so factory subjects below get id >= 2.
         Member::factory()->create(['id' => 1]);
+
+        $this->admin = $this->createAdmin();
+        $this->captureSecurityLog();
     }
 
     private function reject(Member $member): void
     {
-        app(RejectMemberLogin::class)($member);
+        app(RejectMemberLogin::class)($member, $this->admin);
     }
 
     public function test_sets_the_login_rejected_flag(): void
@@ -83,7 +79,7 @@ class RejectMemberLoginTest extends TestCase
 
         $context = $this->assertOneSecurityEvent('member.banned');
         $this->assertSame((string) $member->getKey(), $context['member_id']);
-        $this->assertSame($this->admin->username, $context['admin_username']);
+        $this->assertSame((string) $this->admin->getKey(), $context['admin_member_id']);
     }
 
     public function test_primary_member_cannot_have_login_rejected_and_leaves_no_side_effects(): void

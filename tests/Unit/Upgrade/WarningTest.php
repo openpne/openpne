@@ -42,7 +42,7 @@ class WarningTest extends TestCase
             ['W-UPLOAD-OWNERLESS', 'review'],
             ['W-MEMBER-EMAIL-WHITESPACE', 'review'],
             ['W-MEMBER-EMAIL-NON-ASCII', 'review'],
-            ['W-ADMIN-USERNAME-WHITESPACE', 'review'],
+            ['W-ADMIN-USER-NOT-COPIED', 'dropped'],
             ['W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS', 'review'],
             ['W-ACTIVITY-TEMPLATE-KEPT-NO-LINK', 'review'],

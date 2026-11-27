@@ -23,6 +23,14 @@ class MemberFactory extends Factory
         ];
     }
 
+    public function administrator(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'admin_granted_at' => now(),
+            'admin_generation' => 1,
+        ]);
+    }
+
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [

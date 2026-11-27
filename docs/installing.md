@@ -244,13 +244,8 @@ A MySQL server shared by many sites needs its table definition cache sized as
 ```bash
 php artisan key:generate
 php artisan openpne:install               # the schema and the initial data of a new site
-php artisan openpne:admin:create admin    # asks for the password of the first administrator
 php artisan passport:keys                 # optional: lets AI clients sign in to the MCP server
 ```
-
-For an administrator who should choose their own password, create them with
-`--without-password` and hand them the link `php artisan openpne:admin:password-link <username>`
-prints (valid for 60 minutes and one use; `--minutes` changes that).
 
 `key:generate` writes `APP_KEY` into `.env`. Sessions and everything the site encrypts depend on
 it: keep it with your backups, and do not generate it again.
@@ -465,8 +460,8 @@ believed about the address they come from. See
 
 A proxy in front can hand the web server each visitor's own address as well; the setting then stays
 empty, though `php artisan openpne:check` warns of the proxy's headers, seen on a request the server
-makes to itself. To tell, sign in from a browser off the server (the administrator of step 3 will
-do) and read the address the site recorded:
+makes to itself. To tell, sign in from a browser off the server once step 9 has made the first
+account, and read the address the site recorded:
 
 ```bash
 grep -rh --include='security-*.log' login.success storage/logs | sort | tail -n 1
@@ -619,20 +614,21 @@ there. These screens are Modern's: on a site set to `classic_only`
 one who uses Classic subscribes from Modern, and the device receives pushes whichever look they use
 afterwards.
 
-## 9. The first member
+## 9. The first administrator
 
-Sign in to the admin panel at `https://sns.example.com/admin` with the administrator from step 3.
-
-A member registers through a link. A new site takes members by invitation, so the first one comes
-from the command line, which prints the link instead of mailing it:
+A member registers through a link, and an administrator is a member holding the role. A new site
+takes members by invitation, so the first one comes from the command line, which prints the link
+instead of mailing it:
 
 ```bash
-php artisan openpne:member:invite you@example.com
+php artisan openpne:admin:invite you@example.com
 ```
 
-Open the link, choose a name and a password, and you are a member. From then on members invite
-others from the site, administrators invite from the admin panel, and who may register is a setting
-there. All of those send mail.
+Open the link and choose a name and a password: you are the site's first member and its
+administrator, and the registration lands on the admin panel at `https://sns.example.com/admin`.
+From then on members invite others from the site, administrators invite from the admin panel, and
+who may register is a setting there. All of those send mail. Another administrator is a member given
+the role, in the admin panel's member list or with `php artisan openpne:admin:grant <email>`.
 
 ## After the install
 

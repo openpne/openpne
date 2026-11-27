@@ -5,7 +5,6 @@ namespace App\Upgrade;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\PreferenceKey;
-use App\Upgrade\Steps\AdminUserUpgrade;
 use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
 use App\Upgrade\Steps\BannerUseImageUpgrade;
@@ -149,8 +148,6 @@ final class StepRegistry
             // gadget_configs.gadget_id references gadgets.id, so configs run after gadgets.
             GadgetUpgrade::class,
             GadgetConfigUpgrade::class,
-            // admin_user and sns_settings are independent (no FK).
-            AdminUserUpgrade::class,
             // sns_settings is independent (no FK); migrates the sns_config keys SnsSettingKey opts in.
             SnsSettingUpgrade::class,
             // term_overrides is independent too; the PC sns_term rows, name for name.
@@ -223,6 +220,7 @@ final class StepRegistry
             'diary_comment_update' => 'OpenPNE 3 marker of each diary a member commented on and when. Not migrated: OpenPNE 4 derives the comment history from diary_comments (DiaryCommentHistory).',
             'diary_comment_unread' => 'OpenPNE 3 per-diary unread-comment flag for the diary\'s owner. Not migrated: OpenPNE 4 keeps no diary-comment unread state; the diary_commented notification stands in.',
             'skin_config' => 'OpenPNE 3 skin settings. Not migrated: no OpenPNE 3 application code read the table, and OpenPNE 4 keeps a site\'s appearance in its own admin settings.',
+            'admin_user' => 'OpenPNE 3 administrator logins (username and password). Not migrated: an OpenPNE 4 administrator is a member holding the role, so the operator invites them again; LoginPreflight counts the rows (W-ADMIN-USER-NOT-COPIED).',
         ];
     }
 

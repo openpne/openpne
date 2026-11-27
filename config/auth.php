@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\AdminUser;
 use App\Models\Member;
 
 return [
@@ -16,8 +15,7 @@ return [
     |
     */
 
-    // Guard names are singular (`member`, `admin`); provider and password-broker
-    // keys are plural (`members`, `admins`).
+    // Guard names are singular (`member`); provider and password-broker keys are plural (`members`).
     'defaults' => [
         'guard' => env('AUTH_GUARD', 'member'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'members'),
@@ -48,15 +46,6 @@ return [
             // (docs/internals/sessions.md, "Lifetimes").
             'recaller' => false,
             'absolute_lifetime' => true,
-        ],
-
-        // Administrators authenticate through the Filament `/admin` panel against
-        // this separate guard. It shares the session driver but keeps its own
-        // login state under a guard-scoped session key, so a logged-in member is
-        // never treated as an administrator and vice versa.
-        'admin' => [
-            'driver' => 'session',
-            'provider' => 'admins',
         ],
 
         // Personal access tokens (config/sanctum.php). Declared here rather than left to Sanctum's
@@ -106,14 +95,6 @@ return [
         'token_members' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', Member::class),
-        ],
-
-        'admins' => [
-            // legacy-eloquent (App\Auth\LegacyEloquentUserProvider) also accepts a wrapped
-            // OpenPNE 3 password (bcrypt over the MD5 hex, password_scheme=md5_bcrypt) and
-            // retires it to a plain bcrypt on login.
-            'driver' => 'legacy-eloquent',
-            'model' => env('AUTH_ADMIN_MODEL', AdminUser::class),
         ],
     ],
 

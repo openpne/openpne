@@ -67,12 +67,13 @@ with `php artisan migrate` alone, **not `openpne:install`**: the install command
 navigation, gadgets, profile fields and banner slots of a new site, and the upgrade brings those from
 OpenPNE 3 and refuses a schema that already holds them (`--force-restart` empties it if it happens).
 The first container start with the Docker setup runs the migrations itself, after installing
-dependencies and generating `APP_KEY`; on the host, run `php artisan migrate`. Skip
-`openpne:admin:create` too: the administrators arrive with the data.
+dependencies and generating `APP_KEY`; on the host, run `php artisan migrate`. Invite no
+administrator either: OpenPNE 3's administrators do not come with the data, and the role is given to
+a migrated member after the run ([stage 4](#4-run-the-upgrade)).
 
 On a server set up by [installing.md](installing.md), that makes its step 3
 `php artisan key:generate` and `php artisan migrate --force` (and `passport:keys`, if wanted), and
-leaves out its step 9: the members arrive with the data as well. Its steps 4 to 7 (the web server, HTTPS, background work,
+leaves out its step 9: the members arrive with the data as well, and the role comes after the run. Its steps 4 to 7 (the web server, HTTPS, background work,
 mail) are as written there, and have to be in place before the site is opened to members; so is its
 optional step 8, push notifications, if you take it.
 
@@ -163,8 +164,9 @@ diary or comment twice (OpenPNE 4 keeps one 👍 per member), or a date column h
 under, refuses the value, so the line names the table, the column, the count and the first ids;
 set a real time there (or NULL where the column allows it). Fix the source and dry-run again.
 Some are about the OpenPNE 4 side instead. A `navigations`, `gadgets`, `profiles`, `banners` or
-`admin_users` table that already holds rows, from `openpne:install`, `openpne:admin:create` or a visit
-to the admin Banner page: restore the empty schema, or rerun with `--force-restart`. Under
+`members` table that already holds rows, from `openpne:install`, a registration or a visit to the
+admin Banner page, or an administrator invite from `openpne:admin:invite` that nobody has used:
+restore the empty schema, or rerun with `--force-restart`. Under
 `--source-prefix` or `--source-database`, an OpenPNE 4 `file_bin` that already holds rows:
 `--force-restart` leaves `file_bin` alone, so start again from a fresh database (stages 1 and 2).
 
@@ -195,7 +197,8 @@ data the upgrade does not recognise, not carried.
 | `W-ACTIVITY-TEMPLATE-RENDERED` / `W-ACTIVITY-TEMPLATE-DROPPED` / `W-ACTIVITY-TEMPLATE-UNKNOWN` | Template activities (`diary` / `community_topic` / `community_event`), with where they land. The lines OpenPNE 3 wrote when a diary, topic or event was created. They are rewritten into the OpenPNE 4 wording, in the site's locale, with a link to the record; one in a thread that is not migrated goes with it; a template OpenPNE 4 does not know keeps its stored text. |
 | `W-ACTIVITY-TEMPLATE-KEPT-UNKNOWN` / `W-ACTIVITY-TEMPLATE-KEPT-BAD-PARAMS` / `W-ACTIVITY-TEMPLATE-KEPT-NO-LINK` / `W-ACTIVITY-TEMPLATE-KEPT-UNFIT` | After the copy, template rows whose line could not be rendered keep their stored text, counted by reason: a template OpenPNE 4 does not know, parameters that are not what OpenPNE 3 wrote, a link that names no OpenPNE 4 page, or a link alone longer than the body allows. |
 | `W-UPLOAD-OWNERLESS` | Upload-plugin files whose member or community the upgrade does not carry. They arrive with no owner, so their `/f/show` links answer 404; delete them in the source, or afterwards with `php artisan openpne:prune-ownerless-files` (`--dry-run` first) or in the admin file list. |
-| `W-MEMBER-EMAIL-WHITESPACE` / `W-ADMIN-USERNAME-WHITESPACE` | Members whose email, or administrators whose username, has whitespace at either end. OpenPNE 4 trims what is typed, so they cannot sign in (nor a member reset the password). The value migrates as it is: trim it in the source, or afterwards in `members.email` or on another administrator's edit page. |
+| `W-MEMBER-EMAIL-WHITESPACE` | Members whose email has whitespace at either end. OpenPNE 4 trims what is typed, so they cannot sign in nor reset the password. The value migrates as it is: trim it in the source, or afterwards in `members.email`. |
+| `W-ADMIN-USER-NOT-COPIED` | OpenPNE 3's administrator accounts (`admin_user`). None is copied: an administrator in OpenPNE 4 is a member holding the role, which [stage 4](#4-run-the-upgrade) gives after the run. |
 | `W-MEMBER-EMAIL-NON-ASCII` | Members whose email has a character outside printable ASCII: a non-ASCII letter, a control character or a space inside it. A browser's email field refuses a non-ASCII local part and may send a non-ASCII domain as punycode, so such a member may not sign in or reset the password from a browser; OpenPNE 4 takes only ASCII addresses when one is entered, and on MySQL the stored address may hold an ASCII one it compares equal to ([identifiers](internals/text-comparison.md#identifiers)). The value migrates as it is: replace it in `members.email` with an ASCII address the member reads. |
 | `W-HOME-NOTICE-NOT-COPIED` | Information boxes on the home that the Modern home notice does not carry: one in the side, center or bottom area, or in an area the home layout does not show (the line says which). Classic shows them as it did; write what Modern members should see on the Landing page settings page. |
 | `W-HOME-NOTICE-TOO-LARGE` | The home's top information boxes are longer than the Modern home notice holds, so nothing was copied; write a shorter notice on the Landing page settings page. |
@@ -225,6 +228,15 @@ if it still fails — the dry run would not show it, since that reads your OpenP
 $ php artisan openpne:upgrade-from-3
 ```
 
+Nobody can open the admin panel until a member holds the administrator role. Give it to each migrated
+member who should, by their email address, and to someone who is not a member yet through an
+invite they register with:
+
+```console
+$ php artisan openpne:admin:grant you@example.com
+$ php artisan openpne:admin:invite someone@example.com
+```
+
 Each step is committed as it finishes, so an interrupted run picks up from the first step that did
 not complete; re-running is safe. A step that fails says so on one line (`FAIL <step>: …`) and
 the command exits 1; run it again with `-v` to see the whole exception.
@@ -234,7 +246,9 @@ through a migration and the update changed that set — a step added, removed or
 SQL of a step changed, or one of the later passes revised — the run refuses to resume rather
 than mix two versions, names what changed, and points at `--force-restart`, which empties the
 tables the upgrade owns along with its records of what ran. The same refusal covers an update
-that renames the steps or the tables they write.
+that renames the steps or the tables they write. So run the upgrade and `openpne:verify-upgrade` on
+one version: finish a stopped run on the version that started it, or, on a site nobody uses yet,
+start over on the new one from a fresh restore.
 
 Once a site has completed, a re-run changes nothing: it answers `Completed: … nothing to do`,
 whatever has changed in OpenPNE 4 since, and never suggests `--force-restart`. A site that

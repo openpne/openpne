@@ -15,10 +15,11 @@ the same comparisons ([MariaDB](#mariadb)).
 
 ## Identifiers
 
-Six columns hold what a person signs in with or is reached at, and compare without case through
+Five columns hold what a person signs in with or is reached at, and compare without case through
 [`IdentifierCollation`](../../app/Support/Database/IdentifierCollation.php): `members.email`,
-`registration_tokens.email`, `password_reset_tokens.email`, `email_change_requests.new_email`,
-`admin_role_invites.email` and `admin_users.username`. MySQL uses `utf8mb4_0900_as_ci`, which also treats as one hiragana and
+`registration_tokens.email`, `password_reset_tokens.email`, `email_change_requests.new_email` and
+`admin_role_invites.email`; `admin_users.username` keeps the collation, but nothing reads or writes
+it any more. MySQL uses `utf8mb4_0900_as_ci`, which also treats as one hiragana and
 katakana, small and full-size kana, full- and half-width forms, compatibility forms (`①` is `1`) and
 the kinds of space inside a value, tells accents and voiced marks apart (`é` is not `e`, `が` is not
 `か`) and is NO PAD; MariaDB uses `utf8mb4_uca1400_nopad_as_ci`, which does the same but follows UCA
@@ -27,8 +28,7 @@ otherwise; SQLite uses `NOCASE`, which folds ASCII letters only. A migration tha
 a column takes its collation from `IdentifierCollation::for()`.
 
 Everything that writes or looks up these columns trims with `Str::trim`, which also removes Unicode
-spaces such as U+3000: `TrimStrings` on a request, Filament's `trim()` on the administrator login
-and form (a Livewire request skips `TrimStrings`), and the console commands, the invitation page and
+spaces such as U+3000: `TrimStrings` on a request, and the console commands, the invitation page and
 the actions that write these columns on their own. A stored value with whitespace at either end
 therefore matches nothing anyone can type. The OpenPNE 3 upgrade and `openpne:copy-database` carry
 values as they are; the upgrade warns about such a login.
@@ -81,8 +81,8 @@ before wrapping the term in `%…%`, and appends `ESCAPE '!'` to each `LIKE` abo
 also stops MySQL and MariaDB from reading a backslash in the term as their default one.
 
 A name order is a list a reader scans by name: the mention and recipient pickers, the muted talk
-rooms, group categories after `sort_order`, and the admin tables' sorts by a member's, a group's or an
-administrator's name. Ordering through an expression is a filesort, even on an indexed column.
+rooms, group categories after `sort_order`, and the admin tables' sorts by a member's or a group's
+name. Ordering through an expression is a filesort, even on an indexed column.
 
 ### Search limits
 

@@ -72,14 +72,12 @@ class CookiePrefixTest extends TestCase
         $this->assertTrue($cookie->isSecure());
     }
 
-    public function test_the_admin_realm_strips_the_prefixed_xsrf_cookie(): void
+    public function test_the_admin_realm_keeps_the_prefixed_xsrf_cookie(): void
     {
+        // One session for both realms, so the panel's requests carry the same token cookie.
         config(['session.driver' => 'database', 'session.secure' => true]);
 
-        $this->get('/login')->assertCookie('__Host-XSRF-TOKEN');
-
-        $this->freshRequestState();
-        $this->get('/admin/login')->assertCookieMissing('__Host-XSRF-TOKEN')->assertCookieMissing('XSRF-TOKEN');
+        $this->actingAsAdmin()->get('/admin')->assertOk()->assertCookie('__Host-XSRF-TOKEN');
     }
 
     public function test_the_modern_shell_declares_the_xsrf_cookie_name(): void
@@ -91,12 +89,11 @@ class CookiePrefixTest extends TestCase
             ->assertSee('<meta name="xsrf-cookie" content="__Host-XSRF-TOKEN">', false);
     }
 
-    public function test_both_session_guards_resolve_to_the_app_guard_during_a_request(): void
+    public function test_the_session_guard_resolves_to_the_app_guard_during_a_request(): void
     {
         $this->get('/login');
 
         $this->assertInstanceOf(SessionGuard::class, Auth::guard('member'));
-        $this->assertInstanceOf(SessionGuard::class, Auth::guard('admin'));
     }
 
     public function test_the_app_guard_is_wired_like_the_framework_guard(): void

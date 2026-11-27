@@ -21,7 +21,7 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::table('admin_users')->whereNull('password')->exists()) {
-            throw new RuntimeException('admin_users holds administrators without a password; set one for each (openpne:admin:reset-password) or delete them before rolling back.');
+            throw new RuntimeException('admin_users holds administrators without a password; delete them before rolling back.');
         }
 
         Schema::table('admin_users', function (Blueprint $table) {

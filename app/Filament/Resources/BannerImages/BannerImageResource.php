@@ -22,6 +22,8 @@ class BannerImageResource extends Resource
 
     protected static ?string $model = BannerImage::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhoto;
 
     protected static ?int $navigationSort = 5;

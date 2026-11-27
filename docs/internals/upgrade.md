@@ -145,9 +145,11 @@ default. The value is carried, or not, by the same `TermValue` rule as above.
 
 Runs before any write, on the dry run too. The first check is of the target: a fresh run (no
 checkpoints, not `--force-restart`) refuses when any of `UpgradeRunner::INSTALL_TABLES` among its own
-targets already holds rows, since the walk inserts OpenPNE 3's rows under their own ids. It runs before
-the source is read, and not under `--force-restart`, whose `reset()` empties those tables once the
-source has passed. Introspection goes through `information_schema`
+targets already holds rows, since the walk inserts OpenPNE 3's rows under their own ids, or when
+`admin_role_invites` holds an invite, which no step writes but whose registration would make an
+administrator of the upgraded site. It runs before the source is read, and not under
+`--force-restart`, whose `reset()` empties those tables, the invites and the registration links
+once the source has passed. Introspection goes through `information_schema`
 qualified by the source database and prefix, because `Schema::hasTable()` sees only the
 connection's own database. A missing core table or consumed FROM column, or a partially present
 optional plugin group (`StepRegistry::optionalPluginSources()`), aborts; a fully absent optional
@@ -171,9 +173,12 @@ never made the file columns unique, and a file with two owners would be read und
 audience from the other's page, so it is an ERROR. `UploadFileOwnerPreflight` counts the upload-plugin
 files whose name names a member or community the upgrade does not carry, a WARN: they migrate
 ownerless, and the operator learns which old links will answer 404. `LoginPreflight` counts
-the carried member emails and administrator usernames with whitespace at either end, and the member
-emails with a character outside printable ASCII inside them, each a WARN: they migrate as they are
-([identifiers](text-comparison.md#identifiers)). `TermOverridePreflight` counts the source term rows
+the carried member emails with whitespace at either end, and those with a character outside
+printable ASCII inside them, each a WARN: they migrate as they are
+([identifiers](text-comparison.md#identifiers)). It also counts OpenPNE 3's `admin_user` rows, a
+WARN that the run report repeats: none is copied, since an administrator here is a member holding
+the role ([administrators.md](administrators.md)). The table is read under the source's prefix and
+schema, and a source without it passes in silence. `TermOverridePreflight` counts the source term rows
 that fold onto one `term_overrides` (name, locale) key and a value wider than the column, both an
 ERROR for the same reason; `WithdrawnMemberTermPreflight` does the width check for the sns_config
 nickname the withdrawn-member term is copied from. `NicePreflight` counts a member's second like on one carried target as

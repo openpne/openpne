@@ -43,13 +43,12 @@ Docker Compose が使える環境で、次のコマンドを実行します。
 git clone https://github.com/openpne/openpne.git && cd openpne
 bin/dev-up                                                           # http://localhost:8080
 docker compose exec app php artisan openpne:install                  # テーブルと、新しいサイトの初期データ
-docker compose exec app php artisan openpne:admin:create admin       # パスワードを聞かれます。/admin でログイン
-docker compose exec app php artisan openpne:member:invite you@example.com
+docker compose exec app php artisan openpne:admin:invite you@example.com
 ```
 
 初回の `bin/dev-up` は、イメージをビルドするため、数分かかることがあります。
 
-最後のコマンドを実行すると、登録用のリンクが表示されます。リンクを開いて名前とパスワードを決めると、サイトの最初のメンバーとして登録され、日記を書いたり、グループを作ったりできます。ほかの人も同じコマンドで招待できます。管理画面の「メンバー招待」からも招待できます。その招待メールは、実際のメールボックスではなく <http://localhost:8025> に届きます。
+最後のコマンドを実行すると、登録用のリンクが表示されます。リンクを開いて名前とパスワードを決めると、サイトの最初のメンバー兼管理者として登録され、管理画面(`/admin`)が開きます。日記を書いたり、グループを作ったりもできます。ほかの人は `openpne:member:invite` で招待できます。管理画面の「メンバー招待」からも招待できます。その招待メールは、実際のメールボックスではなく <http://localhost:8025> に届きます。
 
 この環境は、OpenPNE の試用と開発のためのものです(データは clone したディレクトリ内の SQLite ファイルに保存され、フロントエンドは開発サーバーから配信されます)。実際に運営するサイトには、次の本番用の方法を使います。
 

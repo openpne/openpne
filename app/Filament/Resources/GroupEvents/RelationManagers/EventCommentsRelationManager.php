@@ -14,7 +14,6 @@ class EventCommentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'comments';
 
-    // Admin-guard authorization; skip Filament's per-record policy checks (no member policy applies).
     protected static bool $shouldSkipAuthorization = true;
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string

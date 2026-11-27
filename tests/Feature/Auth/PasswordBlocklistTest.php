@@ -100,10 +100,10 @@ class PasswordBlocklistTest extends TestCase
         $this->assertContains($this->contextMessage(), $this->passwordErrors('yamada-secret-9', ['name' => 'Yamada']));
     }
 
-    public function test_a_dot_nested_username_from_a_filament_form_is_rejected(): void
+    public function test_a_dot_nested_name_from_a_filament_form_is_rejected(): void
     {
         // Filament nests form state under `data.*`; the allowlist matches on the key's last segment.
-        $this->assertContains($this->contextMessage(), $this->passwordErrors('adminbob-pass-1', ['data' => ['username' => 'adminbob']]));
+        $this->assertContains($this->contextMessage(), $this->passwordErrors('yamada-secret-9', ['data' => ['name' => 'Yamada']]));
     }
 
     public function test_the_reset_path_enriches_the_data_with_the_member_name(): void
@@ -132,17 +132,6 @@ class PasswordBlocklistTest extends TestCase
         $this->actingAs($member, 'member');
 
         $this->assertContains($this->contextMessage(), $this->passwordErrors('nakamura-strong-9'));
-    }
-
-    public function test_a_cli_username_is_used_as_context(): void
-    {
-        $this->artisan('openpne:admin:create', ['username' => 'takeshi'])
-            ->expectsQuestion('Password', 'takeshi-secret-1')
-            ->expectsQuestion('Confirm password', 'takeshi-secret-1')
-            ->expectsOutputToContain($this->contextMessage())
-            ->assertFailed();
-
-        $this->assertDatabaseMissing('admin_users', ['username' => 'takeshi']);
     }
 
     public function test_a_failing_context_source_skips_only_itself(): void

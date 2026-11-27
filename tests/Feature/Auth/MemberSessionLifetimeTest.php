@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Auth;
 
 use App\Auth\SessionGuard;
-use App\Models\AdminUser;
 use App\Models\Member;
 use App\Session\MemberSessionLifetime;
 use App\Session\RealmDatabaseSessionHandler;
@@ -40,7 +39,7 @@ class MemberSessionLifetimeTest extends TestCase
             $table,
             self::GUEST_MINUTES,
             $this->app,
-            $table === 'admin_sessions' ? null : self::MEMBER_MINUTES,
+            self::MEMBER_MINUTES,
         );
     }
 
@@ -95,13 +94,6 @@ class MemberSessionLifetimeTest extends TestCase
         $this->assertSame('', $this->handler('sessions')->read('guest'));
     }
 
-    public function test_an_admin_row_keeps_the_framework_lifetime(): void
-    {
-        $this->seedRow('admin_sessions', 'admin', 7, self::GUEST_MINUTES + 1);
-
-        $this->assertSame('', $this->handler('admin_sessions')->read('admin'));
-    }
-
     public function test_the_sweep_holds_each_row_to_its_own_lifetime(): void
     {
         $this->seedRow('sessions', 'guest-live', null, self::GUEST_MINUTES - 1);
@@ -121,13 +113,13 @@ class MemberSessionLifetimeTest extends TestCase
         $this->assertInstanceOf(RealmDatabaseSessionHandler::class, $this->app['session.store']->getHandler());
     }
 
-    public function test_the_admin_realm_store_carries_no_member_lifetime(): void
+    public function test_the_admin_realm_store_carries_the_member_lifetime(): void
     {
-        $this->seedRow('admin_sessions', 'admin', 7, self::GUEST_MINUTES + 1);
+        $this->seedRow('sessions', 'member', 7, self::GUEST_MINUTES + 1);
 
-        $this->get('/admin/login');
+        $this->get('/admin');
 
-        $this->assertSame('', $this->app['session.store']->getHandler()->read('admin'));
+        $this->assertNotSame('', $this->app['session.store']->getHandler()->read('member'));
     }
 
     public function test_the_member_realm_store_carries_the_member_lifetime(): void
@@ -180,18 +172,11 @@ class MemberSessionLifetimeTest extends TestCase
         $this->assertSame(self::GUEST_MINUTES, $this->minutesUntilExpiry($response, 'XSRF-TOKEN'));
     }
 
-    public function test_the_admin_realm_keeps_the_framework_lifetime_for_a_signed_in_member(): void
-    {
-        $response = $this->actingAs(Member::factory()->create(), 'member')->get('/admin/login');
-
-        $this->assertSame(self::GUEST_MINUTES, $this->sessionMinutes($response));
-    }
-
-    public function test_a_signed_in_administrator_keeps_the_framework_lifetime(): void
+    public function test_the_admin_panel_carries_the_member_lifetime(): void
     {
         $response = $this->actingAsAdmin()->get('/admin');
 
-        $this->assertSame(self::GUEST_MINUTES, $this->sessionMinutes($response));
+        $this->assertSame(self::MEMBER_MINUTES, $this->sessionMinutes($response));
     }
 
     public function test_another_driver_keeps_the_framework_lifetime(): void
@@ -261,24 +246,30 @@ class MemberSessionLifetimeTest extends TestCase
             ->assertSessionHas($this->loginKey().'_at', now()->getTimestamp());
     }
 
-    public function test_the_admin_guard_has_no_absolute_lifetime(): void
+    public function test_the_admin_panel_holds_the_absolute_lifetime(): void
     {
-        $admin = AdminUser::factory()->create();
-        $key = Auth::guard('admin')->getName();
+        $admin = $this->createAdmin();
 
-        $this->withSession([$key => $admin->getKey(), $key.'_at' => 1])->get('/admin')->assertOk();
+        $this->withSession([
+            $this->loginKey() => $admin->getKey(),
+            $this->loginKey().'_at' => now()->subMinutes(576001)->getTimestamp(),
+        ])->get('/admin')->assertRedirect(route('login'));
+
+        $this->assertGuest('member');
     }
 
     /**
      * Member names no remember-token column, so the member guard alone cannot show what its
-     * recaller switch does; the administrators' provider still stores a token.
+     * recaller switch does; the plain database provider reads the column the table still has.
      */
     public function test_a_guard_with_the_recaller_off_ignores_a_cookie_its_provider_would_honour(): void
     {
-        $admin = AdminUser::factory()->create(['remember_token' => 'stored-token']);
-        $cookie = fn (SessionGuard $guard): array => [$guard->getRecallerName() => $admin->getKey().'|stored-token|'.$admin->getAuthPassword()];
+        config(['auth.providers.probe' => ['driver' => 'database', 'table' => 'members']]);
+        $member = Member::factory()->create();
+        DB::table('members')->where('id', $member->getKey())->update(['remember_token' => 'stored-token']);
+        $cookie = fn (SessionGuard $guard): array => [$guard->getRecallerName() => $member->getKey().'|stored-token|'.$member->getAuthPassword()];
         $build = function (bool $recaller) use ($cookie): SessionGuard {
-            $guard = SessionGuard::make($this->app, 'probe', ['provider' => 'admins', 'recaller' => $recaller]);
+            $guard = SessionGuard::make($this->app, 'probe', ['provider' => 'probe', 'recaller' => $recaller]);
             $guard->setRequest(Request::create('/', 'GET', [], $cookie($guard)));
 
             return $guard;

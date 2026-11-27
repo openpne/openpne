@@ -42,8 +42,7 @@ class AdminNavigationConventionsTest extends TestCase
 
         $screens = array_filter(
             [...array_values($panel->getPages()), ...array_values($panel->getResources())],
-            // Filament's own Dashboard sits above the groups by design; screens like SecuritySettings
-            // (reached from the user menu) opt out of the sidebar altogether.
+            // Filament's own Dashboard sits above the groups by design.
             fn (string $screen): bool => str_starts_with($screen, 'App\\Filament\\')
                 && $screen !== Dashboard::class
                 && $screen::shouldRegisterNavigation(),
@@ -64,6 +63,15 @@ class AdminNavigationConventionsTest extends TestCase
                 $groups,
                 "{$screen} must sit in one of the registered navigation groups.",
             );
+        }
+    }
+
+    public function test_every_group_holds_a_screen(): void
+    {
+        $held = array_map(fn (string $screen): ?string => $screen::getNavigationGroup(), $this->navigableScreens());
+
+        foreach (self::GROUP_KEYS as $key) {
+            $this->assertContains(__($key), $held, "The {$key} group lost its last screen; drop the group or give it one.");
         }
     }
 

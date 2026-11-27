@@ -119,8 +119,8 @@ It asks for the language of its questions, then says what the host lacks, if any
 there until it is put right. Then it asks for the site's address (`https://` and the domain), the
 site's name, the time zone, the database, mail (later, or the host's SMTP server) and the background
 work: on a shared host, keep the answer it offers, that nothing can be kept running. It writes
-`.env`, makes `~/openpne/openpne-data/` beside the site, for the SQLite database and the backups,
-and asks for the first administrator's user name and password.
+`.env` and makes `~/openpne/openpne-data/` beside the site, for the SQLite database and the
+backups.
 
 Then it shows what to set in the control panel, and waits:
 
@@ -132,9 +132,10 @@ Then it shows what to set in the control panel, and waits:
 A change there can take tens of minutes to show. Setup can be stopped while you wait: the same two
 commands, run again, go on from where it stopped. Where it says that a proxy in front adds headers,
 [installing.md](installing.md#5-https-and-a-proxy-in-front) says how to tell whether the site needs
-`TRUSTED_PROXIES`; answering "Later" leaves the site working. Setup ends with a registration link
-for the first member, to open in a browser, a line that backs up the database, and a line for cron.
-Keep the last two.
+`TRUSTED_PROXIES`; answering "Later" leaves the site working. Setup then prints a line that backs
+up the database and a line for cron: keep both. Last, it asks for your email address and prints a
+registration link for it. Open the link in a browser and register with that address: you are the
+site's first member and its administrator, and land on the admin panel.
 
 ## 4. After setup
 
@@ -158,7 +159,8 @@ Keep the last two.
   `php artisan openpne:check --parent-url=https://www.example.net/openpne`.
 
 Lost the two lines? `php artisan openpne:setup` on an installed site prints them again once its
-check from the web passes; answer No when it offers a link for a first member.
+check from the web passes. Until someone has registered, it also asks for the address again and
+prints a new link.
 
 ## Updating
 

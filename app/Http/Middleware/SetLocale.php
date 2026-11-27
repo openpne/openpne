@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\Member;
+use App\Support\AdminRealm;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -12,16 +13,17 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The member's persisted locale outranks the session toggle because it is the durable choice
- * (OpenPNE 3 member_config[lang]); a guest keeps the session toggle. The admin panel registers the
- * `:session` scope so an admin page never picks up a co-logged-in member's locale.
+ * (OpenPNE 3 member_config[lang]); a guest keeps the session toggle. The admin realm keeps it too,
+ * as OpenPNE 3 keeps the admin culture apart from the member config, so its Livewire requests render
+ * in the panel's language.
  */
 class SetLocale
 {
     public const SUPPORTED_LOCALES = ['ja', 'en'];
 
-    public function handle(Request $request, Closure $next, string $scope = 'member'): Response
+    public function handle(Request $request, Closure $next): Response
     {
-        App::setLocale($this->resolveLocale($request, memberAware: $scope === 'member'));
+        App::setLocale($this->resolveLocale($request, memberAware: ! AdminRealm::matches($request)));
 
         return $next($request);
     }

@@ -15,6 +15,8 @@ class FileResource extends Resource
 {
     protected static ?string $model = File::class;
 
+    protected static bool $shouldSkipAuthorization = true;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolder;
 
     protected static ?int $navigationSort = 6;

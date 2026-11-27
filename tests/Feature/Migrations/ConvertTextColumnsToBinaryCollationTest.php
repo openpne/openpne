@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Migrations;
 
-use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\File;
@@ -102,7 +101,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $this->onlyOn('sqlite');
         Member::factory()->create();
         DB::table('members')->where('id', Member::factory()->create()->getKey())->delete();
-        DB::table('admin_users')->where('id', AdminUser::factory()->create()->getKey())->delete();
+        DB::table('admin_users')->where('id', $this->adminRow('gone'))->delete();
         $sequences = $this->sequences();
         $this->assertGreaterThan(DB::table('members')->max('id'), $sequences['members']);
         $this->assertTrue(DB::table('admin_users')->doesntExist() && $sequences['admin_users'] > 0);
@@ -138,8 +137,8 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $migration->down();
         $one = Member::factory()->create(['email' => 'taro@example.com']);
         $other = Member::factory()->create(['email' => 'TARO@example.com']);
-        $admin = AdminUser::factory()->create(['username' => 'root']);
-        $otherAdmin = AdminUser::factory()->create(['username' => 'Root']);
+        $admin = $this->adminRow('root');
+        $otherAdmin = $this->adminRow('Root');
         DB::table('password_reset_tokens')->insert([
             ['email' => 'jiro@example.com', 'token' => 'a', 'created_at' => now()],
             ['email' => 'Jiro@example.com', 'token' => 'b', 'created_at' => now()],
@@ -151,7 +150,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $message = $this->refusal($migration);
 
         $this->assertStringContainsString("members.email holds values the new comparison treats as one (ids {$one->getKey()}, {$other->getKey()})", $message);
-        $this->assertStringContainsString("admin_users.username holds values the new comparison treats as one (ids {$admin->getKey()}, {$otherAdmin->getKey()})", $message);
+        $this->assertStringContainsString("admin_users.username holds values the new comparison treats as one (ids {$admin}, {$otherAdmin})", $message);
         $this->assertStringContainsString('password_reset_tokens.email holds values the new comparison treats as one (2 rows;', $message);
         $this->assertStringContainsString("registration_tokens.email holds values the new comparison treats as one (ids {$invited}, {$reinvited})", $message);
         $this->assertStringNotContainsString('email_change_requests', $message);
@@ -166,7 +165,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $migration->down();
         $member = Member::factory()->create();
         DB::table('members')->where('id', $member->getKey())->update(['email' => 'hanako@example.com ']); // as an upgrade carries it
-        $admin = AdminUser::factory()->create(['username' => "\troot"]);
+        $admin = $this->adminRow("\troot");
         DB::table('password_reset_tokens')->insert(['email' => ' saburo@example.com', 'token' => 'a', 'created_at' => now()]);
         $invited = DB::table('registration_tokens')->insertGetId(['email' => "goro@example.com\u{3000}", 'token' => 'b']);
         Member::factory()->create(['email' => 'plain@example.com']);
@@ -174,7 +173,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $message = $this->refusal($migration);
 
         $this->assertStringContainsString("members.email holds values with whitespace at either end, which no one can type (ids {$member->getKey()})", $message);
-        $this->assertStringContainsString("admin_users.username holds values with whitespace at either end, which no one can type (ids {$admin->getKey()})", $message);
+        $this->assertStringContainsString("admin_users.username holds values with whitespace at either end, which no one can type (ids {$admin})", $message);
         $this->assertStringContainsString('password_reset_tokens.email holds values with whitespace at either end, which no one can type (1 rows;', $message);
         $this->assertStringContainsString("registration_tokens.email holds values with whitespace at either end, which no one can type (ids {$invited})", $message);
         $this->assertStringNotContainsString('example.com', $message);
@@ -422,6 +421,12 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
             ->orWhere('name', 'like', '__temp__%')->orderBy('name')->pluck('sql', 'name')->all();
     }
 
+    /** The table stays until its drop, with no model left to write it. */
+    private function adminRow(string $username): int
+    {
+        return DB::table('admin_users')->insertGetId(['username' => $username, 'password' => 'x', 'created_at' => now(), 'updated_at' => now()]);
+    }
+
     private function seedOneOfEach(): void
     {
         $member = Member::factory()->create(['email' => 'Taro@Example.com']);
@@ -430,7 +435,7 @@ class ConvertTextColumnsToBinaryCollationTest extends TestCase
         $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
         DB::table('timeline_post_tags')->insert(['timeline_post_id' => $post->getKey(), 'tag' => 'café', 'offset' => 0, 'length' => 5]);
         DB::table('reactions')->insert(['reactable_type' => 'timeline_post', 'reactable_id' => $post->getKey(), 'member_id' => $member->getKey(), 'emoji' => "\u{2764}\u{FE0F}", 'created_at' => now()]);
-        AdminUser::factory()->create(['username' => 'Admin']);
+        $this->adminRow('Admin');
     }
 
     /**

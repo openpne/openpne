@@ -243,7 +243,6 @@ class MemberCapacityTest extends TestCase
         Filament::setCurrentPanel('admin');
         $this->actingAsAdmin();
         $this->cap(3);
-        Member::factory()->create();
 
         Livewire::test(InviteMembers::class)
             ->fillForm(['emails' => "a@example.com\nb@example.com\nc@example.com"])

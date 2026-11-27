@@ -1,48 +1,36 @@
 # Sessions
 
-The member realm and the admin realm keep **separate session stores**: both
-logins coexist in one browser, `url.intended` cannot redirect a login across
-realms, and either side's logout (`session()->invalidate()`) destroys only its
-own store. ("Realm" is this member/admin split — "surface" stays reserved for
-the member realm's Classic/Modern presentation.)
+One session store serves the whole site. Everyone signs in as a member, on the `member` guard, at
+`/login` (Fortify) or `/passkeys/login`; an administrator is a member holding the role, and the admin
+panel reads that same session ([administrators.md](administrators.md), "The admin panel"). So
+`url.intended` brings someone sent from `/admin` to the login back to the panel, and logging out
+anywhere ends the session for both.
 
-| Realm | Guard | Cookie (`config/session.php`) | DB table | Login |
-|-------|-------|------------------------------|----------|-------|
-| Member (`/`, everything else) | `member` | `session.cookie` (`SESSION_COOKIE`) | `session.member_table` (`sessions`) | `/login` (Fortify), `/passkeys/login` |
-| Admin (`/admin*`, Livewire + Filament system routes) | `admin` | `session.admin_cookie` (`SESSION_ADMIN_COOKIE`) | `session.admin_table` (`admin_sessions`) | `/admin/login` (Filament) |
+The cookie is `session.cookie` (`SESSION_COOKIE`), prefixed as [below](#cookie-name-prefix); on the
+`database` driver its rows are in `session.table` (`sessions`).
+
+"Realm" still names the member/admin split, by path alone ([Key invariants](#key-invariants) 1):
+the session is the same on both, and what the admin realm changes is the administrator gate, the
+panel's language ([i18n.md](i18n.md)), the error pages and image URL signing. ("Surface" stays
+reserved for the member realm's Classic/Modern presentation.)
 
 `/mcp` is a third realm and holds no session at all: it is mounted outside the `web` group, accepts a
 bearer token as its only credential, and answers 401 instead of redirecting a guest
 ([mcp.md](mcp.md)). The OAuth token endpoint, client registration (`/oauth/token`, `/oauth/register`)
 and the `/.well-known` metadata sit in that realm too; the consent screen `/oauth/authorize` is a
-member page. `UseAdminSessionStore` still runs — it is global — and pinning a store nothing starts
-is harmless; a test asserts the response carries no cookie and writes no session row.
+member page. `PrefixSessionCookie` still runs — it is global — and naming a cookie nothing sets is
+harmless; a test asserts the response carries no cookie and writes no session row.
 `/.well-known/security.txt` holds no session either: it is registered without the `web` group's
 middleware ([security.md](security.md#vulnerability-reporting)).
 
-The switch is [`UseAdminSessionStore`](../../app/Http/Middleware/UseAdminSessionStore.php),
-**global** middleware keyed by request path. It cannot live in the Filament
-panel stack: after the initial page load every panel interaction is a Livewire
-update/upload request served by the `web` group's `StartSession`, and Livewire's
-persistent middleware re-applies only after the session is already resolved.
-Per request it pins, both ways:
-
-- `session.cookie` + `session.table` — read lazily by the session manager at
-  driver-build time, so the config pin lands before `StartSession`.
-- the default auth guard (`Auth::shouldUse`) — the database session handler
-  stamps `sessions.user_id` from the default guard, so admin-realm rows carry
-  `admin_users` ids even on requests where Filament's own `Authenticate` never
-  runs (login-screen Livewire updates, uploads, the locale switch).
-- the cookie-name prefix of whichever realm cookie is active (below).
-- admin responses drop the `XSRF-TOKEN` cookie — one global cookie name, so the
-  last responding realm would overwrite the member token and 419 the member
-  realm's next Inertia POST. Nothing on the admin realm reads it (Livewire
-  sends its page-embedded token).
+[`PrefixSessionCookie`](../../app/Http/Middleware/PrefixSessionCookie.php) is global middleware,
+ahead of every group, so the cookie name it sets is in place before anything builds the session
+driver.
 
 ## Cookie-name prefix
 
-The two realm session cookies and the `XSRF-TOKEN` cookie are all issued under the session config's path, domain and Secure flag,
-and all take a prefix the browser enforces, chosen from that config on every
+The session cookie and the `XSRF-TOKEN` cookie are both issued under the session config's path, domain and Secure flag,
+and both take a prefix the browser enforces, chosen from that config on every
 request ([`CookiePrefix`](../../app/Support/CookiePrefix.php)):
 
 | `session.secure` | `session.domain` | `session.path` | Name |
@@ -75,16 +63,15 @@ echoes the cookie in `X-XSRF-TOKEN`; Classic and the admin realm send the
 page-embedded token instead.
 
 A change of prefix renames the cookies: everyone re-logs in once on the deploy
-that brings a session-cookie prefix. A `SESSION_COOKIE` /
-`SESSION_ADMIN_COOKIE` an operator has already prefixed (`__Secure-`/`__Host-`)
-is passed through unchanged — the operator then owns satisfying the browser's
+that brings a session-cookie prefix. A `SESSION_COOKIE` an operator has
+already prefixed (`__Secure-`/`__Host-`) is passed through unchanged — the operator then owns satisfying the browser's
 prefix terms.
 
 ## Lifetimes
 
 | Setting | Default | Applies to |
 |---|---|---|
-| `SESSION_LIFETIME` | 120 | idle minutes of a guest's session, of the admin realm, and of every session on a driver other than `database` |
+| `SESSION_LIFETIME` | 120 | idle minutes of a guest's session and of every session on a driver other than `database` |
 | `SESSION_MEMBER_LIFETIME` | 43200 (30 days) | idle minutes of a signed-in member's session |
 | `SESSION_MEMBER_ABSOLUTE_LIFETIME` | 576000 (400 days) | minutes from sign-in after which a member's session ends however recently it was used |
 
@@ -102,10 +89,9 @@ writes `members.remember_token`. Why the member values are what they are is in
   [`RealmDatabaseSessionHandler`](../../app/Session/RealmDatabaseSessionHandler.php)
   replaces the framework's `database` handler and reads `sessions.user_id`: a
   row that names a member is live, and swept, by the member lifetime, any other
-  row by `SESSION_LIFETIME`. The handler built for `admin_sessions` carries no
-  member lifetime.
+  row by `SESSION_LIFETIME`.
 - **The cookies follow.** The session cookie and `XSRF-TOKEN` of a response to a
-  signed-in member, outside the admin realm, expire at the member lifetime
+  signed-in member, the admin panel's included, expire at the member lifetime
   ([`MemberSessionLifetime`](../../app/Session/MemberSessionLifetime.php)). With
   `SESSION_EXPIRE_ON_CLOSE` both keep the framework's expiry.
 - **Only the `database` driver.** On any other driver nothing above applies and
@@ -177,25 +163,15 @@ to the store, so the request is wrapped to keep it.
    prefix (`EndpointResolver::prefix()`, APP_KEY-derived), and the Filament
    system route prefix (`filament/*` — export/import downloads). One predicate,
    [`AdminRealm::matches()`](../../app/Support/AdminRealm.php), pinned against the
-   real routes by `AdminSessionStoreTest`.
+   real routes by `PrefixSessionCookieTest`.
 2. **Livewire renders only on the admin realm** (no components outside
    `app/Filament`, architecture-test enforced). A member-realm Livewire
-   component would run on the admin session store — extend the realm
+   component's requests would meet the administrator gate — extend the realm
    predicate before introducing one.
-3. **Session purges are per-realm and go through `App\Auth\SessionRevocation`**,
-   which reads the stable `session.member_table` / `session.admin_table` keys.
-   Never purge via `config('session.table')`: that key is pinned to the serving
-   realm, so an admin-realm action revoking a member (a ban) would target the
-   wrong table.
-4. One process serves one request (FPM). The store/guard pin mutates config, so
-   a long-lived runtime (Octane) would need per-request driver resets; tests
-   simulate fresh workers with `TestCase::freshRequestState()`.
-5. Cookie separation works on **every session driver** (stores are keyed by
-   cookie name / session id); `session.admin_table` only matters to the
-   `database` driver. GC sweeps each table on its own realm's traffic, so
-   stale `admin_sessions` rows may linger between admin visits — lifetime is
-   still enforced on read.
-6. **`members.last_login_at` names the calendar day of the member's last activity**:
+3. **A member's sessions end through `App\Auth\SessionRevocation`**, which
+   deletes their rows from `session.table`; an administrator's panel access ends
+   with them, as it is the same session.
+4. **`members.last_login_at` names the calendar day of the member's last activity**:
    `App\Listeners\Auth\RecordLastLogin` writes it on every `member`-guard `Login`
    (password, passkey, two-factor, emailed login code, post-registration) and
    again on the first `Authenticated` of each later day (site timezone), because
@@ -205,7 +181,8 @@ to the store, so the request is wrapped to keep it.
    NULL. Site operators read it (`MAX(last_login_at)`, the admin member list);
    members see each other's only as a calendar day in member search
    (`App\Features\Member\LastLoginLabel`).
-7. **A member's long idle lifetime rests on `sessions.user_id`**, which the
-   database handler stamps from the default guard on every write. A member-realm
-   request served under another default guard would write the row as a guest's
-   and cut the session to `SESSION_LIFETIME`.
+5. **A member's long idle lifetime rests on `sessions.user_id`**, which the
+   database handler stamps from the default guard on every write. The default
+   guard is `member` on every request, the admin realm's included; a request
+   served under another would write the row as a guest's and cut the session to
+   `SESSION_LIFETIME`.

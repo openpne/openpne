@@ -168,10 +168,10 @@ class FeatureSettingsTest extends TestCase
         $url = FeatureSettings::getUrl();
 
         $this->app['auth']->forgetGuards();
-        $this->get($url)->assertRedirect('/admin/login');
+        $this->get($url)->assertRedirect(route('login'));
 
         $this->actingAs(Member::factory()->create(), 'member')
             ->get($url)
-            ->assertRedirect('/admin/login');
+            ->assertForbidden();
     }
 }

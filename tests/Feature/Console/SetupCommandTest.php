@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Models\AdminUser;
 use App\Models\Member;
 use App\Setup\EnvFile;
 use App\Setup\SetupHost;
@@ -14,6 +13,7 @@ use App\SiteCheck\PhpCommand;
 use App\SiteCheck\SiteLayout;
 use App\SiteCheck\SqliteSupport;
 use App\SiteCheck\WebCheck;
+use App\Support\SnsSettingKey;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Schema\Blueprint;
@@ -479,20 +479,24 @@ class SetupCommandTest extends TestCase
             ->assertFailed();
     }
 
-    /** @return array<string, array{string}> */
+    /** @return array<string, array{string, string}> */
     public static function sqliteSites(): array
     {
-        return ['the first' => ['database.sqlite'], 'one started over' => ['database-2.sqlite']];
+        return [
+            'the first' => ['database.sqlite', 'members'],
+            'one started over' => ['database-2.sqlite', 'members'],
+            'one from before administrators were members' => ['database.sqlite', 'admin_users'],
+        ];
     }
 
     #[DataProvider('sqliteSites')]
-    public function test_a_sqlite_database_holding_a_site_is_not_set_up_over(string $name): void
+    public function test_a_sqlite_database_holding_a_site_is_not_set_up_over(string $name, string $table): void
     {
         $this->sqliteState['extension'] = true;
         mkdir($this->layout->dataDirectory(), 0o700);
         touch($this->sqlitePath());
         $database = new \PDO('sqlite:'.$this->layout->dataDirectory().'/'.$name);
-        $database->exec('CREATE TABLE admin_users (id INTEGER PRIMARY KEY); INSERT INTO admin_users VALUES (1);');
+        $database->exec("CREATE TABLE {$table} (id INTEGER PRIMARY KEY); INSERT INTO {$table} VALUES (1);");
         $database = null;
 
         $this->answerSite($this->runSetup())
@@ -569,12 +573,11 @@ class SetupCommandTest extends TestCase
         $this->shellEnv('APP_KEY', '');
         $this->withEnv();
         config(['app.key' => '']);
-        $this->hostState['hide'] = false;
+        $this->fakeWeb(['unreachable' => fn (): bool => true]);
 
         $this->runSetup()
             ->expectsOutputToContain('Set APP_KEY in .env.')
-            ->expectsQuestion('The first administrator\'s user name', 'admin')
-            ->expectsConfirmation('Go on, with the password showing as you type?', 'no')
+            ->expectsConfirmation('Check again?', 'no')
             ->assertFailed();
 
         $key = (string) EnvFile::read((string) file_get_contents($this->layout->envFile))['APP_KEY'];
@@ -588,7 +591,7 @@ class SetupCommandTest extends TestCase
         $this->shellEnv('APP_KEY', '');
         $before = $this->withEnv();
         config(['app.key' => '']);
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
             ->expectsOutputToContain('has no APP_KEY, but the database holds a site already')
@@ -602,13 +605,12 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         mkdir($this->layout->dataDirectory(), 0o755);
         touch($this->layout->dataDirectory().'/.htaccess');
         $this->fakeTools();
 
         $this->runSetup()
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->assertSuccessful();
 
         $this->assertSame(0o700, fileperms($this->layout->dataDirectory()) & 0o777);
@@ -619,14 +621,13 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         mkdir($this->layout->dataDirectory(), 0o700);
         file_put_contents($this->layout->dataDirectory().'/.htaccess', "RewriteEngine On\n");
         $this->fakeTools();
         unlink($this->layout->base.'/.htaccess');
 
         $this->runSetup()
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->assertSuccessful();
 
         $this->assertSame(SiteLayout::DENY, file_get_contents($this->layout->dataDirectory().'/.htaccess'));
@@ -706,11 +707,10 @@ class SetupCommandTest extends TestCase
         $this->assertFileDoesNotExist($this->layout->base.'/public/leaked.sqlite');
     }
 
-    public function test_a_failed_install_with_members_in_is_not_offered_a_start_over(): void
+    public function test_a_failed_install_someone_registered_during_is_not_offered_a_start_over(): void
     {
         $this->withEnv();
-        Member::factory()->create();
-        $this->migration("throw new RuntimeException('stopped');");
+        $this->migration("\\App\\Models\\Member::factory()->create(); throw new RuntimeException('stopped');", withinTransaction: false);
 
         $this->runSetup()
             ->expectsOutputToContain('do not remove it')
@@ -718,7 +718,7 @@ class SetupCommandTest extends TestCase
             ->assertFailed();
     }
 
-    public function test_a_site_with_env_is_installed_checked_closed_and_given_its_first_member_and_backup(): void
+    public function test_a_site_with_env_is_installed_checked_closed_backed_up_and_given_its_administrators_link(): void
     {
         $this->withEnv();
         $this->fakeWeb();
@@ -728,22 +728,21 @@ class SetupCommandTest extends TestCase
 
         $this->runSetup()
             ->expectsOutputToContain('Creating the tables and the initial data')
-            ->expectsQuestion('The first administrator\'s user name', 'admin')
-            ->expectsQuestion('Password', 'correct horse battery staple')
-            ->expectsQuestion('Confirm password', 'correct horse battery staple')
-            ->expectsOutputToContain('Administrator [admin] created.')
             ->expectsOutputToContain('The web serves the site as it should.')
-            ->expectsConfirmation('Print a registration link for the first member?', 'yes')
-            ->expectsQuestion('Their email address', 'first@example.com')
-            ->expectsOutputToContain('registers as [first@example.com]')
             ->expectsOutputToContain('The copy is written to '.$this->layout->dataDirectory().($this->sqlite() ? '/backup.sqlite,' : '/backup.sql,'))
             ->expectsOutputToContain($this->backupLineStart($php))
             ->expectsOutputToContain('Tried once: the copy holds the site\'s tables.')
             ->expectsOutputToContain("*/5 * * * * cd '{$this->layout->base}' && '{$php}' artisan schedule:run")
+            ->expectsQuestion('The first administrator\'s email address', 'not an address')
+            ->expectsOutputToContain('Give an email address.')
+            ->expectsQuestion('The first administrator\'s email address', ' First@Example.com ')
+            ->expectsOutputToContain('you then land on the admin panel')
+            ->expectsOutputToContain('/register/')
             ->expectsOutputToContain("Done. {$php} artisan openpne:check says")
             ->assertSuccessful();
 
-        $this->assertTrue(AdminUser::where('username', 'admin')->exists());
+        $this->assertSame(['first@example.com'], DB::table('admin_role_invites')->pluck('email')->all());
+        $this->assertFalse(Member::query()->exists());
         $this->assertTrue(DB::table('navigations')->exists());
         $this->assertSame(0o770, fileperms($this->layout->storage) & 0o777);
         $this->assertSame([], glob($this->layout->dataDirectory().'/openpne-setup-*') ?: []);
@@ -752,17 +751,54 @@ class SetupCommandTest extends TestCase
         }
     }
 
-    public function test_run_again_it_skips_what_is_done_and_asks_about_the_first_member(): void
+    public function test_run_again_it_skips_what_is_done_and_prints_no_link(): void
     {
         $this->withEnv();
         $this->fakeWeb();
         $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
-            ->doesntExpectOutputToContain('user name')
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
+            ->doesntExpectOutputToContain('The registration link follows')
             ->assertSuccessful();
+
+        $this->assertFalse(DB::table('admin_role_invites')->exists());
+    }
+
+    public function test_run_again_before_anyone_registered_prints_a_new_link(): void
+    {
+        $this->withEnv();
+        $this->fakeWeb();
+        $this->fakeTools();
+        $this->artisan('openpne:install')->assertSuccessful();
+        $this->artisan('openpne:admin:invite', ['email' => 'first@example.com'])->assertSuccessful();
+        $first = DB::table('registration_tokens')->value('token');
+
+        $this->runSetup()
+            ->expectsQuestion('The first administrator\'s email address', 'first@example.com')
+            ->assertSuccessful();
+
+        $this->assertNotSame($first, DB::table('registration_tokens')->value('token'));
+        $this->assertSame(1, DB::table('registration_tokens')->count());
+    }
+
+    public function test_a_link_refused_three_times_stops_with_the_command_that_prints_one(): void
+    {
+        $this->withEnv();
+        $this->fakeWeb();
+        $this->fakeTools();
+        $this->artisan('openpne:install')->assertSuccessful();
+        $this->setSnsSetting(SnsSettingKey::MemberCapacity, 0);
+
+        $command = $this->runSetup();
+        for ($i = 0; $i < 3; $i++) {
+            $command->expectsQuestion('The first administrator\'s email address', "admin{$i}@example.com");
+        }
+        $command->expectsOutputToContain('php artisan openpne:admin:invite <email> prints one')
+            ->doesntExpectOutputToContain('Done.')
+            ->assertFailed();
+
+        $this->assertFalse(DB::table('admin_role_invites')->exists());
     }
 
     public function test_mariadb_s_mysqldump_is_named_mariadb_dump_in_the_backup_line(): void
@@ -773,7 +809,7 @@ class SetupCommandTest extends TestCase
         $this->withEnv();
         $this->fakeWeb();
         $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         $tools = $this->layout->base.'/tools';
         $dump = $this->root.'/pkg/mariadb-11.4.2/bin/mariadb-dump';
         mkdir(dirname($dump), 0o755, true);
@@ -784,7 +820,6 @@ class SetupCommandTest extends TestCase
         symlink($dump, $tools.'/mariadb-dump');
 
         $this->runSetup()
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->expectsOutputToContain("&& '{$tools}/mariadb-dump' --defaults-extra-file=")
             ->doesntExpectOutputToContain($dump)
             ->assertSuccessful();
@@ -793,7 +828,7 @@ class SetupCommandTest extends TestCase
     public function test_an_administrator_with_migrations_not_run_stops_before_migrating(): void
     {
         $this->withEnv();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         $migrations = $this->root.'/migrations';
         mkdir($migrations);
         file_put_contents($migrations.'/2999_01_01_000000_setup_test_table.php',
@@ -812,7 +847,7 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb(['runner' => 'other']);
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         chmod($this->layout->storage, 0o775);
 
         $this->runSetup()
@@ -826,7 +861,7 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         $calls = 0;
         $this->fakeWeb(['unreachable' => function () use (&$calls): bool {
             return $calls++ < 1;
@@ -837,7 +872,6 @@ class SetupCommandTest extends TestCase
             ->expectsOutputToContain('cannot be reached')
             ->expectsConfirmation('Check again?', 'yes')
             ->expectsOutputToContain('The web serves the site as it should.')
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->assertSuccessful();
     }
 
@@ -845,7 +879,7 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb(['unreachable' => fn (): bool => true]);
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         chmod($this->layout->storage, 0o775);
 
         $this->runSetup()
@@ -860,7 +894,7 @@ class SetupCommandTest extends TestCase
     {
         $this->withEnv();
         $this->fakeWeb();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
         mkdir($this->layout->storage.'/framework/'.WebCheck::LOCK_FILE);
 
         $this->runSetup()
@@ -869,25 +903,12 @@ class SetupCommandTest extends TestCase
             ->assertFailed();
     }
 
-    public function test_an_administrator_password_this_host_would_show_is_asked_about_first(): void
-    {
-        $this->withEnv();
-        $this->hostState['hide'] = false;
-
-        $this->runSetup()
-            ->expectsQuestion('The first administrator\'s user name', 'admin')
-            ->expectsConfirmation('Go on, with the password showing as you type?', 'no')
-            ->assertFailed();
-
-        $this->assertFalse(AdminUser::query()->exists());
-    }
-
     public function test_proxy_addresses_are_typed_never_taken_from_what_was_seen_and_set_alone(): void
     {
         $before = $this->withEnv("APP_NAME=\"Example SNS\"\nTRUSTED_PROXIES=\"\"\nMAIL_PASSWORD='p#ss'\n");
         $this->fakeWeb(['proxy_headers' => ['X-Forwarded-For'], 'peer' => '198.51.100.7']);
         $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
             ->expectsOutputToContain('nothing the check saw is used')
@@ -900,7 +921,6 @@ class SetupCommandTest extends TestCase
             ->expectsOutputToContain('wider than a proxy\'s')
             ->expectsQuestion('The proxy\'s addresses', '203.0.113.0/24, 2001:db8::/32')
             ->expectsConfirmation('Write TRUSTED_PROXIES=203.0.113.0/24,2001:db8::/32 into .env?', 'yes')
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->assertSuccessful();
 
         $this->assertSame(
@@ -914,11 +934,10 @@ class SetupCommandTest extends TestCase
         $this->withEnv("TRUSTED_PROXIES=null\n");
         $this->fakeWeb(['proxy_headers' => ['X-Forwarded-For']]);
         $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
             ->expectsChoice('TRUSTED_PROXIES', 'later', ['later' => 'Later (the site works without it)', 'enter' => 'Enter the proxy\'s addresses'])
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->assertSuccessful();
     }
 
@@ -927,27 +946,13 @@ class SetupCommandTest extends TestCase
         $before = $this->withEnv("APP_NAME=x\nTRUSTED_PROXIES=192.0.2.1\n");
         $this->fakeWeb(['proxy_headers' => ['X-Forwarded-For']]);
         $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
             ->doesntExpectOutputToContain('nothing the check saw is used')
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->assertSuccessful();
 
         $this->assertSame($before, file_get_contents($this->layout->envFile));
-    }
-
-    public function test_an_administrator_password_refused_three_times_stops(): void
-    {
-        $this->withEnv();
-
-        $command = $this->runSetup()->expectsQuestion('The first administrator\'s user name', 'admin');
-        for ($i = 0; $i < 3; $i++) {
-            $command->expectsQuestion('Password', 'short')->expectsQuestion('Confirm password', 'short');
-        }
-        $command->expectsOutputToContain('No administrator was created')->assertFailed();
-
-        $this->assertFalse(AdminUser::query()->exists());
     }
 
     public function test_an_env_naming_a_mariadb_server_stops_before_anything_is_written_or_installed(): void
@@ -1014,10 +1019,9 @@ class SetupCommandTest extends TestCase
         $this->withEnv();
         $this->fakeWeb();
         $this->fakeTools('fails');
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->expectsOutputToContain('Tried once, and it failed: '.($this->sqlite() ? $this->sqlitePath().' could not be copied: file is not a database. Until it works' : 'mysqldump: Got error: 1044'))
             ->assertSuccessful();
     }
@@ -1027,10 +1031,9 @@ class SetupCommandTest extends TestCase
         $this->withEnv();
         $this->fakeWeb();
         $this->fakeTools('empty');
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->expectsOutputToContain('Tried once, and it failed: the copy holds no tables.')
             ->assertSuccessful();
 
@@ -1046,10 +1049,9 @@ class SetupCommandTest extends TestCase
         $this->fakeWeb();
         $this->fakeTools();
         $this->sqliteState['extension'] = false;
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->expectsOutputToContain('PHP on the command line has no sqlite3 extension, and the backup of an SQLite database needs it. Where another PHP on this host has it')
             ->doesntExpectOutputToContain('openpne:backup-sqlite')
             ->assertSuccessful();
@@ -1063,10 +1065,9 @@ class SetupCommandTest extends TestCase
         $this->withEnv();
         $this->fakeWeb();
         $this->fakeTools();
-        AdminUser::create(['username' => 'admin', 'password' => 'correct horse battery staple']);
+        Member::factory()->create();
 
         $this->runSetup()
-            ->expectsConfirmation('Print a registration link for the first member?', 'no')
             ->expectsOutputToContain('The backup line is not shown: '.$this->layout->base)
             ->expectsOutputToContain('The cron line is not shown')
             ->doesntExpectOutputToContain('backup.sql')
@@ -1152,12 +1153,13 @@ class SetupCommandTest extends TestCase
     }
 
     /** A migration ordered after the site's own, so the one openpne:install has left to run. */
-    private function migration(string $up): void
+    private function migration(string $up, bool $withinTransaction = true): void
     {
         $migrations = $this->root.'/migrations';
         mkdir($migrations);
+        $outside = $withinTransaction ? '' : 'public $withinTransaction = false; ';
         file_put_contents($migrations.'/2999_01_01_000000_setup_test.php',
-            "<?php\nuse Illuminate\\Database\\Migrations\\Migration;\nuse Illuminate\\Support\\Facades\\Schema;\nreturn new class extends Migration { public function up(): void { {$up} } };\n");
+            "<?php\nuse Illuminate\\Database\\Migrations\\Migration;\nuse Illuminate\\Support\\Facades\\Schema;\nreturn new class extends Migration { {$outside}public function up(): void { {$up} } };\n");
         $this->app->make('migrator')->path($migrations);
     }
 

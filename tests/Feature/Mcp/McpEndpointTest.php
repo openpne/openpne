@@ -119,7 +119,7 @@ class McpEndpointTest extends McpTestCase
 
         $response = $this->rpc($this->token(Member::factory()->create()), 'tools/list')->assertOk();
 
-        $this->assertSame(0, DB::table(config('session.member_table'))->count());
+        $this->assertSame(0, DB::table(config('session.table'))->count());
         $this->assertSame([], $response->headers->getCookies());
     }
 

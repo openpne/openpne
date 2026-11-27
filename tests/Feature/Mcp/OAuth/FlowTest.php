@@ -309,7 +309,7 @@ class FlowTest extends OAuthTestCase
         [$verifier, $challenge] = $this->pkce();
         $query = $this->redirectQuery($this->consent($viewer, $this->authorizeUrl($client['client_id'], $challenge), ['actor' => 'self']));
 
-        app(RejectMemberLogin::class)($viewer);
+        app(RejectMemberLogin::class)($viewer, $this->createAdmin());
 
         $this->freshRequestState();
         $this->exchange($client['client_id'], $query['code'], $verifier)->assertStatus(400)->assertJsonPath('error', 'invalid_grant');

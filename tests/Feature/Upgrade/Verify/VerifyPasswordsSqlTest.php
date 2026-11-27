@@ -6,7 +6,6 @@ use App\Auth\PasswordScheme;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
-use App\Upgrade\Steps\AdminUserUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\Verify\UpgradeVerifier;
@@ -24,7 +23,7 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
 {
     protected function sourceTables(): array
     {
-        return ['member', 'member_config', 'sns_config', 'plugin', 'admin_user'];
+        return ['member', 'member_config', 'sns_config', 'plugin'];
     }
 
     protected function setUp(): void
@@ -33,7 +32,7 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
 
         $this->seedSources();
 
-        $ok = (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade, new AdminUserUpgrade, new SnsSettingUpgrade]))
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade, new SnsSettingUpgrade]))
             ->run(new RunOptions);
         $this->assertTrue($ok, 'the upgrade run (walk + wrap) should succeed');
     }
@@ -44,10 +43,6 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
         $this->assertTrue(Hash::check(md5('member-secret'), $member->password));
         $this->assertSame(PasswordScheme::Md5Bcrypt->value, $member->password_scheme);
 
-        $admin = DB::table('admin_users')->where('id', 1)->first();
-        $this->assertTrue(Hash::check(md5('admin-secret'), $admin->password));
-        $this->assertSame(PasswordScheme::Md5Bcrypt->value, $admin->password_scheme);
-
         // A member with no password config imports as NULL and is not wrapped.
         $this->assertNull(DB::table('members')->where('id', 2)->value('password'));
         $this->assertNull(DB::table('members')->where('id', 2)->value('password_scheme'));
@@ -55,7 +50,7 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
         [$report, $out] = $this->verify();
         $this->assertFalse($report->failed(), $out);
         $this->assertStringContainsString('PASS passwords:members:wrapped', $out);
-        $this->assertStringContainsString('PASS passwords:admin_users:wrapped', $out);
+        $this->assertStringNotContainsString('admin_users', $out);
         // The runner's post-success surface_mode stamp adds a row sns_settings' step did not
         // produce; Check A must not read it as target drift.
         $this->assertStringContainsString('PASS SnsSettingUpgrade', $out);
@@ -74,21 +69,14 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
     public function test_a_flagged_row_without_a_bcrypt_hash_fails_check_c(): void
     {
         // '$2'-prefixed junk and NULL must both fail — the hasher recognises neither.
-        foreach (['not-a-hash', '$2not-a-real-bcrypt'] as $password) {
-            DB::table('admin_users')->where('id', 1)->update(['password' => $password]);
+        foreach (['not-a-hash', '$2not-a-real-bcrypt', null] as $password) {
+            DB::table('members')->where('id', 1)->update(['password' => $password]);
 
             [$report, $out] = $this->verify();
 
-            $this->assertTrue($report->failed(), $password);
-            $this->assertStringContainsString('FAIL passwords:admin_users:scheme', $out);
+            $this->assertTrue($report->failed(), (string) $password);
+            $this->assertStringContainsString('FAIL passwords:members:scheme', $out);
         }
-
-        DB::table('members')->where('id', 1)->update(['password' => null]);
-
-        [$report, $out] = $this->verify();
-
-        $this->assertTrue($report->failed());
-        $this->assertStringContainsString('FAIL passwords:members:scheme', $out);
     }
 
     public function test_an_unknown_scheme_fails_check_c(): void
@@ -105,7 +93,7 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
     private function verify(): array
     {
         $lines = [];
-        $report = (new UpgradeVerifier(new InsertSelectCompiler, [new MemberUpgrade, new AdminUserUpgrade, new SnsSettingUpgrade]))
+        $report = (new UpgradeVerifier(new InsertSelectCompiler, [new MemberUpgrade, new SnsSettingUpgrade]))
             ->verify(new RunOptions, function (string $line) use (&$lines): void {
                 $lines[] = $line;
             });
@@ -122,10 +110,6 @@ class VerifyPasswordsSqlTest extends UpgradeSqlTestCase
         DB::table('member_config')->insert([
             ['member_id' => 1, 'name' => 'pc_address', 'value' => 'alice@pc.example', 'name_value_hash' => md5('x1'), 'created_at' => '2018-03-04 12:34:56', 'updated_at' => '2019-06-07 01:02:03'],
             ['member_id' => 1, 'name' => 'password', 'value' => md5('member-secret'), 'name_value_hash' => md5('x2'), 'created_at' => '2018-03-04 12:34:56', 'updated_at' => '2019-06-07 01:02:03'],
-        ]);
-        DB::table('admin_user')->insert([
-            'id' => 1, 'username' => 'root-admin', 'password' => md5('admin-secret'),
-            'created_at' => '2018-03-04 12:34:56', 'updated_at' => '2019-06-07 01:02:03',
         ]);
     }
 }

@@ -187,7 +187,6 @@ install() {
   : >database/database.sqlite
   php artisan key:generate --force
   php artisan openpne:install
-  OPENPNE_ADMIN_PASSWORD='archive-check-pass-1' php artisan openpne:admin:create admin
 }
 
 verify() {
@@ -207,11 +206,11 @@ verify() {
     # What a host is checked for before a site exists, so it runs before install writes .env.
     php artisan openpne:check --only=before --lang=en || die "openpne:check --only=before found what the archive lacks"
     install
-    php artisan openpne:member:invite first@example.com | grep -E '^http://127\.0\.0\.1:[0-9]+/register/[A-Za-z0-9]{40}$' >/dev/null \
-      || die "openpne:member:invite printed no registration link"
+    php artisan openpne:admin:invite first@example.com | grep -E '^http://127\.0\.0\.1:[0-9]+/register/[A-Za-z0-9]{40}$' >/dev/null \
+      || die "openpne:admin:invite printed no registration link"
     php artisan optimize
     expect 200 /login
-    expect 200 /admin/login
+    expect 302 /admin
     expect 200 /js/filament/filament/app.js
     asset=$(php -r 'echo array_values(json_decode(file_get_contents("public/build/manifest.json"), true))[0]["file"];')
     expect 200 "/build/$asset"
@@ -363,7 +362,7 @@ update() {
   expect 200 /login
   [ -z "$db" ] || [ "$(sqlite3 -cmd ".timeout 60000" "$db" 'PRAGMA journal_mode')" = wal ] || die "the database is not in WAL mode once the updated site has opened it"
   [ -z "${ARCHIVE_NEW_MARK:-}" ] || grep -qF "$ARCHIVE_NEW_MARK" "$work/page" || die "the login page is not the new release's"
-  expect 200 /admin/login
+  expect 302 /admin
   probe check
   grep -qxF "version=$new_version" RELEASE || die "RELEASE is not the new release's"
   [ -f "$theme/css/main.css" ] || die "the operator's theme did not come along"
@@ -468,9 +467,6 @@ if db == 'mysql':
     expect(r'Password'); send(password + '\r')
 expect(r'Mail'); send('\r')
 expect(r'Background work'); send('\r')
-expect(r"The first administrator's user name"); send('admin\r')
-expect(r'Password'); send('correct horse battery staple\r')
-expect(r'Confirm password'); send('correct horse battery staple\r')
 expect(r'Check again\?', 300); send('n\r')
 end = time.time() + 120
 while pump(1) is not None and time.time() < end:

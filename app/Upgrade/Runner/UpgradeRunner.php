@@ -43,8 +43,10 @@ final class UpgradeRunner
     /** The `step_key` the epoch marker occupies. Not a step: no registry entry ever bears this name. */
     public const EPOCH_KEY = 'naming_epoch';
 
-    /** The tables a new-site install (`openpne:install`, `openpne:admin:create`) writes, which the walk fills from OpenPNE 3 instead. */
-    public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'admin_users'];
+    /** The tables a new-site install (`openpne:install`, a registration) writes, which the walk fills from OpenPNE 3 instead. */
+    public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'members'];
+
+    public const PENDING_ADMIN_INVITE_MESSAGE = 'OpenPNE 4 table `admin_role_invites` holds an administrator invite (openpne:admin:invite), whose registration would make an administrator of the upgraded site. Restore the schema fresh, or rerun with --force-restart, which empties it first.';
 
     /** The `step_key` of the completion marker, written once on the first full success; not a step either. */
     public const RUN_KEY = 'upgrade_completed';
@@ -119,6 +121,11 @@ final class UpgradeRunner
             $installed = $this->installedTargetTables();
             foreach ($installed as $table) {
                 $report->error(self::installedTargetMessage($table));
+            }
+            // No step writes the invites, so the table check above cannot see one awaiting its registration.
+            if (DB::table('admin_role_invites')->exists()) {
+                $installed[] = 'admin_role_invites';
+                $report->error(self::PENDING_ADMIN_INVITE_MESSAGE);
             }
             if ($installed !== []) {
                 $report->abort('the OpenPNE 4 schema is not empty; nothing was migrated.');
@@ -680,10 +687,9 @@ final class UpgradeRunner
         }
 
         try {
-            // Not a step target, and with MySQL's checks off the cascade from admin_users would not run.
-            if (in_array('admin_users', $this->targetTables(), true)) {
-                DB::table('admin_password_setup_tokens')->delete();
-            }
+            // Not step targets: a link issued on the site being overwritten must not register into the upgraded one.
+            DB::table('admin_role_invites')->delete();
+            DB::table('registration_tokens')->delete();
 
             foreach ($this->targetTables() as $table) {
                 DB::table($table)->delete();
@@ -730,7 +736,7 @@ final class UpgradeRunner
 
     public static function installedTargetMessage(string $table): string
     {
-        return "OpenPNE 4 table `{$table}` already holds rows (a new-site install writes them: openpne:install, openpne:admin:create, or opening the admin Banner page); the upgrade needs the schema `php artisan migrate` alone creates. Restore it fresh, or rerun with --force-restart, which empties every target table first.";
+        return "OpenPNE 4 table `{$table}` already holds rows (a new-site install writes them: openpne:install, a registration such as the one openpne:admin:invite leads to, or opening the admin Banner page); the upgrade needs the schema `php artisan migrate` alone creates. Restore it fresh, or rerun with --force-restart, which empties every target table first.";
     }
 
     /** @return list<string> distinct step target tables in reverse run order (FK-safe delete order). */

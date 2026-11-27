@@ -1,6 +1,6 @@
 @php
     $generated = app(\App\Files\GeneratedIcon::class);
-    $wanted = \Illuminate\Support\Facades\Auth::guard('admin')->check()
+    $wanted = \Filament\Facades\Filament::auth()->check()
         && app(\App\Files\SiteIcon::class)->state() !== \App\Files\SiteIconState::Uploaded
         && ! $generated->hasRaster();
 @endphp

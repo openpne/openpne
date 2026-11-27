@@ -41,7 +41,7 @@ class InstallCommandTest extends TestCase
     public function test_it_seeds_a_fresh_site_and_names_the_next_step(): void
     {
         $this->artisan('openpne:install')
-            ->expectsOutputToContain('openpne:admin:create')
+            ->expectsOutputToContain('openpne:admin:invite')
             ->assertSuccessful();
 
         foreach (['profiles', 'navigations', 'gadgets', 'banners'] as $table) {

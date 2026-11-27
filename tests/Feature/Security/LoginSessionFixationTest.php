@@ -4,13 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Security;
 
-use App\Filament\Pages\Auth\Login;
-use App\Models\AdminUser;
 use App\Models\Member;
-use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Livewire\Livewire;
 use Tests\TestCase;
 
 class LoginSessionFixationTest extends TestCase
@@ -59,25 +55,5 @@ class LoginSessionFixationTest extends TestCase
             $this->freshRequestState();
             $this->withCookie($cookie, $id)->get('/dashboard')->assertRedirect('/login');
         }
-    }
-
-    /**
-     * Filament's login is a Livewire component whose test harness emits no cookie and runs no
-     * middleware, so the id is read off the store the component ran against, which is not the
-     * administrators' own.
-     */
-    public function test_an_administrators_login_leaves_the_session_id_it_started_under(): void
-    {
-        Filament::setCurrentPanel('admin');
-        $admin = AdminUser::factory()->create(['username' => 'opene']);
-        $before = session()->getId();
-
-        Livewire::test(Login::class)
-            ->fillForm(['email' => 'opene', 'password' => 'password'])
-            ->call('authenticate')
-            ->assertHasNoFormErrors();
-
-        $this->assertAuthenticatedAs($admin, 'admin');
-        $this->assertNotSame($before, session()->getId());
     }
 }

@@ -178,7 +178,7 @@ rehearse() {
   php artisan queue:restart
   php artisan up
   expect 200 /login
-  expect 200 /admin/login
+  expect 302 /admin
 
   printf '\nrehearsal: a site on %s updated to %s\n' "$1" "$target"
 }

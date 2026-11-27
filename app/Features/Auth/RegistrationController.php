@@ -19,6 +19,7 @@ use App\Rules\NewEmailAddress;
 use App\Support\ShellInsertions;
 use App\Support\SiteLocale;
 use App\Support\SurfaceResolver;
+use Filament\Facades\Filament;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -153,6 +154,12 @@ class RegistrationController extends Controller
 
         Auth::login($member);
         $request->session()->regenerate();
+
+        if ($member->isAdministrator()) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->to(Filament::getPanel('admin')->getUrl());
+        }
 
         return redirect()->intended(route('home'))->with('status', __('Your account is ready.'));
     }

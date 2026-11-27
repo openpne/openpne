@@ -3,23 +3,25 @@
 use App\Files\CanonicalUnavailableException;
 use App\Files\ImageProcessingException;
 use App\Files\ImageProcessorUnavailableException;
+use App\Http\Middleware\EnsureAdministrator;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\NoStore;
+use App\Http\Middleware\PrefixSessionCookie;
 use App\Http\Middleware\PreventRequestForgery as AppPreventRequestForgery;
 use App\Http\Middleware\RemoveCookiesFromPublicFileResponses;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\TickHousekeeping;
-use App\Http\Middleware\UseAdminSessionStore;
 use App\Models\Member;
 use App\Support\ClassicErrorPage;
 use App\Support\GuestLoginRedirect;
 use App\Support\SecurityLog;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Session\Middleware\AuthenticatesSessions;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -68,11 +70,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // this runs before the configuration that picks one (docs/internals/images.md, "The fast path").
         $middleware->encryptCookies(except: ['openpne-img', '__Host-openpne-img']);
 
-        // Global, ahead of every group: it must pin the session store (cookie + table)
-        // and default guard for the request's realm before anything resolves the
-        // session driver — including the web group's StartSession, which also serves
-        // the admin realm's Livewire endpoints.
-        $middleware->prepend(UseAdminSessionStore::class);
+        $middleware->prepend(PrefixSessionCookie::class);
 
         // Global: the daily tick needs the signed-in request whatever the route group.
         $middleware->append(TickHousekeeping::class);
@@ -87,6 +85,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         ], append: [
             SetLocale::class,
             HandleInertiaRequests::class,
+            // The admin realm's Livewire and Filament system routes are served by this group.
+            EnsureAdministrator::class,
         ], replace: [
             PreventRequestForgery::class => AppPreventRequestForgery::class,
         ]);
@@ -101,6 +101,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // missing() handler.
         $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureFeatureEnabled::class);
         $middleware->appendToPriorityList(EnsureFeatureEnabled::class, EnsureTimelinePostingEnabled::class);
+
+        // After the session's credential check and before route-model binding, so a refused visitor
+        // learns nothing of whether the bound record exists.
+        $middleware->appendToPriorityList(AuthenticatesSessions::class, EnsureAdministrator::class);
 
         // Sanctum ships its ability checks unaliased; `ability` is the any-of check, which for a single
         // ability is also all-of.
@@ -129,7 +133,6 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 // The limiter key is never logged: login keys embed the attempted email.
                 SecurityLog::event('throttle.hit', [
                     'route' => request()->route()?->getName(),
-                    // The default guard is the realm's, so on an admin route user() is an administrator.
                     'member_id' => ($user = request()->user()) instanceof Member ? $user->getKey() : null,
                 ]);
             }

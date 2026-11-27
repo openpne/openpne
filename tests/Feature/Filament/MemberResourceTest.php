@@ -8,7 +8,6 @@ use App\Features\Member\Actions\MfaResetUnavailable;
 use App\Features\Member\Actions\RequestMfaReset;
 use App\Filament\Resources\Members\MemberResource;
 use App\Filament\Resources\Members\Pages\ListMembers;
-use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Models\MfaResetRequest;
@@ -30,19 +29,19 @@ class MemberResourceTest extends TestCase
     use CapturesSecurityLog, GrantsAdministratorMidway;
     use RefreshDatabase;
 
-    private AdminUser $admin;
+    private Member $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
+        // Reserve id 1 as the un-withdrawable primary member so factory subjects below get id >= 2.
+        Member::factory()->create(['id' => 1]);
+
         $this->admin = $this->createAdmin();
         $this->actingAsAdmin($this->admin);
         $this->captureSecurityLog();
-
-        // Reserve id 1 as the un-withdrawable primary member so factory subjects below get id >= 2.
-        Member::factory()->create(['id' => 1]);
     }
 
     public function test_list_page_renders_members(): void
@@ -82,7 +81,7 @@ class MemberResourceTest extends TestCase
 
         $context = $this->assertOneSecurityEvent('member.banned');
         $this->assertSame((string) $member->getKey(), $context['member_id']);
-        $this->assertSame($this->admin->username, $context['admin_username']);
+        $this->assertSame((string) $this->admin->getKey(), $context['admin_member_id']);
     }
 
     public function test_ban_revokes_live_sessions(): void
@@ -96,10 +95,8 @@ class MemberResourceTest extends TestCase
             'id' => 'member-device', 'user_id' => $member->getKey(),
             'payload' => base64_encode('{}'), 'last_activity' => time(),
         ]);
-        // The banning operator's own panel session lives in admin_sessions; even with a
-        // colliding id it must survive a member revocation.
-        DB::table('admin_sessions')->insert([
-            'id' => 'operator-device', 'user_id' => $member->getKey(),
+        DB::table('sessions')->insert([
+            'id' => 'operator-device', 'user_id' => $this->admin->getKey(),
             'payload' => base64_encode('{}'), 'last_activity' => time(),
         ]);
 
@@ -107,7 +104,7 @@ class MemberResourceTest extends TestCase
             ->callAction(TestAction::make('ban')->table($member));
 
         $this->assertDatabaseMissing('sessions', ['id' => 'member-device']);
-        $this->assertDatabaseHas('admin_sessions', ['id' => 'operator-device']);
+        $this->assertDatabaseHas('sessions', ['id' => 'operator-device']);
     }
 
     public function test_unban_allows_login(): void
@@ -177,6 +174,84 @@ class MemberResourceTest extends TestCase
         $this->assertFalse((bool) $member->fresh()->is_login_rejected);
     }
 
+    public function test_the_administrator_filter_picks_out_the_role(): void
+    {
+        $other = Member::factory()->administrator()->create();
+        $member = Member::factory()->create();
+
+        Livewire::test(ListMembers::class)
+            ->filterTable('administrator', true)
+            ->assertCanSeeTableRecords([$this->admin, $other])
+            ->assertCanNotSeeTableRecords([$member])
+            ->filterTable('administrator', false)
+            ->assertCanSeeTableRecords([$member])
+            ->assertCanNotSeeTableRecords([$this->admin, $other]);
+    }
+
+    public function test_make_administrator_grants_the_role_with_the_acting_administrator_logged(): void
+    {
+        $member = Member::factory()->create();
+
+        Livewire::test(ListMembers::class)
+            ->callAction(TestAction::make('grantAdministrator')->table($member))
+            ->assertNotified(__('The member is now an administrator'));
+
+        $this->assertTrue($member->fresh()->isAdministrator());
+        $this->assertSame((string) $this->admin->getKey(), $this->assertOneSecurityEvent('admin.granted')['actor']);
+    }
+
+    public function test_make_administrator_is_offered_only_to_a_member_who_can_hold_the_role(): void
+    {
+        $member = Member::factory()->create();
+        $rejected = Member::factory()->create(['is_login_rejected' => true]);
+        $ai = Member::factory()->aiAccount($member)->create();
+
+        Livewire::test(ListMembers::class)
+            ->assertActionVisible(TestAction::make('grantAdministrator')->table($member))
+            ->assertActionHidden(TestAction::make('grantAdministrator')->table($rejected))
+            ->assertActionHidden(TestAction::make('grantAdministrator')->table($ai))
+            ->assertActionHidden(TestAction::make('grantAdministrator')->table($this->admin));
+    }
+
+    public function test_a_grant_the_member_can_no_longer_take_says_why(): void
+    {
+        $member = Member::factory()->create();
+        $list = Livewire::test(ListMembers::class);
+
+        $member->forceFill(['withdrawal_started_at' => now()])->save();
+        $list->callAction(TestAction::make('grantAdministrator')->table($member))
+            ->assertNotified(__('The member is being withdrawn'));
+
+        $this->assertFalse($member->fresh()->isAdministrator());
+    }
+
+    public function test_remove_administrator_revokes_another_administrator_but_never_ones_own(): void
+    {
+        $other = Member::factory()->administrator()->create();
+
+        Livewire::test(ListMembers::class)
+            ->assertActionHidden(TestAction::make('revokeAdministrator')->table($this->admin))
+            ->assertActionHidden(TestAction::make('revokeAdministrator')->table(Member::factory()->create()))
+            ->callAction(TestAction::make('revokeAdministrator')->table($other))
+            ->assertNotified(__('The member is no longer an administrator'));
+
+        $this->assertFalse($other->fresh()->isAdministrator());
+        $this->assertTrue($this->admin->fresh()->isAdministrator());
+        $this->assertSame((string) $this->admin->getKey(), $this->assertOneSecurityEvent('admin.revoked')['actor']);
+    }
+
+    public function test_an_administrator_who_lost_the_role_meanwhile_changes_nobody(): void
+    {
+        $other = Member::factory()->administrator()->create();
+        $list = Livewire::test(ListMembers::class);
+
+        $this->admin->forceFill(['admin_granted_at' => null])->save();
+        $list->callAction(TestAction::make('revokeAdministrator')->table($other))
+            ->assertNotified(__('You are no longer an administrator'));
+
+        $this->assertTrue($other->fresh()->isAdministrator());
+    }
+
     public function test_send_mfa_reset_is_hidden_without_a_live_factor(): void
     {
         // No factor at all, and a pending (unconfirmed) set-up: neither is a live factor, so there is
@@ -229,7 +304,7 @@ class MemberResourceTest extends TestCase
         // Logged before the fallible send, carrying the acting admin's username; the token is never logged.
         $context = $this->assertOneSecurityEvent('mfa.reset_link_sent');
         $this->assertSame((string) $member->getKey(), $context['member_id']);
-        $this->assertSame($this->admin->username, $context['admin_username']);
+        $this->assertSame((string) $this->admin->getKey(), $context['admin_member_id']);
         $this->assertArrayNotHasKey('token', $context);
 
         // On-demand mail pinned to the member's registered address (never the Member notifiable).
@@ -285,7 +360,7 @@ class MemberResourceTest extends TestCase
         // the action body deterministically.
         $this->app->bind(RequestMfaReset::class, fn () => new class extends RequestMfaReset
         {
-            public function __invoke(Member $member): void
+            public function __invoke(Member $member, Member $actor): void
             {
                 throw new MfaResetUnavailable('factor invalidated between before() and the lock recheck');
             }
@@ -310,7 +385,7 @@ class MemberResourceTest extends TestCase
         // warning where monitoring would never see it.
         $this->app->bind(RequestMfaReset::class, fn () => new class extends RequestMfaReset
         {
-            public function __invoke(Member $member): void
+            public function __invoke(Member $member, Member $actor): void
             {
                 throw new RuntimeException('queue exploded');
             }

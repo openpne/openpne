@@ -5,16 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Auth;
 
 use App\Auth\SessionRevocation;
-use App\Models\AdminUser;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * The colliding-id cases give a member and an admin the same integer id, since revoking one must
- * never touch the other's rows.
- */
 class SessionRevocationTest extends TestCase
 {
     use RefreshDatabase;
@@ -36,33 +31,19 @@ class SessionRevocationTest extends TestCase
         ]);
     }
 
-    public function test_member_revocation_purges_member_rows_only(): void
+    public function test_member_revocation_purges_that_members_rows_and_honors_the_exception(): void
     {
         $member = Member::factory()->create();
-        $this->seedRow('sessions', 'member-device', (int) $member->getKey());
-        // An administrator whose id collides with the member's id must be unaffected.
-        $this->seedRow('admin_sessions', 'admin-device', (int) $member->getKey());
+        $other = Member::factory()->create();
+        $this->seedRow('sessions', 'current-device', (int) $member->getKey());
+        $this->seedRow('sessions', 'other-device', (int) $member->getKey());
+        $this->seedRow('sessions', 'someone-else', (int) $other->getKey());
 
-        SessionRevocation::revokeMember($member);
+        SessionRevocation::revokeMember($member, 'current-device');
 
-        $this->assertDatabaseMissing('sessions', ['id' => 'member-device']);
-        $this->assertDatabaseHas('admin_sessions', ['id' => 'admin-device']);
-    }
-
-    public function test_admin_revocation_purges_admin_rows_only_and_honors_the_exception(): void
-    {
-        $admin = AdminUser::factory()->create();
-        $before = $admin->remember_token;
-        $this->seedRow('admin_sessions', 'current-device', (int) $admin->getKey());
-        $this->seedRow('admin_sessions', 'other-device', (int) $admin->getKey());
-        $this->seedRow('sessions', 'member-device', (int) $admin->getKey());
-
-        SessionRevocation::revokeAdmin($admin, 'current-device');
-
-        $this->assertDatabaseHas('admin_sessions', ['id' => 'current-device']);
-        $this->assertDatabaseMissing('admin_sessions', ['id' => 'other-device']);
-        $this->assertDatabaseHas('sessions', ['id' => 'member-device']);
-        $this->assertNotSame($before, $admin->fresh()->remember_token);
+        $this->assertDatabaseHas('sessions', ['id' => 'current-device']);
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device']);
+        $this->assertDatabaseHas('sessions', ['id' => 'someone-else']);
     }
 
     public function test_the_purge_is_a_no_op_off_the_database_driver(): void

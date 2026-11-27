@@ -115,8 +115,9 @@ class AdministratorRoleLockTest extends TestCase
     public function test_a_ban_arriving_while_the_grant_holds_the_member_waits(): void
     {
         $member = Member::factory()->create();
+        $actor = $this->createAdmin();
 
-        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($this->copy($member))));
+        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($this->copy($member), $actor)));
         $this->assertSame(AdministratorRoleResult::Granted, app(GrantAdministrator::class)($member));
 
         $this->assertWaitedOn(self::MEMBER_ROW, $outcomes);
@@ -127,9 +128,10 @@ class AdministratorRoleLockTest extends TestCase
     public function test_a_grant_arriving_while_the_ban_holds_the_member_waits(): void
     {
         $member = Member::factory()->create();
+        $actor = $this->createAdmin();
 
         $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($this->copy($member))));
-        app(RejectMemberLogin::class)($member);
+        app(RejectMemberLogin::class)($member, $actor);
 
         $this->assertWaitedOn(self::MEMBER_ROW, $outcomes);
         $this->assertTrue((bool) $member->fresh()->is_login_rejected);
@@ -139,8 +141,9 @@ class AdministratorRoleLockTest extends TestCase
     public function test_a_ban_committed_just_before_the_grants_lock_refuses_the_grant(): void
     {
         $member = Member::factory()->create();
+        $actor = $this->createAdmin();
 
-        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($this->copy($member))));
+        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($this->copy($member), $actor)));
 
         $this->assertSame(AdministratorRoleResult::LoginRejected, app(GrantAdministrator::class)($member));
         $this->assertSame(['done'], $outcomes->getArrayCopy());
@@ -150,12 +153,13 @@ class AdministratorRoleLockTest extends TestCase
     public function test_a_grant_committed_just_before_the_bans_lock_refuses_the_ban(): void
     {
         $member = Member::factory()->create();
+        $actor = $this->createAdmin();
 
         $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($this->copy($member))));
 
         $this->expectException(AdministratorRoleHeld::class);
         try {
-            app(RejectMemberLogin::class)($member);
+            app(RejectMemberLogin::class)($member, $actor);
         } finally {
             $this->assertSame(['done'], $outcomes->getArrayCopy());
             $this->assertFalse((bool) $member->fresh()->is_login_rejected);

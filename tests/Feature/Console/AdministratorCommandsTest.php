@@ -13,6 +13,7 @@ use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use RuntimeException;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\Concerns\SeparatesCommandStreams;
@@ -64,14 +65,17 @@ class AdministratorCommandsTest extends TestCase
         $this->assertSame('2026-12-02T09:30:00Z', $json['expires_at']);
     }
 
-    public function test_the_invites_link_registers_an_administrator_on_a_closed_site(): void
+    public function test_the_invites_link_registers_an_administrator_on_a_closed_site_who_lands_on_the_panel(): void
     {
         $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'closed');
 
         [, $stdout] = $this->runSeparated('openpne:admin:invite', ['email' => 'admin@example.com']);
-        $this->post(parse_url(trim($stdout), PHP_URL_PATH), self::FORM)->assertRedirect('/');
+        $path = (string) parse_url(trim($stdout), PHP_URL_PATH);
+        // An intended URL left from an earlier visit must not take the new administrator elsewhere.
+        $this->withSession(['url.intended' => url('/diary')])->post($path, self::FORM)->assertRedirect(url('/admin'));
 
         $this->assertTrue(Member::where('email', 'admin@example.com')->sole()->isAdministrator());
+        $this->get('/admin')->assertOk();
     }
 
     public function test_inviting_again_replaces_the_link_and_extends_the_invite(): void
@@ -210,5 +214,46 @@ class AdministratorCommandsTest extends TestCase
         Carbon::setTestNow(Carbon::createFromTimestamp($expiry)->addDays(AdminRoleInvite::KEPT_EXPIRED_DAYS)->addSecond());
         app(Housekeeping::class)->run();
         $this->assertSame(0, AdminRoleInvite::count());
+    }
+
+    public function test_list_json_holds_the_member_count_the_administrators_and_the_kept_invites(): void
+    {
+        $admin = Member::factory()->administrator()->create(['email' => 'admin@example.com', 'name' => 'Hanako']);
+        $secured = Member::factory()->administrator()->create(['email' => 'secured@example.com', 'name' => 'Jiro']);
+        app(EnableTwoFactorAuthentication::class)($secured, force: true);
+        DB::table('members')->where('id', $secured->id)->update(['two_factor_confirmed_at' => now()]);
+        $secured->passkeys()->create(['name' => 'a', 'credential_id' => 'AbC', 'credential' => []]);
+        $secured->passkeys()->create(['name' => 'b', 'credential_id' => 'abc', 'credential' => []]);
+        Member::factory()->aiAccount(Member::factory()->create())->create();
+        $this->runSeparated('openpne:admin:invite', ['email' => 'live@example.com']);
+        AdminRoleInvite::insert([
+            ['email' => 'kept@example.com', 'expires_at' => now()->subDays(AdminRoleInvite::KEPT_EXPIRED_DAYS)->getTimestamp(), 'created_at' => now()],
+            ['email' => 'gone@example.com', 'expires_at' => now()->subDays(AdminRoleInvite::KEPT_EXPIRED_DAYS)->subSecond()->getTimestamp(), 'created_at' => now()],
+        ]);
+
+        [$exit, $stdout, $stderr] = $this->runSeparated('openpne:admin:list', ['--json' => true]);
+
+        $this->assertSame(0, $exit, $stderr);
+        $this->assertSame('', $stderr);
+        $this->assertSame(1, substr_count($stdout, "\n"));
+        $this->assertSame([
+            'members' => 4,
+            'admins' => [
+                ['id' => $admin->id, 'email' => 'admin@example.com', 'name' => 'Hanako', 'two_factor' => false, 'passkeys' => 0, 'granted_at' => '2026-12-01T09:30:00Z'],
+                ['id' => $secured->id, 'email' => 'secured@example.com', 'name' => 'Jiro', 'two_factor' => true, 'passkeys' => 2, 'granted_at' => '2026-12-01T09:30:00Z'],
+            ],
+            'invites' => [
+                ['email' => 'kept@example.com', 'expires_at' => '2026-11-24T09:30:00Z', 'expired' => true],
+                ['email' => 'live@example.com', 'expires_at' => '2026-12-02T09:30:00Z', 'expired' => false],
+            ],
+        ], json_decode($stdout, true, flags: JSON_THROW_ON_ERROR));
+    }
+
+    public function test_list_json_of_an_empty_site_is_all_zero(): void
+    {
+        [$exit, $stdout] = $this->runSeparated('openpne:admin:list', ['--json' => true]);
+
+        $this->assertSame(0, $exit);
+        $this->assertSame(['members' => 0, 'admins' => [], 'invites' => []], json_decode($stdout, true, flags: JSON_THROW_ON_ERROR));
     }
 }
