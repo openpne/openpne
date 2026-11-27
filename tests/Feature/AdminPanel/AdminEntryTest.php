@@ -7,9 +7,9 @@ namespace Tests\Feature\AdminPanel;
 use App\Auth\AdminEntry;
 use App\Auth\Reauth\PasskeyProof;
 use App\Auth\Reauth\ReauthPurpose;
+use App\Filament\Widgets\RegistrationModeWidget;
 use App\Models\Member;
 use App\Notifications\Auth\LoginCodeNotification;
-use Filament\Facades\Filament;
 use Filament\Widgets\Concerns\CanPoll;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -23,6 +23,7 @@ use Laravel\Passkeys\Support\WebAuthn;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PragmaRX\Google2FA\Google2FA;
+use ReflectionClass;
 use ReflectionMethod;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\Support\FakeAuthenticator;
@@ -320,17 +321,19 @@ class AdminEntryTest extends TestCase
 
     public function test_nothing_in_the_panel_polls(): void
     {
-        $widgets = Filament::getPanel('admin')->getWidgets();
-        $this->assertNotEmpty($widgets);
-        foreach ($widgets as $widget) {
-            if (in_array(CanPoll::class, class_uses_recursive($widget), true)) {
-                $this->assertNull((new ReflectionMethod($widget, 'getPollingInterval'))->invoke(app($widget)), $widget);
+        $polling = [];
+        foreach (File::allFiles(app_path()) as $file) {
+            $class = 'App\\'.str_replace(['/', '.php'], ['\\', ''], $file->getRelativePathname());
+            if (class_exists($class) && ! (new ReflectionClass($class))->isAbstract() && in_array(CanPoll::class, class_uses_recursive($class), true)) {
+                $polling[] = $class;
+                $this->assertNull((new ReflectionMethod($class, 'getPollingInterval'))->invoke(app($class)), $class);
             }
         }
+        $this->assertContains(RegistrationModeWidget::class, $polling);
 
         foreach ([app_path(), resource_path('views')] as $root) {
             foreach (File::allFiles($root) as $file) {
-                $this->assertDoesNotMatchRegularExpression('/->poll\(|wire:poll/', $file->getContents(), $file->getRelativePathname());
+                $this->assertDoesNotMatchRegularExpression('/->poll\(|wire:poll|databaseNotifications/', $file->getContents(), $file->getRelativePathname());
             }
         }
     }
