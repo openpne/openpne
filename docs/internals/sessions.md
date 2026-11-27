@@ -71,7 +71,7 @@ prefix terms.
 
 | Setting | Default | Applies to |
 |---|---|---|
-| `SESSION_LIFETIME` | 120 | idle minutes of a guest's session and of every session on a driver other than `database` |
+| `SESSION_LIFETIME` | 120 | idle minutes of a guest's session, of every session on a driver other than `database`, and of [the admin panel's entry](administrators.md#the-panels-entry) |
 | `SESSION_MEMBER_LIFETIME` | 43200 (30 days) | idle minutes of a signed-in member's session |
 | `SESSION_MEMBER_ABSOLUTE_LIFETIME` | 576000 (400 days) | minutes from sign-in after which a member's session ends however recently it was used |
 

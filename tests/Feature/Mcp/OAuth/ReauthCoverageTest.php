@@ -98,6 +98,11 @@ class ReauthCoverageTest extends OAuthTestCase
 
                 return ['post', "/member/config/connections/{$client->getKey()}/{$member->getKey()}/delete", []];
             })(),
+            'admin entry' => (function () use ($member): array {
+                $member->forceFill(['admin_granted_at' => now(), 'admin_generation' => 1])->save();
+
+                return ['post', '/member/admin-entry', []];
+            })(),
         };
     }
 
@@ -119,6 +124,7 @@ class ReauthCoverageTest extends OAuthTestCase
             'ai token revoke' => ['ai token revoke', 'none'],
             'oauth consent' => ['oauth consent', 'none'],
             'connection end' => ['connection end', 'none'],
+            'admin entry' => ['admin entry', 'none'],
         ];
     }
 
@@ -140,6 +146,7 @@ class ReauthCoverageTest extends OAuthTestCase
             'ai token revoke' => ReauthPurpose::AiToken,
             'oauth consent' => ReauthPurpose::OAuthConsent,
             'connection end' => ReauthPurpose::OAuthConnectionRevoke,
+            'admin entry' => ReauthPurpose::AdminEntry,
         ];
 
         return array_map(fn (array $row): array => [$row[0], $row[1], $purposes[$row[0]]], self::operations());

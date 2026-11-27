@@ -67,6 +67,7 @@ class AdministratorInviteRegistrationTest extends TestCase
 
         $this->get("/register/{$raw}")->assertOk();
         $this->post("/register/{$raw}", $this->form())->assertRedirect('/admin');
+        $this->get('/admin')->assertOk();
 
         $member = $this->registered();
         $this->assertTrue($member->isAdministrator());
@@ -87,6 +88,7 @@ class AdministratorInviteRegistrationTest extends TestCase
             ->post("/register/{$raw}", $this->form())
             ->assertRedirect('/admin')
             ->assertSessionMissing('url.intended');
+        $this->get('/admin')->assertOk();
     }
 
     public function test_an_ordinary_link_that_replaced_the_invites_link_still_makes_an_administrator(): void

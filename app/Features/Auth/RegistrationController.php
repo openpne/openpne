@@ -152,6 +152,11 @@ class RegistrationController extends Controller
             throw $e;
         }
 
+        // Before the login, which then opens the panel's entry too (docs/internals/administrators.md, "The panel's entry").
+        if ($member->isAdministrator()) {
+            redirect()->setIntendedUrl(Filament::getPanel('admin')->getUrl());
+        }
+
         Auth::login($member);
         $request->session()->regenerate();
 

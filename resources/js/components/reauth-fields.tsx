@@ -31,7 +31,8 @@ export type ReauthPurpose =
     | 'ai-account-delete'
     | 'ai-token'
     | 'oauth-consent'
-    | 'oauth-connection-revoke';
+    | 'oauth-connection-revoke'
+    | 'admin-entry';
 
 interface Props {
     /** Several of these can share a page, so every field id is prefixed. */

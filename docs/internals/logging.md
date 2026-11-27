@@ -40,6 +40,7 @@ fallible and must not be able to suppress the audit record of a change that alre
 | `member.registered` | listener `LogMemberRegistered` (`MemberRegistered`) | `guard`, `member_id` |
 | `registration.link_printed` | seam: `InviteMemberCommand`, `InviteAdministratorCommand` — a mailed link logs nothing | `email`, `via` (cli), `role` (admin) and `expires_at` for an administrator invite |
 | `admin.granted` / `admin.revoked` | seam: `GrantAdministrator` / `RevokeAdministrator` (actions), and `CompleteRegistration` for a registration through a live administrator invite | `member_id`, `actor` (cli, or the acting administrator's member id), `via` (invite) |
+| `admin.entered` | seam: `AdminEntryController::store` (a re-authentication proof), and listener `StampAdminEntry` (`Login`) for a login headed for the panel ([administrators.md](administrators.md#the-panels-entry)) | `member_id`, `via` (password, passkey, login) |
 | `mfa.enabled` | seam: `MemberMfaController::confirm` | `guard`, `member_id` |
 | `mfa.disabled` | seam: `MemberMfaController::disable` (live), `DisableMemberMfaCommand` | `guard`, `member_id`, `via` (cli) |
 | `mfa.recovery_codes_regenerated` | seam: `MemberMfaController::regenerate` | `guard`, `member_id` |

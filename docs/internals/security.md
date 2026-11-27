@@ -4,9 +4,15 @@
 
 An administrator is a member holding the role ([administrators.md](administrators.md)) and signs
 in as any member does, so everything below about members holds for them: the password, the
-two-factor and passkey rules, login codes, the CAPTCHA and the ban. The admin panel asks for no
-credential of its own; its access lasts as long as the member's session ([Session
-lifetime](#session-lifetime)), and logging out of the panel logs the member out.
+two-factor and passkey rules, login codes, the CAPTCHA and the ban. Logging out of the panel logs
+the member out.
+
+- **The entry.** A member session opens the panel only within `SESSION_LIFETIME` idle (120 minutes)
+  of the last admin-realm request; after that the panel asks for a re-authentication proof, the
+  password with the TOTP factor or a passkey ([administrators.md](administrators.md), "The panel's
+  entry"). A login headed for the panel counts as one. This bounds what a session left signed in on
+  a shared device or taken from one opens, for the 30 days a member's session lasts ([Session
+  lifetime](#session-lifetime)); a stolen session that is used within the period keeps it open.
 
 - **The gate.** Every admin-realm request passes `EnsureAdministrator`
   ([administrators.md](administrators.md), "The admin panel"): a guest is sent to the member login
@@ -18,9 +24,9 @@ lifetime](#session-lifetime)), and logging out of the panel logs the member out.
   administrator's mailbox can reset the password and open the panel. This deviates from NIST SP
   800-63B-4's AAL2-for-administrators SHOULD: a blanket requirement is impractical for the
   operator population.
-- **The login page is a member page.** On a site with `OPENPNE_OPERATOR_RAW_HTML`, its Classic
-  slots print an administrator's HTML, so one administrator's script can read another's password
-  as it is typed, and a script on any member page can drive the panel in an administrator's
+- **The login page and the entry screen are member pages.** On a site with
+  `OPENPNE_OPERATOR_RAW_HTML`, their Classic slots print an administrator's HTML, so one
+  administrator's script can read another's password as it is typed, and a script on any member page can drive the panel in an administrator's
   session ([Administrator content](#administrator-content)). Every administrator has the same
   powers, so neither gives one a power they lack.
 - **Recovery** is a member's: a password reset by mail, recovery codes or
@@ -717,7 +723,8 @@ are the sidecar's to judge; a host that shares users puts the spool on a volume 
 
 A signed-in member's session ends after 30 days idle or 400 days from sign-in,
 whichever comes first, and an administrator's is a member's; a guest's ends after
-`SESSION_LIFETIME` idle (120 minutes). The mechanism and the three settings are
+`SESSION_LIFETIME` idle (120 minutes), as does an administrator's way into the
+panel ([Administrators](#administrators)). The mechanism and the three settings are
 in [sessions.md](sessions.md#lifetimes).
 
 The member values exceed the reauthentication intervals NIST SP 800-63B-4

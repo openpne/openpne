@@ -23,4 +23,12 @@ final class AdminRealm
             $filament, $filament.'/*',
         );
     }
+
+    /** False for a URL off this site's root, the host and an install's subpath included. */
+    public static function matchesUrl(string $url): bool
+    {
+        $root = url('/').'/';
+
+        return str_starts_with($url, $root) && self::matches(Request::create('/'.substr($url, strlen($root))));
+    }
 }

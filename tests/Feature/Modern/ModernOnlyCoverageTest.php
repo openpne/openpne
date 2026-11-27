@@ -96,6 +96,7 @@ class ModernOnlyCoverageTest extends TestCase
         'message.chat.index', 'message.chat.new', 'message.chat.withdrawn',
         'member.invite',
         'notifications.index',
+        'member.admin_entry',
     ];
 
     protected function setUp(): void
@@ -192,6 +193,12 @@ class ModernOnlyCoverageTest extends TestCase
                 ->assertOk()
                 ->assertInertia(fn (AssertableInertia $page) => $page);
         }
+    }
+
+    public function test_the_admin_entry_renders_modern_under_modern_only(): void
+    {
+        $this->actingAs(Member::factory()->administrator()->create())->get('/member/admin-entry')
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('auth/admin-entry'));
     }
 
     /** The classification guard covers only parameterless routes, so the parameterized show pages are asserted explicitly. */

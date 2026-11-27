@@ -27,6 +27,9 @@ class OverviewStatsWidget extends StatsOverviewWidget
 {
     protected ?string $heading = null;
 
+    // A poll is an admin-realm request, so a dashboard left open would keep the panel's entry open.
+    protected ?string $pollingInterval = null;
+
     protected static ?int $sort = 1;
 
     protected function getStats(): array

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Auth\AdminEntry;
 use App\Models\Member;
 use App\Support\AdminRealm;
 use Closure;
@@ -36,12 +37,32 @@ final class EnsureAdministrator
             throw new AuthenticationException('Unauthenticated.', ['member']);
         }
 
-        // auth.session here too, since only the panel's own stack has it: a session whose password hash
-        // is stale is signed out before the role is read.
+        // The admin realm's only auth.session: a session whose password hash is stale is signed out
+        // before the role is read.
         return $this->session->handle($request, function (Request $request) use ($member, $next): Response {
             abort_unless($member instanceof Member && $member->canAccessPanel(Filament::getPanel('admin')), 403);
 
+            if (! AdminEntry::admit($request->session(), $member)) {
+                return $this->toEntry($request);
+            }
+
             return $next($request);
         });
+    }
+
+    /**
+     * Only a page visit or a Livewire update is redirected, since Livewire follows a redirect with the
+     * whole window; Livewire answers a refused upload with an update
+     * (docs/internals/administrators.md, "The panel's entry").
+     */
+    private function toEntry(Request $request): Response
+    {
+        $visit = StartSession::isPageNavigation($request);
+        abort_unless($visit || $request->hasHeader('X-Livewire'), 403);
+
+        $back = $visit && $request->isMethod('GET') ? $request->fullUrl() : $request->session()->previousUrl();
+        redirect()->setIntendedUrl(is_string($back) && AdminRealm::matchesUrl($back) ? $back : Filament::getPanel('admin')->getUrl());
+
+        return redirect()->route('member.admin_entry');
     }
 }

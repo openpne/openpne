@@ -27,6 +27,7 @@ enum ReauthPurpose: string
     case AiToken = 'ai-token';
     case OAuthConsent = 'oauth-consent';
     case OAuthConnectionRevoke = 'oauth-connection-revoke';
+    case AdminEntry = 'admin-entry';
 
     /** @return class-string<ReauthWindow>|null */
     public function window(): ?string
