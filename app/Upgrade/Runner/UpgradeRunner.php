@@ -749,18 +749,18 @@ final class UpgradeRunner
     private function foreignKeysOntoTargets(): array
     {
         $targets = $this->targetTables();
-        $schema = DB::connection()->getDatabaseName();
         $children = [];
 
         foreach (DB::select(
-            'select rc.constraint_schema as s, kcu.table_name as t, kcu.column_name as c, rc.referenced_table_name as p, rc.delete_rule as r
+            'select rc.constraint_schema as s, rc.constraint_schema = rc.unique_constraint_schema as here, kcu.table_name as t, kcu.column_name as c, rc.referenced_table_name as p, rc.delete_rule as r
                from information_schema.referential_constraints rc
                join information_schema.key_column_usage kcu
                  on kcu.constraint_schema = rc.constraint_schema and kcu.constraint_name = rc.constraint_name and kcu.table_name = rc.table_name
               where rc.unique_constraint_schema = ?',
-            [$schema],
+            [DB::connection()->getDatabaseName()],
         ) as $fk) {
-            $here = $fk->s === $schema;
+            // MySQL compares the names, which lower_case_table_names may have folded.
+            $here = (bool) $fk->here;
             // file_bin's key onto files is dropped instead, since no step owns the BLOBs.
             if (! in_array($fk->p, $targets, true) || ($here && (in_array($fk->t, $targets, true) || $fk->t === 'file_bin'))) {
                 continue;
