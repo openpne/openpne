@@ -17,8 +17,9 @@ Filament export and import downloads do not pass the panel's. A guest is sent to
 and, once signed in, back to the URL they asked for; a member the panel refuses gets 403. The only
 admin-realm route it leaves alone is `/admin/logout`, which Filament's own check guards; an
 architecture test lists every admin-realm route and requires the gate ahead of route-model binding
-on each. An Inertia visit that reaches the panel, as the Modern login's redirect to `url.intended`
-does, is answered with a full page load. The panel has no login page of its own; `/admin/login`
+on each. An Inertia visit to the admin realm, as the Modern login's redirect to `url.intended` makes,
+is answered with a full page load ahead of every check (`LoadAdminRealmInFull`), so a refusal too
+arrives as a page. The panel has no login page of its own; `/admin/login`
 redirects to `/admin`.
 
 - **Logging out of the panel** logs the member out and lands on the member login. A member whose

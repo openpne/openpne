@@ -60,7 +60,7 @@ class AdministratorGateTest extends TestCase
         $this->actingAs($ai, 'member')->get('/admin')->assertForbidden();
     }
 
-    public function test_an_administrator_opens_the_panel_and_the_livewire_endpoints(): void
+    public function test_an_administrator_opens_the_panel_pages(): void
     {
         $this->actingAsAdmin()->get('/admin')->assertOk();
         $this->actingAsAdmin()->get('/admin/members')->assertOk();
@@ -79,6 +79,14 @@ class AdministratorGateTest extends TestCase
             ->get('/admin/members', ['X-Inertia' => 'true'])
             ->assertStatus(409)
             ->assertHeader('X-Inertia-Location', url('/admin/members'));
+    }
+
+    public function test_an_inertia_visit_from_a_member_without_the_role_loads_the_refusal_in_full(): void
+    {
+        $this->actingAs(Member::factory()->create(), 'member')
+            ->get('/admin', ['X-Inertia' => 'true'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', url('/admin'));
     }
 
     public function test_logging_out_of_the_panel_lands_on_the_member_login(): void

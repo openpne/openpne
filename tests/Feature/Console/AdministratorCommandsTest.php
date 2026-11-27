@@ -249,6 +249,24 @@ class AdministratorCommandsTest extends TestCase
         ], json_decode($stdout, true, flags: JSON_THROW_ON_ERROR));
     }
 
+    public function test_list_json_carries_a_name_past_the_console_formatter(): void
+    {
+        Member::factory()->administrator()->create(['name' => '<comment>Taro</comment>']);
+
+        [, $stdout] = $this->runSeparated('openpne:admin:list', ['--json' => true]);
+
+        $this->assertSame('<comment>Taro</comment>', json_decode($stdout, true, flags: JSON_THROW_ON_ERROR)['admins'][0]['name']);
+    }
+
+    public function test_list_json_counts_an_invite_expired_at_its_expiry_second(): void
+    {
+        AdminRoleInvite::insert(['email' => 'due@example.com', 'expires_at' => now()->getTimestamp(), 'created_at' => now()]);
+
+        [, $stdout] = $this->runSeparated('openpne:admin:list', ['--json' => true]);
+
+        $this->assertTrue(json_decode($stdout, true, flags: JSON_THROW_ON_ERROR)['invites'][0]['expired']);
+    }
+
     public function test_list_json_of_an_empty_site_is_all_zero(): void
     {
         [$exit, $stdout] = $this->runSeparated('openpne:admin:list', ['--json' => true]);

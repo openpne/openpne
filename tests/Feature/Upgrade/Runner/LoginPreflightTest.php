@@ -7,6 +7,7 @@ use App\Upgrade\Runner\LoginPreflight;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\Runner\Warning;
+use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Upgrade\UpgradeSqlTestCase;
@@ -108,6 +109,24 @@ class LoginPreflightTest extends UpgradeSqlTestCase
         DB::statement('drop table admin_user');
 
         $this->assertSame([], (new LoginPreflight)->inspect([new MemberUpgrade], '', null)->warnings);
+    }
+
+    public function test_the_source_administrators_are_counted_under_the_source_prefix(): void
+    {
+        DB::statement('drop table admin_user');
+        DB::statement(str_replace('`admin_user`', '`op_admin_user`', SourceSchema::default()->createStatement('admin_user', withoutForeignKeys: true)));
+
+        try {
+            DB::table('op_admin_user')->insert(['id' => 1, 'username' => 'root', 'password' => md5('secret'),
+                'created_at' => '2018-01-02 03:04:05', 'updated_at' => '2018-01-02 03:04:05']);
+
+            $this->assertEquals(
+                [new Warning(LoginPreflight::W_ADMIN_USER_NOT_COPIED, LoginPreflight::message(LoginPreflight::W_ADMIN_USER_NOT_COPIED, 1, []), 1)],
+                (new LoginPreflight)->inspect([], 'op_', null)->warnings,
+            );
+        } finally {
+            DB::statement('drop table if exists op_admin_user');
+        }
     }
 
     /** @param  array<string, string>  $config */

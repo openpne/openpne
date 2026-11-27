@@ -77,6 +77,18 @@ class AdministratorInviteRegistrationTest extends TestCase
         $this->assertSame([(string) $member->id, 'cli', 'invite'], [$context['member_id'], $context['actor'], $context['via']]);
     }
 
+    public function test_registering_through_the_invite_drops_the_url_asked_for_before(): void
+    {
+        $this->mode('invite');
+        $this->invite();
+        $raw = $this->link(RegistrationTokenSource::AdminRoleInvite);
+
+        $this->withSession(['url.intended' => url('/diary')])
+            ->post("/register/{$raw}", $this->form())
+            ->assertRedirect('/admin')
+            ->assertSessionMissing('url.intended');
+    }
+
     public function test_an_ordinary_link_that_replaced_the_invites_link_still_makes_an_administrator(): void
     {
         $this->mode('open');

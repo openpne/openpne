@@ -11,7 +11,6 @@ use Filament\Facades\Filament;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -35,12 +34,6 @@ final class EnsureAdministrator
         }
 
         abort_unless($member instanceof Member && $member->canAccessPanel(Filament::getPanel('admin')), 403);
-
-        // The Modern login and registration follow their redirect to url.intended as an Inertia visit,
-        // which cannot swap in a panel page, so the client is told to load it in full.
-        if ($request->hasHeader('X-Inertia')) {
-            return Inertia::location($request->fullUrl());
-        }
 
         return $next($request);
     }

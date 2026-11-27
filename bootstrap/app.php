@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsureAdministrator;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTimelinePostingEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\LoadAdminRealmInFull;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\NoStore;
 use App\Http\Middleware\PrefixSessionCookie;
@@ -71,6 +72,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['openpne-img', '__Host-openpne-img']);
 
         $middleware->prepend(PrefixSessionCookie::class);
+        $middleware->append(LoadAdminRealmInFull::class);
 
         // Global: the daily tick needs the signed-in request whatever the route group.
         $middleware->append(TickHousekeeping::class);

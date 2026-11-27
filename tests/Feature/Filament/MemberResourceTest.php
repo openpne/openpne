@@ -129,6 +129,8 @@ class MemberResourceTest extends TestCase
 
         $this->assertModelMissing($member);
         $this->assertModelMissing($diary);
+        $context = $this->assertOneSecurityEvent('member.withdrawn');
+        $this->assertSame(['admin', (string) $this->admin->getKey()], [$context['actor'], $context['admin_member_id']]);
     }
 
     public function test_primary_member_cannot_be_withdrawn(): void
