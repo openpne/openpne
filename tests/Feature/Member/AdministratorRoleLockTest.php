@@ -233,30 +233,36 @@ class AdministratorRoleLockTest extends TestCase
 
     public function test_a_registration_or_a_registration_settings_save_rolled_back_by_a_deadlock_runs_again(): void
     {
-        $this->deadlockOnce(self::CAPACITY);
+        $thrown = $this->deadlockOnce(self::CAPACITY);
         $member = app(CompleteRegistration::class)($this->adminLink('admin@example.com'), $this->form());
+        $this->assertCount(1, $thrown);
         $this->assertTrue($member->fresh()->isAdministrator());
 
         Filament::setCurrentPanel('admin');
         $this->actingAsAdmin();
-        $this->deadlockOnce('/insert into `sns_settings`/i');
+        DB::table('sns_settings')->where('key', SnsSettingKey::RegistrationMode->value)->delete();
+        $thrown = $this->deadlockOnce('/insert into `sns_settings`/i');
         Livewire::test(RegistrationSettings::class)->fillForm(['registration_mode' => 'closed'])->call('save')->assertHasNoErrors();
+        $this->assertCount(1, $thrown);
         $this->assertSame('closed', DB::table('sns_settings')->where('key', SnsSettingKey::RegistrationMode->value)->value('value'));
     }
 
     /** InnoDB's answer to a write meeting another writer on the same gaps, which a single connection cannot provoke. */
-    private function deadlockOnce(string $pattern = self::ADMINISTRATORS): void
+    /** @return ArrayObject<int, string> the statement it failed, once it has */
+    private function deadlockOnce(string $pattern = self::ADMINISTRATORS): ArrayObject
     {
-        $done = false;
+        $thrown = new ArrayObject;
 
-        DB::beforeExecuting(function (string $sql, array $bindings, Connection $on) use (&$done, $pattern): void {
-            if ($done || ! preg_match($pattern, $sql)) {
+        DB::beforeExecuting(function (string $sql, array $bindings, Connection $on) use ($thrown, $pattern): void {
+            if (count($thrown) > 0 || ! preg_match($pattern, $sql)) {
                 return;
             }
-            $done = true;
+            $thrown[] = $sql;
 
             throw new QueryException($on->getName(), $sql, $bindings, new PDOException('SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction'));
         });
+
+        return $thrown;
     }
 
     private function adminLink(string $email): RegistrationToken
@@ -354,6 +360,20 @@ class AdministratorRoleLockTest extends TestCase
 
         $this->assertWaitedOn('/update `sns_settings`/i', $outcomes);
         $this->assertTrue($member->fresh()->isAdministrator());
+    }
+
+    /** A member committed just as the link is written stands for a registration the upsert waited out. */
+    public function test_a_registration_committing_while_the_link_is_written_still_refuses_the_invite(): void
+    {
+        $outcomes = $this->before('/insert into `registration_tokens`/i', fn (): string => $this->raced(fn () => Member::factory()->create(['email' => 'admin@example.com'])));
+        $result = app(IssueRegistrationToken::class)->unmailedLink('admin@example.com', RegistrationTokenSource::AdminRoleInvite, function (CarbonInterface $createdAt): void {
+            AdminRoleInvite::upsert([['email' => 'admin@example.com', 'expires_at' => $createdAt->copy()->addDay()->getTimestamp(), 'created_at' => $createdAt]], ['email'], ['expires_at', 'created_at']);
+        });
+
+        $this->assertSame(['done'], $outcomes->getArrayCopy());
+        $this->assertSame(IssueResult::AlreadyMember, $result);
+        $this->assertDatabaseCount('registration_tokens', 0);
+        $this->assertDatabaseCount('admin_role_invites', 0);
     }
 
     public function test_an_invite_expiring_before_the_registration_locks_grants_nothing(): void
