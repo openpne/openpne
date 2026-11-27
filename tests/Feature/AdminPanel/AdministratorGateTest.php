@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminPanel;
 
 use App\Http\Middleware\EnsureAdministrator;
+use App\Http\Middleware\SetLocale;
 use App\Models\Member;
 use App\Support\AdminRealm;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -91,9 +92,10 @@ class AdministratorGateTest extends TestCase
     {
         Router::middleware('web')->get('/'.ltrim(EndpointResolver::prefix(), '/').'/locale-probe', fn () => app()->getLocale());
         Router::middleware('web')->get('/locale-probe', fn () => app()->getLocale());
-        $admin = Member::factory()->administrator()->create(['locale' => 'ja']);
+        // No stored choice, so the member realm falls to the session key the panel's must not share.
+        $admin = Member::factory()->administrator()->create(['locale' => null]);
 
-        $this->actingAsAdmin($admin)->withSession(['locale' => 'en']);
+        $this->actingAsAdmin($admin)->withSession([SetLocale::ADMIN_SESSION_KEY => 'en', 'locale' => 'ja']);
 
         $this->get('/'.ltrim(EndpointResolver::prefix(), '/').'/locale-probe')->assertOk()->assertContent('en');
         $this->get('/locale-probe')->assertOk()->assertContent('ja');

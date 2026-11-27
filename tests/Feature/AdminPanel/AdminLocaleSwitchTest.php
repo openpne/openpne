@@ -21,8 +21,17 @@ class AdminLocaleSwitchTest extends TestCase
             ->post('/admin/locale/session', ['locale' => 'en'])
             ->assertNoContent();
 
-        $this->assertSame('en', session('locale'));
         $this->assertSame('ja', $admin->fresh()->locale);
+        $this->get('/admin')->assertOk()->assertSee('lang="en"', false);
+    }
+
+    public function test_the_member_toggle_leaves_the_panel_language_alone(): void
+    {
+        $admin = Member::factory()->administrator()->create(['locale' => 'ja']);
+
+        $this->actingAsAdmin($admin)->post('/admin/locale/session', ['locale' => 'en']);
+        $this->post('/locale', ['locale' => 'ja']);
+
         $this->get('/admin')->assertOk()->assertSee('lang="en"', false);
     }
 

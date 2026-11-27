@@ -5,10 +5,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/*
- * An administrator made without a password has none until their setup link is used
- * (docs/internals/security.md, "Administrator password links").
- */
 return new class extends Migration
 {
     public function up(): void

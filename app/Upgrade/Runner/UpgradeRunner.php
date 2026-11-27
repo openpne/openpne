@@ -46,7 +46,7 @@ final class UpgradeRunner
     /** The tables a new-site install (`openpne:install`, a registration) writes, which the walk fills from OpenPNE 3 instead. */
     public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'members'];
 
-    public const PENDING_ADMIN_INVITE_MESSAGE = 'OpenPNE 4 table `admin_role_invites` holds an administrator invite (openpne:admin:invite), whose registration would make an administrator of the upgraded site. Restore the schema fresh, or rerun with --force-restart, which empties it first.';
+    public const PENDING_ADMIN_INVITE_MESSAGE = 'OpenPNE 4 table `admin_role_invites` holds an administrator invite (openpne:admin:invite), whose registration, while it is live, would make an administrator of the upgraded site. Restore the schema fresh, or rerun with --force-restart, which empties it first.';
 
     /** The `step_key` of the completion marker, written once on the first full success; not a step either. */
     public const RUN_KEY = 'upgrade_completed';

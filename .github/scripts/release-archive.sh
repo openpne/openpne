@@ -10,7 +10,9 @@
 #                                    stored file, then walk docs/updating.md to the new one
 #   shared-update <old dir> <old version> <new dir> <new version>
 #                                    the same through docs/installing-on-a-shared-host.md: its
-#                                    commands, taken from the guide, and openpne:setup in a terminal
+#                                    commands, taken from the guide, and openpne:setup in a terminal,
+#                                    answered as this version asks; the old version must be later than
+#                                    4.0.0-alpha.1, whose setup asked for an administrator first
 #
 # `update` reads ARCHIVE_DB: sqlite-default (database/database.sqlite in WAL mode, the default),
 # sqlite-outside (WAL too, at an absolute path outside the tree), relocated (that, with .env and

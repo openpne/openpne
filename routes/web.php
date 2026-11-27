@@ -122,9 +122,7 @@ Route::redirect('/admin/login', '/admin')->name('admin.login.legacy');
 Route::post('/admin/locale/session', function (Request $request) {
     $locale = (string) $request->input('locale');
     if (in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
-        // Never members.locale: the panel language must not change the administrator's own choice
-        // for the member pages.
-        $request->session()->put('locale', $locale);
+        $request->session()->put(SetLocale::ADMIN_SESSION_KEY, $locale);
     }
 
     return response()->noContent();

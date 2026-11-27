@@ -13,22 +13,26 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The member's persisted locale outranks the session toggle because it is the durable choice
- * (OpenPNE 3 member_config[lang]); a guest keeps the session toggle. The admin realm keeps it too,
- * as OpenPNE 3 keeps the admin culture apart from the member config, so its Livewire requests render
- * in the panel's language.
+ * (OpenPNE 3 member_config[lang]); a guest keeps the session toggle. The admin realm reads only its
+ * own session key, as OpenPNE 3 kept the admin culture apart from the member's in either direction.
  */
 class SetLocale
 {
     public const SUPPORTED_LOCALES = ['ja', 'en'];
 
+    /** The panel's language, which neither the member toggle nor members.locale writes. */
+    public const ADMIN_SESSION_KEY = 'admin_locale';
+
     public function handle(Request $request, Closure $next): Response
     {
-        App::setLocale($this->resolveLocale($request, memberAware: ! AdminRealm::matches($request)));
+        App::setLocale(AdminRealm::matches($request)
+            ? $this->resolveLocale($request, self::ADMIN_SESSION_KEY, memberAware: false)
+            : $this->resolveLocale($request, 'locale', memberAware: true));
 
         return $next($request);
     }
 
-    private function resolveLocale(Request $request, bool $memberAware): string
+    private function resolveLocale(Request $request, string $sessionKey, bool $memberAware): string
     {
         if ($memberAware) {
             $member = $request->user('member');
@@ -37,7 +41,7 @@ class SetLocale
             }
         }
 
-        $session = $request->session()->get('locale');
+        $session = $request->session()->get($sessionKey);
         if (in_array($session, self::SUPPORTED_LOCALES, strict: true)) {
             return $session;
         }

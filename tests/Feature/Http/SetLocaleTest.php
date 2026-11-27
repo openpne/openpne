@@ -42,7 +42,12 @@ class SetLocaleTest extends TestCase
     {
         $member = Member::factory()->make(['locale' => 'en']);
 
-        $this->assertSame('ja', $this->resolve('/admin/members', $member, session: 'ja'));
+        $this->assertSame('ja', $this->resolve('/admin/members', $member, session: 'ja', sessionKey: SetLocale::ADMIN_SESSION_KEY));
+    }
+
+    public function test_the_admin_realm_ignores_the_member_session_toggle(): void
+    {
+        $this->assertSame('ja', $this->resolve('/admin/members', null, session: 'en', sessionKey: 'locale', accept: 'ja'));
     }
 
     public function test_post_locale_persists_for_an_authenticated_member(): void
@@ -64,15 +69,15 @@ class SetLocaleTest extends TestCase
     }
 
     /** Drive the middleware directly and return the locale it resolves. */
-    private function resolve(string $path, ?Member $member, ?string $session): string
+    private function resolve(string $path, ?Member $member, ?string $session, string $sessionKey = 'locale', ?string $accept = null): string
     {
-        $request = Request::create($path);
+        $request = Request::create($path, server: $accept === null ? [] : ['HTTP_ACCEPT_LANGUAGE' => $accept]);
         $request->setUserResolver(fn (?string $guard = null) => $guard === 'member' ? $member : null);
 
         $store = app('session.store');
         $request->setLaravelSession($store);
         if ($session !== null) {
-            $store->put('locale', $session);
+            $store->put($sessionKey, $session);
         }
 
         (new SetLocale)->handle($request, fn () => response(''));

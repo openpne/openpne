@@ -34,10 +34,10 @@ redirects to `/admin`.
   the role, each confirmed. Giving is hidden for an AI account and a member whose login is
   rejected, taking on the administrator's own row, and a refusal the action still returns is
   shown with its reason.
-- **The panel's language** is a session toggle (`/admin/locale/session`) that never writes
-  `members.locale`, as OpenPNE 3 kept the admin culture apart from the member's
-  ([i18n.md](i18n.md)). The panel and its Livewire requests follow it; the member pages follow the
-  member's own choice.
+- **The panel's language** is a session toggle (`/admin/locale/session`) under a key of its own,
+  as OpenPNE 3 kept the admin culture apart from the member's in either direction
+  ([i18n.md](i18n.md)): it never writes `members.locale`, and the member pages' toggle never
+  writes it. The panel and its Livewire requests follow it.
 - **The dashboard** reminds an administrator without a confirmed TOTP factor to add one in the
   member settings, and suggests a passkey.
 - **Registering through an administrator invite** lands on the panel, whatever URL the visitor
