@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Every grant and revoke takes these locks first and the target member's row after.
- * On InnoDB a revoke's write to the index can still deadlock with a writer queued on these gaps, so the caller's transaction must retry (docs/internals/administrators.md, "Locks").
+ * On InnoDB a write to the index can still deadlock with another writer on these gaps, so the action's transaction retries, which Laravel does only for the outermost one (docs/internals/administrators.md, "Locks").
  */
 final class AdministratorLock
 {

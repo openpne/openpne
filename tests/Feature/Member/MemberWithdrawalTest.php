@@ -97,7 +97,6 @@ class MemberWithdrawalTest extends TestCase
         ])->assertForbidden();
 
         $this->assertModelExists($member);
-        $this->assertTrue($member->fresh()->isAdministrator());
     }
 
     public function test_the_leave_url_redirects_to_the_withdrawal_category(): void

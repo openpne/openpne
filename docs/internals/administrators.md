@@ -46,10 +46,12 @@ grant and a ban, or a grant and a withdrawal, of one member serialize on that ro
 it under the lock: a ban committed first refuses the grant, a grant committed first refuses the ban.
 On MySQL under REPEATABLE READ, the administrator rows are read through the index on
 `admin_granted_at` with gap locks. While a grant or revoke is open, every insert into `members`, a
-registration among them, waits for it. A revoke's own write to that index can deadlock with another
-grant or revoke queued on those gaps; InnoDB rolls one back, and both actions run their transaction
-again (`attempts: 3`), so a caller sees the deadlock only if it repeats. SQLite has no row locks; its
-writes are serialized instead.
+registration among them, waits for it. A grant's or revoke's own write to that index can deadlock
+with another grant or revoke on those gaps (two grants on a site with no administrator yet do not
+even wait for each other first); InnoDB rolls one back, and both actions run their transaction again
+(`attempts: 3`), so a caller sees the deadlock only if it repeats. Laravel retries only the outermost
+transaction, so neither action may be called inside another one. SQLite has no row locks; its writes
+are serialized instead.
 
 ## Inviting an administrator
 
