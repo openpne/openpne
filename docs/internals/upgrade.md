@@ -239,7 +239,7 @@ SET NULL nulls, any other refuses before anything changes; `file_bin`'s is the o
 and a key from another database refuses too, where the connection's user can see it).
 It also empties what names a target row by an id no key carries: `session.table` on
 `session.connection` (before the targets, so a store it cannot reach stops it with only sessions
-gone), `UpgradeRunner::MEMBER_OWNED_TABLES` and the front page's issues, whose ledger
+gone, and again after them), `UpgradeRunner::MEMBER_OWNED_TABLES` and the front page's issues, whose ledger
 would otherwise hold back the upgraded site's stories under those ids ([home-issues.md](home-issues.md)).
 A session driver other than `database` (or `array`, which keeps nothing past its process) refuses
 before anything changes, since that store is out of the reset's reach.

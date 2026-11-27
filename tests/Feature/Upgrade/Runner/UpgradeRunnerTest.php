@@ -252,7 +252,7 @@ class UpgradeRunnerTest extends TestCase
         $member = Member::factory()->create();
         $signedIn = false;
         DB::listen(function ($query) use ($member, &$signedIn): void {
-            if (! $signedIn && str_contains($query->sql, 'admin_role_invites')) {
+            if (! $signedIn && preg_match('/^delete from [`"]members[`"]$/', $query->sql) === 1) {
                 $signedIn = true;
                 DB::table((string) config('session.table'))->insert(['id' => 'late', 'user_id' => $member->getKey(), 'payload' => '', 'last_activity' => time()]);
             }
