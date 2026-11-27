@@ -6,11 +6,12 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\CapturesSecurityLog;
+use Tests\Concerns\GrantsAdministratorMidway;
 use Tests\TestCase;
 
 class MemberWithdrawalTest extends TestCase
 {
-    use CapturesSecurityLog;
+    use CapturesSecurityLog, GrantsAdministratorMidway;
     use RefreshDatabase;
 
     public function test_a_guest_cannot_post_the_withdrawal(): void
@@ -82,6 +83,21 @@ class MemberWithdrawalTest extends TestCase
 
         $this->assertModelExists($admin);
         $this->assertAuthenticatedAs($admin, 'member');
+    }
+
+    public function test_a_grant_landing_after_the_request_was_authorized_withdraws_nothing(): void
+    {
+        Member::factory()->create(['id' => 1]);
+        $member = Member::factory()->create();
+
+        $this->grantBeforeTheLockedRead($member);
+        $this->actingAs($member)->post('/member/config/withdrawal', [
+            'current_password' => 'password',
+            'confirm' => '1',
+        ])->assertForbidden();
+
+        $this->assertModelExists($member);
+        $this->assertTrue($member->fresh()->isAdministrator());
     }
 
     public function test_the_leave_url_redirects_to_the_withdrawal_category(): void

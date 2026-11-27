@@ -52,6 +52,14 @@ class AdminRoleInvite extends Model
         return static::whereKey($email)->where('expires_at', '>', now()->getTimestamp())->exists();
     }
 
+    /** Whether the address a registration link was issued to has a live invite, whether or not the link itself still works. */
+    public static function liveForLink(string $rawToken): bool
+    {
+        $email = RegistrationToken::where('token', hash('sha256', $rawToken))->value('email');
+
+        return is_string($email) && static::liveFor($email);
+    }
+
     /**
      * @return Builder<AdminRoleInvite>
      */

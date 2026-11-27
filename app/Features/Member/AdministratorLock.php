@@ -8,8 +8,8 @@ use App\Models\Member;
 use Illuminate\Support\Collection;
 
 /**
- * Every write of the administrator role takes these locks first and the target member's row after,
- * so two writers never wait on each other in opposite order (docs/internals/administrators.md, "Locks").
+ * Every grant and revoke takes these locks first and the target member's row after.
+ * On InnoDB a revoke's write to the index can still deadlock with a writer queued on these gaps, so the caller's transaction must retry (docs/internals/administrators.md, "Locks").
  */
 final class AdministratorLock
 {

@@ -16,7 +16,6 @@ use App\Models\Member;
 use App\Models\RegistrationToken;
 use App\Notifications\Auth\MemberCapacityRequestNotification;
 use App\Rules\NewEmailAddress;
-use App\Support\ShellInsertions;
 use App\Support\SiteLocale;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
@@ -91,11 +90,6 @@ class RegistrationController extends Controller
         $pending = $this->resolveForCompletion($token);
         if ($pending instanceof RedirectResponse) {
             return $pending;
-        }
-
-        // Whichever link opened it, the screen that would make an administrator draws nothing an operator or package put in the shell.
-        if (AdminRoleInvite::liveFor($pending->email)) {
-            ShellInsertions::withhold($request);
         }
 
         if ($this->capacity->isFullForCompletion()) {

@@ -235,6 +235,19 @@ class AdministratorInviteRegistrationTest extends TestCase
         $this->assertDatabaseCount('admin_role_invites', 1);
     }
 
+    public function test_closed_answers_a_link_replaced_before_the_insert_with_a_404(): void
+    {
+        $this->mode('closed');
+        $this->invite();
+        $raw = $this->link(RegistrationTokenSource::AdminRoleInvite);
+        $this->between(fn () => $this->link(RegistrationTokenSource::AdminRoleInvite));
+
+        $this->post("/register/{$raw}", $this->form())->assertNotFound();
+
+        $this->assertNull($this->registered());
+        $this->assertDatabaseCount('admin_role_invites', 1);
+    }
+
     public function test_moving_a_members_address_to_an_invited_one_grants_nothing(): void
     {
         $member = Member::factory()->create(['email' => 'before@example.com']);

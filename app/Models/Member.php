@@ -386,7 +386,7 @@ class Member extends Authenticatable implements PasskeyUser
         return $this->owner_member_id !== null;
     }
 
-    /** Written only by GrantAdministrator, RevokeAdministrator and CompleteRegistration, under this row's lock. */
+    /** Written only under this row's lock (docs/internals/administrators.md, "Locks"). */
     public function isAdministrator(): bool
     {
         return $this->admin_granted_at !== null;

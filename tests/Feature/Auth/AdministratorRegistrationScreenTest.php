@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Features\Auth\RegistrationTokenSource;
+use App\Http\Middleware\PreventRequestForgery;
 use App\Models\AdminRoleInvite;
 use App\Models\Banner;
 use App\Models\Gadget;
@@ -11,6 +12,8 @@ use App\Services\GadgetService;
 use App\Support\LayoutHook;
 use App\Support\LayoutHooks;
 use App\Support\SnsSettingKey;
+use Illuminate\Contracts\Encryption\Encrypter;
+use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -141,5 +144,25 @@ class AdministratorRegistrationScreenTest extends TestCase
         // A refused submission returns to the form: the session recorded it, and no Referer could lead back.
         $this->post("/register/{$raw}", ['name' => 'Newcomer', 'password' => 'short', 'password_confirmation' => 'short'])
             ->assertRedirect("/register/{$raw}");
+    }
+
+    public function test_a_page_drawn_at_the_link_on_an_error_withholds_too(): void
+    {
+        $this->app->bind(PreventRequestForgery::class, fn (Application $app) => new class($app, $app->make(Encrypter::class)) extends PreventRequestForgery
+        {
+            protected function runningUnitTests(): bool
+            {
+                return false;
+            }
+        });
+        $form = ['name' => 'Newcomer', 'password' => 'sufficiently-long-pw', 'password_confirmation' => 'sufficiently-long-pw'];
+
+        $plain = $this->post('/register/'.$this->link('member@example.com', RegistrationTokenSource::AdminInvite), $form)->assertStatus(419)->getContent();
+        $this->assertContains(self::MARK, $this->foreignHosts($plain));
+
+        $this->invite('admin@example.com');
+        $expired = $this->post('/register/'.$this->link('admin@example.com', RegistrationTokenSource::AdminRoleInvite), $form)->assertStatus(419)->getContent();
+        $this->assertSame([], $this->foreignHosts($expired));
+        $this->assertStringNotContainsString(self::MARK, $expired);
     }
 }

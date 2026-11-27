@@ -78,6 +78,7 @@ class MembersTable
                 DeleteAction::make()
                     ->label(__('Withdraw this member'))
                     ->hidden(fn (Member $record): bool => ! MemberResource::canDelete($record))
+                    ->failureNotificationTitle(__('An administrator cannot be withdrawn'))
                     ->using(function (Member $record): bool {
                         try {
                             app(WithdrawMember::class)($record);

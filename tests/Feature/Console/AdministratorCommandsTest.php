@@ -12,6 +12,8 @@ use App\Support\Housekeeping;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\Concerns\SeparatesCommandStreams;
 use Tests\TestCase;
@@ -107,6 +109,21 @@ class AdministratorCommandsTest extends TestCase
         $this->assertSame(0, AdminRoleInvite::count());
         $this->assertSame(0, RegistrationToken::count());
         $this->assertCount(0, $this->securityRecords('registration.link_printed'));
+    }
+
+    public function test_an_invite_that_fails_to_write_leaves_no_link(): void
+    {
+        DB::beforeExecuting(function (string $sql): void {
+            if (preg_match('/insert into [`"]admin_role_invites[`"]/', $sql)) {
+                throw new RuntimeException('the invite was not written');
+            }
+        });
+
+        [$exit, $stdout] = $this->runSeparated('openpne:admin:invite', ['email' => 'admin@example.com']);
+
+        $this->assertNotSame(0, $exit);
+        $this->assertSame('', $stdout);
+        $this->assertDatabaseCount('registration_tokens', 0);
     }
 
     public function test_grant_and_revoke_take_an_id_or_an_address(): void

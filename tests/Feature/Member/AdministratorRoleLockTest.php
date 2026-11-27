@@ -23,6 +23,7 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PDOException;
 use RuntimeException;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\Concerns\OpensSecondConnection;
@@ -67,6 +68,12 @@ class AdministratorRoleLockTest extends TestCase
         parent::tearDown();
     }
 
+    /** The racer's own instance: the race must not reach the caller's copy except through the database. */
+    private function copy(Member $member): Member
+    {
+        return Member::findOrFail($member->getKey());
+    }
+
     private function administrator(): Member
     {
         $member = Member::factory()->create();
@@ -80,7 +87,7 @@ class AdministratorRoleLockTest extends TestCase
         $first = $this->administrator();
         $second = $this->administrator();
 
-        $outcomes = $this->after(self::ADMINISTRATORS, fn (): string => $this->raced(fn () => app(RevokeAdministrator::class)($second)));
+        $outcomes = $this->after(self::ADMINISTRATORS, fn (): string => $this->raced(fn () => app(RevokeAdministrator::class)($this->copy($second))));
         $this->assertSame(AdministratorRoleResult::Revoked, app(RevokeAdministrator::class)($first));
 
         $this->assertWaitedOn(self::ADMINISTRATORS, $outcomes);
@@ -93,7 +100,7 @@ class AdministratorRoleLockTest extends TestCase
         $first = $this->administrator();
         $second = $this->administrator();
 
-        $outcomes = $this->before(self::ADMINISTRATORS, fn (): string => $this->raced(fn () => app(RevokeAdministrator::class)($second)));
+        $outcomes = $this->before(self::ADMINISTRATORS, fn (): string => $this->raced(fn () => app(RevokeAdministrator::class)($this->copy($second))));
         $this->assertSame(AdministratorRoleResult::LastAdministrator, app(RevokeAdministrator::class)($first));
 
         $this->assertSame(['done'], $outcomes->getArrayCopy());
@@ -105,7 +112,7 @@ class AdministratorRoleLockTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($member)));
+        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($this->copy($member))));
         $this->assertSame(AdministratorRoleResult::Granted, app(GrantAdministrator::class)($member));
 
         $this->assertWaitedOn(self::MEMBER_ROW, $outcomes);
@@ -117,7 +124,7 @@ class AdministratorRoleLockTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($member)));
+        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($this->copy($member))));
         app(RejectMemberLogin::class)($member);
 
         $this->assertWaitedOn(self::MEMBER_ROW, $outcomes);
@@ -129,7 +136,7 @@ class AdministratorRoleLockTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($member)));
+        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(RejectMemberLogin::class)($this->copy($member))));
 
         $this->assertSame(AdministratorRoleResult::LoginRejected, app(GrantAdministrator::class)($member));
         $this->assertSame(['done'], $outcomes->getArrayCopy());
@@ -140,7 +147,7 @@ class AdministratorRoleLockTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($member)));
+        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($this->copy($member))));
 
         $this->expectException(AdministratorRoleHeld::class);
         try {
@@ -155,7 +162,7 @@ class AdministratorRoleLockTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(WithdrawMember::class)($member)));
+        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(WithdrawMember::class)($this->copy($member))));
         $this->assertSame(AdministratorRoleResult::Granted, app(GrantAdministrator::class)($member));
 
         $this->assertWaitedOn(self::MEMBER_ROW, $outcomes);
@@ -167,7 +174,7 @@ class AdministratorRoleLockTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($member)));
+        $outcomes = $this->after(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($this->copy($member))));
         app(WithdrawMember::class)($member);
 
         $this->assertWaitedOn(self::MEMBER_ROW, $outcomes);
@@ -181,7 +188,7 @@ class AdministratorRoleLockTest extends TestCase
 
         $outcomes = $this->before(self::MEMBER_ROW, function () use ($member): string {
             try {
-                return $this->raced(fn () => app(WithdrawMember::class)($member));
+                return $this->raced(fn () => app(WithdrawMember::class)($this->copy($member)));
             } catch (RuntimeException) {
                 return 'stopped';
             }
@@ -196,7 +203,7 @@ class AdministratorRoleLockTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($member)));
+        $outcomes = $this->before(self::MEMBER_ROW, fn (): string => $this->raced(fn () => app(GrantAdministrator::class)($this->copy($member))));
 
         $this->expectException(AdministratorRoleHeld::class);
         try {
@@ -206,6 +213,33 @@ class AdministratorRoleLockTest extends TestCase
             $this->assertModelExists($member);
             $this->assertNull($member->fresh()->withdrawal_started_at);
         }
+    }
+
+    public function test_a_grant_or_revoke_rolled_back_by_a_deadlock_runs_again(): void
+    {
+        $administrator = $this->administrator();
+        $member = Member::factory()->create();
+
+        $this->deadlockOnce();
+        $this->assertSame(AdministratorRoleResult::Granted, app(GrantAdministrator::class)($member));
+
+        $this->deadlockOnce();
+        $this->assertSame(AdministratorRoleResult::Revoked, app(RevokeAdministrator::class)($administrator));
+    }
+
+    /** InnoDB's answer to a revoke's index write meeting a writer queued on the administrators' gaps, which a single connection cannot provoke. */
+    private function deadlockOnce(): void
+    {
+        $done = false;
+
+        DB::beforeExecuting(function (string $sql, array $bindings, Connection $on) use (&$done): void {
+            if ($done || ! preg_match(self::ADMINISTRATORS, $sql)) {
+                return;
+            }
+            $done = true;
+
+            throw new QueryException($on->getName(), $sql, $bindings, new PDOException('SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction'));
+        });
     }
 
     private function adminLink(string $email): RegistrationToken

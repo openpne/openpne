@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('admin_role_invites', function (Blueprint $table) {
             $table->string('email')->collation(IdentifierCollation::for(DB::connection()))->primary();
-            // Unix seconds, as admin_password_setup_tokens keeps its expiry, so an invite lasts its minutes across a daylight-saving change.
+            // Unix seconds, so an invite lasts its minutes across a daylight-saving change in APP_TIMEZONE.
             $table->unsignedBigInteger('expires_at');
             $table->dateTime('created_at')->nullable();
         });

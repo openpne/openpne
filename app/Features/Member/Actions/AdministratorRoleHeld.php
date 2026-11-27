@@ -4,7 +4,7 @@ namespace App\Features\Member\Actions;
 
 use RuntimeException;
 
-/** Thrown by WithdrawMember and RejectMemberLogin: the only way an administrator is lost is RevokeAdministrator. */
+/** An administrator is lost only by a revoke, which keeps the last one (docs/internals/administrators.md, "Who can hold the role"). */
 class AdministratorRoleHeld extends RuntimeException
 {
     public function __construct()

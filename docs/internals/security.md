@@ -492,7 +492,8 @@ if delivery fails) and in whatever the mailer keeps, the application log under `
 
 - **The mode is asked twice**, when the link is issued and again when it is opened
   (`RegistrationMode::allows`), so a link outlives neither a tightened mode nor its lifetime
-  (`OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES`, 24 hours by default).
+  (`OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES`, 24 hours by default). An `admin_role_invite` link asks
+  no mode; it asks, when opened and completed, whether the address's invite is live.
 - **One link per address, used once.** A newer link for an address replaces the older one,
   whoever issued either, and completing the registration deletes it in the transaction that
   creates the member.
