@@ -166,7 +166,9 @@ set a real time there (or NULL where the column allows it). Fix the source and d
 Some are about the OpenPNE 4 side instead. A `navigations`, `gadgets`, `profiles`, `banners` or
 `members` table that already holds rows, from `openpne:install`, a registration or a visit to the
 admin Banner page, or an administrator invite from `openpne:admin:invite` that nobody has used:
-restore the empty schema, or rerun with `--force-restart`. Under
+restore the empty schema, or rerun with `--force-restart`, which also signs everyone out and
+removes what belonged to the members it replaces: passkeys, MCP connections and API tokens,
+notifications, and pending email changes, password resets and two-factor resets. Under
 `--source-prefix` or `--source-database`, an OpenPNE 4 `file_bin` that already holds rows:
 `--force-restart` leaves `file_bin` alone, so start again from a fresh database (stages 1 and 2).
 

@@ -89,6 +89,18 @@ class AdministratorGateTest extends TestCase
             ->assertHeader('X-Inertia-Location', url('/admin'));
     }
 
+    public function test_a_session_with_a_stale_password_hash_is_signed_out_on_a_web_group_admin_route(): void
+    {
+        Router::middleware('web')->get('/admin/session-probe', fn () => 'ok');
+
+        $this->actingAsAdmin()
+            ->withSession(['password_hash_member' => 'stale'])
+            ->get('/admin/session-probe')
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest('member');
+    }
+
     public function test_logging_out_of_the_panel_lands_on_the_member_login(): void
     {
         $this->actingAsAdmin()->post('/admin/logout')->assertRedirect(route('login'));

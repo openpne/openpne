@@ -24,6 +24,7 @@ use App\Upgrade\Steps\WithdrawnMemberTermUpgrade;
 use App\Upgrade\UpgradeStep;
 use Closure;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -45,6 +46,9 @@ final class UpgradeRunner
 
     /** The tables a new-site install (`openpne:install`, a registration) writes, which the walk fills from OpenPNE 3 instead. */
     public const INSTALL_TABLES = ['navigations', 'navigation_translations', 'gadgets', 'profiles', 'profile_translations', 'banners', 'members'];
+
+    /** Every row of these belongs to a member, by an id no foreign key carries; reset() empties them when it replaces `members`. */
+    public const MEMBER_OWNED_TABLES = ['oauth_refresh_tokens', 'oauth_access_tokens', 'oauth_auth_codes', 'oauth_device_codes', 'personal_access_tokens', 'notifications', 'password_reset_tokens'];
 
     public const PENDING_ADMIN_INVITE_MESSAGE = 'OpenPNE 4 table `admin_role_invites` holds an administrator invite (openpne:admin:invite), whose registration, while it is live, would make an administrator of the upgraded site. Restore the schema fresh, or rerun with --force-restart, which empties it first.';
 
@@ -682,6 +686,9 @@ final class UpgradeRunner
             (new FileBinMigration)->dropForeignKey();
         }
 
+        // After the drop, so file_bin is not among them; before any delete, so a rule this cannot apply refuses with nothing deleted.
+        $children = $mysql ? $this->foreignKeysOntoTargets() : [];
+
         if ($mysql) {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
         }
@@ -694,6 +701,8 @@ final class UpgradeRunner
             foreach ($this->targetTables() as $table) {
                 DB::table($table)->delete();
             }
+
+            $this->clearRowsNamingTargets($children);
         } finally {
             if ($mysql) {
                 DB::statement('SET FOREIGN_KEY_CHECKS=1');
@@ -702,6 +711,56 @@ final class UpgradeRunner
 
         UpgradeState::query()->delete();
         $report->line('Reset: cleared upgrade state and target tables.');
+    }
+
+    /**
+     * The walk inserts OpenPNE 3's rows under their own ids, so a row left outside the targets would
+     * bind its passkey, token or session to whoever holds that id there. With MySQL's checks off
+     * InnoDB applies no delete rule, so $children's are applied here (SQLite's ran with the deletes).
+     *
+     * @param  list<array{0: string, 1: string, 2: string}>  $children
+     */
+    private function clearRowsNamingTargets(array $children): void
+    {
+        foreach ($children as [$table, $column, $rule]) {
+            $rows = DB::table($table)->whereNotNull($column);
+            $rule === 'SET NULL' ? $rows->update([$column => null]) : $rows->delete();
+        }
+
+        if (! in_array('members', $this->targetTables(), true)) {
+            return;
+        }
+
+        DB::table((string) config('session.table'))->delete();
+        foreach (self::MEMBER_OWNED_TABLES as $table) {
+            DB::table($table)->delete();
+        }
+    }
+
+    /** @return list<array{0: string, 1: string, 2: string}> table, column and delete rule of each foreign key from outside the targets onto one */
+    private function foreignKeysOntoTargets(): array
+    {
+        $targets = $this->targetTables();
+        $children = [];
+
+        foreach (DB::select(
+            'select kcu.table_name as t, kcu.column_name as c, rc.referenced_table_name as p, rc.delete_rule as r
+               from information_schema.referential_constraints rc
+               join information_schema.key_column_usage kcu
+                 on kcu.constraint_schema = rc.constraint_schema and kcu.constraint_name = rc.constraint_name and kcu.table_name = rc.table_name
+              where rc.constraint_schema = ?',
+            [DB::connection()->getDatabaseName()],
+        ) as $fk) {
+            if (! in_array($fk->p, $targets, true) || in_array($fk->t, $targets, true)) {
+                continue;
+            }
+            if (! in_array($fk->r, ['CASCADE', 'SET NULL'], true)) {
+                throw new RuntimeException("`{$fk->t}`.`{$fk->c}` refers to the upgrade target `{$fk->p}` with ON DELETE {$fk->r}, which a reset cannot apply.");
+            }
+            $children[] = [$fk->t, $fk->c, $fk->r];
+        }
+
+        return $children;
     }
 
     /**

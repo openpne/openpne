@@ -13,7 +13,9 @@ How an administrator signs in and what guards the panel is in [security.md](secu
 login is not rejected. `EnsureAdministrator` asks it on every admin-realm request
 ([sessions.md](sessions.md), "Key invariants" 1), from the `web` group and from the panel's own
 stack, since panel pages do not pass the `web` group and Livewire's uploads, previews and the
-Filament export and import downloads do not pass the panel's. A guest is sent to the member login
+Filament export and import downloads do not pass the panel's. Before the role it runs `auth.session`,
+which signs out a session whose password has changed since it signed in, so a session the change left
+behind (no row is deleted on a session driver other than `database`) opens no admin-realm route. A guest is sent to the member login
 and, once signed in, back to the URL they asked for; a member the panel refuses gets 403. The only
 admin-realm route it leaves alone is `/admin/logout`, which Filament's own check guards; an
 architecture test lists every admin-realm route and requires the gate ahead of route-model binding

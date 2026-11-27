@@ -10,6 +10,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
@@ -157,23 +158,37 @@ class PrefixSessionCookieTest extends TestCase
         $this->withCookie($prefixed, $sid)->get('/dashboard')->assertOk();
     }
 
-    public function test_a_session_from_before_the_switch_opens_both_the_member_pages_and_the_admin_panel(): void
+    /** @return array<string, array{0: string, 1: ?string}> */
+    public static function releasedCookiePrefixes(): array
     {
-        // The cookie a member's browser already holds on an HTTPS site: the one name the member
-        // realm has always used, now carried into the admin realm too.
-        config(['session.driver' => 'database', 'session.secure' => true]);
-        $prefixed = '__Host-'.config('session.cookie');
+        return ['host-only' => ['__Host-', null], 'with a domain' => ['__Secure-', 'localhost']];
+    }
+
+    /** The session row and cookie are written as 4.0.0-alpha.1 wrote a member's, not by this version's login. */
+    #[DataProvider('releasedCookiePrefixes')]
+    public function test_a_member_session_from_the_release_before_the_switch_opens_both_realms(string $prefix, ?string $domain): void
+    {
+        config(['session.driver' => 'database', 'session.secure' => true, 'session.domain' => $domain]);
         $admin = Member::factory()->administrator()->create();
+        $login = 'login_member_'.sha1('Illuminate\\Auth\\SessionGuard');
+        $sid = str_repeat('a', 40);
+        DB::table('sessions')->insert([
+            'id' => $sid,
+            'user_id' => $admin->getKey(),
+            'payload' => base64_encode(json_encode([
+                '_token' => str_repeat('t', 40),
+                $login => $admin->getKey(),
+                $login.'_at' => time(),
+                'password_hash_member' => hash_hmac('sha256', $admin->getAuthPassword(), (string) config('app.key')),
+            ], JSON_THROW_ON_ERROR)),
+            'last_activity' => time(),
+        ]);
+        $cookie = $prefix.config('session.cookie');
 
-        $login = $this->post('/login', ['email' => $admin->email, 'password' => 'password'])->assertRedirect();
-        $sid = $login->getCookie($prefixed)->getValue();
-
-        $this->freshRequestState();
-        $this->withCookie($prefixed, $sid)->get('/dashboard')->assertOk();
-        $this->freshRequestState();
-        $this->withCookie($prefixed, $sid)->get('/admin')->assertOk();
-        $this->freshRequestState();
-        $this->withCookie($prefixed, $sid)->get('/admin/members')->assertOk();
+        foreach (['/dashboard', '/admin', '/admin/members'] as $path) {
+            $this->freshRequestState();
+            $this->withCookie($cookie, $sid)->get($path)->assertOk();
+        }
     }
 
     public function test_no_livewire_renders_outside_the_admin_realm(): void

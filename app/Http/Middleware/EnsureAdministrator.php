@@ -10,6 +10,7 @@ use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -22,6 +23,8 @@ final class EnsureAdministrator
     /** Route names on the admin realm that need no administrator. */
     public const EXEMPT = ['filament.admin.auth.logout'];
 
+    public function __construct(private readonly AuthenticateSession $session) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         if (! AdminRealm::matches($request) || in_array($request->route()?->getName(), self::EXEMPT, true)) {
@@ -33,8 +36,12 @@ final class EnsureAdministrator
             throw new AuthenticationException('Unauthenticated.', ['member']);
         }
 
-        abort_unless($member instanceof Member && $member->canAccessPanel(Filament::getPanel('admin')), 403);
+        // auth.session here too, since only the panel's own stack has it: a session whose password hash
+        // is stale is signed out before the role is read.
+        return $this->session->handle($request, function (Request $request) use ($member, $next): Response {
+            abort_unless($member instanceof Member && $member->canAccessPanel(Filament::getPanel('admin')), 403);
 
-        return $next($request);
+            return $next($request);
+        });
     }
 }

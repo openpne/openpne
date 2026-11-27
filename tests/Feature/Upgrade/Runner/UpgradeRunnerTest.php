@@ -22,6 +22,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use Tests\TestCase;
 
@@ -202,6 +203,75 @@ class UpgradeRunnerTest extends TestCase
 
         $this->assertDatabaseCount('admin_role_invites', 0);
         $this->assertDatabaseCount('registration_tokens', 0);
+    }
+
+    public function test_a_reset_that_replaces_the_members_leaves_nothing_bound_to_their_ids(): void
+    {
+        $member = Member::factory()->create();
+        $id = $member->getKey();
+        $member->passkeys()->create(['name' => 'a', 'credential_id' => 'AbC', 'credential' => []]);
+        $member->createToken('mcp');
+        DB::table('mfa_reset_requests')->insert(['member_id' => $id, 'token' => 'reset', 'created_at' => now()]);
+        DB::table('email_change_requests')->insert(['member_id' => $id, 'new_email' => 'new@example.com', 'token' => 'change', 'created_at' => now()]);
+        DB::table('oauth_access_tokens')->insert(['id' => 'access', 'user_id' => $id, 'client_id' => 'client', 'revoked' => false]);
+        DB::table('oauth_refresh_tokens')->insert(['id' => 'refresh', 'access_token_id' => 'access', 'revoked' => false]);
+        DB::table('oauth_auth_codes')->insert(['id' => 'code', 'user_id' => $id, 'client_id' => 'client', 'revoked' => false]);
+        DB::table('oauth_device_codes')->insert(['id' => 'device', 'user_id' => $id, 'client_id' => 'client', 'user_code' => 'U', 'scopes' => '[]', 'revoked' => false]);
+        DB::table('notifications')->insert(['id' => 'n', 'type' => 'x', 'notifiable_type' => $member->getMorphClass(), 'notifiable_id' => $id, 'data' => '{}']);
+        DB::table('password_reset_tokens')->insert(['email' => $member->email, 'token' => 'pw', 'created_at' => now()]);
+        DB::table((string) config('session.table'))->insert(['id' => 'session', 'user_id' => $id, 'payload' => '', 'last_activity' => time()]);
+
+        (new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade]))->reset();
+
+        foreach (['passkeys', 'mfa_reset_requests', 'email_change_requests', (string) config('session.table'), ...UpgradeRunner::MEMBER_OWNED_TABLES] as $table) {
+            $this->assertDatabaseCount($table, 0);
+        }
+    }
+
+    public function test_every_table_naming_a_member_by_id_is_cleared_by_a_reset_that_replaces_the_members(): void
+    {
+        $targets = (new UpgradeRunner(new InsertSelectCompiler))->targetTables();
+        // Holding an id nothing reads: the old admin accounts' sessions and links, and an OAuth client's owner, which dynamic registration leaves empty.
+        $inert = ['admin_sessions', 'admin_password_setup_tokens', 'oauth_clients'];
+        $cleared = [(string) config('session.table'), 'registration_tokens', ...UpgradeRunner::MEMBER_OWNED_TABLES, ...$inert];
+        $missed = [];
+
+        foreach (Schema::getTableListing(schemaQualified: false) as $table) {
+            if (in_array($table, $targets, true) || in_array($table, $cleared, true)) {
+                continue;
+            }
+            $guarded = collect(Schema::getForeignKeys($table))
+                ->filter(fn (array $fk) => in_array($fk['foreign_table'], $targets, true))
+                ->flatMap(fn (array $fk) => $fk['columns'])
+                ->all();
+            foreach (Schema::getColumnListing($table) as $column) {
+                if (preg_match('/(^|_)(member|user|notifiable|tokenable|owner)_id$/', $column) === 1 && ! in_array($column, $guarded, true)) {
+                    $missed[] = "{$table}.{$column}";
+                }
+            }
+        }
+
+        $this->assertSame([], $missed);
+    }
+
+    public function test_every_foreign_key_onto_an_upgrade_target_has_a_delete_rule_a_reset_applies(): void
+    {
+        $targets = (new UpgradeRunner(new InsertSelectCompiler))->targetTables();
+        $unapplied = [];
+
+        foreach (Schema::getTableListing(schemaQualified: false) as $table) {
+            if (in_array($table, $targets, true)) {
+                continue;
+            }
+            foreach (Schema::getForeignKeys($table) as $fk) {
+                $dropped = $table === 'file_bin' && $fk['foreign_table'] === 'files';
+                if (in_array($fk['foreign_table'], $targets, true) && ! $dropped && ! in_array($fk['on_delete'], ['cascade', 'set null'], true)) {
+                    $unapplied[] = "{$table}.".implode(',', $fk['columns'])." {$fk['on_delete']}";
+                }
+            }
+        }
+
+        $this->assertSame([], $unapplied);
     }
 
     public function test_a_pending_administrator_invite_refuses_a_fresh_run_and_yields_to_a_restart(): void
