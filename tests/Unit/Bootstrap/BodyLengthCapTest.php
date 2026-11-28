@@ -116,19 +116,41 @@ class BodyLengthCapTest extends TestCase
         $this->assertSame(['message' => 'The request body is too large.'], json_decode(OPENPNE_BODY_TOO_LARGE_BODY, true));
     }
 
-    public function test_the_entry_point_answers_413_without_loading_the_autoloader(): void
+    /** @return array<string, array{string}> */
+    public static function entryBodies(): array
+    {
+        return [
+            'declared' => [sprintf("\$_SERVER['CONTENT_LENGTH'] = '%d';", OPENPNE_MAX_BODY_BYTES + 1)],
+            // php://input is empty under the CLI, so the undeclared body is served by a stand-in wrapper.
+            'undeclared, read' => [sprintf(<<<'PHP'
+                final class LongInput
+                {
+                    public $context;
+                    private int $left = 0;
+                    public function stream_open(string $path, string $mode, int $options, ?string &$opened): bool { $this->left = $path === 'php://input' ? %d : 0; return true; }
+                    public function stream_read(int $count): string { $n = min($count, $this->left); $this->left -= $n; return str_repeat('a', $n); }
+                    public function stream_eof(): bool { return $this->left === 0; }
+                    public function stream_stat(): array { return []; }
+                }
+                stream_wrapper_unregister('php');
+                stream_wrapper_register('php', LongInput::class);
+                PHP, OPENPNE_MAX_BODY_BYTES + 1)],
+        ];
+    }
+
+    #[DataProvider('entryBodies')]
+    public function test_the_entry_point_answers_413_without_loading_the_autoloader(string $body): void
     {
         $storage = sys_get_temp_dir().'/openpne-body-cap-'.bin2hex(random_bytes(6));
         mkdir($storage);
-        $driver = sprintf(<<<'PHP'
+        $driver = $body.<<<'PHP'
             $_SERVER['REQUEST_METHOD'] = 'POST';
             $_SERVER['CONTENT_TYPE'] = 'application/json';
-            $_SERVER['CONTENT_LENGTH'] = '%d';
             register_shutdown_function(function () {
                 fwrite(STDERR, json_encode(['status' => http_response_code(), 'files' => get_included_files()]));
             });
             require $argv[1];
-            PHP, OPENPNE_MAX_BODY_BYTES + 1);
+            PHP;
 
         $process = proc_open(
             [PHP_BINARY, '-r', $driver, '--', realpath(__DIR__.'/../../../public/index.php')],
@@ -152,7 +174,7 @@ class BodyLengthCapTest extends TestCase
         $stdout = stream_get_contents($pipes[1]);
         $report = json_decode((string) stream_get_contents($pipes[2]), true);
         proc_close($process);
-        rmdir($storage);
+        exec('rm -rf '.escapeshellarg($storage));
 
         $this->assertTrue($finished, 'the entry point did not answer on its own');
 
