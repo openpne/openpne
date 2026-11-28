@@ -80,7 +80,7 @@ class BodyLengthCapTest extends TestCase
 
     public function test_a_declared_length_over_the_limit_is_refused_before_reading(): void
     {
-        $body = $this->body(0);
+        $body = $this->body(10);
 
         $this->assertTrue(openpne_body_exceeds(['CONTENT_LENGTH' => (string) (OPENPNE_MAX_BODY_BYTES + 1)], $body));
         $this->assertSame(0, ftell($body));

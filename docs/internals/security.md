@@ -584,8 +584,9 @@ as fields filled with characters JSON escapes, still go over it.
   chunked body or a short declared length is measured by what arrives. A body that cannot be opened
   is refused.
 - `/mcp` decodes its body whatever the type, so
-  [`RefuseLongMcpBody`](../../app/Http/Middleware/RefuseLongMcpBody.php) holds every type to the same
-  limit there, right after the per-IP throttle ([mcp.md](mcp.md#rate-limits)).
+  [`RefuseLongMcpBody`](../../app/Http/Middleware/RefuseLongMcpBody.php) holds the declared length and
+  the raw body PHP leaves readable to the same limit for every type there, right after the per-IP
+  throttle ([mcp.md](mcp.md#rate-limits)); a multipart body PHP has parsed leaves nothing to read.
 - Both refusals send the same short JSON body with `nosniff` and `Cache-Control: no-store, private`.
 
 ## Response headers
