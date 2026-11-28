@@ -294,13 +294,12 @@ reach it, with a picture to draw or a large request body, from someone signed in
 1.3 GB. With the system's libgd, a picture's memory is held outside `memory_limit`: count each
 process at `memory_limit` or the size `openpne:check` states, whichever is larger.
 
-A request body is bounded in three places. The web server refuses one over `client_max_body_size`
-(Apache: `LimitRequestBody`) before PHP reads it. PHP leaves a form over `post_max_size` unread, and the
-site answers 413; a body that is not a form, such as JSON, is still read whole and decoded by the
-site before that answer, so only the web server's limit stops it. PHP writes a form's files to
-temporary files, but holds a form without files at three to five times its size, and a JSON body at
-50 times or more depending on its shape; a request past `memory_limit` fails alone. Keep the web
-server's limit at `post_max_size`, and lower both only as far as the upload caps allow.
+A request body is bounded in four places, in this order. The web server refuses one over
+`client_max_body_size` (Apache: `LimitRequestBody`) before PHP reads it. PHP leaves a form over
+`post_max_size` unread. The site then refuses a body that is not a form, such as JSON, with 413 once
+it passes 1 MiB, before reading it. Last, the site answers 413 to any body whose declared length is
+over `post_max_size`. A request past `memory_limit` fails alone. Keep the web server's limit at
+`post_max_size`, and lower both only as far as the upload caps allow.
 
 ```nginx
 # /etc/nginx/sites-available/openpne

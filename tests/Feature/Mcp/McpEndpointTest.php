@@ -6,6 +6,7 @@ namespace Tests\Feature\Mcp;
 
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTokenMemberNotFrozen;
+use App\Http\Middleware\RefuseLongMcpBody;
 use App\Http\Middleware\ThrottleMcpByIp;
 use App\Mcp\Servers\OpenPneServer;
 use App\Models\Member;
@@ -16,6 +17,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Laravel\Mcp\Server\Middleware\ValidateMcpHeaders;
 use Laravel\Mcp\Server\Middleware\ValidateOrigin;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use ReflectionProperty;
@@ -102,6 +104,21 @@ class McpEndpointTest extends McpTestCase
         $this->freshRequestState();
         $response = $this->post('/mcp', $this->envelope('tools/list'))->assertUnauthorized();
         $this->assertSame('', $response->getContent());
+    }
+
+    public function test_a_form_typed_body_past_the_limit_is_refused_before_authentication(): void
+    {
+        $send = fn (int $length) => $this->call('POST', '/mcp', [], [], [], ['CONTENT_TYPE' => 'application/x-www-form-urlencoded'], str_repeat('a', $length));
+        require_once base_path('bootstrap/body-length-cap.php');
+
+        $refused = $send(OPENPNE_MAX_BODY_BYTES + 1)->assertStatus(413);
+        $this->assertSame(OPENPNE_BODY_TOO_LARGE_BODY, $refused->getContent());
+        foreach (OPENPNE_BODY_TOO_LARGE_HEADERS as $name => $value) {
+            $refused->assertHeader($name, $value);
+        }
+
+        $this->freshRequestState();
+        $send(OPENPNE_MAX_BODY_BYTES)->assertUnauthorized();
     }
 
     public function test_a_signed_in_member_session_alone_does_not_reach_the_endpoint(): void
@@ -239,6 +256,7 @@ class McpEndpointTest extends McpTestCase
     {
         $expected = [
             ThrottleMcpByIp::class,
+            RefuseLongMcpBody::class,
             Authenticate::class,
             EnsureTokenMemberNotFrozen::class,
             CheckForAnyAbility::class,
@@ -246,6 +264,7 @@ class McpEndpointTest extends McpTestCase
             ThrottleRequests::class,
             ValidateOrigin::class,
         ];
+        $expectedOnPost = [...$expected, ValidateMcpHeaders::class];
 
         $router = app(Router::class);
         $seen = 0;
@@ -258,12 +277,12 @@ class McpEndpointTest extends McpTestCase
 
             $resolved = array_values(array_filter(
                 array_map(fn (mixed $m): string => is_string($m) ? explode(':', $m)[0] : '', $router->gatherRouteMiddleware($route)),
-                fn (string $m): bool => in_array($m, $expected, true),
+                fn (string $m): bool => in_array($m, $expectedOnPost, true),
             ));
 
             // Not the order the group declares: the framework's priority list re-sorts Authenticate,
             // the feature gate and ThrottleRequests among themselves, and this is what comes out.
-            $this->assertSame($expected, $resolved, "{$route->methods()[0]} /mcp");
+            $this->assertSame(in_array('POST', $route->methods(), true) ? $expectedOnPost : $expected, $resolved, "{$route->methods()[0]} /mcp");
         }
 
         $this->assertSame(3, $seen, 'Mcp::web should register a GET, a DELETE and a POST');

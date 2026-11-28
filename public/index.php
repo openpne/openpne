@@ -20,6 +20,13 @@ if (openpne_image_fast_path_serve($_SERVER, $_GET, $_COOKIE, $storagePath)) {
     exit;
 }
 
+// A body that is not a form is refused past its limit before anything decodes it
+// (docs/internals/security.md, "Request body length").
+require __DIR__.'/../bootstrap/body-length-cap.php';
+if (openpne_body_length_exceeded($_SERVER)) {
+    openpne_refuse_body_length();
+}
+
 // Register the Composer autoloader...
 require __DIR__.'/../vendor/autoload.php';
 
