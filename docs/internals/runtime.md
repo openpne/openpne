@@ -44,6 +44,9 @@ refreshing.
    by its filesystem path, and finds its own file under the same `LARAVEL_STORAGE_PATH`
    ([images.md](images.md), "The fast path"). A deploy that wants the file in place before the first
    request, or gone the moment the fast path is switched off, runs `php artisan openpne:image-fast-path`.
+5. `public/index.php` answers in this order before the autoloader: maintenance mode, the image fast
+   path, then the body length refusal ([security.md](security.md#request-body-length)). Each needs
+   nothing from the framework.
 
 ## Site timezone
 

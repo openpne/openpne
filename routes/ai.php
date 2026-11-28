@@ -3,6 +3,7 @@
 use App\Auth\PassportKeys;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureTokenMemberNotFrozen;
+use App\Http\Middleware\RefuseLongMcpBody;
 use App\Http\Middleware\ThrottleMcpByIp;
 use App\Mcp\McpAbilities;
 use App\Mcp\OAuth\RegisterController;
@@ -19,6 +20,7 @@ Route::middleware([
     // the gate, where a 401 never reaches it.
     AddWwwAuthenticateHeader::class,
     ThrottleMcpByIp::class,
+    RefuseLongMcpBody::class,
     // Sanctum first: a personal token never builds the OAuth guard, which needs the signing keys.
     'auth:sanctum,oauth',
     EnsureTokenMemberNotFrozen::class,

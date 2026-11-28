@@ -241,9 +241,8 @@ file before validation runs, and the form reports a failed upload rather than th
 files plus its fields, so it must hold the cap times that count with room for the rest of the body;
 over it the answer is a bare 413 from `ValidatePostSize`, the composed post lost with it. The proxy's
 body limit (nginx `client_max_body_size`, 1 MB unconfigured) sits in front of both and fails the same
-way, out of the app's sight. `post_max_size` bounds a form only: PHP still hands a larger JSON body to
-the framework, which decodes it before `ValidatePostSize` answers, so ahead of `memory_limit` only the
-proxy's limit bounds one.
+way, out of the app's sight. PHP leaves a form over `post_max_size` unread; a body that is not a
+form is refused past 1 MiB before the framework reads it ([security](security.md), "Request body length").
 
 The upgrade does not copy OpenPNE 3's `image_max_filesize`; a run, dry or real, prints the value to
 set, or says the OpenPNE 3 value could not be read as a size.

@@ -567,6 +567,28 @@ Authentication and credential-mutation events (login, MFA, password/email change
 are recorded on a dedicated `security` log channel — the event vocabulary, PII/injection contract,
 and retention are in [logging](logging.md).
 
+## Request body length
+
+A body that is not a form, such as JSON, is refused with 413 once it passes 1 MiB, before the
+framework reads it: [`public/index.php`](../../public/index.php) checks it after the maintenance and
+image fast-path answers and before the autoloader, so a longer body is never decoded. The limit,
+`OPENPNE_MAX_BODY_BYTES` in [`bootstrap/body-length-cap.php`](../../bootstrap/body-length-cap.php), is one
+value for every route, sized with room over the largest body ordinary input reaches, and equals
+Livewire's own `payload.max_size`, which a test pins. A few extreme inputs that pass validation, such
+as fields filled with characters JSON escapes, still go over it.
+
+- A form type (`application/x-www-form-urlencoded`, `multipart/form-data`), its media type cut at the
+  first `;`, `,` or space as PHP's form parser cuts it, is not held to this limit, whatever the method,
+  unless `Content-Type` contains `/json` or `+json`: Laravel decodes that as JSON.
+- The declared `Content-Length` is checked first, then at most one byte past the limit is read, so a
+  chunked body or a short declared length is measured by what arrives. A body that cannot be opened
+  is refused.
+- `/mcp` decodes its body whatever the type, so
+  [`RefuseLongMcpBody`](../../app/Http/Middleware/RefuseLongMcpBody.php) holds the declared length and
+  the raw body PHP leaves readable to the same limit for every type there, right after the per-IP
+  throttle ([mcp.md](mcp.md#rate-limits)); a multipart body PHP has parsed leaves nothing to read.
+- Both refusals send the same short JSON body with `nosniff` and `Cache-Control: no-store, private`.
+
 ## Response headers
 
 [`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php) sets the
