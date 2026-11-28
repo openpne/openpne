@@ -579,8 +579,7 @@ as fields filled with characters JSON escapes, still go over it.
 
 - A form type (`application/x-www-form-urlencoded`, `multipart/form-data`), its media type cut at the
   first `;`, `,` or space as PHP's form parser cuts it, is not held to this limit, whatever the method,
-  unless `Content-Type` contains `/json` or `+json`: Laravel decodes that as JSON. Being read first, such
-  an urlencoded body sent with PUT, PATCH or DELETE reaches the framework empty on PHP 8.4 and later.
+  unless `Content-Type` contains `/json` or `+json`: Laravel decodes that as JSON.
 - The declared `Content-Length` is checked first, then at most one byte past the limit is read, so a
   chunked body or a short declared length is measured by what arrives. A body that cannot be opened
   is refused.
