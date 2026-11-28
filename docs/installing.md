@@ -297,7 +297,7 @@ process at `memory_limit` or the size `openpne:check` states, whichever is large
 A request body is bounded in four places, in this order. The web server refuses one over
 `client_max_body_size` (Apache: `LimitRequestBody`) before PHP reads it. PHP leaves a form over
 `post_max_size` unread. The site then refuses a body that is not a form, such as JSON, with 413 once
-it passes 1 MiB, before reading it. Last, the site answers 413 to any body whose declared length is
+it passes 1 MiB, before the framework reads it. Last, the site answers 413 to any body whose declared length is
 over `post_max_size`. A request past `memory_limit` fails alone. Keep the web server's limit at
 `post_max_size`, and lower both only as far as the upload caps allow.
 

@@ -106,6 +106,63 @@ class BodyLengthCapTest extends TestCase
         $this->assertTrue(openpne_body_exceeds([], false));
     }
 
+    public function test_the_refusal_is_the_documented_one(): void
+    {
+        $this->assertSame([
+            'Content-Type' => 'application/json',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'no-store, private',
+        ], OPENPNE_BODY_TOO_LARGE_HEADERS);
+        $this->assertSame(['message' => 'The request body is too large.'], json_decode(OPENPNE_BODY_TOO_LARGE_BODY, true));
+    }
+
+    public function test_the_entry_point_answers_413_without_loading_the_autoloader(): void
+    {
+        $storage = sys_get_temp_dir().'/openpne-body-cap-'.bin2hex(random_bytes(6));
+        mkdir($storage);
+        $driver = sprintf(<<<'PHP'
+            $_SERVER['REQUEST_METHOD'] = 'POST';
+            $_SERVER['CONTENT_TYPE'] = 'application/json';
+            $_SERVER['CONTENT_LENGTH'] = '%d';
+            register_shutdown_function(function () {
+                fwrite(STDERR, json_encode(['status' => http_response_code(), 'files' => get_included_files()]));
+            });
+            require $argv[1];
+            PHP, OPENPNE_MAX_BODY_BYTES + 1);
+
+        $process = proc_open(
+            [PHP_BINARY, '-r', $driver, '--', realpath(__DIR__.'/../../../public/index.php')],
+            [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $pipes,
+            null,
+            [...getenv(), 'LARAVEL_STORAGE_PATH' => $storage],
+        );
+        fclose($pipes[0]);
+        // Past a missing refusal the child boots the application, which need not exit on its own.
+        $deadline = microtime(true) + 10;
+        while (proc_get_status($process)['running'] && microtime(true) < $deadline) {
+            usleep(20000);
+        }
+        $finished = ! proc_get_status($process)['running'];
+        if (! $finished) {
+            proc_terminate($process, 9);
+        }
+        stream_set_blocking($pipes[1], false);
+        stream_set_blocking($pipes[2], false);
+        $stdout = stream_get_contents($pipes[1]);
+        $report = json_decode((string) stream_get_contents($pipes[2]), true);
+        proc_close($process);
+        rmdir($storage);
+
+        $this->assertTrue($finished, 'the entry point did not answer on its own');
+
+        $this->assertSame(OPENPNE_BODY_TOO_LARGE_BODY, $stdout);
+        $this->assertSame(413, $report['status'] ?? null);
+        $files = implode("\n", $report['files'] ?? []);
+        $this->assertStringContainsString('bootstrap/body-length-cap.php', $files);
+        $this->assertStringNotContainsString('vendor/autoload.php', $files);
+    }
+
     public function test_the_entry_point_checks_after_the_early_answers_and_before_the_autoloader(): void
     {
         $index = (string) file_get_contents(__DIR__.'/../../../public/index.php');

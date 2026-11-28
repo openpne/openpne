@@ -119,6 +119,22 @@ class McpEndpointTest extends McpTestCase
 
         $this->freshRequestState();
         $send(OPENPNE_MAX_BODY_BYTES)->assertUnauthorized();
+
+        $this->freshRequestState();
+        $json = json_encode(['pad' => str_repeat('a', OPENPNE_MAX_BODY_BYTES - 10)]);
+        $this->assertSame(OPENPNE_MAX_BODY_BYTES, strlen($json));
+        $this->call('POST', '/mcp', [], [], [], ['CONTENT_TYPE' => 'application/json'], $json)->assertUnauthorized();
+    }
+
+    public function test_the_package_decodes_a_form_typed_body_as_json_rpc(): void
+    {
+        $envelope = json_encode($this->envelope('tools/list'));
+
+        $this->call('POST', '/mcp', [], [], [], [
+            'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+            'HTTP_ACCEPT' => 'application/json, text/event-stream',
+            'HTTP_AUTHORIZATION' => 'Bearer '.$this->token(Member::factory()->create()),
+        ], $envelope)->assertOk()->assertSee('list-talk-rooms');
     }
 
     public function test_a_signed_in_member_session_alone_does_not_reach_the_endpoint(): void

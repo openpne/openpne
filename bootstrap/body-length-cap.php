@@ -12,8 +12,8 @@ const OPENPNE_BODY_TOO_LARGE_HEADERS = [
 const OPENPNE_BODY_TOO_LARGE_BODY = '{"message":"The request body is too large."}';
 
 /**
- * True when the declared length or the body read so far passes the limit; reads one byte past it at
- * most and leaves the stream part-read (docs/internals/security.md, "Request body length").
+ * True when the declared length or what arrives passes the limit, or the body is not an open stream;
+ * reads one byte past the limit at most and leaves the stream part-read (docs/internals/security.md, "Request body length").
  *
  * @param  array<array-key, mixed>  $server
  */

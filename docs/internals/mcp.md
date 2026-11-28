@@ -408,8 +408,9 @@ Two layers, because they answer different questions:
 - **Per IP, before authentication** ([`ThrottleMcpByIp`](../../app/Http/Middleware/ThrottleMcpByIp.php)).
   The framework's `ThrottleRequests` sits *below* `Authenticate` in the middleware priority list, so a
   named limiter on the same route bounds a legitimate client and does nothing about someone spraying
-  tokens at the door. This one is outside that list and keeps the first slot; the body length check
-  ([security.md](security.md#request-body-length)) comes right after it.
+  tokens at the door. This one is outside that list and keeps the first slot; the check that holds a
+  form-typed body to the body length limit ([security.md](security.md#request-body-length)) comes right
+  after it. A longer body that is not a form is refused before either, uncounted.
 - **Per token, after it** (`throttle:mcp`), keyed by the token rather than the member, so one runaway
   client cannot spend another's budget.
 
